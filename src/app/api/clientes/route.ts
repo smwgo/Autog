@@ -80,7 +80,7 @@ export async function GET(request: Request) {
       orderBy: {
         createdAt: "desc",
       },
-      take: 200,
+      take: 1000,
     });
 
     // Consultar branch y assignedToSucursal directo de Neon para máxima compatibilidad
@@ -141,13 +141,11 @@ export async function GET(request: Request) {
         if (userBranchParam === "SUCURSAL") {
           return c.branch === "SUCURSAL" || c.assignedToSucursal === true;
         }
-        // Si el operador es de PRINCIPAL y filtró específicamente por SUCURSAL o PRINCIPAL
+        // Si el operador es de PRINCIPAL y filtró específicamente por SUCURSAL en BranchTabs
         if (sedeParam === "SUCURSAL") {
           return c.branch === "SUCURSAL" || c.assignedToSucursal === true;
         }
-        if (sedeParam === "PRINCIPAL") {
-          return c.branch === "PRINCIPAL";
-        }
+        // Por defecto en Principal / Ambas sedes, los clientes de la empresa son globales y visibles
         return true;
       });
 

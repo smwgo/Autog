@@ -567,6 +567,127 @@ export async function GET(request: Request) {
         });
       }
 
+      // 0.96 Consulta de Historial Semanal: Vehículos atendidos y pagados en la semana en curso (Lunes a Domingo)
+      if (searchParams.get("historialSemanal") === "true") {
+        const now = new Date();
+        const currentDay = now.getDay(); // 0: domingo, 1: lunes, ..., 6: sábado
+        const diffToMonday = (currentDay === 0 ? -6 : 1) - currentDay;
+        const startOfWeek = new Date(now);
+        startOfWeek.setDate(now.getDate() + diffToMonday);
+        startOfWeek.setHours(0, 0, 0, 0);
+
+        const endOfWeek = new Date(startOfWeek);
+        endOfWeek.setDate(startOfWeek.getDate() + 6);
+        endOfWeek.setHours(23, 59, 59, 999);
+
+        // Consultar órdenes atendidas y pagadas dentro de la semana actual
+        const orderRows: any[] = (await prisma.$queryRawUnsafe(
+          `SELECT * FROM "WorkshopOrder"
+           WHERE (
+             "status" IN ('Pagado', 'PAGADO', 'Facturado', 'FACTURADO', 'Facturada', 'FACTURADA', 'Cobrado', 'COBRADO', 'Entregado', 'ENTREGADO', '05 Entregada', 'Entregada', 'Finalizado', 'FINALIZADO', 'Terminado', 'TERMINADO', 'Historial', 'HISTORIAL')
+             OR COALESCE("quoteStatus", '') IN ('Pagado', 'PAGADO', 'Facturado', 'FACTURADO', 'Facturada', 'FACTURADA')
+             OR COALESCE("deliveryStatus", '') IN ('Facturado', 'FACTURADO', 'Pagado', 'PAGADO')
+             OR ("totalCost" > 0 AND "totalPaid" >= "totalCost")
+           )
+           AND (
+             ("updatedAt" >= $1 AND "updatedAt" <= $2)
+             OR ("createdAt" >= $1 AND "createdAt" <= $2)
+           )
+           ORDER BY "updatedAt" DESC LIMIT 100`,
+          startOfWeek,
+          endOfWeek
+        ).catch(() => [])) as any[];
+
+        // Consultar historial de servicios registrados en la semana actual
+        const historyRows: any[] = (await prisma.$queryRawUnsafe(
+          `SELECT * FROM "WorkshopHistory"
+           WHERE ("createdAt" >= $1 AND "createdAt" <= $2)
+              OR ("updatedAt" >= $1 AND "updatedAt" <= $2)
+           ORDER BY "createdAt" DESC LIMIT 100`,
+          startOfWeek,
+          endOfWeek
+        ).catch(() => [])) as any[];
+
+        const vistos = new Set<string>();
+        const attendedVehicles: any[] = [];
+
+        for (const row of orderRows) {
+          const ord = mapOrderRow(row);
+          const key = (ord.orderNumber || ord.id || "").toUpperCase();
+          if (key) vistos.add(key);
+          if (ord.plate) vistos.add(ord.plate.toUpperCase());
+
+          const services = (ord.items && ord.items.length > 0)
+            ? ord.items.map((i: any) => i.name || i.description).filter(Boolean)
+            : (ord.services || []);
+
+          const ordAny = ord as any;
+          const brand = ordAny.brand || row.brand || "";
+          const model = ordAny.model || row.model || "";
+          const year = ordAny.year || row.year || "";
+          const dateVal = ord.updatedAt || row.updatedAt || row.createdAt || new Date();
+
+          attendedVehicles.push({
+            id: ord.id,
+            orderNumber: ord.orderNumber || ord.id,
+            plate: (ord.plate || "S/P").toUpperCase(),
+            vehicle: ord.vehicle || `${brand} ${model}`.trim() || "Vehículo",
+            brand,
+            model,
+            year,
+            client: ord.client || "Cliente General",
+            clientPhone: ord.clientPhone || "",
+            services,
+            cost: Number(ord.totalPaid || ord.totalCost || 0),
+            totalCost: Number(ord.totalCost || 0),
+            totalPaid: Number(ord.totalPaid || ord.totalCost || 0),
+            mechanic: ord.mechanic || "Taller",
+            mileage: ord.mileage ? `${ord.mileage.toLocaleString()} km` : "N/A",
+            date: dateVal,
+            photos: [...(ord.receptionPhotos || []), ...(ord.evidencePhotos || [])],
+            status: ord.status || "Atendido y Pagado",
+            source: "order",
+          });
+        }
+
+        for (const h of historyRows) {
+          const histKey = (h.orderNumber || h.serviceCode || h.id || "").toUpperCase();
+          const histPlate = (h.plate || "").toUpperCase();
+          if (vistos.has(histKey) || (histPlate && vistos.has(histPlate))) continue;
+
+          attendedVehicles.push({
+            id: h.id,
+            orderNumber: h.orderNumber || h.serviceCode,
+            plate: (h.plate || "S/P").toUpperCase(),
+            vehicle: h.vehicle || "Vehículo",
+            brand: "",
+            model: "",
+            year: "",
+            client: h.client || "Cliente General",
+            clientPhone: "",
+            services: safeParseJson<string[]>(h.servicesJson, []),
+            cost: Number(h.cost || 0),
+            totalCost: Number(h.cost || 0),
+            totalPaid: Number(h.cost || 0),
+            mechanic: h.mechanic || "Taller",
+            mileage: h.mileage || "N/A",
+            date: h.createdAt || h.date,
+            photos: safeParseJson<string[]>(h.photosJson, []),
+            status: "Pagado",
+            source: "history",
+          });
+        }
+
+        return NextResponse.json({
+          success: true,
+          weekStart: startOfWeek.toISOString(),
+          weekEnd: endOfWeek.toISOString(),
+          totalCount: attendedVehicles.length,
+          totalRevenue: attendedVehicles.reduce((sum, a) => sum + (Number(a.cost) || 0), 0),
+          attendedVehicles,
+        });
+      }
+
       // 1. Consulta específica de historial por placa
       if (plateParam && searchParams.get("historial") === "true") {
         const [historyRows, orderRows] = (await Promise.all([

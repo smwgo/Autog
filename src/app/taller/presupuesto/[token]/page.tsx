@@ -114,11 +114,10 @@ export default function AprobacionPresupuestoMovilPage() {
               {orden.quoteNumber || `PRE-${orden.orderNumber}`}
             </span>
             <span
-              className={`px-3 py-1 rounded-full text-xs font-semibold border ${
-                yaAprobado
-                  ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-300"
-                  : "bg-amber-500/20 border-amber-500/40 text-amber-300"
-              }`}
+              className={`px-3 py-1 rounded-full text-xs font-semibold border ${yaAprobado
+                ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-300"
+                : "bg-amber-500/20 border-amber-500/40 text-amber-300"
+                }`}
             >
               {orden.quoteStatus || "Pendiente de Aprobación"}
             </span>
@@ -173,11 +172,10 @@ export default function AprobacionPresupuestoMovilPage() {
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5">
                         <span
-                          className={`text-[10px] px-1.5 py-0.5 rounded font-semibold ${
-                            it.type === "PART"
-                              ? "bg-pink-500/20 text-pink-300"
-                              : "bg-blue-500/20 text-blue-300"
-                          }`}
+                          className={`text-[10px] px-1.5 py-0.5 rounded font-semibold ${it.type === "PART"
+                            ? "bg-pink-500/20 text-pink-300"
+                            : "bg-blue-500/20 text-blue-300"
+                            }`}
                         >
                           {it.type === "PART" ? "Repuesto" : "Servicio"}
                         </span>

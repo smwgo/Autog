@@ -11,6 +11,7 @@ import InspeccionVehiculo from "@/components/taller/InspeccionVehiculo";
 import ModalNuevaOrdenTrabajo from "@/components/taller/ModalNuevaOrdenTrabajo";
 import ModalPresupuestoPdf from "@/components/taller/ModalPresupuestoPdf";
 import ModalFormularioRapido from "@/components/taller/ModalFormularioRapido";
+import ModalHistorialSemanal from "@/components/taller/ModalHistorialSemanal";
 import LubricentroExpress from "./components/LubricentroExpress";
 import ModalCategoriasTaller from "./components/ModalCategoriasTaller";
 import CatalogoProductosServiciosTaller from "@/components/taller/CatalogoProductosServiciosTaller";
@@ -823,6 +824,8 @@ export default function TallerPanel() {
 
   // FLOTANTE NUEVA ORDEN DE TRABAJO (SOLO SE ABRE AL PULSAR BOTÓN NUEVA ORDEN)
   const [mostrarModalNuevaOrden, setMostrarModalNuevaOrden] = useState(false);
+  // HISTORIAL SEMANAL DE VEHÍCULOS ATENDIDOS Y PAGADOS
+  const [mostrarModalHistorialSemanal, setMostrarModalHistorialSemanal] = useState(false);
   // MODAL / LISTA DE CLIENTES Y AUTOS EN ATENCIÓN (PAUSAR, CAMBIAR, CONTINUAR)
   const [mostrarModalAutosAtencion, setMostrarModalAutosAtencion] = useState(false);
   // MODAL FLOTANTE DE CONFIRMACIÓN PARA ELIMINAR TRABAJOS DE LA ORDEN
@@ -4985,23 +4988,6 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
             {ordenActiva ? (
               <div className="flex items-center gap-2 min-w-0 flex-1">
                 <div className="flex items-center gap-2.5 min-w-0">
-                  <span className="w-10 h-10 sm:w-9 sm:h-9 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-500 flex items-center justify-center shrink-0">
-                    <svg
-                      className="w-5.5 h-5.5 sm:w-5 sm:h-5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                      strokeWidth="1.8"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      aria-hidden="true"
-                    >
-                      <path d="M5 11l1.5-4.5A2 2 0 0 1 8.4 5h7.2a2 2 0 0 1 1.9 1.5L19 11" />
-                      <path d="M3.5 11h17v7h-17zM6.5 18v1.5M17.5 18v1.5M3.5 14h2M18.5 14h2" />
-                      <circle cx="7" cy="14.5" r=".5" />
-                      <circle cx="17" cy="14.5" r=".5" />
-                    </svg>
-                  </span>
                   <span className="min-w-0">
                     <span className="block text-base sm:text-sm font-bold sm:font-semibold leading-tight text-zinc-900 dark:text-white">
                       Orden de Servicio
@@ -5010,6 +4996,15 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                       {limpiarNumeroOrden(ordenActiva.orderNumber)}
                     </span>
                   </span>
+                  <button
+                    type="button"
+                    onClick={() => setMostrarModalAutosAtencion(true)}
+                    title={`Órdenes en cola: ${autosEnPista.length}`}
+                    aria-label={`Órdenes en cola: ${autosEnPista.length}`}
+                    className="w-10 h-10 sm:w-9 sm:h-9 rounded-full bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-500/30 text-cyan-700 dark:text-cyan-300 flex items-center justify-center shrink-0 font-bold font-mono text-sm sm:text-xs transition-transform active:scale-95 cursor-pointer shadow-xs"
+                  >
+                    {autosEnPista.length || 1}
+                  </button>
                 </div>
               </div>
             ) : cargandoInicial ? (
@@ -5023,11 +5018,22 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
             ) : (
               <div className="flex items-center gap-2">
                 <span className="text-base sm:text-lg font-bold text-zinc-800 dark:text-zinc-200">
-                  Taller Mecánico
+                  {MODULOS_ESPECIALIDADES.find((m) => m.id === moduloTaller)?.shortName || "Taller"}
                 </span>
               </div>
             )}
             <div className="flex items-center gap-2 shrink-0 ml-auto">
+              <button
+                type="button"
+                onClick={() => setMostrarModalHistorialSemanal(true)}
+                aria-label="Historial Semanal"
+                title="Historial Semanal"
+                className="w-11 h-11 sm:w-9 sm:h-9 rounded-xl bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/35 text-purple-600 dark:text-purple-400 flex items-center justify-center transition-all cursor-pointer shadow-xs active:scale-95 shrink-0"
+              >
+                <svg className="w-5 h-5 sm:w-4.5 sm:h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </button>
               {ordenActiva && ordenActiva.plate && ordenActiva.plate !== "EXPRESS" && (
                 <Link
                   href={`/taller/nueva-orden?editId=${encodeURIComponent(ordenActiva.id)}`}
@@ -5299,17 +5305,6 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                             {nombreClienteDisplay}
                           </span>
                         )}
-                        <span className="mt-0.5 inline-flex items-center justify-end">
-                          <span
-                            className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
-                              auto.status === "Pausada"
-                                ? "bg-amber-500/15 text-amber-600 dark:text-amber-400"
-                                : "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
-                            }`}
-                          >
-                            {auto.status === "Pausada" ? "Pausada" : "Activa"}
-                          </span>
-                        </span>
                       </div>
                       <svg
                         className="w-5 h-5 sm:w-4 sm:h-4 shrink-0 text-zinc-400"
@@ -5348,28 +5343,31 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                     <span className={ordenActiva.status === "Pausada" ? "text-amber-500/60" : "text-emerald-500/60"}>•</span>
 
                     {ordenActiva.status === "Pausada" ? (
-                      <span className="inline-flex items-center gap-1.5 text-amber-700 dark:text-amber-400 shrink-0 font-semibold" title="En Pausa">
-                        <span className="w-2.5 h-2.5 sm:w-2 sm:h-2 rounded-full bg-amber-500 dark:bg-amber-400 shrink-0" />
+                      <button
+                        type="button"
+                        onClick={(e) => handleReanudarOrden(ordenActiva, e)}
+                        title="Semáforo: Clic para pasar a Trabajando"
+                        className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/35 text-amber-800 dark:text-amber-300 font-bold transition-all cursor-pointer active:scale-95 shrink-0"
+                      >
+                        <span className="w-2.5 h-2.5 sm:w-2 sm:h-2 rounded-full bg-amber-500 dark:bg-amber-400 shrink-0 shadow-xs" />
                         <span>Pausada</span>
-                      </span>
+                        <span className="px-1.5 py-0.5 rounded-md bg-amber-600/20 dark:bg-amber-400/20 text-[11px] font-black leading-none">
+                          {(autosEnPista.length > 0 ? autosEnPista : [ordenActiva]).filter((o) => o.status === "Pausada").length}
+                        </span>
+                      </button>
                     ) : (
-                      <span className="inline-flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400 shrink-0 font-semibold" title="Trabajando">
-                        <span className="w-2.5 h-2.5 sm:w-2 sm:h-2 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse shrink-0" />
+                      <button
+                        type="button"
+                        onClick={(e) => handlePausarOrden(ordenActiva, e)}
+                        title="Semáforo: Clic para pasar a Pausa"
+                        className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/35 text-emerald-800 dark:text-emerald-300 font-bold transition-all cursor-pointer active:scale-95 shrink-0"
+                      >
+                        <span className="w-2.5 h-2.5 sm:w-2 sm:h-2 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse shrink-0 shadow-xs" />
                         <span>Trabajando</span>
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Órdenes del día con palabras cortas */}
-                  <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl sm:rounded-lg bg-zinc-200/70 dark:bg-white/5 border border-zinc-300 dark:border-white/10 text-xs font-semibold text-zinc-800 dark:text-zinc-200">
-                    <span>Órdenes: <strong className="text-blue-600 dark:text-blue-400">{autosEnPista.length}</strong></span>
-                    <span>•</span>
-                    <span>Activas: <strong className="text-emerald-600 dark:text-emerald-400">{autosEnPista.filter((o) => o.status !== "Pausada").length}</strong></span>
-                    {autosEnPista.some((o) => o.status === "Pausada") && (
-                      <>
-                        <span>•</span>
-                        <span>Pausadas: <strong className="text-amber-600 dark:text-amber-400">{autosEnPista.filter((o) => o.status === "Pausada").length}</strong></span>
-                      </>
+                        <span className="px-1.5 py-0.5 rounded-md bg-emerald-600/20 dark:bg-emerald-400/20 text-[11px] font-black leading-none">
+                          {(autosEnPista.length > 0 ? autosEnPista : [ordenActiva]).filter((o) => o.status !== "Pausada").length}
+                        </span>
+                      </button>
                     )}
                   </div>
                 </div>
@@ -7233,6 +7231,12 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
         </div>
       )}
 
+
+      {/* MODAL HISTORIAL SEMANAL DE VEHÍCULOS ATENDIDOS Y PAGADOS */}
+      <ModalHistorialSemanal
+        isOpen={mostrarModalHistorialSemanal}
+        onClose={() => setMostrarModalHistorialSemanal(false)}
+      />
 
       <TallerMobileNav />
     </div>

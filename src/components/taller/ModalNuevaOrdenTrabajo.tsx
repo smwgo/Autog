@@ -1813,7 +1813,7 @@ export default function ModalNuevaOrdenTrabajo({
             {
               id: "asig-1",
               nombre: empleadoLogueado.nombre,
-              tarea: "Diagnóstico y mantenimiento",
+              tarea: "",
             },
           ];
         }
@@ -2307,7 +2307,8 @@ export default function ModalNuevaOrdenTrabajo({
       const mecanicosTexto =
         asignacionesTecnicos.length > 0
           ? asignacionesTecnicos
-              .map((a) => (a.tarea ? `${a.nombre} (${a.tarea})` : a.nombre))
+              .map((a) => a.nombre.trim())
+              .filter(Boolean)
               .join(", ")
           : empleadoLogueado.nombre || "Sin asignar";
 
@@ -2550,11 +2551,12 @@ export default function ModalNuevaOrdenTrabajo({
                   onClick={() => {
                     resetFormularioCompleto();
                   }}
-                  className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-zinc-200/60 hover:bg-zinc-200 dark:bg-white/[0.05] dark:hover:bg-white/[0.10] text-zinc-700 dark:text-zinc-300 transition-all flex items-center justify-center shrink-0 active:scale-95 cursor-pointer"
-                  title="Volver a Taller"
+                  className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-zinc-200/60 hover:bg-zinc-200 dark:bg-white/[0.05] dark:hover:bg-white/[0.10] text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white transition-all flex items-center justify-center shrink-0 active:scale-95 cursor-pointer"
+                  title="Cerrar"
+                  aria-label="Cerrar"
                 >
                   <svg className="w-4 h-4 sm:w-4.5 sm:h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M19 12H5M12 19l-7-7 7-7" />
+                    <path d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </Link>
               )}
@@ -3248,6 +3250,20 @@ export default function ModalNuevaOrdenTrabajo({
                   }
                 };
 
+                const retrocederCliente = () => {
+                  if (subPasoCliente === "nombre") {
+                    setSubPasoCliente("tipo");
+                  } else if (subPasoCliente === "identificacion") {
+                    setSubPasoCliente("nombre");
+                  } else if (subPasoCliente === "telefono") {
+                    setSubPasoCliente("identificacion");
+                  } else if (subPasoCliente === "email") {
+                    setSubPasoCliente("telefono");
+                  } else if (subPasoCliente === "direccion") {
+                    setSubPasoCliente("email");
+                  }
+                };
+
                 return (
                   <div className="p-5 sm:p-6 rounded-3xl bg-zinc-50/90 dark:bg-zinc-900/40 border border-zinc-200/80 dark:border-white/10 space-y-5 shadow-xs transition-all animate-fade-in">
                     {/* Header */}
@@ -3255,7 +3271,7 @@ export default function ModalNuevaOrdenTrabajo({
                       <div className="flex items-center gap-2">
                         <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
                         <h4 className="text-sm font-bold text-zinc-900 dark:text-white">
-                          Registrar Nuevo Cliente
+                          Cliente
                         </h4>
                       </div>
                       <button
@@ -3286,7 +3302,7 @@ export default function ModalNuevaOrdenTrabajo({
                                 mostrarToast("Primero ingresa el nombre del cliente", "err");
                               }
                             }}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
                               esActivo
                                 ? "bg-emerald-500 text-black shadow-sm font-bold scale-[1.02]"
                                 : esCompletado
@@ -3296,12 +3312,11 @@ export default function ModalNuevaOrdenTrabajo({
                           >
                             <span>{p.icon}</span>
                             <span>{p.label}</span>
-                            {esCompletado && valor && (
-                              <span className="max-w-[70px] truncate text-[10px] opacity-80 font-mono">
-                                ({valor})
+                            {esCompletado && (
+                              <span className={esActivo ? "text-black font-bold" : "text-emerald-600 dark:text-emerald-400 font-bold"}>
+                                ✓
                               </span>
                             )}
-                            {esCompletado && <span className="text-emerald-600 dark:text-emerald-400">✓</span>}
                           </button>
                         );
                       })}
@@ -3336,7 +3351,7 @@ export default function ModalNuevaOrdenTrabajo({
                                 👤
                               </div>
                               <div>
-                                <span className="text-sm font-bold block">Persona Natural</span>
+                                <span className="text-sm font-bold block">Persona</span>
                               </div>
                             </button>
 
@@ -3356,7 +3371,7 @@ export default function ModalNuevaOrdenTrabajo({
                                 🏢
                               </div>
                               <div>
-                                <span className="text-sm font-bold block">Empresa / Corporativo</span>
+                                <span className="text-sm font-bold block">Empresa</span>
                               </div>
                             </button>
                           </div>
@@ -3477,14 +3492,14 @@ export default function ModalNuevaOrdenTrabajo({
                                     className="fixed inset-0 z-[90]"
                                     onClick={() => setMostrarMenuFotoCliente(false)}
                                   />
-                                  <div className="absolute right-0 top-full mt-2 w-40 p-1.5 rounded-2xl bg-zinc-950 border-2 border-emerald-500 shadow-2xl shadow-black/80 z-[100] animate-in fade-in zoom-in-95">
+                                  <div className="absolute right-0 top-full mt-2 w-36 sm:w-40 p-1.5 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-xl shadow-zinc-900/10 dark:shadow-black/70 z-[100] animate-in fade-in zoom-in-95">
                                     <button
                                       type="button"
                                       onClick={() => {
                                         setMostrarMenuFotoCliente(false);
                                         fileInputClienteCamaraRef.current?.click();
                                       }}
-                                      className="w-full px-3 py-2 rounded-xl text-left text-xs font-bold text-white hover:bg-emerald-500/20 hover:text-emerald-300 flex items-center gap-2 cursor-pointer transition-colors"
+                                      className="w-full px-3 py-2 rounded-lg text-left text-xs font-semibold text-zinc-700 dark:text-zinc-200 hover:bg-emerald-50 hover:text-emerald-700 dark:hover:bg-emerald-500/20 dark:hover:text-emerald-300 flex items-center gap-2 cursor-pointer transition-colors"
                                     >
                                       <span className="text-base">📸</span>
                                       <span>Cámara</span>
@@ -3495,7 +3510,7 @@ export default function ModalNuevaOrdenTrabajo({
                                         setMostrarMenuFotoCliente(false);
                                         fileInputClienteGaleriaRef.current?.click();
                                       }}
-                                      className="w-full px-3 py-2 rounded-xl text-left text-xs font-bold text-white hover:bg-emerald-500/20 hover:text-emerald-300 flex items-center gap-2 cursor-pointer transition-colors"
+                                      className="w-full px-3 py-2 rounded-lg text-left text-xs font-semibold text-zinc-700 dark:text-zinc-200 hover:bg-emerald-50 hover:text-emerald-700 dark:hover:bg-emerald-500/20 dark:hover:text-emerald-300 flex items-center gap-2 cursor-pointer transition-colors"
                                     >
                                       <span className="text-base">🖼️</span>
                                       <span>Galería</span>
@@ -3507,7 +3522,7 @@ export default function ModalNuevaOrdenTrabajo({
                                           setMostrarMenuFotoCliente(false);
                                           setNuevoClienteFoto(null);
                                         }}
-                                        className="w-full px-3 py-2 rounded-xl text-left text-xs font-semibold text-rose-400 hover:bg-rose-500/20 flex items-center gap-2 cursor-pointer transition-colors border-t border-white/10 mt-1 pt-1"
+                                        className="w-full px-3 py-2 rounded-lg text-left text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/20 flex items-center gap-2 cursor-pointer transition-colors border-t border-zinc-100 dark:border-zinc-800 mt-1 pt-1"
                                       >
                                         <span className="text-base">🗑️</span>
                                         <span>Quitar</span>
@@ -3519,12 +3534,20 @@ export default function ModalNuevaOrdenTrabajo({
                             </div>
                           </div>
 
-                          <div className="pt-2">
+                          <div className="pt-2 flex items-center gap-2.5">
+                            <button
+                              type="button"
+                              onClick={retrocederCliente}
+                              className="h-12 px-5 rounded-xl border border-zinc-300 dark:border-white/10 hover:bg-zinc-100 dark:hover:bg-white/5 text-zinc-700 dark:text-zinc-300 font-bold text-sm transition-all cursor-pointer flex items-center justify-center gap-1.5 active:scale-98 shrink-0"
+                            >
+                              <span>←</span>
+                              <span>Atrás</span>
+                            </button>
                             <button
                               type="button"
                               onClick={avanzarCliente}
                               disabled={!nuevoClienteNombre.trim()}
-                              className={`w-full h-12 rounded-xl font-bold text-sm transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-98 ${
+                              className={`flex-1 h-12 rounded-xl font-bold text-sm transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-98 ${
                                 nuevoClienteNombre.trim()
                                   ? "bg-emerald-500 hover:bg-emerald-400 text-black shadow-md shadow-emerald-500/20"
                                   : "bg-zinc-200 dark:bg-white/5 text-zinc-400 dark:text-zinc-500 cursor-not-allowed"
@@ -3563,11 +3586,19 @@ export default function ModalNuevaOrdenTrabajo({
                             />
                           </div>
 
-                          <div className="pt-2">
+                          <div className="pt-2 flex items-center gap-2.5">
+                            <button
+                              type="button"
+                              onClick={retrocederCliente}
+                              className="h-12 px-5 rounded-xl border border-zinc-300 dark:border-white/10 hover:bg-zinc-100 dark:hover:bg-white/5 text-zinc-700 dark:text-zinc-300 font-bold text-sm transition-all cursor-pointer flex items-center justify-center gap-1.5 active:scale-98 shrink-0"
+                            >
+                              <span>←</span>
+                              <span>Atrás</span>
+                            </button>
                             <button
                               type="button"
                               onClick={avanzarCliente}
-                              className="w-full h-12 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-sm transition-all cursor-pointer flex items-center justify-center gap-2 shadow-md shadow-emerald-500/20 active:scale-98"
+                              className="flex-1 h-12 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-sm transition-all cursor-pointer flex items-center justify-center gap-2 shadow-md shadow-emerald-500/20 active:scale-98"
                             >
                               <span>Avanzar a Teléfono</span>
                               <span>→</span>
@@ -3602,11 +3633,19 @@ export default function ModalNuevaOrdenTrabajo({
                             />
                           </div>
 
-                          <div className="pt-2">
+                          <div className="pt-2 flex items-center gap-2.5">
+                            <button
+                              type="button"
+                              onClick={retrocederCliente}
+                              className="h-12 px-5 rounded-xl border border-zinc-300 dark:border-white/10 hover:bg-zinc-100 dark:hover:bg-white/5 text-zinc-700 dark:text-zinc-300 font-bold text-sm transition-all cursor-pointer flex items-center justify-center gap-1.5 active:scale-98 shrink-0"
+                            >
+                              <span>←</span>
+                              <span>Atrás</span>
+                            </button>
                             <button
                               type="button"
                               onClick={avanzarCliente}
-                              className="w-full h-12 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-sm transition-all cursor-pointer flex items-center justify-center gap-2 shadow-md shadow-emerald-500/20 active:scale-98"
+                              className="flex-1 h-12 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-sm transition-all cursor-pointer flex items-center justify-center gap-2 shadow-md shadow-emerald-500/20 active:scale-98"
                             >
                               <span>Avanzar a Correo</span>
                               <span>→</span>
@@ -3644,11 +3683,19 @@ export default function ModalNuevaOrdenTrabajo({
                             />
                           </div>
 
-                          <div className="pt-2">
+                          <div className="pt-2 flex items-center gap-2.5">
+                            <button
+                              type="button"
+                              onClick={retrocederCliente}
+                              className="h-12 px-5 rounded-xl border border-zinc-300 dark:border-white/10 hover:bg-zinc-100 dark:hover:bg-white/5 text-zinc-700 dark:text-zinc-300 font-bold text-sm transition-all cursor-pointer flex items-center justify-center gap-1.5 active:scale-98 shrink-0"
+                            >
+                              <span>←</span>
+                              <span>Atrás</span>
+                            </button>
                             <button
                               type="button"
                               onClick={avanzarCliente}
-                              className="w-full h-12 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-sm transition-all cursor-pointer flex items-center justify-center gap-2 shadow-md shadow-emerald-500/20 active:scale-98"
+                              className="flex-1 h-12 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-sm transition-all cursor-pointer flex items-center justify-center gap-2 shadow-md shadow-emerald-500/20 active:scale-98"
                             >
                               <span>Avanzar a Dirección</span>
                               <span>→</span>
@@ -3683,53 +3730,20 @@ export default function ModalNuevaOrdenTrabajo({
                             />
                           </div>
 
-                          {/* Resumen del Cliente Configurado */}
-                          <div className="p-3.5 rounded-xl bg-zinc-100 dark:bg-white/[0.04] border border-zinc-200 dark:border-white/10 flex flex-wrap items-center justify-between gap-2 text-xs">
-                            <div className="flex items-center gap-2">
-                              {nuevoClienteFoto ? (
-                                <img
-                                  src={nuevoClienteFoto}
-                                  alt="Foto cliente"
-                                  className="w-6 h-6 rounded-full object-cover border border-emerald-500/40"
-                                />
-                              ) : (
-                                <span className="text-emerald-500 font-bold">✓</span>
-                              )}
-                              <strong className="font-bold text-zinc-900 dark:text-white">
-                                {nuevoClienteNombre || "Sin nombre"}
-                              </strong>
-                              {nuevoClienteIdentificacion && (
-                                <>
-                                  <span className="text-zinc-400">•</span>
-                                  <span className="font-mono text-zinc-600 dark:text-zinc-300">
-                                    {nuevoClienteIdentificacion}
-                                  </span>
-                                </>
-                              )}
-                              {nuevoClienteTelefono && (
-                                <>
-                                  <span className="text-zinc-400">•</span>
-                                  <span className="text-zinc-600 dark:text-zinc-300">
-                                    📱 {nuevoClienteTelefono}
-                                  </span>
-                                </>
-                              )}
-                            </div>
+                          <div className="pt-2 flex items-center gap-2.5">
                             <button
                               type="button"
-                              onClick={() => setSubPasoCliente("nombre")}
-                              className="text-emerald-600 dark:text-emerald-400 font-semibold hover:underline cursor-pointer"
+                              onClick={retrocederCliente}
+                              className="h-12 px-5 rounded-xl border border-zinc-300 dark:border-white/10 hover:bg-zinc-100 dark:hover:bg-white/5 text-zinc-700 dark:text-zinc-300 font-bold text-sm transition-all cursor-pointer flex items-center justify-center gap-1.5 active:scale-98 shrink-0"
                             >
-                              Editar
+                              <span>←</span>
+                              <span>Atrás</span>
                             </button>
-                          </div>
-
-                          <div className="pt-2">
                             <button
                               type="button"
                               onClick={handleGuardarClienteYPasarVehiculo}
                               disabled={guardandoCliente}
-                              className="w-full h-12 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-sm transition-all cursor-pointer flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/25 active:scale-98 disabled:opacity-50"
+                              className="flex-1 h-12 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-sm transition-all cursor-pointer flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/25 active:scale-98 disabled:opacity-50"
                             >
                               <span>{guardandoCliente ? "Guardando..." : "Continuar"}</span>
                               <span>→</span>
@@ -3868,7 +3882,7 @@ export default function ModalNuevaOrdenTrabajo({
                           onClick={() => handleSeleccionarVehiculo(v)}
                           className={`p-4 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${
                             seleccionado
-                              ? "bg-emerald-600/15 border-emerald-500 shadow-md ring-1 ring-emerald-500/50"
+                              ? "bg-blue-600/15 border-blue-500 shadow-md ring-1 ring-blue-500/50"
                               : "bg-zinc-50/80 hover:bg-zinc-100 dark:bg-white/[0.03] dark:hover:bg-white/[0.07] border-zinc-200 dark:border-white/10"
                           }`}
                         >
@@ -3887,7 +3901,7 @@ export default function ModalNuevaOrdenTrabajo({
 
                           <div className="shrink-0 text-right">
                             {seleccionado ? (
-                              <span className="w-8 h-8 rounded-full bg-emerald-500 text-black font-bold flex items-center justify-center text-sm shadow-sm">
+                              <span className="w-8 h-8 rounded-full bg-blue-600 text-white font-bold flex items-center justify-center text-sm shadow-sm">
                                 ✓
                               </span>
                             ) : (
@@ -3912,7 +3926,7 @@ export default function ModalNuevaOrdenTrabajo({
                         setMostrarFormNuevoVehiculo(true);
                         setSubPasoVehiculo("placa");
                       }}
-                      className="p-4 rounded-2xl border border-dashed border-zinc-300 dark:border-white/15 hover:border-emerald-500/50 hover:bg-emerald-500/5 transition-all cursor-pointer flex items-center justify-center gap-2 text-xs font-semibold text-zinc-600 dark:text-zinc-400 hover:text-emerald-600 dark:hover:text-emerald-400 min-h-[72px]"
+                      className="p-4 rounded-2xl border border-dashed border-zinc-300 dark:border-white/15 hover:border-blue-500/50 hover:bg-blue-500/5 transition-all cursor-pointer flex items-center justify-center gap-2 text-xs font-semibold text-zinc-600 dark:text-zinc-400 hover:text-blue-600 dark:hover:text-blue-400 min-h-[72px]"
                     >
                       <span className="text-base font-bold">+</span>
                       <span>Registrar otro vehículo</span>
@@ -3984,7 +3998,7 @@ export default function ModalNuevaOrdenTrabajo({
                         <button
                           type="button"
                           onClick={() => setMostrarFormNuevoVehiculo(false)}
-                          className="text-xs text-emerald-600 dark:text-emerald-400 hover:underline font-semibold cursor-pointer"
+                          className="text-xs text-blue-600 dark:text-blue-400 hover:underline font-semibold cursor-pointer"
                         >
                           ← Volver
                         </button>
@@ -3999,11 +4013,9 @@ export default function ModalNuevaOrdenTrabajo({
                         const esCompletado = idx < pasoIdx || Boolean(String(valor || "").trim());
 
                         const colorClase = esActivo
-                          ? "bg-emerald-500 text-black shadow-sm font-bold scale-[1.02]"
+                          ? "bg-blue-600 text-white shadow-sm font-bold scale-[1.02]"
                           : esCompletado
-                          ? p.id === "placa"
-                            ? "bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/40 hover:bg-blue-500/25"
-                            : "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20"
+                          ? "bg-blue-500/10 text-blue-700 dark:text-blue-400 border border-blue-500/20 hover:bg-blue-500/20"
                           : "bg-zinc-100 dark:bg-white/5 text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300";
 
                         return (
@@ -4018,23 +4030,21 @@ export default function ModalNuevaOrdenTrabajo({
                                 mostrarToast("Primero ingresa la placa del vehículo", "err");
                               }
                             }}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${colorClase}`}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${colorClase}`}
                           >
-                            {p.id === "placa" && esCompletado && valor ? (
-                              <span className="font-mono font-bold tracking-wider uppercase">
-                                {valor}
+                            <span>{p.icon}</span>
+                            <span>{p.label}</span>
+                            {p.id === "modelo" && vehiculoFoto && (
+                              <img
+                                src={vehiculoFoto}
+                                alt="Foto"
+                                className="w-4 h-4 rounded-full object-cover border border-blue-500 shrink-0 inline-block"
+                              />
+                            )}
+                            {esCompletado && (
+                              <span className={esActivo ? "text-white font-bold" : "text-blue-600 dark:text-blue-400 font-bold"}>
+                                ✓
                               </span>
-                            ) : (
-                              <>
-                                <span>{p.icon}</span>
-                                <span>{p.label}</span>
-                                {esCompletado && valor && (
-                                  <span className="max-w-[70px] truncate text-[10px] opacity-80 font-mono">
-                                    ({valor})
-                                  </span>
-                                )}
-                                {esCompletado && <span className="text-emerald-600 dark:text-emerald-400">✓</span>}
-                              </>
                             )}
                           </button>
                         );
@@ -4065,7 +4075,7 @@ export default function ModalNuevaOrdenTrabajo({
                                 }
                               }}
                               placeholder="Ej: ABC-1234"
-                              className="w-full h-16 px-5 rounded-2xl bg-zinc-50 dark:bg-black/50 border-2 border-zinc-300 dark:border-white/15 focus:border-emerald-500 text-zinc-900 dark:text-white font-mono font-bold uppercase text-2xl tracking-widest placeholder:text-zinc-300 dark:placeholder:text-zinc-600 focus:outline-none shadow-inner"
+                              className="w-full h-16 px-5 rounded-2xl bg-zinc-50 dark:bg-black/50 border-2 border-zinc-300 dark:border-white/15 focus:border-blue-500 text-zinc-900 dark:text-white font-mono font-bold uppercase text-2xl tracking-widest placeholder:text-zinc-300 dark:placeholder:text-zinc-600 focus:outline-none shadow-inner"
                               autoFocus
                             />
                           </div>
@@ -4077,7 +4087,7 @@ export default function ModalNuevaOrdenTrabajo({
                               disabled={!vehiculoPlaca.trim()}
                               className={`w-full h-12 rounded-xl font-bold text-sm transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-98 ${
                                 vehiculoPlaca.trim()
-                                  ? "bg-emerald-500 hover:bg-emerald-400 text-black shadow-md shadow-emerald-500/20"
+                                  ? "bg-blue-600 hover:bg-blue-500 text-white shadow-md shadow-blue-600/20"
                                   : "bg-zinc-200 dark:bg-white/5 text-zinc-400 dark:text-zinc-500 cursor-not-allowed"
                               }`}
                             >
@@ -4109,7 +4119,7 @@ export default function ModalNuevaOrdenTrabajo({
                                 }
                               }}
                               placeholder="Ej: Toyota, Chevrolet, Hyundai..."
-                              className="w-full h-14 px-4 rounded-2xl bg-zinc-50 dark:bg-black/50 border-2 border-zinc-300 dark:border-white/15 focus:border-emerald-500 text-zinc-900 dark:text-white text-lg font-semibold placeholder:text-zinc-300 dark:placeholder:text-zinc-600 focus:outline-none shadow-sm"
+                              className="w-full h-14 px-4 rounded-2xl bg-zinc-50 dark:bg-black/50 border-2 border-zinc-300 dark:border-white/15 focus:border-blue-500 text-zinc-900 dark:text-white text-lg font-semibold placeholder:text-zinc-300 dark:placeholder:text-zinc-600 focus:outline-none shadow-sm"
                               autoFocus
                             />
                           </div>
@@ -4126,26 +4136,34 @@ export default function ModalNuevaOrdenTrabajo({
                                   type="button"
                                   onClick={() => {
                                     setVehiculoMarca(m);
-                                    setSubPasoVehiculo("modelo");
                                   }}
                                   className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
                                     vehiculoMarca.toUpperCase() === m.toUpperCase()
-                                      ? "bg-emerald-500 text-black font-bold shadow-xs"
+                                      ? "bg-blue-600 text-white font-bold shadow-xs scale-105"
                                       : "bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-white/10"
                                   }`}
                                 >
                                   {m}
+                                  {vehiculoMarca.toUpperCase() === m.toUpperCase() && " ✓"}
                                 </button>
                               ))}
                             </div>
                           </div>
 
                           {/* Botones de Navegación */}
-                          <div className="pt-2">
+                          <div className="pt-2 flex items-center gap-2.5">
+                            <button
+                              type="button"
+                              onClick={irAAnterior}
+                              className="h-12 px-5 rounded-xl border border-zinc-300 dark:border-white/10 hover:bg-zinc-100 dark:hover:bg-white/5 text-zinc-700 dark:text-zinc-300 font-bold text-sm transition-all cursor-pointer flex items-center justify-center gap-1.5 active:scale-98 shrink-0"
+                            >
+                              <span>←</span>
+                              <span>Atrás</span>
+                            </button>
                             <button
                               type="button"
                               onClick={irASiguiente}
-                              className="w-full h-12 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-sm transition-all cursor-pointer flex items-center justify-center gap-2 shadow-md shadow-emerald-500/20 active:scale-98"
+                              className="flex-1 h-12 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm transition-all cursor-pointer flex items-center justify-center gap-2 shadow-md shadow-blue-600/20 active:scale-98"
                             >
                               <span>Avanzar a Modelo</span>
                               <span>→</span>
@@ -4155,184 +4173,213 @@ export default function ModalNuevaOrdenTrabajo({
                       )}
 
                       {/* ================= PASO 3: MODELO ================= */}
-                      {subPasoVehiculo === "modelo" && (
-                        <div className="space-y-3">
-                          <div>
-                            <label className="text-sm font-bold text-zinc-900 dark:text-zinc-100 block">
-                              🚘 Modelo del Vehículo {vehiculoMarca ? `(${vehiculoMarca})` : ""}
-                            </label>
-                          </div>
+                      {subPasoVehiculo === "modelo" && (() => {
+                        // Modelos sugeridos basados en la marca seleccionada
+                        const modelosSugeridos = (() => {
+                          if (vehiculoMarca) {
+                            const marcaKey = Object.keys(CATALOGO_VEHICULOS).find(
+                              (m) => m.toLowerCase() === vehiculoMarca.trim().toLowerCase()
+                            );
+                            if (marcaKey && CATALOGO_VEHICULOS[marcaKey]?.modelos?.length > 0) {
+                              return CATALOGO_VEHICULOS[marcaKey].modelos;
+                            }
+                          }
+                          return ["Hilux", "D-Max", "Fortuner", "Sportage", "Tucson", "Aveo", "Sail", "Ranger", "Picanto"];
+                        })();
 
-                          <div className="relative z-30">
-                            <input
-                              type="text"
-                              value={vehiculoModelo}
-                              onChange={(e) => setVehiculoModelo(e.target.value)}
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter") {
-                                  e.preventDefault();
-                                  setSubPasoVehiculo("anio");
-                                }
-                              }}
-                              placeholder={vehiculoMarca ? `Ej: Modelo de ${vehiculoMarca}` : "Ej: Hilux, Aveo, Tucson..."}
-                              className="w-full h-14 pl-4 pr-16 rounded-2xl bg-zinc-50 dark:bg-black/50 border-2 border-zinc-300 dark:border-white/15 focus:border-emerald-500 text-zinc-900 dark:text-white text-lg font-semibold placeholder:text-zinc-300 dark:placeholder:text-zinc-600 focus:outline-none shadow-sm"
-                              autoFocus
-                            />
+                        return (
+                          <div className="space-y-3.5">
+                            <div>
+                              <label className="text-sm font-bold text-zinc-900 dark:text-zinc-100 block">
+                                🚘 Modelo del Vehículo {vehiculoMarca ? `(${vehiculoMarca})` : ""}
+                              </label>
+                            </div>
 
-                            {/* Botón Tomar Foto de Perfil del Vehículo (Visible con alto contraste en Modo Oscuro) */}
-                            <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center z-40">
-                              {/* Input para Cámara Móvil Directa */}
+
+                            <div className="relative z-30">
                               <input
-                                ref={fileInputVehiculoCamaraRef}
-                                type="file"
-                                accept="image/*"
-                                capture="environment"
-                                className="hidden"
-                                onChange={handleFotoVehiculoSeleccionada}
-                              />
-                              {/* Input para Galería / Archivo */}
-                              <input
-                                ref={fileInputVehiculoGaleriaRef}
-                                type="file"
-                                accept="image/*"
-                                className="hidden"
-                                onChange={handleFotoVehiculoSeleccionada}
+                                type="text"
+                                value={vehiculoModelo}
+                                onChange={(e) => setVehiculoModelo(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") {
+                                    e.preventDefault();
+                                    setSubPasoVehiculo("anio");
+                                  }
+                                }}
+                                placeholder={vehiculoMarca ? `Ej: Modelo de ${vehiculoMarca}` : "Ej: Hilux, Aveo, Tucson..."}
+                                className="w-full h-14 pl-4 pr-16 rounded-2xl bg-zinc-50 dark:bg-black/50 border-2 border-zinc-300 dark:border-white/15 focus:border-blue-500 text-zinc-900 dark:text-white text-lg font-semibold placeholder:text-zinc-300 dark:placeholder:text-zinc-600 focus:outline-none shadow-sm"
+                                autoFocus
                               />
 
-                              <button
-                                type="button"
-                                onClick={() => setMostrarMenuFotoVehiculo((prev) => !prev)}
-                                title="Tomar foto con el móvil o subir de galería"
-                                className="relative w-10 h-10 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/35 border-2 border-emerald-400 dark:border-emerald-400 text-emerald-300 dark:text-emerald-300 flex items-center justify-center cursor-pointer transition-all shadow-md shadow-emerald-500/20 active:scale-95 overflow-hidden group"
-                              >
-                                {vehiculoFoto ? (
-                                  <div className="relative w-full h-full">
-                                    <img
-                                      src={vehiculoFoto}
-                                      alt="Foto perfil vehículo"
-                                      className="w-full h-full object-cover"
-                                    />
-                                    {subiendoFotoVehiculo && (
-                                      <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-emerald-400 border-t-transparent" />
-                                      </div>
-                                    )}
-                                    <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                      <span className="text-[9px] font-bold text-white bg-black/60 px-1 py-0.5 rounded">Cambiar</span>
-                                    </div>
-                                  </div>
-                                ) : subiendoFotoVehiculo ? (
-                                  <div className="animate-spin rounded-full h-5 w-5 border-2 border-emerald-400 border-t-transparent" />
-                                ) : (
-                                  <svg className="w-5 h-5 text-emerald-400 dark:text-emerald-300 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.2}>
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                                    <circle cx="12" cy="13" r="3" />
-                                  </svg>
-                                )}
-                              </button>
+                              {/* Botón Tomar Foto de Perfil del Vehículo (Visible con alto contraste en Modo Oscuro) */}
+                              <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center z-40">
+                                {/* Input para Cámara Móvil Directa */}
+                                <input
+                                  ref={fileInputVehiculoCamaraRef}
+                                  type="file"
+                                  accept="image/*"
+                                  capture="environment"
+                                  className="hidden"
+                                  onChange={handleFotoVehiculoSeleccionada}
+                                />
+                                {/* Input para Galería / Archivo */}
+                                <input
+                                  ref={fileInputVehiculoGaleriaRef}
+                                  type="file"
+                                  accept="image/*"
+                                  className="hidden"
+                                  onChange={handleFotoVehiculoSeleccionada}
+                                />
 
-                              {vehiculoFoto && (
                                 <button
                                   type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setVehiculoFoto(null);
-                                  }}
-                                  title="Quitar foto"
-                                  className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-rose-500 hover:bg-rose-600 text-white text-[9px] font-bold flex items-center justify-center shadow cursor-pointer transition-transform hover:scale-110 z-10"
+                                  onClick={() => setMostrarMenuFotoVehiculo((prev) => !prev)}
+                                  title="Tomar foto con el móvil o subir de galería"
+                                  className="relative w-10 h-10 rounded-xl bg-blue-500/20 hover:bg-blue-500/35 border-2 border-blue-400 dark:border-blue-400 text-blue-300 dark:text-blue-300 flex items-center justify-center cursor-pointer transition-all shadow-md shadow-blue-500/20 active:scale-95 overflow-hidden group"
                                 >
-                                  ✕
+                                  {vehiculoFoto ? (
+                                    <div className="relative w-full h-full">
+                                      <img
+                                        src={vehiculoFoto}
+                                        alt="Foto perfil vehículo"
+                                        className="w-full h-full object-cover"
+                                      />
+                                      {subiendoFotoVehiculo && (
+                                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                                          <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-400 border-t-transparent" />
+                                        </div>
+                                      )}
+                                      <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                        <span className="text-[9px] font-bold text-white bg-black/60 px-1 py-0.5 rounded">Cambiar</span>
+                                      </div>
+                                    </div>
+                                  ) : subiendoFotoVehiculo ? (
+                                    <div className="animate-spin rounded-full h-5 w-5 border-2 border-blue-400 border-t-transparent" />
+                                  ) : (
+                                    <svg className="w-5 h-5 text-blue-400 dark:text-blue-300 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.2}>
+                                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                                      <circle cx="12" cy="13" r="3" />
+                                    </svg>
+                                  )}
                                 </button>
-                              )}
 
-                              {/* Menú Flotante: Tomar con Cámara Móvil o Subir de Galería */}
-                              {mostrarMenuFotoVehiculo && (
-                                <>
-                                  <div
-                                    className="fixed inset-0 z-[90]"
-                                    onClick={() => setMostrarMenuFotoVehiculo(false)}
-                                  />
-                                  <div className="absolute right-0 top-full mt-2 w-36 p-1.5 rounded-2xl bg-zinc-950 border-2 border-emerald-500 shadow-2xl shadow-black/90 z-[100] animate-in fade-in zoom-in-95">
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        setMostrarMenuFotoVehiculo(false);
-                                        fileInputVehiculoCamaraRef.current?.click();
-                                      }}
-                                      className="w-full px-3 py-2 rounded-xl text-left text-xs font-bold text-white hover:bg-emerald-500/20 hover:text-emerald-300 flex items-center gap-2 cursor-pointer transition-colors"
-                                    >
-                                      <span className="text-base">📸</span>
-                                      <span>Cámara</span>
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        setMostrarMenuFotoVehiculo(false);
-                                        fileInputVehiculoGaleriaRef.current?.click();
-                                      }}
-                                      className="w-full px-3 py-2 rounded-xl text-left text-xs font-bold text-white hover:bg-emerald-500/20 hover:text-emerald-300 flex items-center gap-2 cursor-pointer transition-colors"
-                                    >
-                                      <span className="text-base">🖼️</span>
-                                      <span>Galería</span>
-                                    </button>
-                                    {vehiculoFoto && (
+                                {vehiculoFoto && (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setVehiculoFoto(null);
+                                    }}
+                                    title="Quitar foto"
+                                    className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-rose-500 hover:bg-rose-600 text-white text-[9px] font-bold flex items-center justify-center shadow cursor-pointer transition-transform hover:scale-110 z-10"
+                                  >
+                                    ✕
+                                  </button>
+                                )}
+
+                                {/* Menú Flotante: Tomar con Cámara Móvil o Subir de Galería */}
+                                {mostrarMenuFotoVehiculo && (
+                                  <>
+                                    <div
+                                      className="fixed inset-0 z-[90]"
+                                      onClick={() => setMostrarMenuFotoVehiculo(false)}
+                                    />
+                                    <div className="absolute right-0 top-full mt-2 w-36 sm:w-40 p-1.5 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-xl shadow-zinc-900/10 dark:shadow-black/70 z-[100] animate-in fade-in zoom-in-95">
                                       <button
                                         type="button"
                                         onClick={() => {
                                           setMostrarMenuFotoVehiculo(false);
-                                          setVehiculoFoto(null);
+                                          fileInputVehiculoCamaraRef.current?.click();
                                         }}
-                                        className="w-full px-3 py-2 rounded-xl text-left text-xs font-semibold text-rose-400 hover:bg-rose-500/20 flex items-center gap-2 cursor-pointer transition-colors border-t border-white/10 mt-1 pt-1"
+                                        className="w-full px-3 py-2 rounded-lg text-left text-xs font-semibold text-zinc-700 dark:text-zinc-200 hover:bg-blue-50 hover:text-blue-700 dark:hover:bg-blue-500/20 dark:hover:text-blue-300 flex items-center gap-2 cursor-pointer transition-colors"
                                       >
-                                        <span className="text-base">🗑️</span>
-                                        <span>Quitar</span>
+                                        <span className="text-base">📸</span>
+                                        <span>Cámara</span>
                                       </button>
-                                    )}
-                                  </div>
-                                </>
-                              )}
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setMostrarMenuFotoVehiculo(false);
+                                          fileInputVehiculoGaleriaRef.current?.click();
+                                        }}
+                                        className="w-full px-3 py-2 rounded-lg text-left text-xs font-semibold text-zinc-700 dark:text-zinc-200 hover:bg-blue-50 hover:text-blue-700 dark:hover:bg-blue-500/20 dark:hover:text-blue-300 flex items-center gap-2 cursor-pointer transition-colors"
+                                      >
+                                        <span className="text-base">🖼️</span>
+                                        <span>Galería</span>
+                                      </button>
+                                      {vehiculoFoto && (
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            setMostrarMenuFotoVehiculo(false);
+                                            setVehiculoFoto(null);
+                                          }}
+                                          className="w-full px-3 py-2 rounded-lg text-left text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/20 flex items-center gap-2 cursor-pointer transition-colors border-t border-zinc-100 dark:border-zinc-800 mt-1 pt-1"
+                                        >
+                                          <span className="text-base">🗑️</span>
+                                          <span>Quitar</span>
+                                        </button>
+                                      )}
+                                    </div>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Chips de Modelos Frecuentes / Filtrados por Marca */}
+                            <div className="space-y-1.5">
+                              <span className="text-[11px] text-zinc-500 dark:text-zinc-400 font-semibold uppercase tracking-wider">
+                                {vehiculoMarca ? `Modelos de ${vehiculoMarca}:` : "Modelos Comunes:"}
+                              </span>
+                              <div className="flex flex-wrap gap-2 max-h-36 overflow-y-auto pr-1">
+                                {modelosSugeridos.map((mod) => (
+                                  <button
+                                    key={mod}
+                                    type="button"
+                                    onClick={() => {
+                                      // Al aplicar filtro solo selecciona el modelo sin salir al paso año
+                                      setVehiculoModelo(mod);
+                                      const tipoDetectado = detectarCarroceria(mod, vehiculoMarca);
+                                      if (tipoDetectado) {
+                                        setVehiculoTipo(tipoDetectado);
+                                      }
+                                    }}
+                                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                                      vehiculoModelo.toUpperCase() === mod.toUpperCase()
+                                        ? "bg-blue-600 text-white font-bold shadow-xs scale-105"
+                                        : "bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-white/10"
+                                    }`}
+                                  >
+                                    {mod}
+                                    {vehiculoModelo.toUpperCase() === mod.toUpperCase() && " ✓"}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+
+                            {/* Botones de Navegación — Cambia de paso únicamente al presionar Avanzar a Año */}
+                            <div className="pt-2 flex items-center gap-2.5">
+                              <button
+                                type="button"
+                                onClick={irAAnterior}
+                                className="h-12 px-5 rounded-xl border border-zinc-300 dark:border-white/10 hover:bg-zinc-100 dark:hover:bg-white/5 text-zinc-700 dark:text-zinc-300 font-bold text-sm transition-all cursor-pointer flex items-center justify-center gap-1.5 active:scale-98 shrink-0"
+                              >
+                                <span>←</span>
+                                <span>Atrás</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={irASiguiente}
+                                className="flex-1 h-12 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm transition-all cursor-pointer flex items-center justify-center gap-2 shadow-md shadow-blue-600/20 active:scale-98"
+                              >
+                                <span>Avanzar a Año</span>
+                                <span>→</span>
+                              </button>
                             </div>
                           </div>
-
-                          {/* Chips de Modelos Frecuentes */}
-                          <div className="space-y-1.5">
-                            <span className="text-[11px] text-zinc-500 dark:text-zinc-400 font-semibold uppercase tracking-wider">
-                              Modelos Comunes:
-                            </span>
-                            <div className="flex flex-wrap gap-2">
-                              {["Hilux", "D-Max", "Fortuner", "Sportage", "Tucson", "Aveo", "Sail", "Ranger", "Picanto"].map((mod) => (
-                                <button
-                                  key={mod}
-                                  type="button"
-                                  onClick={() => {
-                                    setVehiculoModelo(mod);
-                                    setSubPasoVehiculo("anio");
-                                  }}
-                                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-                                    vehiculoModelo.toUpperCase() === mod.toUpperCase()
-                                      ? "bg-emerald-500 text-black font-bold shadow-xs"
-                                      : "bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-white/10"
-                                  }`}
-                                >
-                                  {mod}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-
-                          {/* Botones de Navegación */}
-                          <div className="pt-2">
-                            <button
-                              type="button"
-                              onClick={irASiguiente}
-                              className="w-full h-12 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-sm transition-all cursor-pointer flex items-center justify-center gap-2 shadow-md shadow-emerald-500/20 active:scale-98"
-                            >
-                              <span>Avanzar a Año</span>
-                              <span>→</span>
-                            </button>
-                          </div>
-                        </div>
-                      )}
+                        );
+                      })()}
 
                       {/* ================= PASO 4: AÑO ================= */}
                       {subPasoVehiculo === "anio" && (
@@ -4342,6 +4389,7 @@ export default function ModalNuevaOrdenTrabajo({
                               📅 Año de Fabricación
                             </label>
                           </div>
+
 
                           <div className="relative">
                             <input
@@ -4356,7 +4404,7 @@ export default function ModalNuevaOrdenTrabajo({
                               }}
                               placeholder="Ej: 2024"
                               maxLength={4}
-                              className="w-full h-14 px-5 rounded-2xl bg-zinc-50 dark:bg-black/50 border-2 border-zinc-300 dark:border-white/15 focus:border-emerald-500 text-zinc-900 dark:text-white font-mono text-xl font-bold placeholder:text-zinc-300 dark:placeholder:text-zinc-600 focus:outline-none shadow-sm"
+                              className="w-full h-14 px-5 rounded-2xl bg-zinc-50 dark:bg-black/50 border-2 border-zinc-300 dark:border-white/15 focus:border-blue-500 text-zinc-900 dark:text-white font-mono text-xl font-bold placeholder:text-zinc-300 dark:placeholder:text-zinc-600 focus:outline-none shadow-sm"
                               autoFocus
                             />
                           </div>
@@ -4373,26 +4421,34 @@ export default function ModalNuevaOrdenTrabajo({
                                   type="button"
                                   onClick={() => {
                                     setVehiculoAnio(String(yr));
-                                    setSubPasoVehiculo("tipo");
                                   }}
                                   className={`px-3 py-1.5 rounded-xl text-xs font-mono font-semibold transition-all cursor-pointer ${
                                     vehiculoAnio === String(yr)
-                                      ? "bg-emerald-500 text-black font-bold shadow-xs"
+                                      ? "bg-blue-600 text-white font-bold shadow-xs scale-105"
                                       : "bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-white/10"
                                   }`}
                                 >
                                   {yr}
+                                  {vehiculoAnio === String(yr) && " ✓"}
                                 </button>
                               ))}
                             </div>
                           </div>
 
                           {/* Botones de Navegación */}
-                          <div className="pt-2">
+                          <div className="pt-2 flex items-center gap-2.5">
+                            <button
+                              type="button"
+                              onClick={irAAnterior}
+                              className="h-12 px-5 rounded-xl border border-zinc-300 dark:border-white/10 hover:bg-zinc-100 dark:hover:bg-white/5 text-zinc-700 dark:text-zinc-300 font-bold text-sm transition-all cursor-pointer flex items-center justify-center gap-1.5 active:scale-98 shrink-0"
+                            >
+                              <span>←</span>
+                              <span>Atrás</span>
+                            </button>
                             <button
                               type="button"
                               onClick={irASiguiente}
-                              className="w-full h-12 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-sm transition-all cursor-pointer flex items-center justify-center gap-2 shadow-md shadow-emerald-500/20 active:scale-98"
+                              className="flex-1 h-12 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm transition-all cursor-pointer flex items-center justify-center gap-2 shadow-md shadow-blue-600/20 active:scale-98"
                             >
                               <span>Avanzar a Tipo</span>
                               <span>→</span>
@@ -4504,15 +4560,15 @@ export default function ModalNuevaOrdenTrabajo({
                                   }}
                                   className={`p-3.5 sm:p-4 rounded-2xl border-2 flex flex-col items-center justify-center gap-2.5 transition-all cursor-pointer group active:scale-95 ${
                                     esSeleccionado
-                                      ? "bg-emerald-500/15 border-emerald-500 text-emerald-800 dark:text-emerald-300 shadow-sm font-bold"
-                                      : "bg-zinc-50 hover:bg-zinc-100 dark:bg-white/[0.03] dark:hover:bg-white/[0.06] border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-300 hover:border-emerald-500/50"
+                                      ? "bg-blue-500/15 border-blue-500 text-blue-800 dark:text-blue-300 shadow-sm font-bold"
+                                      : "bg-zinc-50 hover:bg-zinc-100 dark:bg-white/[0.03] dark:hover:bg-white/[0.06] border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-300 hover:border-blue-500/50"
                                   }`}
                                 >
                                   <div
                                     className={`transition-transform duration-200 group-hover:scale-110 ${
                                       esSeleccionado
-                                        ? "text-emerald-600 dark:text-emerald-400"
-                                        : "text-zinc-500 dark:text-zinc-400 group-hover:text-emerald-600 dark:group-hover:text-emerald-400"
+                                        ? "text-blue-600 dark:text-blue-400"
+                                        : "text-zinc-500 dark:text-zinc-400 group-hover:text-blue-600 dark:group-hover:text-blue-400"
                                     }`}
                                   >
                                     {icon}
@@ -4523,41 +4579,20 @@ export default function ModalNuevaOrdenTrabajo({
                             })}
                           </div>
 
-                          {/* Resumen del Vehículo Configurado */}
-                          <div className="p-3.5 rounded-xl bg-zinc-100 dark:bg-white/[0.04] border border-zinc-200 dark:border-white/10 flex flex-wrap items-center justify-between gap-2 text-xs">
-                            <div className="flex items-center gap-2">
-                              {vehiculoFoto ? (
-                                <img
-                                  src={vehiculoFoto}
-                                  alt="Foto vehículo"
-                                  className="w-6 h-6 rounded-lg object-cover border border-emerald-500/40"
-                                />
-                              ) : (
-                                <span className="text-emerald-500 font-bold">✓</span>
-                              )}
-                              <span className="font-mono font-bold text-zinc-900 dark:text-white">
-                                {vehiculoPlaca || "SIN PLACA"}
-                              </span>
-                              <span className="text-zinc-500">•</span>
-                              <span className="font-semibold text-zinc-700 dark:text-zinc-300">
-                                {[vehiculoMarca, vehiculoModelo, vehiculoAnio, vehiculoTipo].filter(Boolean).join(" ")}
-                              </span>
-                            </div>
+                          {/* Botón de Confirmación Final */}
+                          <div className="pt-2 flex items-center gap-2.5">
                             <button
                               type="button"
-                              onClick={() => setSubPasoVehiculo("placa")}
-                              className="text-emerald-600 dark:text-emerald-400 font-semibold hover:underline cursor-pointer"
+                              onClick={irAAnterior}
+                              className="h-12 px-5 rounded-xl border border-zinc-300 dark:border-white/10 hover:bg-zinc-100 dark:hover:bg-white/5 text-zinc-700 dark:text-zinc-300 font-bold text-sm transition-all cursor-pointer flex items-center justify-center gap-1.5 active:scale-98 shrink-0"
                             >
-                              Editar
+                              <span>←</span>
+                              <span>Atrás</span>
                             </button>
-                          </div>
-
-                          {/* Botón de Confirmación Final */}
-                          <div className="pt-2">
                             <button
                               type="button"
                               onClick={irASiguiente}
-                              className="w-full h-12 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-sm transition-all cursor-pointer flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/25 active:scale-98"
+                              className="flex-1 h-12 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm transition-all cursor-pointer flex items-center justify-center gap-2 shadow-lg shadow-blue-600/25 active:scale-98"
                             >
                               <span>Continuar</span>
                               <span>→</span>
@@ -4817,10 +4852,10 @@ export default function ModalNuevaOrdenTrabajo({
                   </div>
                 </div>
 
-                {/* Columna Derecha: Evidencias Multimedia (Foto, Video, Nota de Voz) */}
+                {/* Columna Derecha: Fotos del Vehículo */}
                 <div className="lg:col-span-5 p-4 rounded-2xl bg-zinc-50/70 dark:bg-white/[0.03] border border-zinc-200 dark:border-white/10 space-y-3 flex flex-col justify-between transition-all hover:border-zinc-300 dark:hover:border-white/15 shadow-xs">
                   <div className="space-y-3">
-                    {/* Cabecera de la sección multimedia */}
+                    {/* Cabecera de la sección de fotos */}
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <div className="w-7 h-7 rounded-lg bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-600 dark:text-sky-400">
@@ -4829,22 +4864,22 @@ export default function ModalNuevaOrdenTrabajo({
                           </svg>
                         </div>
                         <div>
-                          <span className="text-xs font-semibold text-zinc-900 dark:text-zinc-200 block">Evidencias Multimedia</span>
+                          <span className="text-xs font-semibold text-zinc-900 dark:text-zinc-200 block">Fotos del Vehículo</span>
                         </div>
                       </div>
                       <div className="flex items-center gap-1.5">
                         <span className="text-[10px] font-mono text-zinc-600 dark:text-zinc-400 bg-zinc-200/50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 px-2 py-0.5 rounded-full">
-                          {fotosIniciales.length} fotos {videosIniciales.length > 0 && `• ${videosIniciales.length} vid`} {notasVozIniciales.length > 0 && `• ${notasVozIniciales.length} voz`}
+                          {fotosIniciales.length} {fotosIniciales.length === 1 ? "foto" : "fotos"}
                         </span>
                       </div>
                     </div>
 
-                    {/* Barra de 2 Acciones Discretas */}
-                    <div className="grid grid-cols-2 gap-1.5 p-1 bg-zinc-200/60 dark:bg-black/40 rounded-xl border border-zinc-200 dark:border-white/5">
+                    {/* Barra de Acción: Solo Foto */}
+                    <div className="p-1 bg-zinc-200/60 dark:bg-black/40 rounded-xl border border-zinc-200 dark:border-white/5">
                       <button
                         type="button"
                         onClick={() => setPanelMultimedia((curr) => (curr === "foto" ? null : "foto"))}
-                        className={`py-1.5 px-2 rounded-lg text-xs font-medium transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                        className={`w-full py-1.5 px-3 rounded-lg text-xs font-medium transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                           panelMultimedia === "foto"
                             ? "bg-sky-500/20 text-sky-700 dark:text-sky-300 border border-sky-500/30"
                             : "text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white hover:bg-white/80 dark:hover:bg-white/5"
@@ -4858,30 +4893,6 @@ export default function ModalNuevaOrdenTrabajo({
                         {fotosIniciales.length > 0 && (
                           <span className="w-4 h-4 rounded-full bg-sky-500/30 text-sky-800 dark:text-sky-200 text-[9px] font-bold flex items-center justify-center">
                             {fotosIniciales.length}
-                          </span>
-                        )}
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (grabandoVideo) detenerGrabacionVideo();
-                          setPanelMultimedia((curr) => (curr === "audio" ? null : "audio"));
-                        }}
-                        className={`py-1.5 px-2 rounded-lg text-xs font-medium transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                          panelMultimedia === "audio"
-                            ? "bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30"
-                            : "text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white hover:bg-white/80 dark:hover:bg-white/5"
-                        }`}
-                        title="Nota de voz con dictado y almacenamiento en Cloudflare R2"
-                      >
-                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 0 0 6-6v-1.5m-6 7.5a6 6 0 0 1-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15a3 3 0 0 1-3-3V6a3 3 0 0 1 6 0v6a3 3 0 0 1-3 3Z" />
-                        </svg>
-                        <span>Nota de voz</span>
-                        {notasVozIniciales.length > 0 && (
-                          <span className="w-4 h-4 rounded-full bg-emerald-500/30 text-emerald-800 dark:text-emerald-200 text-[9px] font-bold flex items-center justify-center">
-                            {notasVozIniciales.length}
                           </span>
                         )}
                       </button>
@@ -4911,7 +4922,7 @@ export default function ModalNuevaOrdenTrabajo({
                       <div className="p-3 rounded-xl bg-white dark:bg-black/40 border border-zinc-200 dark:border-white/10 space-y-2.5 animate-fade-in shadow-xs">
                         <div className="flex items-center justify-between text-xs pb-1">
                           <div className="flex items-center gap-1.5">
-                            <span className="text-zinc-900 dark:text-zinc-200 font-semibold">Fotografías del vehículo</span>
+                            <span className="text-zinc-900 dark:text-zinc-200 font-semibold">Fotos</span>
                             <span className="text-[10px] text-zinc-600 dark:text-zinc-500 font-medium">
                               ({fotosIniciales.length}/{MULTIMEDIA_CONFIG.MAX_PHOTOS})
                             </span>
@@ -4986,7 +4997,7 @@ export default function ModalNuevaOrdenTrabajo({
                                   />
                                   <circle cx="12" cy="13" r="3" />
                                 </svg>
-                                <span>Tomar con cámara</span>
+                                <span>Cámara</span>
                               </button>
 
                               <button
@@ -5007,12 +5018,12 @@ export default function ModalNuevaOrdenTrabajo({
                                     d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5"
                                   />
                                 </svg>
-                                <span>Adjuntar imágenes</span>
+                                <span>Galería</span>
                               </button>
                             </div>
 
                             <p className="text-[10px] text-zinc-600 dark:text-zinc-500 text-center font-medium">
-                              Compresión inteligente activada (preserva rayones, placas y daños)
+                              Compresión
                             </p>
 
                             <input
@@ -5179,8 +5190,8 @@ export default function ModalNuevaOrdenTrabajo({
                       </div>
                     )}
 
-                    {/* PANEL CONTEXTUAL 3: NOTA DE VOZ */}
-                    {panelMultimedia === "audio" && (
+                    {/* PANEL CONTEXTUAL 3: NOTA DE VOZ (Deshabilitado: solo fotos) */}
+                    {false && (
                       <div className="p-3.5 rounded-2xl bg-white dark:bg-black/50 border border-emerald-500/30 space-y-3 animate-fade-in shadow-xl">
                         <div className="flex items-center justify-between text-xs pb-1 border-b border-zinc-200 dark:border-white/10">
                           <div className="flex items-center gap-2">
@@ -5285,7 +5296,7 @@ export default function ModalNuevaOrdenTrabajo({
                                 </span>
                               </div>
                               <audio
-                                src={audioUrlTemp}
+                                src={audioUrlTemp || undefined}
                                 controls
                                 className="w-full h-9 rounded-lg"
                                 preload="metadata"
@@ -6241,73 +6252,17 @@ export default function ModalNuevaOrdenTrabajo({
           )}
         </div>
 
-        {/* Pie Inferior: Navegación */}
+        {/* Pie Inferior: Navegación y Fecha */}
         <div
           className={
             isPageMode
-              ? "p-3.5 sm:p-5 bg-zinc-50/70 dark:bg-white/[0.02] flex items-center justify-between gap-3 shrink-0"
-              : "px-4 py-3 sm:px-6 sm:py-4 flex items-center justify-between gap-3 bg-zinc-50/70 dark:bg-white/[0.02] shrink-0"
+              ? "p-3.5 sm:p-5 bg-zinc-50/70 dark:bg-white/[0.02] flex items-center justify-end gap-3 shrink-0"
+              : "px-4 py-3 sm:px-6 sm:py-4 flex items-center justify-end gap-3 bg-zinc-50/70 dark:bg-white/[0.02] shrink-0"
           }
         >
-          <div className="flex items-center gap-2 min-w-0">
-            {mostrarFormNuevoCliente ? (
-              <button
-                type="button"
-                onClick={() => setMostrarFormNuevoCliente(false)}
-                className="px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-xl bg-zinc-200/60 hover:bg-zinc-200 dark:bg-white/[0.05] dark:hover:bg-white/[0.10] text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white text-xs sm:text-sm font-medium transition-all cursor-pointer active:scale-95 flex items-center gap-1.5 shrink-0 min-h-[44px]"
-              >
-                <span>←</span>
-                <span>Atrás</span>
-              </button>
-            ) : pasoActivo > 1 ? (
-              <button
-                type="button"
-                onClick={() => {
-                  if (pasoActivo === 3) {
-                    if (subiendoFoto || grabandoVideo || subiendoVideo || grabandoAudio || subiendoAudio) {
-                      mostrarToast("Hay una grabación o subida en curso. Finalízala o cancélala antes de retroceder.", "err");
-                      return;
-                    }
-                    detenerTracksMedia();
-                  }
-                  // Cerrar escáner al retroceder
-                  detenerCamara();
-                  setMostrarEscanerMatricula(false);
-                  setPasoActivo((p) => ((p - 1) as 1 | 2 | 3 | 4));
-                }}
-                className="px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-xl bg-zinc-200/60 hover:bg-zinc-200 dark:bg-white/[0.05] dark:hover:bg-white/[0.10] text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white text-xs sm:text-sm font-medium transition-all cursor-pointer active:scale-95 flex items-center gap-1.5 shrink-0 min-h-[44px]"
-              >
-                <span>←</span>
-                <span>Atrás</span>
-              </button>
-            ) : isPageMode ? (
-              <Link
-                href="/taller"
-                onClick={() => {
-                  resetFormularioCompleto();
-                }}
-                className="px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white dark:text-white text-xs sm:text-sm font-medium transition-all cursor-pointer active:scale-95 flex items-center gap-1.5 shrink-0 min-h-[44px]"
-              >
-                <span>←</span>
-                <span>Volver</span>
-              </Link>
-            ) : (
-              <button
-                type="button"
-                onClick={handleCancelarSinGuardar}
-                disabled={creando}
-                className="px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white dark:text-white text-xs sm:text-sm font-medium transition-all cursor-pointer active:scale-95 disabled:opacity-50 min-h-[44px] shrink-0 flex items-center gap-1.5"
-              >
-                <span>←</span>
-                <span>Volver</span>
-              </button>
-            )}
-
-          </div>
-
-          {/* En PC / Tablet: Fecha y Hora de Recepción en el medio */}
+          {/* Fecha y Hora de Recepción alineada a la derecha al final */}
           {fechaHoraRecepcion && (
-            <div className="hidden md:flex items-center justify-center">
+            <div className="flex items-center">
               <span
                 title="Fecha y hora de recepción"
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-200/60 dark:bg-white/[0.04] text-zinc-700 dark:text-zinc-400 text-xs font-mono font-semibold min-w-0"
@@ -6321,97 +6276,55 @@ export default function ModalNuevaOrdenTrabajo({
             </div>
           )}
 
-          <div className="flex items-center gap-2 shrink-0">
-            {editOrderId && pasoActivo < 4 && (
-              <button
-                type="button"
-                onClick={handleCrearOrdenFinal}
-                disabled={creando}
-                className="px-3.5 py-2 sm:px-5 sm:py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs sm:text-sm font-bold transition-all cursor-pointer flex items-center justify-center shadow-md shadow-emerald-600/25 active:scale-95 min-h-[44px] disabled:opacity-50"
-              >
-                <span>{creando ? "Guardando..." : "Guardar"}</span>
-              </button>
-            )}
-            {pasoActivo < 4 ? (
-              <button
-                type="button"
-                onClick={() => {
-                  if (pasoActivo === 1) {
-                    if (!tieneCliente) {
-                      mostrarToast("Selecciona o ingresa un cliente primero", "err");
-                      return;
-                    }
-                    irAPaso(2);
-                  } else if (pasoActivo === 2) {
-                    if (!tieneVehiculo) {
-                      mostrarToast("Ingresa la placa del vehículo", "err");
-                      return;
-                    }
-                    irAPaso(3);
-                  } else if (pasoActivo === 3) {
-                    if (subiendoFoto || grabandoVideo || subiendoVideo || grabandoAudio || subiendoAudio) {
-                      mostrarToast("Hay una grabación o subida multimedia en curso. Espera o finalízala antes de continuar.", "err");
-                      return;
-                    }
-                    irAPaso(4);
-                  }
-                }}
-                className="px-4 py-2 sm:px-6 sm:py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs sm:text-sm font-semibold transition-all cursor-pointer flex items-center gap-1.5 shadow-md shadow-blue-600/25 active:scale-95 min-h-[44px]"
-              >
-                <span>Siguiente</span>
-                <span>→</span>
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={handleCrearOrdenFinal}
-                disabled={creando}
-                className="px-4 py-2 sm:px-6 sm:py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 border border-blue-400/40 text-white text-xs sm:text-sm font-bold transition-all cursor-pointer shadow-md shadow-blue-600/30 active:scale-95 disabled:opacity-50 flex items-center gap-2 min-h-[44px]"
-              >
-                {creando ? (
-                  <>
-                    <svg
-                      className="w-4 h-4 animate-spin"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                      strokeWidth={1.5}
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"
-                      />
-                    </svg>
-                    <span>{editOrderId ? "Guardando..." : "Creando orden..."}</span>
-                  </>
-                ) : (
-                  <>
-                    <span>{editOrderId ? "Guardar" : "Crear orden"}</span>
-                    <span>✓</span>
-                  </>
-                )}
-              </button>
-            )}
-          </div>
+          {/* Botones de acción final (Guardar o Crear orden) en el paso final o edición */}
+          {(editOrderId || pasoActivo === 4) && (
+            <div className="flex items-center gap-2 shrink-0">
+              {editOrderId && pasoActivo < 4 && (
+                <button
+                  type="button"
+                  onClick={handleCrearOrdenFinal}
+                  disabled={creando}
+                  className="px-3.5 py-2 sm:px-5 sm:py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs sm:text-sm font-bold transition-all cursor-pointer flex items-center justify-center shadow-md shadow-emerald-600/25 active:scale-95 min-h-[44px] disabled:opacity-50"
+                >
+                  <span>{creando ? "Guardando..." : "Guardar"}</span>
+                </button>
+              )}
+              {pasoActivo === 4 && (
+                <button
+                  type="button"
+                  onClick={handleCrearOrdenFinal}
+                  disabled={creando}
+                  className="px-4 py-2 sm:px-6 sm:py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 border border-blue-400/40 text-white text-xs sm:text-sm font-bold transition-all cursor-pointer shadow-md shadow-blue-600/30 active:scale-95 disabled:opacity-50 flex items-center gap-2 min-h-[44px]"
+                >
+                  {creando ? (
+                    <>
+                      <svg
+                        className="w-4 h-4 animate-spin"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth={1.5}
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"
+                        />
+                      </svg>
+                      <span>{editOrderId ? "Guardando..." : "Creando orden..."}</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>{editOrderId ? "Guardar" : "Crear orden"}</span>
+                      <span>✓</span>
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </div>
-
-      {/* En móvil: Fuera de este rectángulo al final del móvil, más grande */}
-      {fechaHoraRecepcion && (
-        <div className="md:hidden flex items-center justify-center pt-3 pb-1 text-center">
-          <span
-            title="Fecha y hora de recepción"
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-white/90 dark:bg-[#121215]/90 backdrop-blur-md border border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-200 text-xs sm:text-sm font-semibold font-mono shadow-xs"
-          >
-            <svg className="w-4 h-4 text-emerald-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-              <circle cx="12" cy="12" r="9" />
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 7v5l3 2" />
-            </svg>
-            <span>{fechaHoraRecepcion}</span>
-          </span>
-        </div>
-      )}
     </div>
   );
 

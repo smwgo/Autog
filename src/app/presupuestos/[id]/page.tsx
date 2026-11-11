@@ -1302,7 +1302,7 @@ export default function PaginaDetallePropuesta() {
                     Centro Automotriz
                   </p>
                   <p className="text-xs text-zinc-600 dark:text-zinc-400 font-normal mt-0.5">
-                    Ingresado por: {orden?.mechanic ? orden.mechanic.split("(")[0].trim() : "Carlos Rodríguez"}
+                    Ingresado por: {orden?.mechanic ? orden.mechanic.replace(/\s*\([^)]*\)/g, "").trim() : "Carlos Rodríguez"}
                   </p>
                 </div>
               </div>
@@ -1547,7 +1547,7 @@ export default function PaginaDetallePropuesta() {
                     <div className="flex items-center gap-1.5 text-xs text-zinc-500 dark:text-zinc-400">
                       <span className="text-zinc-400">👨‍🔧</span>
                       <span className="font-normal text-zinc-800 dark:text-zinc-200 truncate">
-                        {orden.mechanic || "Carlos Rodríguez (Taller)"}
+                        {(orden.mechanic || "Carlos Rodríguez").replace(/\s*\([^)]*\)/g, "").trim() || "Carlos Rodríguez"}
                       </span>
                     </div>
 
@@ -2470,7 +2470,7 @@ export default function PaginaDetallePropuesta() {
             <div className="space-y-2">
               <div className="border-b border-black w-48 mx-auto" />
               <p className="font-bold">AutoG Centro Automotriz</p>
-              <p className="text-[10px] text-zinc-500">Mecánico: {orden.mechanic}</p>
+              <p className="text-[10px] text-zinc-500">Mecánico: {(orden.mechanic || "Carlos Rodríguez").replace(/\s*\([^)]*\)/g, "").trim()}</p>
             </div>
           </div>
         </div>

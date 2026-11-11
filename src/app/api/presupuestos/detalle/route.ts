@@ -345,7 +345,7 @@ export async function GET(request: Request) {
           client: order.client,
           clientPhone: order.clientPhone,
           clientIdDoc: order.clientIdDoc,
-          mechanic: order.mechanic,
+          mechanic: order.mechanic ? order.mechanic.replace(/\s*\([^)]*\)/g, "").trim() : "",
           status: order.status,
           progress: Number(order.progress || 0),
           mileage: order.mileage,

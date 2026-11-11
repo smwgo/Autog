@@ -41,18 +41,18 @@ export default function ModalPresupuestoPdf({
     orden.items && orden.items.length > 0
       ? orden.items
       : Array.isArray((orden as any).services)
-      ? (orden as any).services.map((srv: any, idx: number) =>
+        ? (orden as any).services.map((srv: any, idx: number) =>
           typeof srv === "string"
             ? { id: `srv_${idx}`, name: srv, qty: 1, price: 0, type: "SERVICE" }
             : {
-                id: srv.id || `srv_${idx}`,
-                name: srv.name || srv.title || "Servicio",
-                qty: srv.qty || 1,
-                price: srv.price || 0,
-                type: "SERVICE",
-              }
+              id: srv.id || `srv_${idx}`,
+              name: srv.name || srv.title || "Servicio",
+              qty: srv.qty || 1,
+              price: srv.price || 0,
+              type: "SERVICE",
+            }
         )
-      : [];
+        : [];
 
   const items = rawItems;
   const hallazgos = orden.inspectionFindings || [];
@@ -330,8 +330,8 @@ export default function ModalPresupuestoPdf({
             </span>
             <div className="mt-1 flex items-center justify-start sm:justify-end">
               {orden.quoteStatus === "Aprobado" ||
-              orden.status === "Aprobado" ||
-              orden.quoteStatus === "ACEPTADO" ? (
+                orden.status === "Aprobado" ||
+                orden.quoteStatus === "ACEPTADO" ? (
                 <span className="px-2.5 py-0.5 rounded-md bg-emerald-50 border border-emerald-300 text-emerald-800 text-sm font-normal">
                   Aprobado
                 </span>
@@ -369,7 +369,7 @@ export default function ModalPresupuestoPdf({
           </div>
           <div>
             <span className="text-sm font-normal text-zinc-500 block">Técnico</span>
-            <span className="text-sm font-normal text-zinc-900 block truncate mt-0.5">{formatoNombrePropio(orden.mechanic || "Taller")}</span>
+            <span className="text-sm font-normal text-zinc-900 block truncate mt-0.5">{formatoNombrePropio((orden.mechanic || "Taller").replace(/\s*\([^)]*\)/g, "").trim() || "Taller")}</span>
           </div>
         </div>
 
