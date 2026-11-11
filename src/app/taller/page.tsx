@@ -1365,7 +1365,7 @@ export default function TallerPanel() {
       }
     }
 
-    return [...fotosCatalogo, ...(ordenActiva.receptionPhotos || [])].find(
+    return fotosCatalogo.find(
       (foto) => /^(data:image\/|https?:\/\/|\/|blob:)/i.test(foto.trim())
     ) || null;
   }, [clientesCatalogo, ordenActiva]);
@@ -5028,7 +5028,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
               </div>
             )}
             <div className="flex items-center gap-2 shrink-0 ml-auto">
-              {ordenActiva && (
+              {ordenActiva && ordenActiva.plate && ordenActiva.plate !== "EXPRESS" && (
                 <Link
                   href={`/taller/nueva-orden?editId=${encodeURIComponent(ordenActiva.id)}`}
                   onClick={() => {
@@ -5176,13 +5176,30 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                       console.error("No se pudieron cargar las fotos del vehículo:", error);
                     }
                   }
-                  const todasLasFotos = [...fotosVehiculo, ...(auto.receptionPhotos || [])].filter(
+                  if (vehiculoCatalogo?.imageUrl && !fotosVehiculo.includes(vehiculoCatalogo.imageUrl)) {
+                    fotosVehiculo.unshift(vehiculoCatalogo.imageUrl);
+                  }
+                  const todasLasFotos = fotosVehiculo.filter(
                     (foto): foto is string => typeof foto === "string" && /^(data:image\/|https?:\/\/|\/|blob:)/i.test(foto.trim())
                   );
                   const fotoVehiculo = todasLasFotos[0];
                   const nombreVehiculo = anioVehiculo
                     ? auto.vehicle.replace(String(anioVehiculo), "").trim()
                     : auto.vehicle;
+
+                  const clienteCatalogo = clientesCatalogo.find(
+                    (c) =>
+                      c.id === (auto as any).customerId ||
+                      (Array.isArray(c.vehicles) && c.vehicles.some((v: any) => v.plate === auto.plate || v.id === auto.vehicleId)) ||
+                      (c.name && auto.client && c.name.toLowerCase() === auto.client.toLowerCase())
+                  );
+                  const rawClient = auto.client || (auto as any).customer?.name || clienteCatalogo?.name || "";
+                  const nombreClienteDisplay =
+                    rawClient &&
+                    !rawClient.toLowerCase().includes("consumidor final") &&
+                    !rawClient.toLowerCase().includes("cliente mostrador")
+                      ? rawClient
+                      : "";
                   return (
                     <button
                       key={auto.id}
@@ -5273,6 +5290,27 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                           )}
                         </span>
                       </span>
+                      <div className="shrink-0 text-right max-w-[140px] sm:max-w-[220px] pl-1">
+                        {nombreClienteDisplay && (
+                          <span
+                            className="block text-xs sm:text-sm font-bold text-zinc-900 dark:text-white truncate"
+                            title={nombreClienteDisplay}
+                          >
+                            {nombreClienteDisplay}
+                          </span>
+                        )}
+                        <span className="mt-0.5 inline-flex items-center justify-end">
+                          <span
+                            className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                              auto.status === "Pausada"
+                                ? "bg-amber-500/15 text-amber-600 dark:text-amber-400"
+                                : "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+                            }`}
+                          >
+                            {auto.status === "Pausada" ? "Pausada" : "Activa"}
+                          </span>
+                        </span>
+                      </div>
                       <svg
                         className="w-5 h-5 sm:w-4 sm:h-4 shrink-0 text-zinc-400"
                         fill="none"
@@ -5287,37 +5325,53 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                   );
                 })}
               </div>
-              <div className="w-[calc(100%+1.25rem)] -mx-2.5 px-2.5 py-2 sm:w-[calc(100%+3rem)] sm:-mx-6 sm:px-6 md:w-[calc(100%+4rem)] md:-mx-8 md:px-8 bg-zinc-100 dark:bg-[#34343a] flex items-center justify-between gap-2">
-                <div
-                  className={`inline-flex items-center gap-2 px-3.5 py-1.5 sm:px-3 sm:py-1.5 rounded-xl sm:rounded-lg border text-xs font-medium ${
-                    ordenActiva.status === "Pausada"
-                      ? "bg-amber-500/10 border-amber-500/25 text-amber-700 dark:text-amber-400"
-                      : "bg-emerald-500/10 border-emerald-500/25 text-emerald-700 dark:text-emerald-400"
-                  }`}
-                >
-                  <span className="text-zinc-700 dark:text-zinc-300 whitespace-nowrap text-xs">
-                    Ingreso:{" "}
-                    <span
-                      className="text-zinc-900 dark:text-white font-semibold sm:font-medium"
-                      title={formatearFechaCompleta(ordenActiva.dateIn || ordenActiva.startedAt)}
-                    >
-                      {formatearFechaIngreso(ordenActiva.dateIn || ordenActiva.startedAt)}
+              <div className="w-[calc(100%+1.25rem)] -mx-2.5 px-2.5 py-2 sm:w-[calc(100%+3rem)] sm:-mx-6 sm:px-6 md:w-[calc(100%+4rem)] md:-mx-8 md:px-8 bg-zinc-100 dark:bg-[#34343a] flex items-center justify-between gap-2 flex-wrap">
+                <div className="flex items-center gap-2 flex-wrap">
+                  {/* Ingreso y Estado */}
+                  <div
+                    className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl sm:rounded-lg border text-xs font-medium ${
+                      ordenActiva.status === "Pausada"
+                        ? "bg-amber-500/10 border-amber-500/25 text-amber-700 dark:text-amber-400"
+                        : "bg-emerald-500/10 border-emerald-500/25 text-emerald-700 dark:text-emerald-400"
+                    }`}
+                  >
+                    <span className="text-zinc-700 dark:text-zinc-300 whitespace-nowrap">
+                      Ingreso:{" "}
+                      <span
+                        className="text-zinc-900 dark:text-white font-semibold"
+                        title={formatearFechaCompleta(ordenActiva.dateIn || ordenActiva.startedAt)}
+                      >
+                        {formatearFechaIngreso(ordenActiva.dateIn || ordenActiva.startedAt)}
+                      </span>
                     </span>
-                  </span>
 
-                  <span className={ordenActiva.status === "Pausada" ? "text-amber-500/60" : "text-emerald-500/60"}>•</span>
+                    <span className={ordenActiva.status === "Pausada" ? "text-amber-500/60" : "text-emerald-500/60"}>•</span>
 
-                  {ordenActiva.status === "Pausada" ? (
-                    <span className="inline-flex items-center gap-1.5 text-amber-700 dark:text-amber-400 shrink-0 font-semibold sm:font-medium" title="En Pausa">
-                      <span className="w-2.5 h-2.5 sm:w-2 sm:h-2 rounded-full bg-amber-500 dark:bg-amber-400 shrink-0" />
-                      <span>En Pausa</span>
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400 shrink-0 font-semibold sm:font-medium" title="Trabajando">
-                      <span className="w-2.5 h-2.5 sm:w-2 sm:h-2 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse shrink-0" />
-                      <span>Trabajando</span>
-                    </span>
-                  )}
+                    {ordenActiva.status === "Pausada" ? (
+                      <span className="inline-flex items-center gap-1.5 text-amber-700 dark:text-amber-400 shrink-0 font-semibold" title="En Pausa">
+                        <span className="w-2.5 h-2.5 sm:w-2 sm:h-2 rounded-full bg-amber-500 dark:bg-amber-400 shrink-0" />
+                        <span>Pausada</span>
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400 shrink-0 font-semibold" title="Trabajando">
+                        <span className="w-2.5 h-2.5 sm:w-2 sm:h-2 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse shrink-0" />
+                        <span>Trabajando</span>
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Órdenes del día con palabras cortas */}
+                  <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl sm:rounded-lg bg-zinc-200/70 dark:bg-white/5 border border-zinc-300 dark:border-white/10 text-xs font-semibold text-zinc-800 dark:text-zinc-200">
+                    <span>Órdenes: <strong className="text-blue-600 dark:text-blue-400">{autosEnPista.length}</strong></span>
+                    <span>•</span>
+                    <span>Activas: <strong className="text-emerald-600 dark:text-emerald-400">{autosEnPista.filter((o) => o.status !== "Pausada").length}</strong></span>
+                    {autosEnPista.some((o) => o.status === "Pausada") && (
+                      <>
+                        <span>•</span>
+                        <span>Pausadas: <strong className="text-amber-600 dark:text-amber-400">{autosEnPista.filter((o) => o.status === "Pausada").length}</strong></span>
+                      </>
+                    )}
+                  </div>
                 </div>
                 {ordenActiva &&
                   (ordenActiva.quoteStatus === "Pendiente" ||

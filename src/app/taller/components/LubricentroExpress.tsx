@@ -552,24 +552,13 @@ export default function LubricentroExpress({
   const handleActualizarItemsOrdenGenerales = async (nuevosItems: any[]) => {
     let ord = ordenActiva || ordenLocalBorrador;
     if (!ord) {
-      ord = {
-        id: `ord_exp_${Date.now()}`,
-        orderNumber: `ORD-${Date.now().toString().slice(-4)}`,
-        plate: "EXPRESS",
-        vehicle: "Atención Rápida",
-        clientName: "Cliente Mostrador",
-        status: "01 En Espera",
-        items: nuevosItems,
-        dateIn: new Date().toISOString(),
-      };
-      setOrdenLocalBorrador(ord);
-      onOrdenCreada?.(ord);
-    } else {
-      const ordActualizada = { ...ord, items: nuevosItems };
-      if (!ordenActiva) setOrdenLocalBorrador(ordActualizada);
-      onOrdenCreada?.(ordActualizada);
-      await sincronizarOrdenLubricentro({ items: nuevosItems });
+      if (mostrarToast) mostrarToast("Selecciona o abre una orden de trabajo real primero", "err");
+      return;
     }
+    const ordActualizada = { ...ord, items: nuevosItems };
+    if (!ordenActiva) setOrdenLocalBorrador(ordActualizada);
+    onOrdenCreada?.(ordActualizada);
+    await sincronizarOrdenLubricentro({ items: nuevosItems });
   };
 
   const tieneServicioEnOrden = (codeOrKey: string, name?: string) => {
@@ -592,18 +581,8 @@ export default function LubricentroExpress({
   }) => {
     let ord = ordenActiva || ordenLocalBorrador;
     if (!ord) {
-      ord = {
-        id: `ord_exp_${Date.now()}`,
-        orderNumber: `ORD-${Date.now().toString().slice(-4)}`,
-        plate: "EXPRESS",
-        vehicle: "Atención Rápida",
-        clientName: "Cliente Mostrador",
-        status: "01 En Espera",
-        items: [],
-        dateIn: new Date().toISOString(),
-      };
-      setOrdenLocalBorrador(ord);
-      onOrdenCreada?.(ord);
+      if (mostrarToast) mostrarToast("Selecciona o abre una orden de trabajo real primero", "err");
+      return;
     }
 
     const existe = itemsOrden.find(

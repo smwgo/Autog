@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { getClientActiveBranch } from "@/lib/branch";
 import {
   MULTIMEDIA_CONFIG,
@@ -1858,11 +1859,13 @@ export default function ModalNuevaOrdenTrabajo({
         .trim();
       if (cleanCorr) setCorrelativoOrden(cleanCorr);
 
-      const cName = cust?.name || ord.client || "";
-      const cIdent = cust?.identification || ord.clientIdDoc || "";
-      const cPhone = cust?.phone || ord.clientPhone || "";
-      const cEmail = cust?.email || ord.clientEmail || "";
-      const cAddr = cust?.address || "";
+      const rawName = cust?.name || ord.client || "";
+      const esClienteFalso = !rawName || rawName.toLowerCase().includes("consumidor final") || rawName.toLowerCase().includes("cliente mostrador");
+      const cName = esClienteFalso ? "" : rawName;
+      const cIdent = esClienteFalso ? "" : cust?.identification || ord.clientIdDoc || "";
+      const cPhone = esClienteFalso ? "" : cust?.phone || ord.clientPhone || "";
+      const cEmail = esClienteFalso ? "" : cust?.email || ord.clientEmail || "";
+      const cAddr = esClienteFalso ? "" : cust?.address || "";
       const cType = cust?.type === "Empresa" ? "Empresa" : "Persona";
 
       setTipoCliente(cType);
@@ -1875,7 +1878,7 @@ export default function ModalNuevaOrdenTrabajo({
       setEmailContacto(cEmail);
       setNuevoClienteFoto(cust?.avatar || cust?.imageUrl || ord?.customer?.avatar || ord?.customer?.imageUrl || null);
 
-      if (cust) {
+      if (cust && !esClienteFalso) {
         setClienteSeleccionado(cust);
       } else if (cName) {
         setClienteSeleccionado({
@@ -1888,6 +1891,8 @@ export default function ModalNuevaOrdenTrabajo({
           type: cType === "Empresa" ? "Empresa" : "Personal",
           vehicles: veh ? [veh] : [],
         });
+      } else {
+        setClienteSeleccionado(null);
       }
 
       const anioMatch = String(ord.vehicle || "").match(/\b(?:19|20)\d{2}\b/)?.[0];
@@ -1896,12 +1901,21 @@ export default function ModalNuevaOrdenTrabajo({
         .replace(new RegExp(`\\b${anioInicial}\\b`), "")
         .trim();
       const partesVeh = tituloSinAnio.split(/\s+/).filter(Boolean);
-      const marcaInicial = veh?.brand || partesVeh[0] || "";
-      const modeloInicial = veh?.model || partesVeh.slice(1).join(" ") || "";
-      const placaInicialOrd = veh?.plate || ord.plate || "";
+      const rawMarca = veh?.brand || partesVeh[0] || "";
+      const rawModelo = veh?.model || partesVeh.slice(1).join(" ") || "";
+      const rawPlaca = veh?.plate || ord.plate || "";
+
+      const esVehiculoFalso =
+        rawPlaca.toUpperCase() === "EXPRESS" ||
+        rawMarca.toLowerCase().includes("atención rápida") ||
+        rawMarca.toLowerCase().includes("atencion rapida");
+
+      const marcaInicial = esVehiculoFalso ? "" : rawMarca;
+      const modeloInicial = esVehiculoFalso ? "" : rawModelo;
+      const placaInicialOrd = esVehiculoFalso ? "" : rawPlaca;
       const tipoInicial = veh?.vehicleType || detectarCarroceria(modeloInicial, marcaInicial) || "Auto";
 
-      setVehiculoSeleccionadoId(veh?.id || ord.vehicleId || "NUEVO");
+      setVehiculoSeleccionadoId(esVehiculoFalso ? "NUEVO" : (veh?.id || ord.vehicleId || "NUEVO"));
       setVehiculoPlaca(placaInicialOrd);
       setVehiculoMarca(marcaInicial);
       setVehiculoModelo(modeloInicial);
@@ -1948,15 +1962,22 @@ export default function ModalNuevaOrdenTrabajo({
 
       if (ord.mechanic) {
         const primerMec = String(ord.mechanic).split(",")[0].split("(")[0].trim();
-        if (primerMec) {
+        const tareaMec = String(ord.mechanic).includes("(")
+          ? String(ord.mechanic).split("(")[1]?.replace(/\)/g, "").trim()
+          : "";
+        if (primerMec && primerMec.toLowerCase() !== "sin asignar") {
           setAsignacionesTecnicos([
             {
               id: "asig-1",
               nombre: primerMec,
-              tarea: "Diagnóstico y mantenimiento",
+              tarea: tareaMec || "",
             },
           ]);
+        } else {
+          setAsignacionesTecnicos([]);
         }
+      } else {
+        setAsignacionesTecnicos([]);
       }
     };
 
@@ -2194,38 +2215,6 @@ export default function ModalNuevaOrdenTrabajo({
     setPasoActivo(2);
   };
 
-  // Al elegir Consumidor Final para trabajos rápidos sin registro nominal
-  const handleSeleccionarConsumidorFinal = () => {
-    const cfExistente = (listaClientes || []).find(
-      (c) =>
-        String(c.identification || "").trim() === "9999999999" ||
-        String(c.name || "").trim().toLowerCase() === "consumidor final"
-    );
-    const consumidorFinalObj = cfExistente || {
-      id: undefined,
-      name: "Consumidor Final",
-      identification: "9999999999",
-      phone: "S/N",
-      email: "",
-      type: "Personal",
-      vehicles: [],
-    };
-
-    setClienteSeleccionado(consumidorFinalObj);
-    setBusquedaCliente("Consumidor Final");
-    setEmailContacto("");
-    setMostrarDropdownClientes(false);
-    setMostrarFormNuevoCliente(false);
-
-    // En Consumidor Final abrir directo el ingreso rápido de placa/vehículo
-    setVehiculoSeleccionadoId("NUEVO");
-    if (matriculaEscaneadaInfo && !matriculaEscaneadaInfo.existe && matriculaEscaneadaInfo.placa) {
-      setVehiculoPlaca(matriculaEscaneadaInfo.placa);
-    }
-    setMostrarFormNuevoVehiculo(true);
-    mostrarToast("👤 Consumidor Final seleccionado", "ok");
-    setPasoActivo(2);
-  };
 
   // Al elegir un vehículo existente del cliente
   const handleSeleccionarVehiculo = (v: any) => {
@@ -2282,13 +2271,7 @@ export default function ModalNuevaOrdenTrabajo({
     setPanelMultimedia(null);
     detenerTracksMedia();
     setIngresadoPor(empleadoLogueado.nombre || "Hernan Marquez");
-    setAsignacionesTecnicos([
-      {
-        id: "asig-1",
-        nombre: empleadoLogueado.nombre || mecanicos[0] || "Hernan Marquez",
-        tarea: "Diagnóstico y mantenimiento",
-      },
-    ]);
+    setAsignacionesTecnicos([]);
   };
 
   // Crear la orden directamente en Neon DB y entrar a la página
@@ -2305,16 +2288,16 @@ export default function ModalNuevaOrdenTrabajo({
         : nuevoClienteNombre
     ).trim();
 
-    if (!nombreFinal) {
-      mostrarToast("Por favor selecciona o ingresa el nombre del cliente", "err");
+    if (!nombreFinal || nombreFinal.toLowerCase().includes("consumidor final") || nombreFinal.toLowerCase().includes("cliente mostrador")) {
+      mostrarToast("Por favor ingresa los datos reales del cliente", "err");
       setPasoActivo(1);
       return;
     }
 
     // 2. Validar Vehículo
     const placaFinal = vehiculoPlaca.trim().toUpperCase();
-    if (!placaFinal) {
-      mostrarToast("Por favor ingresa la placa del vehículo", "err");
+    if (!placaFinal || placaFinal === "EXPRESS") {
+      mostrarToast("Por favor ingresa la placa real del vehículo", "err");
       setPasoActivo(2);
       return;
     }
@@ -2429,7 +2412,11 @@ export default function ModalNuevaOrdenTrabajo({
   const handleCancelarSinGuardar = () => {
     resetFormularioCompleto();
     if (isPageMode) {
-      router.push("/taller");
+      if (typeof window !== "undefined") {
+        window.location.href = "/taller";
+      } else {
+        router.push("/taller");
+      }
     } else if (onClose) {
       onClose();
     }
@@ -2558,16 +2545,18 @@ export default function ModalNuevaOrdenTrabajo({
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
               {isPageMode && (
-                <button
-                  type="button"
-                  onClick={() => router.push("/taller")}
+                <Link
+                  href="/taller"
+                  onClick={() => {
+                    resetFormularioCompleto();
+                  }}
                   className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-zinc-200/60 hover:bg-zinc-200 dark:bg-white/[0.05] dark:hover:bg-white/[0.10] text-zinc-700 dark:text-zinc-300 transition-all flex items-center justify-center shrink-0 active:scale-95 cursor-pointer"
                   title="Volver a Taller"
                 >
                   <svg className="w-4 h-4 sm:w-4.5 sm:h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
                     <path d="M19 12H5M12 19l-7-7 7-7" />
                   </svg>
-                </button>
+                </Link>
               )}
 
               <div className="flex flex-col items-start min-w-0 leading-snug">
@@ -3274,7 +3263,7 @@ export default function ModalNuevaOrdenTrabajo({
                         onClick={() => setMostrarFormNuevoCliente(false)}
                         className="text-xs text-emerald-600 dark:text-emerald-400 hover:underline font-semibold cursor-pointer"
                       >
-                        ← Volver a buscar clientes
+                        ← Volver
                       </button>
                     </div>
 
@@ -3988,7 +3977,7 @@ export default function ModalNuevaOrdenTrabajo({
                       <div className="flex items-center gap-2 text-xs">
                         <span className="text-zinc-500 dark:text-zinc-400 font-medium">Asociado a:</span>
                         <strong className="font-bold text-zinc-900 dark:text-zinc-100 bg-white dark:bg-white/5 px-2.5 py-1 rounded-lg border border-zinc-200 dark:border-white/10">
-                          {clienteSeleccionado?.name || nuevoClienteNombre || "Consumidor Final"}
+                          {clienteSeleccionado?.name || nuevoClienteNombre || "Sin cliente"}
                         </strong>
                       </div>
                       {clienteSeleccionado?.vehicles && clienteSeleccionado.vehicles.length > 0 && (
@@ -3997,7 +3986,7 @@ export default function ModalNuevaOrdenTrabajo({
                           onClick={() => setMostrarFormNuevoVehiculo(false)}
                           className="text-xs text-emerald-600 dark:text-emerald-400 hover:underline font-semibold cursor-pointer"
                         >
-                          ← Ver vehículos guardados
+                          ← Volver
                         </button>
                       )}
                     </div>
@@ -5664,7 +5653,7 @@ export default function ModalNuevaOrdenTrabajo({
                   <div className="flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-emerald-500 dark:bg-emerald-400" />
                     <span className="font-bold text-zinc-900 dark:text-white uppercase text-[11px] tracking-wider">
-                      Resumen del Servicio ({tipoIngreso})
+                      Resumen
                     </span>
                   </div>
 
@@ -5696,30 +5685,43 @@ export default function ModalNuevaOrdenTrabajo({
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div>
-                    <span className="text-zinc-600 dark:text-zinc-500 text-[11px] font-medium block">Cliente</span>
-                    <strong className="text-zinc-900 dark:text-white text-xs block truncate">
-                      {clienteSeleccionado?.name || nuevoClienteNombre || "Consumidor Final"}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="space-y-0.5">
+                    <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400 block">Cliente</span>
+                    <strong className="text-sm sm:text-base font-bold text-zinc-900 dark:text-white block truncate">
+                      {(() => {
+                        const raw = (clienteSeleccionado?.name || nuevoClienteNombre || "").trim();
+                        return !raw || raw.toLowerCase().includes("consumidor final") || raw.toLowerCase().includes("cliente mostrador")
+                          ? "Sin cliente"
+                          : raw;
+                      })()}
                     </strong>
-                    <span className="text-zinc-600 dark:text-zinc-400 text-[11px] block">
-                      {clienteSeleccionado?.identification || nuevoClienteIdentificacion || "Sin cédula/RUC"}
+                    <span className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-400 font-mono block">
+                      {(() => {
+                        const rawId = (clienteSeleccionado?.identification || nuevoClienteIdentificacion || "").trim();
+                        return !rawId || rawId === "9999999999" || rawId === "9999999999999" ? "Sin cédula/RUC" : rawId;
+                      })()}
                     </span>
                   </div>
 
-                  <div>
-                    <span className="text-zinc-600 dark:text-zinc-500 text-[11px] font-medium block">Vehículo</span>
-                    <strong className="text-zinc-900 dark:text-white text-xs block truncate">
-                      {vehiculoMarca || "Vehículo"} {vehiculoModelo}
+                  <div className="space-y-0.5">
+                    <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400 block">Vehículo</span>
+                    <strong className="text-sm sm:text-base font-bold text-zinc-900 dark:text-white block truncate">
+                      {(() => {
+                        const marca = vehiculoMarca && !vehiculoMarca.toLowerCase().includes("atención rápida") && !vehiculoMarca.toLowerCase().includes("atencion rapida") && vehiculoMarca !== "EXPRESS" ? vehiculoMarca : "";
+                        const modelo = vehiculoModelo && !vehiculoModelo.toLowerCase().includes("atención rápida") && !vehiculoModelo.toLowerCase().includes("atencion rapida") && vehiculoModelo !== "EXPRESS" ? vehiculoModelo : "";
+                        const combo = `${marca} ${modelo}`.trim();
+                        return combo || "Sin vehículo";
+                      })()}
                     </strong>
-                    <span className="text-emerald-700 dark:text-emerald-400 font-mono text-[11px] font-bold block">
-                      {vehiculoPlaca || "SIN PLACA"} {vehiculoKm ? `• ${vehiculoKm} Km` : ""}
+                    <span className="text-xs sm:text-sm text-emerald-600 dark:text-emerald-400 font-mono font-bold block">
+                      {vehiculoPlaca && vehiculoPlaca !== "EXPRESS" ? vehiculoPlaca : "SIN PLACA"} {vehiculoKm ? `• ${vehiculoKm} Km` : ""}
                     </span>
                   </div>
 
-                  <div>
-                    <span className="text-zinc-600 dark:text-zinc-500 text-[11px] font-medium block">Motivo / Trabajo</span>
-                    <p className="text-zinc-800 dark:text-zinc-300 text-[11px] line-clamp-2">
+                  <div className="space-y-0.5">
+                    <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400 block">Motivo / Trabajo</span>
+                    <p className="text-xs sm:text-sm font-medium text-zinc-800 dark:text-zinc-200 line-clamp-2">
                       {motivoIngreso || "Ingreso a revisión / servicio"}
                     </p>
                   </div>
@@ -5743,11 +5745,7 @@ export default function ModalNuevaOrdenTrabajo({
                     onClick={() => {
                       setFlotanteTecnicoSeleccionado("");
                       setBusquedaTecnico("");
-                      setFlotanteTarea(
-                        tipoIngreso === "Lubricentro"
-                          ? "Cambio de aceite y filtros"
-                          : "Diagnóstico y reparación"
-                      );
+                      setFlotanteTarea("");
                       setMostrarDropdownTecnicos(true);
                       setMostrarFlotanteAsignar(true);
                     }}
@@ -5759,27 +5757,7 @@ export default function ModalNuevaOrdenTrabajo({
                 </div>
 
                 {/* Tarjetas de Técnicos Asignados y Qué van a hacer */}
-                {asignacionesTecnicos.length === 0 ? (
-                  <div className="p-4 rounded-2xl bg-zinc-50/70 dark:bg-white/[0.02] border border-dashed border-zinc-300 dark:border-white/10 text-center text-xs text-zinc-600 dark:text-zinc-400 font-medium space-y-2">
-                    <p>No hay técnicos asignados aún para esta orden.</p>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setFlotanteTecnicoSeleccionado(listaMecanicosUnica[0] || "");
-                        setBusquedaTecnico(listaMecanicosUnica[0] || "");
-                        setFlotanteTarea(
-                          tipoIngreso === "Lubricentro"
-                            ? "Cambio de aceite y filtros"
-                            : "Diagnóstico y reparación"
-                        );
-                        setMostrarFlotanteAsignar(true);
-                      }}
-                      className="px-3 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 dark:bg-white/5 dark:hover:bg-white/10 text-blue-700 dark:text-blue-400 font-semibold text-xs cursor-pointer"
-                    >
-                      + Asignar primer técnico
-                    </button>
-                  </div>
-                ) : (
+                {asignacionesTecnicos.length > 0 && (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                     {asignacionesTecnicos.map((asig) => (
                       <div
@@ -5792,10 +5770,12 @@ export default function ModalNuevaOrdenTrabajo({
                           </div>
                           <div className="min-w-0">
                             <strong className="text-zinc-900 dark:text-white text-xs block truncate">{asig.nombre}</strong>
-                            <span className="text-[11px] text-zinc-600 dark:text-zinc-400 flex items-center gap-1 mt-0.5 truncate">
-                              <span className="text-blue-600 dark:text-blue-400">📋</span>
-                              <span className="truncate">{asig.tarea || "Trabajo general"}</span>
-                            </span>
+                            {asig.tarea && (
+                              <span className="text-[11px] text-zinc-600 dark:text-zinc-400 flex items-center gap-1 mt-0.5 truncate">
+                                <span className="text-blue-600 dark:text-blue-400">📋</span>
+                                <span className="truncate">{asig.tarea}</span>
+                              </span>
+                            )}
                           </div>
                         </div>
 
@@ -6029,17 +6009,16 @@ export default function ModalNuevaOrdenTrabajo({
                       const nuevaAsig = {
                         id: `asig-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
                         nombre: tecnicoFinal,
-                        tarea:
-                          flotanteTarea.trim() ||
-                          (tipoIngreso === "Lubricentro"
-                            ? "Servicio de lubricación"
-                            : "Diagnóstico y reparación"),
+                        tarea: flotanteTarea.trim(),
                       };
                       setAsignacionesTecnicos((prev) => [
                         ...prev.filter((a) => a.nombre !== tecnicoFinal),
                         nuevaAsig,
                       ]);
                       setMostrarFlotanteAsignar(false);
+                      setFlotanteTecnicoSeleccionado("");
+                      setBusquedaTecnico("");
+                      setFlotanteTarea("");
                     }}
                     className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white text-xs font-bold transition-all cursor-pointer shadow-md shadow-blue-600/30"
                   >
@@ -6241,7 +6220,7 @@ export default function ModalNuevaOrdenTrabajo({
                       className="px-3 py-1.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white text-xs cursor-pointer flex items-center gap-1"
                     >
                       <span>←</span>
-                      <span>Volver a Marcas</span>
+                      <span>Volver</span>
                     </button>
                   ) : (
                     <span className="text-[11px] text-zinc-600 dark:text-zinc-500 font-normal">
@@ -6302,22 +6281,25 @@ export default function ModalNuevaOrdenTrabajo({
                 <span>Atrás</span>
               </button>
             ) : isPageMode ? (
-              <button
-                type="button"
-                onClick={() => router.push("/taller")}
+              <Link
+                href="/taller"
+                onClick={() => {
+                  resetFormularioCompleto();
+                }}
                 className="px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white dark:text-white text-xs sm:text-sm font-medium transition-all cursor-pointer active:scale-95 flex items-center gap-1.5 shrink-0 min-h-[44px]"
               >
                 <span>←</span>
                 <span>Volver</span>
-              </button>
+              </Link>
             ) : (
               <button
                 type="button"
                 onClick={handleCancelarSinGuardar}
                 disabled={creando}
-                className="hidden sm:inline-flex px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-xl bg-zinc-200/60 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white text-xs sm:text-sm font-medium transition-all cursor-pointer active:scale-95 disabled:opacity-50 min-h-[44px] shrink-0"
+                className="px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white dark:text-white text-xs sm:text-sm font-medium transition-all cursor-pointer active:scale-95 disabled:opacity-50 min-h-[44px] shrink-0 flex items-center gap-1.5"
               >
-                Cancelar
+                <span>←</span>
+                <span>Volver</span>
               </button>
             )}
 

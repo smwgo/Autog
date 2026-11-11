@@ -1908,11 +1908,10 @@ export async function POST(request: Request) {
         }
 
         await prisma.$executeRawUnsafe(
-          `UPDATE "Vehicle" SET "vehicleType" = $2, "nextOilChangeMileage" = COALESCE($3, "nextOilChangeMileage"), "photosJson" = $4, "updatedAt" = NOW() WHERE "id" = $1`,
+          `UPDATE "Vehicle" SET "vehicleType" = $2, "nextOilChangeMileage" = COALESCE($3, "nextOilChangeMileage"), "updatedAt" = NOW() WHERE "id" = $1`,
           vehicle.id,
           tipoVehiculo,
-          nextOilKm,
-          photosJsonStr
+          nextOilKm
         );
 
         const vehicleTitle = `${vehicle.brand} ${vehicle.model}${vehicle.year ? " " + vehicle.year : ""}`;
@@ -3253,11 +3252,10 @@ export async function POST(request: Request) {
         }
 
         await prisma.$executeRawUnsafe(
-          `UPDATE "Vehicle" SET "vehicleType" = $2, "nextOilChangeMileage" = $3, "photosJson" = $4 WHERE "id" = $1`,
+          `UPDATE "Vehicle" SET "vehicleType" = $2, "nextOilChangeMileage" = $3 WHERE "id" = $1`,
           vehicle.id,
           tipoVehiculo,
-          kmNum > 0 ? kmNum + 5000 : null,
-          photosJsonStr
+          kmNum > 0 ? kmNum + 5000 : null
         );
 
         // 3. Crear Orden de Trabajo Unificada activa inmediatamente
@@ -3411,11 +3409,10 @@ export async function POST(request: Request) {
             : existingPhotos;
 
         await prisma.$executeRawUnsafe(
-          `UPDATE "Vehicle" SET "mileage" = $2, "nextOilChangeMileage" = COALESCE($3, "nextOilChangeMileage"), "photosJson" = $4, "updatedAt" = NOW() WHERE "id" = $1`,
+          `UPDATE "Vehicle" SET "mileage" = $2, "nextOilChangeMileage" = COALESCE($3, "nextOilChangeMileage"), "updatedAt" = NOW() WHERE "id" = $1`,
           vehicle.id,
           kmNum,
-          nextOilKm,
-          JSON.stringify(mergedPhotos)
+          nextOilKm
         );
 
         // Verificar si ya tiene orden activa en pista

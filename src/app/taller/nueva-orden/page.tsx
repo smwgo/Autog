@@ -23,7 +23,11 @@ function NuevaOrdenContent() {
           placaInicial={placa}
           clienteInicial={cliente}
           editOrderId={editId}
-          onClose={() => {}}
+          onClose={() => {
+            if (typeof window !== "undefined") {
+              window.location.href = "/taller";
+            }
+          }}
           onOrdenCreada={(orden) => {
             if (typeof window !== "undefined") {
               try {
