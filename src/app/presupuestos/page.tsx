@@ -341,7 +341,14 @@ export default function PanelPresupuestosPage() {
       }
 
       if (data.success) {
-        setOrdenes(data.ordenes || []);
+        const rawList = Array.isArray(data.ordenes) ? data.ordenes : [];
+        const seenIds = new Set<string>();
+        const ordenesUnicas = rawList.filter((o: OrdenResumen) => {
+          if (!o?.id || seenIds.has(o.id)) return false;
+          seenIds.add(o.id);
+          return true;
+        });
+        setOrdenes(ordenesUnicas);
         if (data.kpis) setKpis(data.kpis);
       } else {
         mostrarToast(data.error || "Error al cargar órdenes", "err");
@@ -569,14 +576,14 @@ export default function PanelPresupuestosPage() {
               <>
                 {/* Vista Móvil Compacta */}
                 <div className="md:hidden space-y-2.5">
-                  {ordenes.map((orden) => {
+                  {ordenes.map((orden, idx) => {
                     const esPagado = orden.quoteStatus === "Pagado" || orden.status === "Pagado";
                     const esAprobado = !esPagado && (orden.quoteStatus === "Aprobado" || orden.status === "EN_CAJA");
                     const estaTrabajando = ordenTrabajandoId === orden.id || ordenTrabajandoId === orden.orderNumber;
                     const { fecha, hora } = formatearFechaHora(orden.createdAt, orden.dateIn);
                     return (
                       <div
-                        key={orden.id}
+                        key={`movil-${orden.id || idx}`}
                         onClick={() => irAPropuesta(orden.id)}
                         className={`rounded-2xl border p-3.5 space-y-2.5 shadow-xs transition-all cursor-pointer ${
                           estaTrabajando
@@ -653,14 +660,14 @@ export default function PanelPresupuestosPage() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800 text-xs font-normal">
-                        {ordenes.map((orden) => {
+                        {ordenes.map((orden, idx) => {
                           const esPagado = orden.quoteStatus === "Pagado" || orden.status === "Pagado";
                           const esAprobado = !esPagado && (orden.quoteStatus === "Aprobado" || orden.status === "EN_CAJA");
                           const estaTrabajando = ordenTrabajandoId === orden.id || ordenTrabajandoId === orden.orderNumber;
                           const { fecha, hora } = formatearFechaHora(orden.createdAt, orden.dateIn);
                           return (
                             <tr
-                              key={orden.id}
+                              key={`desk-${orden.id || idx}`}
                               onClick={() => irAPropuesta(orden.id)}
                               className={`transition-colors cursor-pointer ${
                                 estaTrabajando

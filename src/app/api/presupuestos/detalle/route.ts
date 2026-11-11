@@ -126,6 +126,32 @@ export async function GET(request: Request) {
         vehiclePhoto = vehicleRecord.imageUrl || null;
       }
 
+      // 1.2 Calcular historial: si ha venido antes o es primera vez
+      let previousVisitsCount = 0;
+      try {
+        const pPlate = (order.plate || "").trim();
+        const pIdDoc = (order.clientIdDoc || "").trim();
+        const pCustId = (order.customerId || "").trim();
+        if (pPlate || pIdDoc || pCustId) {
+          const countRows = (await prisma.$queryRawUnsafe(
+            `SELECT COUNT(*)::int AS count FROM "WorkshopOrder" 
+             WHERE "id" != $1 
+               AND (
+                 ($2 != '' AND "plate" ILIKE $2) 
+                 OR ($3 != '' AND "clientIdDoc" = $3) 
+                 OR ($4 != '' AND "customerId" = $4)
+               )`,
+            order.id || "",
+            pPlate ? `%${pPlate}%` : "",
+            pIdDoc,
+            pCustId
+          ).catch(() => [])) as any[];
+          previousVisitsCount = Number(countRows?.[0]?.count || 0);
+        }
+      } catch (errCount) {
+        console.warn("Aviso al contar historial de visitas:", errCount);
+      }
+
       // 2. Obtener todas las evidencias multimedia asociadas desde Neon
       let evRows: any[] = [];
       try {
@@ -347,6 +373,8 @@ export async function GET(request: Request) {
           customerId: customerRecord?.id || order.customerId || null,
           vehicleId: vehicleRecord?.id || order.vehicleId || null,
           customerType: customerRecord?.type || "Personal",
+          previousVisitsCount,
+          isFirstVisit: previousVisitsCount === 0,
         },
         proveedores,
       });

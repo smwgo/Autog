@@ -108,11 +108,15 @@ export function BranchTabs({ onChange, className = "", size = "sm", iconOnly = f
   // Cerrar al click fuera
   useEffect(() => {
     if (!open) return;
-    const handler = (e: MouseEvent) => {
+    const handler = (e: MouseEvent | TouchEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
     };
     document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
+    document.addEventListener("touchstart", handler);
+    return () => {
+      document.removeEventListener("mousedown", handler);
+      document.removeEventListener("touchstart", handler);
+    };
   }, [open]);
 
   const handleSelect = (branch: FiltroSedeType) => {
@@ -143,14 +147,14 @@ export function BranchTabs({ onChange, className = "", size = "sm", iconOnly = f
         title={`Sede activa: ${active.label}`}
         className={
           iconOnly
-            ? `inline-flex items-center justify-center h-9 w-9 sm:h-10 sm:w-10 rounded-xl border transition-all cursor-pointer active:scale-95 shadow-2xs text-base ${
+            ? `inline-flex items-center justify-center min-h-[40px] min-w-[40px] h-10 w-10 sm:h-10 sm:w-10 rounded-xl border transition-all cursor-pointer active:scale-95 shadow-2xs text-base ${
                 activeBranch === "SUCURSAL"
                   ? "bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30 hover:bg-amber-500/25"
                   : activeBranch === "AMBOS"
                   ? "bg-purple-500/15 text-purple-700 dark:text-purple-400 border-purple-500/30 hover:bg-purple-500/25"
                   : "bg-white dark:bg-zinc-900 text-blue-700 dark:text-blue-400 border-zinc-200 dark:border-zinc-800 hover:border-blue-500 dark:hover:border-blue-500"
               }`
-            : `inline-flex items-center gap-1.5 rounded-md border bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-700 shadow-xs hover:border-zinc-300 dark:hover:border-zinc-600 transition-all cursor-pointer active:scale-95 font-semibold text-zinc-700 dark:text-zinc-200 ${
+            : `inline-flex items-center gap-1.5 rounded-xl border bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-700 shadow-xs hover:border-zinc-300 dark:hover:border-zinc-600 transition-all cursor-pointer active:scale-95 font-semibold text-zinc-700 dark:text-zinc-200 ${
                 isSmall ? "px-2.5 py-1 text-[11px]" : "px-4 py-2 text-sm"
               }`
         }
@@ -174,36 +178,53 @@ export function BranchTabs({ onChange, className = "", size = "sm", iconOnly = f
       </button>
 
       {open && (
-        <div
-          role="listbox"
-          className="absolute right-0 mt-1.5 min-w-[148px] bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-md shadow-xl z-50 py-1 animate-in fade-in zoom-in-95 duration-100 origin-top-right"
-        >
-          {OPTIONS.map((opt) => {
-            const isActive = activeBranch === opt.value;
-            return (
-              <button
-                key={opt.value}
-                type="button"
-                role="option"
-                aria-selected={isActive}
-                onClick={() => handleSelect(opt.value)}
-                className={`w-full flex items-center gap-2 px-3.5 py-2.5 text-sm transition-colors cursor-pointer ${
-                  isActive
-                    ? "bg-blue-50 dark:bg-blue-600/15 text-blue-600 dark:text-blue-400 font-semibold"
-                    : "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800/80"
-                }`}
-              >
-                <span>{opt.icon}</span>
-                <span className="flex-1 text-left">{opt.label}</span>
-                {isActive && (
-                  <svg className="w-3.5 h-3.5 text-blue-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
-                  </svg>
-                )}
-              </button>
-            );
-          })}
-        </div>
+        <>
+          {/* Telón de fondo invisible para cerrar en cualquier toque/clic fuera en móvil y escritorio */}
+          <div
+            className="fixed inset-0 z-[60] bg-black/20 dark:bg-black/40 backdrop-blur-[0.5px] sm:bg-transparent sm:backdrop-blur-none"
+            onClick={() => setOpen(false)}
+          />
+
+          <div
+            role="listbox"
+            className="absolute right-0 top-full mt-2 w-48 sm:w-52 p-1.5 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl border border-zinc-200/90 dark:border-zinc-800 rounded-2xl shadow-2xl shadow-black/20 dark:shadow-black/70 z-[70] py-1.5 animate-in fade-in zoom-in-95 duration-100 origin-top-right space-y-1"
+          >
+            <div className="px-3 py-1.5 border-b border-zinc-100 dark:border-zinc-800/80 mb-1 flex items-center justify-between">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
+                Sede Activa
+              </span>
+              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 font-semibold">
+                {active.label}
+              </span>
+            </div>
+
+            {OPTIONS.map((opt) => {
+              const isActive = activeBranch === opt.value;
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  role="option"
+                  aria-selected={isActive}
+                  onClick={() => handleSelect(opt.value)}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 text-xs sm:text-sm font-semibold rounded-xl transition-all cursor-pointer select-none active:scale-95 ${
+                    isActive
+                      ? "bg-blue-500/15 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 font-bold border border-blue-500/20 shadow-2xs"
+                      : "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800/80 border border-transparent"
+                  }`}
+                >
+                  <span className="text-base sm:text-lg shrink-0">{opt.icon}</span>
+                  <span className="flex-1 text-left">{opt.label}</span>
+                  {isActive && (
+                    <svg className="w-4 h-4 text-blue-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
+                    </svg>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </>
       )}
     </div>
   );

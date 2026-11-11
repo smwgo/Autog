@@ -81,16 +81,17 @@ export async function GET(request: Request) {
         FROM "WorkshopOrder" o
         LEFT JOIN (
           SELECT 
-            COALESCE("orderId", "orderNumber") as ord_ref,
-            COUNT(*) as total_evidencias,
-            COUNT(CASE WHEN "type" = 'image' THEN 1 END) as total_fotos,
-            COUNT(CASE WHEN "type" = 'audio' THEN 1 END) as total_audios,
-            COUNT(CASE WHEN "type" = 'video' THEN 1 END) as total_videos,
-            COUNT(CASE WHEN "transcriptionText" IS NOT NULL AND length("transcriptionText") > 0 THEN 1 END) as total_transcripciones
-          FROM "WorkshopEvidence"
-          WHERE "uploadStatus" = 'COMPLETED'
-          GROUP BY ord_ref
-        ) ev ON (ev.ord_ref = o."id" OR ev.ord_ref = o."orderNumber")
+            COALESCE(e."orderId", wo."id") as resolved_order_id,
+            COUNT(e."id") as total_evidencias,
+            COUNT(CASE WHEN e."type" = 'image' THEN 1 END) as total_fotos,
+            COUNT(CASE WHEN e."type" = 'audio' THEN 1 END) as total_audios,
+            COUNT(CASE WHEN e."type" = 'video' THEN 1 END) as total_videos,
+            COUNT(CASE WHEN e."transcriptionText" IS NOT NULL AND length(e."transcriptionText") > 0 THEN 1 END) as total_transcripciones
+          FROM "WorkshopEvidence" e
+          LEFT JOIN "WorkshopOrder" wo ON (e."orderId" IS NULL AND e."orderNumber" = wo."orderNumber")
+          WHERE e."uploadStatus" = 'COMPLETED'
+          GROUP BY resolved_order_id
+        ) ev ON ev.resolved_order_id = o."id"
         WHERE 1=1
       `;
 
@@ -150,8 +151,16 @@ export async function GET(request: Request) {
         }).catch(() => [])) as any[];
       }
 
+      // Deduplicar filas por ID para garantizar unicidad absoluta
+      const seenRowIds = new Set<string>();
+      const rowsUnicas = rows.filter((r: any) => {
+        if (!r?.id || seenRowIds.has(r.id)) return false;
+        seenRowIds.add(r.id);
+        return true;
+      });
+
       // Mapear órdenes con cálculo de totales y desglose de repuestos y servicios
-      const ordenes = rows.map((r: any) => {
+      const ordenes = rowsUnicas.map((r: any) => {
         let items: any[] = [];
         let services: any[] = [];
         let findings: any[] = [];

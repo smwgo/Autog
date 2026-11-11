@@ -87,6 +87,8 @@ interface OrdenDetalleCompleta {
   customerId?: string | null;
   vehicleId?: string | null;
   customerType?: string | null;
+  previousVisitsCount?: number;
+  isFirstVisit?: boolean;
   inspectionFindings?: any[];
   receptionInventory?: any[];
 }
@@ -1204,17 +1206,17 @@ export default function PaginaDetallePropuesta() {
             },
             {
               idx: 3,
-              titulo: "Tecnicentro",
-              icon: "⚙️",
-              badge: `${countArea("TECNICENTRO")} ítems`,
-              done: isAreaDone("TECNICENTRO"),
-            },
-            {
-              idx: 4,
               titulo: "Carwash",
               icon: "🚿",
               badge: `${countArea("CARWASH")} ítems`,
               done: isAreaDone("CARWASH"),
+            },
+            {
+              idx: 4,
+              titulo: "Tecnicentro",
+              icon: "⚙️",
+              badge: `${countArea("TECNICENTRO")} ítems`,
+              done: isAreaDone("TECNICENTRO"),
             },
             {
               idx: 5,
@@ -1399,23 +1401,27 @@ export default function PaginaDetallePropuesta() {
                     </div>
 
                     <div className="flex items-center gap-2 flex-wrap text-xs text-zinc-500 dark:text-zinc-400">
-                      <span className="px-2 py-0.5 rounded-md bg-zinc-100 dark:bg-white/5 font-normal text-zinc-800 dark:text-zinc-200">
-                        {orden.clientIdDoc || "CLI-000000"}
-                      </span>
+                      {(() => {
+                        const esEmpresa =
+                          orden.customerType === "Empresa" ||
+                          (orden.clientIdDoc && orden.clientIdDoc.length === 13) ||
+                          /\b(S\.?A\.?|CIA\.?|LTDA\.?|CORP\.?|INC\.?|EMPRESA)\b/i.test(orden.client || "");
+                        const tipoClienteEtiqueta = esEmpresa ? "Empresa" : "Persona";
+                        const tipoClienteIcono = esEmpresa ? "🏢" : "👤";
 
-                      {/* Enlace rápido a WhatsApp si tiene teléfono */}
-                      {orden.clientPhone && orden.clientPhone !== "S/N" && (
-                        <a
-                          href={`https://wa.me/${orden.clientPhone.replace(/\D/g, "")}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-normal transition-colors"
-                          title="Contactar al cliente vía WhatsApp"
-                        >
-                          <span>💬</span>
-                          <span className="font-mono">{orden.clientPhone}</span>
-                        </a>
-                      )}
+                        return (
+                          <span
+                            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md font-medium text-xs ${
+                              esEmpresa
+                                ? "bg-purple-500/10 text-purple-700 dark:text-purple-300 border border-purple-500/20"
+                                : "bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/20"
+                            }`}
+                          >
+                            <span>{tipoClienteIcono}</span>
+                            <span>{tipoClienteEtiqueta}</span>
+                          </span>
+                        );
+                      })()}
                     </div>
 
                     <div className="pt-0.5 flex items-center gap-1.5">
@@ -1546,13 +1552,17 @@ export default function PaginaDetallePropuesta() {
                     </div>
 
                     <div className="pt-0.5 flex items-center gap-2 text-xs">
-                      <span className="font-normal text-zinc-700 dark:text-zinc-300">
-                        {orden.mileage ? `${Number(orden.mileage).toLocaleString()} km` : "N/D"}
-                      </span>
-                      <span className="text-zinc-300 dark:text-zinc-700">•</span>
-                      <span className="text-[11px] font-medium text-zinc-600 dark:text-zinc-400">
-                        Tanque: <span className="font-normal text-zinc-900 dark:text-white">{orden.fuelLevel || "1/2"}</span>
-                      </span>
+                      {orden.previousVisitsCount && orden.previousVisitsCount > 0 ? (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20 font-medium text-xs">
+                          <span>🔄</span>
+                          <span>Ha venido antes ({orden.previousVisitsCount} {orden.previousVisitsCount === 1 ? "visita previa" : "visitas previas"})</span>
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/20 font-medium text-xs">
+                          <span>⭐</span>
+                          <span>Primera vez aquí</span>
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1605,26 +1615,12 @@ export default function PaginaDetallePropuesta() {
                 </span>
                 <div>
                   <h2 className="text-base font-normal text-zinc-900 dark:text-white">
-                    Taller · Diagnóstico, Imágenes, Audios y Trabajos
+                    Taller · Diagnóstico
                   </h2>
-                  <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                    Revisa diagnóstico con imágenes y audios juntos, verifica o asigna productos y servicios de Taller
-                  </p>
                 </div>
               </div>
 
               <div className="flex items-center gap-2 print:hidden flex-wrap">
-                <button
-                  type="button"
-                  onClick={() => toggleAreaVerificada("TALLER")}
-                  className={`h-9 px-3 rounded-xl border text-xs font-normal transition-all cursor-pointer flex items-center gap-1.5 ${
-                    areasVerificadas["TALLER"]
-                      ? "bg-emerald-500/15 border-emerald-500/40 text-emerald-600 dark:text-emerald-300"
-                      : "bg-zinc-100 dark:bg-white/5 border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-200/70"
-                  }`}
-                >
-                  <span>{areasVerificadas["TALLER"] ? "✓ Taller Verificado" : "○ Marcar Taller Verificado"}</span>
-                </button>
                 <button
                   type="button"
                   onClick={() => {
@@ -1736,76 +1732,6 @@ export default function PaginaDetallePropuesta() {
                 ))}
               </div>
             )}
-
-            {/* Imágenes y Audios de Taller juntos dentro del Diagnóstico */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 pt-3 border-t border-zinc-200/80 dark:border-white/10">
-              {/* Imágenes de Taller */}
-              <div className="space-y-2">
-                <span className="text-xs font-normal text-zinc-600 dark:text-zinc-400 flex items-center gap-1.5">
-                  <span>📷</span>
-                  <span>Imágenes de Taller ({fotosVehiculo.length})</span>
-                </span>
-                {fotosVehiculo.length === 0 ? (
-                  <div className="p-3 rounded-xl border border-dashed border-zinc-200 dark:border-white/10 text-xs text-zinc-400">
-                    Sin imágenes registradas en taller.
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-4 sm:grid-cols-5 gap-2">
-                    {fotosVehiculo.map((fotoUrl, idx) => (
-                      <div
-                        key={`foto-galeria-${idx}`}
-                        onClick={() => setFotoZoom(fotoUrl)}
-                        className="group/img relative aspect-4/3 rounded-lg overflow-hidden border border-zinc-200 dark:border-white/10 bg-zinc-100 dark:bg-black/40 cursor-pointer hover:border-blue-500/50 transition-all"
-                      >
-                        <img
-                          src={fotoUrl}
-                          alt={`Foto ${idx + 1}`}
-                          className="w-full h-full object-cover group-hover/img:scale-105 transition-transform duration-200"
-                          loading="lazy"
-                        />
-                        <div className="absolute bottom-1 right-1 px-1 py-0.2 rounded bg-black/60 text-[9px] font-mono text-white/90">
-                          #{idx + 1}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Audios de Taller */}
-              <div className="space-y-2">
-                <span className="text-xs font-normal text-zinc-600 dark:text-zinc-400 flex items-center gap-1.5">
-                  <span>🎙️</span>
-                  <span>
-                    Audios de Taller (
-                    {(orden.evidencias || []).filter((e) => e.type === "audio" || e.url?.includes(".mp3")).length})
-                  </span>
-                </span>
-                {!(orden.evidencias || []).some((e) => e.type === "audio" || e.url?.includes(".mp3")) ? (
-                  <div className="p-3 rounded-xl border border-dashed border-zinc-200 dark:border-white/10 text-xs text-zinc-400">
-                    Sin audios registrados en taller.
-                  </div>
-                ) : (
-                  <div className="space-y-2 max-h-44 overflow-y-auto pr-1">
-                    {(orden.evidencias || [])
-                      .filter((e) => e.type === "audio" || e.url?.includes(".mp3"))
-                      .map((ev) => (
-                        <div
-                          key={ev.id}
-                          className="p-2.5 rounded-xl bg-white dark:bg-[#16161a] border border-zinc-200 dark:border-white/10 space-y-1.5"
-                        >
-                          <audio controls src={ev.url} className="w-full h-8" />
-                          {ev.transcriptionText && (
-                            <p className="text-xs text-zinc-600 dark:text-zinc-400 italic">
-                              &quot;{ev.transcriptionText}&quot;
-                            </p>
-                          )}
-                        </div>
-                      ))}
-                  </div>
-                )}
-              </div>
-            </div>
           </div>
 
           {/* PRODUCTOS Y SERVICIOS DE TALLER (DENTRO DE TARJETA 2) */}
@@ -1817,7 +1743,7 @@ export default function PaginaDetallePropuesta() {
                 <div className="flex items-center justify-between">
                   <h3 className="text-sm font-normal text-zinc-800 dark:text-zinc-200 flex items-center gap-2">
                     <span>🔧</span>
-                    <span>Productos y Servicios de Taller ({repArea.length + srvArea.length})</span>
+                    <span>Productos/Servicios {repArea.length + srvArea.length}</span>
                   </h3>
                 </div>
 
@@ -2010,9 +1936,9 @@ export default function PaginaDetallePropuesta() {
               =================================================================== */}
           {(
             [
-              { idx: 2, key: "LUBRICENTRO" as EspecialidadTipo, nombre: "Lubricentro", icon: "🛢️", prevLabel: "Taller y Diagnóstico", nextLabel: "Tecnicentro" },
-              { idx: 3, key: "TECNICENTRO" as EspecialidadTipo, nombre: "Tecnicentro", icon: "⚙️", prevLabel: "Lubricentro", nextLabel: "Car Wash" },
-              { idx: 4, key: "CARWASH" as EspecialidadTipo, nombre: "Car Wash", icon: "🚿", prevLabel: "Tecnicentro", nextLabel: "Proveedor y Pago" },
+              { idx: 2, key: "LUBRICENTRO" as EspecialidadTipo, nombre: "Lubricentro", icon: "🛢️", prevLabel: "Taller", nextLabel: "Carwash" },
+              { idx: 3, key: "CARWASH" as EspecialidadTipo, nombre: "Carwash", icon: "🚿", prevLabel: "Lubricentro", nextLabel: "Tecnicentro" },
+              { idx: 4, key: "TECNICENTRO" as EspecialidadTipo, nombre: "Tecnicentro", icon: "⚙️", prevLabel: "Carwash", nextLabel: "Pago" },
             ] as const
           ).map((area) => {
             const repArea = repuestos.filter((r) => (r.origin || "TALLER") === area.key);
@@ -2029,11 +1955,8 @@ export default function PaginaDetallePropuesta() {
                     </span>
                     <div>
                       <h2 className="text-base font-normal text-zinc-900 dark:text-white">
-                        {area.nombre} · Verificación y Asignación
+                        {area.nombre}
                       </h2>
-                      <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                        Verifica los productos y servicios de {area.nombre}, o asígnalos aquí si hacen falta
-                      </p>
                     </div>
                   </div>
 
@@ -2271,11 +2194,8 @@ export default function PaginaDetallePropuesta() {
                 </span>
                 <div>
                   <h2 className="text-base font-normal text-zinc-900 dark:text-white">
-                    Proveedor y Cierre · Pedidos con Link y Pago / POS
+                    Pago
                   </h2>
-                  <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                    Pide a proveedor con link individual o de toda esta orden, y finaliza pagando o enviando a POS
-                  </p>
                 </div>
               </div>
 

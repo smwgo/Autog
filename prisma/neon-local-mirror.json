@@ -111,7 +111,7 @@
       "assignedToSucursal": false,
       "lastVisit": "2026-11-10T19:12:22.309Z",
       "createdAt": "2026-11-10T19:12:22.309Z",
-      "updatedAt": "2026-11-10T19:12:22.309Z",
+      "updatedAt": "2026-11-11T00:01:20.937Z",
       "vehicles": [
         {
           "id": "cmwb2hh3n0008c4wt0svlxtgk",
@@ -129,7 +129,7 @@
           "vin": null,
           "fuelType": "Gasolina",
           "createdAt": "2026-11-10T19:12:27.345Z",
-          "updatedAt": "2026-11-10T19:12:27.345Z"
+          "updatedAt": "2026-11-11T01:02:26.329Z"
         }
       ]
     }
@@ -313,7 +313,7 @@
       "vin": null,
       "fuelType": "Gasolina",
       "createdAt": "2026-11-10T19:12:27.345Z",
-      "updatedAt": "2026-11-10T19:12:27.345Z",
+      "updatedAt": "2026-11-11T01:02:26.329Z",
       "customer": {
         "id": "cmwb2hd7t0006c4wtnuasy3tt",
         "identification": "0963258996",
@@ -766,32 +766,32 @@
       "clientPhone": "093547118",
       "clientIdDoc": "0963258996",
       "mechanic": "Sin asignar",
-      "status": "En Pista",
-      "progress": 10,
+      "status": "En Proceso",
+      "progress": 50,
       "mileage": null,
       "nextOilChangeKm": null,
-      "fuelLevel": "1/2",
+      "fuelLevel": "Normal",
       "generalCondition": "Bueno",
-      "receptionInventoryJson": "[]",
-      "inspectionFindingsJson": "[]",
+      "receptionInventoryJson": "[\"Gata\",\"Llave\",\"Repuesto\",\"Matrícula\"]",
+      "inspectionFindingsJson": "[{\"id\":\"pin-1794358861352-pk4y\",\"vista\":\"frontal\",\"vistaLabel\":\"Frontal\",\"x\":35,\"y\":60,\"zona\":\"Frontal\",\"tipo\":\"Rayón \",\"descripcion\":\"\",\"pinNumber\":1,\"photoUrl\":\"/api/storage/download?key=taller_inspeccion_evidencia%2Fdbbf823f-3c07-492c-a235-f2e90929a2ce.png\",\"photoUrls\":[\"/api/storage/download?key=taller_inspeccion_evidencia%2Fdbbf823f-3c07-492c-a235-f2e90929a2ce.png\"],\"capturedAt\":\"10/11/2026, 08:01:34 p. m.\"}]",
       "receptionSignatureUrl": null,
       "inspectionChecklistJson": "{}",
       "inspectionTemplateId": null,
-      "servicesJson": "[]",
-      "itemsJson": "[]",
+      "servicesJson": "[\"AMALIE ELIXIR 5W30\",\"Llanta 185/65 R15 Pistera\"]",
+      "itemsJson": "[{\"id\":\"item-1794358881618-0163\",\"code\":\"AM-75767-36\",\"type\":\"PART\",\"name\":\"AMALIE ELIXIR 5W30\",\"category\":\"Inspección - Pin #1 (Frontal)\",\"qty\":1,\"price\":1,\"productId\":\"cmw020tc60256dxtk\",\"imageUrl\":\"/api/storage/download?key=productos%2F4bc83888-ff2e-43ce-9381-d4122eacb5ed.png\",\"status\":\"Pendiente\"},{\"id\":\"neu_tc_neu_1856515_1794358928390\",\"key\":\"key_tc_neu_1856515_1794358928390\",\"productId\":\"tc_neu_1856515\",\"type\":\"PART\",\"category\":\"Tecnicentro - LLANTAS\",\"subCategory\":\"PISTERA\",\"cwCategoryId\":\"TODO\",\"code\":\"TC-TC_NEU_1856515\",\"name\":\"Llanta 185/65 R15 Pistera\",\"brand\":\"Tecnicentro\",\"presentation\":\"Unidad\",\"unitOfMeasure\":\"Unidad\",\"price\":65,\"total\":65,\"qty\":1,\"estimatedMinutes\":30,\"vehicleType\":\"General\",\"status\":\"Listo\",\"completed\":true,\"empleado_id\":\"emp-carlos-rodriguez\",\"empleado_nombre\":\"Carlos Rodríguez\"}]",
       "receptionPhotosJson": "[]",
       "evidencePhotosJson": "[]",
       "voiceNotesJson": "[]",
-      "notes": "Ingreso a taller",
+      "notes": "Ingreso a taller • Inspección 5 Vistas (1 hallazgos): #1 [Frontal] Rayón : Frontal",
       "dateIn": "2026-11-10T19:12:30.335Z",
-      "startedAt": null,
+      "startedAt": "2026-11-11T01:02:14.776Z",
       "completedAt": null,
       "durationMinutes": 0,
       "estimatedOut": "Hoy",
-      "totalCost": "0",
-      "quoteNumber": null,
-      "quoteStatus": "Borrador",
-      "quoteToken": null,
+      "totalCost": "66",
+      "quoteNumber": "PRE-2026-3521",
+      "quoteStatus": "Pendiente de Aprobación",
+      "quoteToken": "PRE-2026-3521-J5GVU",
       "quoteTaxRate": "15",
       "quoteDiscount": "0",
       "quoteDiscountType": "PERCENT",
@@ -823,7 +823,7 @@
       "branch": "PRINCIPAL",
       "transferredFrom": null,
       "createdAt": "2026-11-10T19:12:30.335Z",
-      "updatedAt": "2026-11-10T19:12:30.335Z"
+      "updatedAt": "2026-11-11T01:02:25.818Z"
     }
   ],
   "employee": [],
@@ -1884,6 +1884,27 @@
       "metadataJson": "{\"originalName\":\"vehiculo_ABC123_1794337839711.jpg\"}",
       "createdAt": "2026-11-10T19:11:34.812Z",
       "updatedAt": "2026-11-10T19:11:34.812Z"
+    },
+    {
+      "id": "evi_621f95xmwbeyeif",
+      "orderId": "ord_05oo74wmwb2hhv8",
+      "orderNumber": "OT #00001",
+      "vehicleId": null,
+      "plate": "ABC123",
+      "type": "image",
+      "r2Key": "taller_inspeccion_evidencia/dbbf823f-3c07-492c-a235-f2e90929a2ce.png",
+      "mimeType": "image/png",
+      "fileSizeBytes": 5222,
+      "durationSeconds": null,
+      "transcriptionText": null,
+      "uploadStatus": "COMPLETED",
+      "transcriptionStatus": "NOT_APPLICABLE",
+      "uploadedBy": "Sin asignar",
+      "clientTempId": null,
+      "branch": "PRINCIPAL",
+      "metadataJson": "{\"originalName\":\"Captura de pantalla 2026-11-05 013410.png\"}",
+      "createdAt": "2026-11-11T01:01:34.357Z",
+      "updatedAt": "2026-11-11T01:01:34.357Z"
     }
   ],
   "orderRequest": [
