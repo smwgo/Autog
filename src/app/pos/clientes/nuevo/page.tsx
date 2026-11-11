@@ -538,7 +538,7 @@ function NuevoClienteContent() {
                   {/* Barra Inferior */}
                   <div className="pt-5 sm:pt-6 border-t border-zinc-200 dark:border-zinc-800/80 flex flex-col-reverse sm:flex-row items-center justify-between gap-3 sm:gap-4">
                     <span className="text-xs text-zinc-500 dark:text-zinc-400 text-center sm:text-left">
-                      {editId ? "Paso 1: Modifica los datos principales" : "Toma menos de 2 minutos"}
+                      {editId ? "Modifica los datos principales" : "Toma menos de 2 minutos"}
                     </span>
 
                     <button

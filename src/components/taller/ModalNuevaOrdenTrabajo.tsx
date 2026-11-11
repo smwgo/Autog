@@ -2845,7 +2845,7 @@ export default function ModalNuevaOrdenTrabajo({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                   <div className="sm:col-span-2">
                     <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1 block">
-                      {tipoCliente === "Empresa" ? "Razón Social" : "Nombres y Apellidos"} <span className="text-rose-500">*</span>
+                      {tipoCliente === "Empresa" ? "Razón Social" : "Nombre y Apellidos"} <span className="text-rose-500">*</span>
                     </label>
                     <input
                       type="text"
@@ -3324,15 +3324,10 @@ export default function ModalNuevaOrdenTrabajo({
                       {/* ================= PASO 1: TIPO DE CLIENTE ================= */}
                       {subPasoCliente === "tipo" && (
                         <div className="space-y-4">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <label className="text-sm font-bold text-zinc-900 dark:text-zinc-100 block">
-                                Tipo de Cliente
-                              </label>
-                            </div>
-                            <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-                              Paso 1 de 6
-                            </span>
+                          <div>
+                            <label className="text-sm font-bold text-zinc-900 dark:text-zinc-100 block">
+                              Tipo de Cliente
+                            </label>
                           </div>
 
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -3393,15 +3388,10 @@ export default function ModalNuevaOrdenTrabajo({
                       {/* ================= PASO 2: NOMBRE O RAZÓN SOCIAL ================= */}
                       {subPasoCliente === "nombre" && (
                         <div className="space-y-3">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <label className="text-sm font-bold text-zinc-900 dark:text-zinc-100 block">
-                                {tipoCliente === "Empresa" ? "Razón Social de la Empresa" : "Nombres y Apellidos del Cliente"} <span className="text-rose-500">*</span>
-                              </label>
-                            </div>
-                            <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-                              Paso 2 de 6
-                            </span>
+                          <div>
+                            <label className="text-sm font-bold text-zinc-900 dark:text-zinc-100 block">
+                              {tipoCliente === "Empresa" ? "Razón Social" : "Nombre y Apellidos"} <span className="text-rose-500">*</span>
+                            </label>
                           </div>
 
                           <div className="flex items-center gap-3">
@@ -3561,15 +3551,10 @@ export default function ModalNuevaOrdenTrabajo({
                       {/* ================= PASO 3: CÉDULA / RUC ================= */}
                       {subPasoCliente === "identificacion" && (
                         <div className="space-y-3">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <label className="text-sm font-bold text-zinc-900 dark:text-zinc-100 block">
-                                {tipoCliente === "Empresa" ? "Número de RUC" : "Número de Cédula"} <span className="text-rose-500">*</span>
-                              </label>
-                            </div>
-                            <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-                              Paso 3 de 6
-                            </span>
+                          <div>
+                            <label className="text-sm font-bold text-zinc-900 dark:text-zinc-100 block">
+                              {tipoCliente === "Empresa" ? "Número de RUC" : "Número de Cédula"} <span className="text-rose-500">*</span>
+                            </label>
                           </div>
 
                           <div>
@@ -3605,15 +3590,10 @@ export default function ModalNuevaOrdenTrabajo({
                       {/* ================= PASO 4: WHATSAPP ================= */}
                       {subPasoCliente === "telefono" && (
                         <div className="space-y-3">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <label className="text-sm font-bold text-zinc-900 dark:text-zinc-100 block">
-                                WhatsApp <span className="text-rose-500">*</span>
-                              </label>
-                            </div>
-                            <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-                              Paso 4 de 6
-                            </span>
+                          <div>
+                            <label className="text-sm font-bold text-zinc-900 dark:text-zinc-100 block">
+                              WhatsApp <span className="text-rose-500">*</span>
+                            </label>
                           </div>
 
                           <div>
@@ -3649,15 +3629,10 @@ export default function ModalNuevaOrdenTrabajo({
                       {/* ================= PASO 5: CORREO ELECTRÓNICO ================= */}
                       {subPasoCliente === "email" && (
                         <div className="space-y-3">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <label className="text-sm font-bold text-zinc-900 dark:text-zinc-100 block">
-                                Correo Electrónico (Opcional)
-                              </label>
-                            </div>
-                            <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-                              Paso 5 de 6
-                            </span>
+                          <div>
+                            <label className="text-sm font-bold text-zinc-900 dark:text-zinc-100 block">
+                              Correo Electrónico (Opcional)
+                            </label>
                           </div>
 
                           <div>
@@ -3696,15 +3671,10 @@ export default function ModalNuevaOrdenTrabajo({
                       {/* ================= PASO 6: DIRECCIÓN ================= */}
                       {subPasoCliente === "direccion" && (
                         <div className="space-y-4">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <label className="text-sm font-bold text-zinc-900 dark:text-zinc-100 block">
-                                Dirección (Opcional)
-                              </label>
-                            </div>
-                            <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-                              Paso 6 de 6
-                            </span>
+                          <div>
+                            <label className="text-sm font-bold text-zinc-900 dark:text-zinc-100 block">
+                              Dirección (Opcional)
+                            </label>
                           </div>
 
                           <div>
@@ -4088,18 +4058,13 @@ export default function ModalNuevaOrdenTrabajo({
                       {/* ================= PASO 1: PLACA ================= */}
                       {subPasoVehiculo === "placa" && (
                         <div className="space-y-3">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <label className="text-sm font-bold text-zinc-900 dark:text-zinc-100 block">
-                                🔢 Placa del Vehículo <span className="text-rose-500">*</span>
-                              </label>
-                            </div>
-                            <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-                              Paso 1 de 5
-                            </span>
+                          <div>
+                            <label className="text-sm font-bold text-zinc-900 dark:text-zinc-100 block">
+                              🔢 Placa del Vehículo <span className="text-rose-500">*</span>
+                            </label>
                           </div>
 
-                          <div className="relative z-30">
+                          <div>
                             <input
                               type="text"
                               value={vehiculoPlaca}
@@ -4111,12 +4076,122 @@ export default function ModalNuevaOrdenTrabajo({
                                 }
                               }}
                               placeholder="Ej: ABC-1234"
-                              className="w-full h-16 pl-5 pr-16 rounded-2xl bg-zinc-50 dark:bg-black/50 border-2 border-zinc-300 dark:border-white/15 focus:border-emerald-500 text-zinc-900 dark:text-white font-mono font-bold uppercase text-2xl tracking-widest placeholder:text-zinc-300 dark:placeholder:text-zinc-600 focus:outline-none shadow-inner"
+                              className="w-full h-16 px-5 rounded-2xl bg-zinc-50 dark:bg-black/50 border-2 border-zinc-300 dark:border-white/15 focus:border-emerald-500 text-zinc-900 dark:text-white font-mono font-bold uppercase text-2xl tracking-widest placeholder:text-zinc-300 dark:placeholder:text-zinc-600 focus:outline-none shadow-inner"
+                              autoFocus
+                            />
+                          </div>
+
+                          <div className="pt-2 relative z-10">
+                            <button
+                              type="button"
+                              onClick={irASiguiente}
+                              disabled={!vehiculoPlaca.trim()}
+                              className={`w-full h-12 rounded-xl font-bold text-sm transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-98 ${
+                                vehiculoPlaca.trim()
+                                  ? "bg-emerald-500 hover:bg-emerald-400 text-black shadow-md shadow-emerald-500/20"
+                                  : "bg-zinc-200 dark:bg-white/5 text-zinc-400 dark:text-zinc-500 cursor-not-allowed"
+                              }`}
+                            >
+                              <span>Avanzar a Marca</span>
+                              <span>→</span>
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* ================= PASO 2: MARCA ================= */}
+                      {subPasoVehiculo === "marca" && (
+                        <div className="space-y-3">
+                          <div>
+                            <label className="text-sm font-bold text-zinc-900 dark:text-zinc-100 block">
+                              🏷️ Marca del Vehículo
+                            </label>
+                          </div>
+
+                          <div>
+                            <input
+                              type="text"
+                              value={vehiculoMarca}
+                              onChange={(e) => setVehiculoMarca(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  e.preventDefault();
+                                  setSubPasoVehiculo("modelo");
+                                }
+                              }}
+                              placeholder="Ej: Toyota, Chevrolet, Hyundai..."
+                              className="w-full h-14 px-4 rounded-2xl bg-zinc-50 dark:bg-black/50 border-2 border-zinc-300 dark:border-white/15 focus:border-emerald-500 text-zinc-900 dark:text-white text-lg font-semibold placeholder:text-zinc-300 dark:placeholder:text-zinc-600 focus:outline-none shadow-sm"
+                              autoFocus
+                            />
+                          </div>
+
+                          {/* Chips de Marcas Populares */}
+                          <div className="space-y-1.5">
+                            <span className="text-[11px] text-zinc-500 dark:text-zinc-400 font-semibold uppercase tracking-wider">
+                              Marcas Frecuentes:
+                            </span>
+                            <div className="flex flex-wrap gap-2">
+                              {["Toyota", "Chevrolet", "Hyundai", "Kia", "Nissan", "Ford", "Renault", "Volkswagen", "Mazda"].map((m) => (
+                                <button
+                                  key={m}
+                                  type="button"
+                                  onClick={() => {
+                                    setVehiculoMarca(m);
+                                    setSubPasoVehiculo("modelo");
+                                  }}
+                                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                                    vehiculoMarca.toUpperCase() === m.toUpperCase()
+                                      ? "bg-emerald-500 text-black font-bold shadow-xs"
+                                      : "bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-white/10"
+                                  }`}
+                                >
+                                  {m}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Botones de Navegación */}
+                          <div className="pt-2">
+                            <button
+                              type="button"
+                              onClick={irASiguiente}
+                              className="w-full h-12 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-sm transition-all cursor-pointer flex items-center justify-center gap-2 shadow-md shadow-emerald-500/20 active:scale-98"
+                            >
+                              <span>Avanzar a Modelo</span>
+                              <span>→</span>
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* ================= PASO 3: MODELO ================= */}
+                      {subPasoVehiculo === "modelo" && (
+                        <div className="space-y-3">
+                          <div>
+                            <label className="text-sm font-bold text-zinc-900 dark:text-zinc-100 block">
+                              🚘 Modelo del Vehículo {vehiculoMarca ? `(${vehiculoMarca})` : ""}
+                            </label>
+                          </div>
+
+                          <div className="relative z-30">
+                            <input
+                              type="text"
+                              value={vehiculoModelo}
+                              onChange={(e) => setVehiculoModelo(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  e.preventDefault();
+                                  setSubPasoVehiculo("anio");
+                                }
+                              }}
+                              placeholder={vehiculoMarca ? `Ej: Modelo de ${vehiculoMarca}` : "Ej: Hilux, Aveo, Tucson..."}
+                              className="w-full h-14 pl-4 pr-16 rounded-2xl bg-zinc-50 dark:bg-black/50 border-2 border-zinc-300 dark:border-white/15 focus:border-emerald-500 text-zinc-900 dark:text-white text-lg font-semibold placeholder:text-zinc-300 dark:placeholder:text-zinc-600 focus:outline-none shadow-sm"
                               autoFocus
                             />
 
                             {/* Botón Tomar Foto de Perfil del Vehículo (Visible con alto contraste en Modo Oscuro) */}
-                            <div className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center z-40">
+                            <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center z-40">
                               {/* Input para Cámara Móvil Directa */}
                               <input
                                 ref={fileInputVehiculoCamaraRef}
@@ -4139,7 +4214,7 @@ export default function ModalNuevaOrdenTrabajo({
                                 type="button"
                                 onClick={() => setMostrarMenuFotoVehiculo((prev) => !prev)}
                                 title="Tomar foto con el móvil o subir de galería"
-                                className="relative w-11 h-11 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/35 border-2 border-emerald-400 dark:border-emerald-400 text-emerald-300 dark:text-emerald-300 flex items-center justify-center cursor-pointer transition-all shadow-md shadow-emerald-500/20 active:scale-95 overflow-hidden group"
+                                className="relative w-10 h-10 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/35 border-2 border-emerald-400 dark:border-emerald-400 text-emerald-300 dark:text-emerald-300 flex items-center justify-center cursor-pointer transition-all shadow-md shadow-emerald-500/20 active:scale-95 overflow-hidden group"
                               >
                                 {vehiculoFoto ? (
                                   <div className="relative w-full h-full">
@@ -4230,126 +4305,6 @@ export default function ModalNuevaOrdenTrabajo({
                             </div>
                           </div>
 
-                          <div className="pt-2 relative z-10">
-                            <button
-                              type="button"
-                              onClick={irASiguiente}
-                              disabled={!vehiculoPlaca.trim()}
-                              className={`w-full h-12 rounded-xl font-bold text-sm transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-98 ${
-                                vehiculoPlaca.trim()
-                                  ? "bg-emerald-500 hover:bg-emerald-400 text-black shadow-md shadow-emerald-500/20"
-                                  : "bg-zinc-200 dark:bg-white/5 text-zinc-400 dark:text-zinc-500 cursor-not-allowed"
-                              }`}
-                            >
-                              <span>Avanzar a Marca</span>
-                              <span>→</span>
-                            </button>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* ================= PASO 2: MARCA ================= */}
-                      {subPasoVehiculo === "marca" && (
-                        <div className="space-y-3">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <label className="text-sm font-bold text-zinc-900 dark:text-zinc-100 block">
-                                🏷️ Marca del Vehículo
-                              </label>
-                            </div>
-                            <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-                              Paso 2 de 5
-                            </span>
-                          </div>
-
-                          <div>
-                            <input
-                              type="text"
-                              value={vehiculoMarca}
-                              onChange={(e) => setVehiculoMarca(e.target.value)}
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter") {
-                                  e.preventDefault();
-                                  setSubPasoVehiculo("modelo");
-                                }
-                              }}
-                              placeholder="Ej: Toyota, Chevrolet, Hyundai..."
-                              className="w-full h-14 px-4 rounded-2xl bg-zinc-50 dark:bg-black/50 border-2 border-zinc-300 dark:border-white/15 focus:border-emerald-500 text-zinc-900 dark:text-white text-lg font-semibold placeholder:text-zinc-300 dark:placeholder:text-zinc-600 focus:outline-none shadow-sm"
-                              autoFocus
-                            />
-                          </div>
-
-                          {/* Chips de Marcas Populares */}
-                          <div className="space-y-1.5">
-                            <span className="text-[11px] text-zinc-500 dark:text-zinc-400 font-semibold uppercase tracking-wider">
-                              Marcas Frecuentes:
-                            </span>
-                            <div className="flex flex-wrap gap-2">
-                              {["Toyota", "Chevrolet", "Hyundai", "Kia", "Nissan", "Ford", "Renault", "Volkswagen", "Mazda"].map((m) => (
-                                <button
-                                  key={m}
-                                  type="button"
-                                  onClick={() => {
-                                    setVehiculoMarca(m);
-                                    setSubPasoVehiculo("modelo");
-                                  }}
-                                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-                                    vehiculoMarca.toUpperCase() === m.toUpperCase()
-                                      ? "bg-emerald-500 text-black font-bold shadow-xs"
-                                      : "bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-white/10"
-                                  }`}
-                                >
-                                  {m}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-
-                          {/* Botones de Navegación */}
-                          <div className="pt-2">
-                            <button
-                              type="button"
-                              onClick={irASiguiente}
-                              className="w-full h-12 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-sm transition-all cursor-pointer flex items-center justify-center gap-2 shadow-md shadow-emerald-500/20 active:scale-98"
-                            >
-                              <span>Avanzar a Modelo</span>
-                              <span>→</span>
-                            </button>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* ================= PASO 3: MODELO ================= */}
-                      {subPasoVehiculo === "modelo" && (
-                        <div className="space-y-3">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <label className="text-sm font-bold text-zinc-900 dark:text-zinc-100 block">
-                                🚘 Modelo del Vehículo {vehiculoMarca ? `(${vehiculoMarca})` : ""}
-                              </label>
-                            </div>
-                            <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-                              Paso 3 de 5
-                            </span>
-                          </div>
-
-                          <div>
-                            <input
-                              type="text"
-                              value={vehiculoModelo}
-                              onChange={(e) => setVehiculoModelo(e.target.value)}
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter") {
-                                  e.preventDefault();
-                                  setSubPasoVehiculo("anio");
-                                }
-                              }}
-                              placeholder={vehiculoMarca ? `Ej: Modelo de ${vehiculoMarca}` : "Ej: Hilux, Aveo, Tucson..."}
-                              className="w-full h-14 px-4 rounded-2xl bg-zinc-50 dark:bg-black/50 border-2 border-zinc-300 dark:border-white/15 focus:border-emerald-500 text-zinc-900 dark:text-white text-lg font-semibold placeholder:text-zinc-300 dark:placeholder:text-zinc-600 focus:outline-none shadow-sm"
-                              autoFocus
-                            />
-                          </div>
-
                           {/* Chips de Modelos Frecuentes */}
                           <div className="space-y-1.5">
                             <span className="text-[11px] text-zinc-500 dark:text-zinc-400 font-semibold uppercase tracking-wider">
@@ -4393,15 +4348,10 @@ export default function ModalNuevaOrdenTrabajo({
                       {/* ================= PASO 4: AÑO ================= */}
                       {subPasoVehiculo === "anio" && (
                         <div className="space-y-3">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <label className="text-sm font-bold text-zinc-900 dark:text-zinc-100 block">
-                                📅 Año de Fabricación
-                              </label>
-                            </div>
-                            <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-                              Paso 4 de 5
-                            </span>
+                          <div>
+                            <label className="text-sm font-bold text-zinc-900 dark:text-zinc-100 block">
+                              📅 Año de Fabricación
+                            </label>
                           </div>
 
                           <div className="relative">
@@ -4465,15 +4415,10 @@ export default function ModalNuevaOrdenTrabajo({
                       {/* ================= PASO 5: TIPO DE VEHÍCULO ================= */}
                       {subPasoVehiculo === "tipo" && (
                         <div className="space-y-4">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <label className="text-sm font-bold text-zinc-900 dark:text-zinc-100 block">
-                                Tipo de Carrocería
-                              </label>
-                            </div>
-                            <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-                              Paso 5 de 5
-                            </span>
+                          <div>
+                            <label className="text-sm font-bold text-zinc-900 dark:text-zinc-100 block">
+                              Tipo de Carrocería
+                            </label>
                           </div>
 
                           <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">

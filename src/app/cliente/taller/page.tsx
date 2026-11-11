@@ -345,9 +345,6 @@ export default function ClienteTallerPage() {
                   <h2 className="text-base font-bold text-slate-900 dark:text-white">
                     Progreso de la orden
                   </h2>
-                  <span className="text-xs text-slate-500 dark:text-zinc-400 font-medium">
-                    Paso {etapaActualIdx + 1} de 6
-                  </span>
                 </div>
 
                 <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-zinc-400">
