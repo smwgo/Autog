@@ -123,7 +123,11 @@ export async function GET(request: Request) {
       }
 
       if (vehicleRecord) {
-        vehiclePhoto = vehicleRecord.imageUrl || null;
+        let vImg = vehicleRecord.imageUrl || null;
+        if (vImg && (vImg.startsWith("blob:") || !vImg.trim())) {
+          vImg = null;
+        }
+        vehiclePhoto = vImg;
       }
 
       // 1.2 Calcular historial: si ha venido antes o es primera vez
@@ -278,6 +282,30 @@ export async function GET(request: Request) {
         }
       });
 
+      // Auto-resolver vehiclePhoto si está vacía o era un blob temporal
+      if (!vehiclePhoto) {
+        const candidateEv = evidencias.find((e: any) => e.type === "image" && e.url && !e.url.startsWith("blob:"));
+        if (candidateEv) {
+          vehiclePhoto = candidateEv.url;
+        } else {
+          const candidatePhoto = todasLasFotosOrden.find((p: any) => typeof p === "string" && p.trim() && !p.startsWith("blob:"));
+          if (candidatePhoto) {
+            vehiclePhoto = candidatePhoto.startsWith("http") || candidatePhoto.startsWith("/") || candidatePhoto.startsWith("data:")
+              ? candidatePhoto
+              : `/api/storage/download?key=${encodeURIComponent(candidatePhoto)}`;
+          }
+        }
+
+        // Si encontramos una foto real y hay registro de vehículo, guardar en Neon para persistencia
+        if (vehiclePhoto && vehicleRecord?.id) {
+          prisma.$executeRawUnsafe(
+            `UPDATE "Vehicle" SET "imageUrl" = $1, "updatedAt" = CURRENT_TIMESTAMP WHERE "id" = $2`,
+            vehiclePhoto,
+            vehicleRecord.id
+          ).catch(() => {});
+        }
+      }
+
       // Normalizar estructura de repuestos para presupuestos y compras
       const repuestosNormalizados = items.map((it: any, index: number) => {
         const costPrice = Number(it.costPrice || it.cost || 0);
@@ -289,8 +317,10 @@ export async function GET(request: Request) {
         return {
           id: it.id || `rep_${index}_${Date.now()}`,
           productId: it.productId || null,
+          findingId: it.findingId || null,
           code: it.code || `REP-${index + 1}`,
           name: it.name || it.description || "Repuesto / Insumo",
+          category: it.category || "",
           qty,
           costPrice,
           price,
@@ -310,17 +340,26 @@ export async function GET(request: Request) {
       });
 
       // Normalizar estructura de servicios / mano de obra
-      const serviciosNormalizados = services.map((sv: any, index: number) => ({
-        id: sv.id || `srv_${index}_${Date.now()}`,
-        code: sv.code || `SRV-${index + 1}`,
-        name: sv.name || "Servicio Técnico",
-        category: sv.category || "Mano de Obra",
-        price: Number(sv.price || 0),
-        estimatedMinutes: Number(sv.estimatedMinutes || 30),
-        mechanic: sv.mechanic || order.mechanic || "Taller",
-        imageUrl: sv.imageUrl || sv.photoUrl || null,
-        origin: sv.origin || null,
-      }));
+      const serviciosNormalizados = services.map((sv: any, index: number) => {
+        const isString = typeof sv === "string";
+        const name = isString ? sv : (sv.name || sv.description || "Servicio Técnico");
+        const price = isString ? 0 : Number(sv.price || 0);
+        const code = isString ? `SRV-${index + 1}` : (sv.code || `SRV-${index + 1}`);
+        const category = isString ? "Mano de Obra" : (sv.category || "Mano de Obra");
+        return {
+          id: sv.id || `srv_${index}_${Date.now()}`,
+          findingId: sv.findingId || null,
+          code,
+          name,
+          category,
+          price,
+          estimatedMinutes: Number(sv.estimatedMinutes || 30),
+          mechanic: sv.mechanic || order.mechanic || "Taller",
+          imageUrl: sv.imageUrl || sv.photoUrl || null,
+          origin: sv.origin || null,
+          notes: sv.notes || "",
+        };
+      });
 
       // 4. Obtener proveedores disponibles para el autocompletado
       let proveedores: any[] = [];
@@ -368,8 +407,8 @@ export async function GET(request: Request) {
           photos: todasLasFotosOrden,
           evidencePhotos,
           receptionPhotos,
-          clientPhoto: clientPhoto || customerRecord?.avatar || customerRecord?.imageUrl || null,
-          vehiclePhoto: vehiclePhoto || vehicleRecord?.imageUrl || (todasLasFotosOrden.length > 0 ? todasLasFotosOrden[0] : null),
+          clientPhoto: clientPhoto && !clientPhoto.startsWith("blob:") ? clientPhoto : (customerRecord?.avatar && !customerRecord.avatar.startsWith("blob:") ? customerRecord.avatar : (customerRecord?.imageUrl && !customerRecord.imageUrl.startsWith("blob:") ? customerRecord.imageUrl : null)),
+          vehiclePhoto: vehiclePhoto && !vehiclePhoto.startsWith("blob:") ? vehiclePhoto : null,
           customerId: customerRecord?.id || order.customerId || null,
           vehicleId: vehicleRecord?.id || order.vehicleId || null,
           customerType: customerRecord?.type || "Personal",

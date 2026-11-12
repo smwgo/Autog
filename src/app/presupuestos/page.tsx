@@ -295,6 +295,56 @@ export default function PanelPresupuestosPage() {
     setTimeout(() => setToast(null), 4000);
   };
 
+  // Estado para eliminar propuesta con confirmación
+  const [ordenAEliminar, setOrdenAEliminar] = useState<OrdenResumen | null>(null);
+  const [eliminandoId, setEliminandoId] = useState<string | null>(null);
+
+  const handleConfirmarEliminar = async () => {
+    if (!ordenAEliminar) return;
+    const targetId = ordenAEliminar.id;
+    const targetNum = ordenAEliminar.orderNumber;
+    try {
+      setEliminandoId(targetId || targetNum);
+      const url = `/api/taller/ordenes?id=${encodeURIComponent(targetId || "")}&orderNumber=${encodeURIComponent(targetNum || "")}`;
+      const res = await fetch(url, {
+        method: "DELETE",
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success) {
+        mostrarToast(data.message || "Propuesta eliminada correctamente.", "ok");
+      } else {
+        mostrarToast(data.error || "No se pudo eliminar la propuesta.", "err");
+      }
+
+      if (
+        ordenTrabajandoId === targetId ||
+        ordenTrabajandoId === targetNum ||
+        ordenTrabajandoId === ordenAEliminar.id ||
+        ordenTrabajandoId === ordenAEliminar.orderNumber
+      ) {
+        setOrdenTrabajandoId(null);
+        try {
+          localStorage.removeItem("taller_orden_activa_id");
+        } catch {}
+      }
+
+      // Remover inmediatamente del estado local de la tabla
+      setOrdenes((prev) =>
+        prev.filter((o) => {
+          const mId = o.id && (o.id === targetId || o.id === ordenAEliminar.id);
+          const mNum = o.orderNumber && (o.orderNumber === targetNum || o.orderNumber === ordenAEliminar.orderNumber);
+          return !mId && !mNum;
+        })
+      );
+      setOrdenAEliminar(null);
+      void cargarOrdenes(true);
+    } catch (err: any) {
+      mostrarToast("Error de conexión al eliminar: " + (err.message || ""), "err");
+    } finally {
+      setEliminandoId(null);
+    }
+  };
+
   // Navegación a la página de expediente / propuesta dedicada
   const irAPropuesta = (id: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
@@ -630,17 +680,40 @@ export default function PanelPresupuestosPage() {
                           <span className="font-normal text-xs text-zinc-500 dark:text-zinc-400">
                             {fecha}{hora ? ` · ${hora}` : ""}
                           </span>
-                          <span
-                            className={`px-2.5 py-0.5 rounded-lg border text-xs font-normal shrink-0 ${
-                              esPagado
-                                ? "bg-sky-500/15 border-sky-500/30 text-sky-700 dark:text-sky-300"
-                                : esAprobado
-                                ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-700 dark:text-emerald-300"
-                                : "bg-amber-500/15 border-amber-500/30 text-amber-700 dark:text-amber-400"
-                            }`}
-                          >
-                            {esPagado ? "✓ Pagado" : esAprobado ? "✓ Aprobado" : "En Espera"}
-                          </span>
+                          <div className="flex items-center gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
+                            <span
+                              className={`px-2.5 py-0.5 rounded-lg border text-xs font-normal shrink-0 ${
+                                esPagado
+                                  ? "bg-sky-500/15 border-sky-500/30 text-sky-700 dark:text-sky-300"
+                                  : esAprobado
+                                  ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-700 dark:text-emerald-300"
+                                  : "bg-amber-500/15 border-amber-500/30 text-amber-700 dark:text-amber-400"
+                              }`}
+                            >
+                              {esPagado ? "✓ Pagado" : esAprobado ? "✓ Aprobado" : "En Espera"}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setOrdenAEliminar(orden);
+                              }}
+                              className="w-7 h-7 rounded-lg bg-rose-50 dark:bg-rose-500/10 hover:bg-rose-100 dark:hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-normal flex items-center justify-center transition-all cursor-pointer"
+                              title="Eliminar propuesta"
+                            >
+                              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => irAPropuesta(orden.id)}
+                              className="w-7 h-7 rounded-lg bg-purple-50 dark:bg-purple-500/10 hover:bg-purple-100 dark:hover:bg-purple-500/20 text-purple-600 dark:text-purple-400 text-xs font-normal flex items-center justify-center transition-all cursor-pointer"
+                              title="Abrir propuesta"
+                            >
+                              →
+                            </button>
+                          </div>
                         </div>
                       </div>
                     );
@@ -724,7 +797,20 @@ export default function PanelPresupuestosPage() {
                                 </span>
                               </td>
                               <td className="py-3 px-4 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-                                <div className="flex items-center justify-end">
+                                <div className="flex items-center justify-end gap-1.5">
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setOrdenAEliminar(orden);
+                                    }}
+                                    className="w-7 h-7 rounded-lg bg-rose-50 dark:bg-rose-500/10 hover:bg-rose-100 dark:hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-normal flex items-center justify-center transition-all cursor-pointer"
+                                    title="Eliminar propuesta"
+                                  >
+                                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
+                                  </button>
                                   <button
                                     type="button"
                                     onClick={() => irAPropuesta(orden.id)}
@@ -747,6 +833,63 @@ export default function PanelPresupuestosPage() {
           </div>
         </div>
       </main>
+
+      {/* MODAL DE CONFIRMACIÓN DE ELIMINACIÓN */}
+      {ordenAEliminar && (
+        <div
+          onClick={() => !eliminandoId && setOrdenAEliminar(null)}
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white dark:bg-[#121215] border border-zinc-200 dark:border-white/10 rounded-2xl max-w-sm w-full p-5 space-y-4 shadow-2xl animate-scale-up text-zinc-900 dark:text-white"
+          >
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-xl bg-rose-100 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0 text-lg">
+                ⚠️
+              </div>
+              <div className="space-y-1">
+                <h3 className="font-semibold text-sm sm:text-base">
+                  ¿Eliminar propuesta #{limpiarNumeroOrden(ordenAEliminar.orderNumber)}?
+                </h3>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                  Esta acción eliminará de forma permanente la propuesta de{" "}
+                  <strong className="text-zinc-800 dark:text-zinc-200 font-medium">
+                    {ordenAEliminar.client || "Cliente"}
+                  </strong>{" "}
+                  ({ordenAEliminar.vehicle || "Vehículo"}). No se podrá recuperar.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-zinc-100 dark:border-white/5">
+              <button
+                type="button"
+                disabled={Boolean(eliminandoId)}
+                onClick={() => setOrdenAEliminar(null)}
+                className="px-3.5 py-2 rounded-xl text-xs font-medium text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-white/5 transition-colors cursor-pointer disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={Boolean(eliminandoId)}
+                onClick={handleConfirmarEliminar}
+                className="px-4 py-2 rounded-xl text-xs font-semibold bg-rose-600 hover:bg-rose-500 text-white shadow-sm transition-all active:scale-95 cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+              >
+                {eliminandoId ? (
+                  <>
+                    <span className="animate-spin inline-block">⏳</span>
+                    <span>Eliminando...</span>
+                  </>
+                ) : (
+                  <span>Sí, eliminar</span>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

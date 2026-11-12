@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import fs from "fs";
+import path from "path";
 
 export const dynamic = "force-dynamic";
 
@@ -527,13 +529,14 @@ export async function PUT(request: Request) {
   }
 }
 
-// DELETE: Eliminar una orden de taller y sus registros asociados (solicitud, historial, factura/venta vinculada)
+// DELETE: Eliminar una orden de taller y sus registros asociados (solicitud, historial, factura/venta vinculada, mirror)
 export async function DELETE(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const id = searchParams.get("id");
+    const id = (searchParams.get("id") || "").trim();
+    const orderNumberParam = (searchParams.get("orderNumber") || "").trim();
 
-    if (!id) {
+    if (!id && !orderNumberParam) {
       return NextResponse.json(
         { success: false, error: "El ID o número de orden es requerido." },
         { status: 400 }
@@ -541,59 +544,156 @@ export async function DELETE(request: Request) {
     }
 
     return await withRetry(async () => {
-      const ordRows: any[] = await prisma.$queryRawUnsafe(
-        'SELECT "id", "orderNumber", "client", "plate" FROM "WorkshopOrder" WHERE id = $1 OR "orderNumber" = $1 LIMIT 1',
-        id
-      );
-      const ord = ordRows?.[0];
-      const orderNum = (ord?.orderNumber || id).toString().trim();
-      const rawNum = orderNum.replace(/^OT-/i, "").trim();
-      const candidateNums = Array.from(new Set([orderNum, rawNum, `OT-${rawNum}`, `OT-OT ${rawNum}`])).filter(Boolean);
+      let ordRows: any[] = [];
+      try {
+        ordRows = (await prisma.$queryRawUnsafe(
+          'SELECT "id", "orderNumber", "client", "plate" FROM "WorkshopOrder" WHERE id = $1 OR "orderNumber" = $1 OR ($2 != \'\' AND "orderNumber" = $2) LIMIT 1',
+          id || orderNumberParam,
+          orderNumberParam || ""
+        ).catch(() => [])) as any[];
+      } catch {}
+
+      let ord = ordRows?.[0];
+
+      // Fallback: si no está en Neon, buscar datos en el mirror local
+      if (!ord) {
+        try {
+          const mirrorPath = path.join(process.cwd(), "prisma", "neon-local-mirror.json");
+          if (fs.existsSync(mirrorPath)) {
+            const mirrorData = JSON.parse(fs.readFileSync(mirrorPath, "utf-8"));
+            const list = mirrorData.workshopOrder || mirrorData.WorkshopOrder || [];
+            ord = list.find(
+              (o: any) =>
+                (id && o.id === id) ||
+                (id && o.orderNumber === id) ||
+                (orderNumberParam && o.orderNumber === orderNumberParam)
+            );
+          }
+        } catch {}
+      }
+
+      const orderNum = (ord?.orderNumber || orderNumberParam || id).toString().trim();
+      const rawNum = orderNum.replace(/^(ot|ord)[-\s#]*/gi, "").replace(/#+/g, "").trim();
+      const candidateNums = Array.from(
+        new Set([
+          id,
+          orderNumberParam,
+          ord?.id,
+          orderNum,
+          rawNum,
+          `#${rawNum}`,
+          `OT #${rawNum}`,
+          `OT-${rawNum}`,
+          `OT-OT ${rawNum}`,
+          `OT ${rawNum}`,
+        ].filter(Boolean))
+      ) as string[];
 
       // 1. Eliminar solicitudes POS/Taller vinculadas
       for (const num of candidateNums) {
-        await prisma.$executeRawUnsafe(
-          'DELETE FROM "OrderRequest" WHERE "requestNumber" = $1',
-          num
-        ).catch(() => {});
+        await prisma
+          .$executeRawUnsafe('DELETE FROM "OrderRequest" WHERE "requestNumber" = $1', num)
+          .catch(() => {});
       }
 
       // 2. Eliminar historial de taller vinculado
       for (const num of candidateNums) {
-        await prisma.$executeRawUnsafe(
-          'DELETE FROM "WorkshopHistory" WHERE "orderNumber" = $1',
-          num
-        ).catch(() => {});
+        await prisma
+          .$executeRawUnsafe('DELETE FROM "WorkshopHistory" WHERE "orderNumber" = $1', num)
+          .catch(() => {});
       }
 
       // 3. Eliminar facturas electrónicas vinculadas
-      await prisma.$executeRawUnsafe(
-        'DELETE FROM "ClientInvoice" WHERE "orderId" = $1 OR "orderId" = $2',
-        ord?.id || id,
-        orderNum
-      ).catch(() => {});
+      await prisma
+        .$executeRawUnsafe(
+          'DELETE FROM "ClientInvoice" WHERE "orderId" = $1 OR "orderId" = $2',
+          ord?.id || id,
+          orderNum
+        )
+        .catch(() => {});
 
       // 4. Eliminar ventas POS vinculadas por sourceOrderNumber
       for (const num of candidateNums) {
-        const linkedSales = await prisma.sale.findMany({
-          where: { sourceOrderNumber: num },
-          select: { id: true },
-        }).catch(() => []);
-        for (const s of linkedSales) {
-          await prisma.saleItem.deleteMany({ where: { saleId: s.id } }).catch(() => {});
-          await prisma.sale.delete({ where: { id: s.id } }).catch(() => {});
-        }
+        try {
+          const linkedSales = await prisma.sale.findMany({
+            where: { sourceOrderNumber: num },
+            select: { id: true },
+          }).catch(() => []);
+          for (const s of linkedSales) {
+            await prisma.saleItem.deleteMany({ where: { saleId: s.id } }).catch(() => {});
+            await prisma.sale.delete({ where: { id: s.id } }).catch(() => {});
+          }
+        } catch {}
       }
 
-      // 5. Eliminar la orden de taller
-      await prisma.$executeRawUnsafe(
-        'DELETE FROM "WorkshopOrder" WHERE id = $1 OR "orderNumber" = $1',
-        id
-      );
+      // 5. Eliminar evidencias vinculadas
+      for (const num of candidateNums) {
+        await prisma
+          .$executeRawUnsafe('DELETE FROM "WorkshopEvidence" WHERE "orderId" = $1 OR "orderNumber" = $1', num)
+          .catch(() => {});
+      }
+
+      // 6. Eliminar la orden de taller en Neon PostgreSQL
+      for (const num of candidateNums) {
+        await prisma
+          .$executeRawUnsafe('DELETE FROM "WorkshopOrder" WHERE id = $1 OR "orderNumber" = $1', num)
+          .catch(() => {});
+      }
+
+      // 7. Eliminar del mirror local (neon-local-mirror.json)
+      try {
+        const mirrorPath = path.join(process.cwd(), "prisma", "neon-local-mirror.json");
+        if (fs.existsSync(mirrorPath)) {
+          const mirrorData = JSON.parse(fs.readFileSync(mirrorPath, "utf-8"));
+          const matchIds = new Set(
+            candidateNums.map((x) => String(x).toLowerCase().trim())
+          );
+
+          let modified = false;
+          ["workshopOrder", "WorkshopOrder"].forEach((key) => {
+            if (Array.isArray(mirrorData[key])) {
+              const beforeLen = mirrorData[key].length;
+              mirrorData[key] = mirrorData[key].filter((o: any) => {
+                const oid = String(o.id || "").toLowerCase().trim();
+                const onum = String(o.orderNumber || "").toLowerCase().trim();
+                const oraw = onum.replace(/^(ot|ord)[-\s#]*/gi, "").replace(/#+/g, "").trim();
+                return !matchIds.has(oid) && !matchIds.has(onum) && !matchIds.has(oraw);
+              });
+              if (mirrorData[key].length !== beforeLen) modified = true;
+            }
+          });
+
+          ["orderRequest", "OrderRequest"].forEach((key) => {
+            if (Array.isArray(mirrorData[key])) {
+              mirrorData[key] = mirrorData[key].filter((r: any) => {
+                const rid = String(r.id || "").toLowerCase().trim();
+                const rnum = String(r.requestNumber || "").toLowerCase().trim();
+                return !matchIds.has(rid) && !matchIds.has(rnum);
+              });
+            }
+          });
+
+          ["workshopEvidence", "WorkshopEvidence"].forEach((key) => {
+            if (Array.isArray(mirrorData[key])) {
+              mirrorData[key] = mirrorData[key].filter((e: any) => {
+                const eoid = String(e.orderId || "").toLowerCase().trim();
+                const eonum = String(e.orderNumber || "").toLowerCase().trim();
+                return !matchIds.has(eoid) && !matchIds.has(eonum);
+              });
+            }
+          });
+
+          if (modified) {
+            fs.writeFileSync(mirrorPath, JSON.stringify(mirrorData, null, 2), "utf-8");
+          }
+        }
+      } catch (mirrorErr) {
+        console.warn("Aviso al remover orden del mirror local:", mirrorErr);
+      }
 
       return NextResponse.json({
         success: true,
-        message: "Orden eliminada exitosamente.",
+        message: `Orden #${rawNum || orderNum} eliminada exitosamente.`,
       });
     });
   } catch (error: any) {

@@ -10,7 +10,16 @@ export const dynamic = "force-dynamic";
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { orderId, items = [], services = [], notes, quoteStatus, inspectionFindings } = body;
+    const {
+      orderId,
+      items = [],
+      services = [],
+      notes,
+      quoteStatus,
+      quoteTaxRate,
+      quoteDiscount,
+      inspectionFindings,
+    } = body;
 
     if (!orderId) {
       return NextResponse.json(
@@ -20,10 +29,17 @@ export async function POST(request: Request) {
     }
 
     return await withRetry(async () => {
-      // Calcular total de la orden
+      // Calcular total de la orden con impuestos y descuentos
       const totalRepuestos = items.reduce((acc: number, it: any) => acc + (Number(it.price || 0) * Number(it.qty || 1)), 0);
       const totalServicios = services.reduce((acc: number, sv: any) => acc + Number(sv.price || 0), 0);
-      const totalCalculado = Number((totalRepuestos + totalServicios).toFixed(2));
+      const subtotalCalculado = Number((totalRepuestos + totalServicios).toFixed(2));
+
+      const taxRate = Number(quoteTaxRate !== undefined ? quoteTaxRate : 15);
+      const discount = Number(quoteDiscount !== undefined ? quoteDiscount : 0);
+      const valorDescuento = Number(((subtotalCalculado * discount) / 100).toFixed(2));
+      const baseImponible = Math.max(0, subtotalCalculado - valorDescuento);
+      const valorIva = Number(((baseImponible * taxRate) / 100).toFixed(2));
+      const totalCalculado = Number((baseImponible + valorIva).toFixed(2));
 
       await prisma.$executeRawUnsafe(
         `UPDATE "WorkshopOrder"
@@ -32,6 +48,8 @@ export async function POST(request: Request) {
              "totalCost" = $4,
              "notes" = COALESCE($5, "notes"),
              "quoteStatus" = COALESCE($6, "quoteStatus"),
+             "quoteTaxRate" = COALESCE($7, "quoteTaxRate"),
+             "quoteDiscount" = COALESCE($8, "quoteDiscount"),
              "updatedAt" = CURRENT_TIMESTAMP
          WHERE "id" = $1 OR "orderNumber" = $1`,
         orderId,
@@ -39,7 +57,9 @@ export async function POST(request: Request) {
         JSON.stringify(services),
         totalCalculado,
         notes !== undefined ? notes : null,
-        quoteStatus || "Cotizando"
+        quoteStatus || "Cotizando",
+        quoteTaxRate !== undefined ? Number(quoteTaxRate) : null,
+        quoteDiscount !== undefined ? Number(quoteDiscount) : null
       );
 
       if (inspectionFindings !== undefined) {
@@ -54,8 +74,12 @@ export async function POST(request: Request) {
 
       return NextResponse.json({
         success: true,
-        message: "Presupuesto guardado correctamente.",
+        message: "Presupuesto guardado correctamente en Neon PostgreSQL.",
         total: totalCalculado,
+        subtotal: subtotalCalculado,
+        itemCount: items.length,
+        serviceCount: services.length,
+        findingsCount: Array.isArray(inspectionFindings) ? inspectionFindings.length : undefined,
       });
     });
   } catch (error: any) {

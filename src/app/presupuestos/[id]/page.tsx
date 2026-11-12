@@ -273,6 +273,8 @@ export default function PaginaDetallePropuesta() {
   const [subiendoFoto, setSubiendoFoto] = useState(false);
   const [subiendoFotoCliente, setSubiendoFotoCliente] = useState(false);
   const [subiendoFotoVehiculoPrincipal, setSubiendoFotoVehiculoPrincipal] = useState(false);
+  const [fotoVehiculoError, setFotoVehiculoError] = useState(false);
+  const [fotoClienteError, setFotoClienteError] = useState(false);
 
   // Modales flotantes minimalistas de fotos y audios por evidencia
   const [flotanteFotos, setFlotanteFotos] = useState<{
@@ -397,6 +399,9 @@ export default function PaginaDetallePropuesta() {
 
   // Formulario rápido para nuevo repuesto
   const [nuevoNombre, setNuevoNombre] = useState("");
+  const [nuevoCodigo, setNuevoCodigo] = useState("");
+  const [nuevoCategoria, setNuevoCategoria] = useState("");
+  const [nuevoProductId, setNuevoProductId] = useState<string | null>(null);
   const [nuevoCosto, setNuevoCosto] = useState("0");
   const [nuevoPvp, setNuevoPvp] = useState("0");
   const [nuevaCantidad, setNuevaCantidad] = useState("1");
@@ -406,8 +411,86 @@ export default function PaginaDetallePropuesta() {
 
   // Formulario rápido para nuevo servicio
   const [nuevoServicioNombre, setNuevoServicioNombre] = useState("");
+  const [nuevoServicioCodigo, setNuevoServicioCodigo] = useState("");
   const [nuevoServicioPrecio, setNuevoServicioPrecio] = useState("0");
   const [nuevoServicioOrigen, setNuevoServicioOrigen] = useState<EspecialidadTipo>("TALLER");
+
+  // Búsqueda en vivo en Neon PostgreSQL (Catálogos reales)
+  const [busquedaProductoNeon, setBusquedaProductoNeon] = useState("");
+  const [productosEncontradosNeon, setProductosEncontradosNeon] = useState<any[]>([]);
+  const [buscandoProductoNeon, setBuscandoProductoNeon] = useState(false);
+
+  const [busquedaServicioNeon, setBusquedaServicioNeon] = useState("");
+  const [serviciosEncontradosNeon, setServiciosEncontradosNeon] = useState<any[]>([]);
+  const [buscandoServicioNeon, setBuscandoServicioNeon] = useState(false);
+
+  // Estado de sincronización en tiempo real con Neon PostgreSQL
+  const [estadoSync, setEstadoSync] = useState<"guardado" | "guardando" | "error">("guardado");
+  const [ultimaSync, setUltimaSync] = useState<Date | null>(null);
+  const debounceTimerRef = React.useRef<NodeJS.Timeout | null>(null);
+
+  // Modal para crear nuevo hallazgo / evidencia
+  const [modalNuevoHallazgo, setModalNuevoHallazgo] = useState<{
+    abierto: boolean;
+    seccionId?: string;
+    seccionNombre?: string;
+    vistaDefault?: string;
+  }>({ abierto: false });
+  const [nuevoHallazgoTipo, setNuevoHallazgoTipo] = useState("");
+  const [nuevoHallazgoDescripcion, setNuevoHallazgoDescripcion] = useState("");
+  const [nuevoHallazgoVista, setNuevoHallazgoVista] = useState("frontal");
+  const [nuevoHallazgoSolicitaRepuesto, setNuevoHallazgoSolicitaRepuesto] = useState(true);
+  const [nuevoHallazgoSolicitaServicio, setNuevoHallazgoSolicitaServicio] = useState(false);
+
+  // Buscar productos reales en Neon al tipear en el modal de repuestos
+  useEffect(() => {
+    if (!modalNuevoRepuesto) {
+      setBusquedaProductoNeon("");
+      setProductosEncontradosNeon([]);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      setBuscandoProductoNeon(true);
+      try {
+        const q = busquedaProductoNeon.trim();
+        const res = await fetch(`/api/presupuestos/productos-rapidos?q=${encodeURIComponent(q)}`);
+        const data = await res.json();
+        if (data.success && Array.isArray(data.productos)) {
+          setProductosEncontradosNeon(data.productos);
+        }
+      } catch (err) {
+        console.error("Error buscando productos en Neon:", err);
+      } finally {
+        setBuscandoProductoNeon(false);
+      }
+    }, 200);
+    return () => clearTimeout(timer);
+  }, [busquedaProductoNeon, modalNuevoRepuesto]);
+
+  // Buscar servicios reales en Neon al tipear en el modal de servicios
+  useEffect(() => {
+    if (!modalNuevoServicio) {
+      setBusquedaServicioNeon("");
+      setServiciosEncontradosNeon([]);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      setBuscandoServicioNeon(true);
+      try {
+        const q = busquedaServicioNeon.trim();
+        const res = await fetch(`/api/presupuestos/servicios-rapidos?q=${encodeURIComponent(q)}`);
+        const data = await res.json();
+        if (data.success && Array.isArray(data.servicios)) {
+          setServiciosEncontradosNeon(data.servicios);
+        }
+      } catch (err) {
+        console.error("Error buscando servicios en Neon:", err);
+      } finally {
+        setBuscandoServicioNeon(false);
+      }
+    }, 200);
+    return () => clearTimeout(timer);
+  }, [busquedaServicioNeon, modalNuevoServicio]);
 
   const mostrarToast = (msg: string, tipo: "ok" | "err" = "ok") => {
     setToast({ msg, tipo });
@@ -474,6 +557,8 @@ export default function PaginaDetallePropuesta() {
         }
         if (data.success && data.order) {
           const ord = data.order;
+          setFotoVehiculoError(false);
+          setFotoClienteError(false);
           setOrden(ord);
           if (Array.isArray(data.proveedores) && data.proveedores.length > 0) {
             setProveedores(data.proveedores);
@@ -520,8 +605,10 @@ export default function PaginaDetallePropuesta() {
               h.linkedItems.forEach((li: any) => {
                 const esServicio = li.type === "SERVICE" || li.category?.toLowerCase().includes("servicio") || li.category?.toLowerCase().includes("mano de obra");
                 if (esServicio) {
-                  const yaExiste = srvInit.some((s) => s.id === li.id || (s.name && li.name && s.name.toLowerCase() === li.name.toLowerCase()));
-                  if (!yaExiste) {
+                  const srvExistente = srvInit.find((s) => s.id === li.id || (s.name && li.name && s.name.toLowerCase() === li.name.toLowerCase()));
+                  if (srvExistente) {
+                    if (!srvExistente.findingId) srvExistente.findingId = h.id;
+                  } else {
                     srvInit.push({
                       id: li.id || `srv_find_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
                       findingId: h.id,
@@ -533,17 +620,20 @@ export default function PaginaDetallePropuesta() {
                     });
                   }
                 } else {
-                  const yaExiste = itemsInit.some((it) => it.id === li.id || (it.name && li.name && it.name.toLowerCase() === li.name.toLowerCase()));
-                  if (!yaExiste) {
+                  const repExistente = itemsInit.find((it) => it.id === li.id || (it.name && li.name && it.name.toLowerCase() === li.name.toLowerCase()));
+                  if (repExistente) {
+                    if (!repExistente.findingId) repExistente.findingId = h.id;
+                  } else {
                     itemsInit.push({
                       id: li.id || `rep_find_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
                       findingId: h.id,
                       name: li.name,
+                      code: li.code,
                       qty: Number(li.qty || 1),
-                      costPrice: 0,
+                      costPrice: Number(li.costPrice || 0),
                       price: Number(li.price || 0),
                       subtotalVenta: Number(li.price || 0) * Number(li.qty || 1),
-                      subtotalCosto: 0,
+                      subtotalCosto: Number(li.costPrice || 0) * Number(li.qty || 1),
                       margin: Number(li.price || 0) * Number(li.qty || 1),
                       marginPercent: 100,
                       supplierName: "Bodega Taller",
@@ -556,6 +646,18 @@ export default function PaginaDetallePropuesta() {
                 }
               });
             }
+
+            // También enlazar ítems que en notas tengan [Evidencia #X]
+            itemsInit.forEach((it) => {
+              if (!it.findingId && it.notes && (it.notes.includes(`[Evidencia #${numEv}]`) || it.notes.includes(`Pin #${numEv}`))) {
+                it.findingId = h.id;
+              }
+            });
+            srvInit.forEach((sv) => {
+              if (!sv.findingId && sv.notes && (sv.notes.includes(`[Evidencia #${numEv}]`) || sv.notes.includes(`Pin #${numEv}`))) {
+                sv.findingId = h.id;
+              }
+            });
           });
 
           setRepuestos(itemsInit);
@@ -572,82 +674,331 @@ export default function PaginaDetallePropuesta() {
     cargarDetalle();
   }, [id]);
 
-  // Modificar cantidad
-  const handleUpdateQty = (itemId: string, delta: number) => {
-    setRepuestos((prev) =>
-      prev.map((it) => {
-        if (it.id === itemId) {
-          const newQty = Math.max(1, (it.qty || 1) + delta);
-          const subtotalVenta = Number((it.price * newQty).toFixed(2));
-          const subtotalCosto = Number((it.costPrice * newQty).toFixed(2));
-          const margin = Number(((it.price - it.costPrice) * newQty).toFixed(2));
-          return { ...it, qty: newQty, subtotalVenta, subtotalCosto, margin };
-        }
-        return it;
-      })
-    );
+  // Sincronizar propuesta con Neon PostgreSQL en tiempo real
+  const sincronizarConNeon = async (
+    nuevosRepuestos?: ItemPropuesta[],
+    nuevosServicios?: ServicioPropuesta[],
+    nuevosFindings?: any[],
+    nuevasNotas?: string,
+    nuevoIva?: number,
+    nuevoDescuento?: number
+  ) => {
+    if (!orden) return false;
+    const itemsParaGuardar = nuevosRepuestos ?? repuestos;
+    const serviciosParaGuardar = nuevosServicios ?? servicios;
+    const findingsParaGuardar = nuevosFindings ?? (orden.inspectionFindings || hallazgos);
+    const notasParaGuardar = nuevasNotas ?? notasFactura;
+    const ivaParaGuardar = nuevoIva ?? porcentajeIva;
+    const descParaGuardar = nuevoDescuento ?? porcentajeDescuento;
+
+    setEstadoSync("guardando");
+    setGuardando(true);
+    try {
+      const res = await fetch("/api/presupuestos/guardar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          orderId: orden.id,
+          items: itemsParaGuardar,
+          services: serviciosParaGuardar,
+          notes: notasParaGuardar,
+          quoteStatus: orden.quoteStatus || "Cotizando",
+          quoteTaxRate: ivaParaGuardar,
+          quoteDiscount: descParaGuardar,
+          inspectionFindings: findingsParaGuardar,
+        }),
+      });
+
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error || "Error al sincronizar");
+
+      setEstadoSync("guardado");
+      setUltimaSync(new Date());
+      setOrden((prev: any) =>
+        prev
+          ? {
+              ...prev,
+              items: itemsParaGuardar,
+              services: serviciosParaGuardar,
+              inspectionFindings: findingsParaGuardar,
+              notes: notasParaGuardar,
+              totalCost: data.total,
+            }
+          : prev
+      );
+      return true;
+    } catch (err: any) {
+      console.error("Error al sincronizar con Neon:", err);
+      setEstadoSync("error");
+      return false;
+    } finally {
+      setGuardando(false);
+    }
   };
 
-  // Modificar precios en línea
+  const dispararGuardadoDebounced = (
+    nuevosRep: ItemPropuesta[],
+    nuevosSrv: ServicioPropuesta[],
+    nuevosFind?: any[],
+    nuevasNotas?: string
+  ) => {
+    setEstadoSync("guardando");
+    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+    debounceTimerRef.current = setTimeout(() => {
+      sincronizarConNeon(nuevosRep, nuevosSrv, nuevosFind, nuevasNotas);
+    }, 600);
+  };
+
+  // Modificar cantidad (CRUD Update)
+  const handleUpdateQty = (itemId: string, delta: number) => {
+    const nuevosRepuestos = repuestos.map((it) => {
+      if (it.id === itemId) {
+        const newQty = Math.max(1, (it.qty || 1) + delta);
+        const subtotalVenta = Number((it.price * newQty).toFixed(2));
+        const subtotalCosto = Number((it.costPrice * newQty).toFixed(2));
+        const margin = Number(((it.price - it.costPrice) * newQty).toFixed(2));
+        return { ...it, qty: newQty, subtotalVenta, subtotalCosto, margin };
+      }
+      return it;
+    });
+    setRepuestos(nuevosRepuestos);
+
+    const findingsActualizados = (orden?.inspectionFindings || hallazgos).map((h: any) => {
+      if (Array.isArray(h.linkedItems)) {
+        return {
+          ...h,
+          linkedItems: h.linkedItems.map((li: any) => {
+            if (li.id === itemId) {
+              const newQty = Math.max(1, (li.qty || 1) + delta);
+              return { ...li, qty: newQty };
+            }
+            return li;
+          }),
+        };
+      }
+      return h;
+    });
+    setOrden((prev: any) => (prev ? { ...prev, inspectionFindings: findingsActualizados } : prev));
+
+    dispararGuardadoDebounced(nuevosRepuestos, servicios, findingsActualizados);
+  };
+
+  // Modificar precios en línea (CRUD Update)
   const handleUpdatePrice = (itemId: string, field: "costPrice" | "price", valStr: string) => {
     const val = parseFloat(valStr) || 0;
-    setRepuestos((prev) =>
-      prev.map((it) => {
-        if (it.id === itemId) {
-          const costPrice = field === "costPrice" ? val : it.costPrice;
-          const price = field === "price" ? val : it.price;
-          const subtotalVenta = Number((price * it.qty).toFixed(2));
-          const subtotalCosto = Number((costPrice * it.qty).toFixed(2));
-          const margin = Number(((price - costPrice) * it.qty).toFixed(2));
-          const marginPercent = price > 0 ? Math.round(((price - costPrice) / price) * 100) : 0;
-          return { ...it, costPrice, price, subtotalVenta, subtotalCosto, margin, marginPercent };
-        }
-        return it;
-      })
-    );
+    const nuevosRepuestos = repuestos.map((it) => {
+      if (it.id === itemId) {
+        const costPrice = field === "costPrice" ? val : it.costPrice;
+        const price = field === "price" ? val : it.price;
+        const subtotalVenta = Number((price * it.qty).toFixed(2));
+        const subtotalCosto = Number((costPrice * it.qty).toFixed(2));
+        const margin = Number(((price - costPrice) * it.qty).toFixed(2));
+        const marginPercent = price > 0 ? Math.round(((price - costPrice) / price) * 100) : 0;
+        return { ...it, costPrice, price, subtotalVenta, subtotalCosto, margin, marginPercent };
+      }
+      return it;
+    });
+    setRepuestos(nuevosRepuestos);
+
+    const findingsActualizados = (orden?.inspectionFindings || hallazgos).map((h: any) => {
+      if (Array.isArray(h.linkedItems)) {
+        return {
+          ...h,
+          linkedItems: h.linkedItems.map((li: any) => {
+            if (li.id === itemId) {
+              const costPrice = field === "costPrice" ? val : (li.costPrice || 0);
+              const price = field === "price" ? val : (li.price || 0);
+              return { ...li, costPrice, price };
+            }
+            return li;
+          }),
+        };
+      }
+      return h;
+    });
+    setOrden((prev: any) => (prev ? { ...prev, inspectionFindings: findingsActualizados } : prev));
+
+    dispararGuardadoDebounced(nuevosRepuestos, servicios, findingsActualizados);
   };
 
-  // Modificar Casillero: Sí hay en Bodega (Taller) vs Pedir a Proveedor Externo
-  const handleToggleStock = (itemId: string) => {
-    setRepuestos((prev) =>
-      prev.map((it) => {
-        if (it.id === itemId) {
-          const nextStock = !it.inStock;
-          return {
-            ...it,
-            inStock: nextStock,
-            purchaseStatus: nextStock ? "STOCK_LOCAL" : "POR_PEDIR",
-            supplierName: nextStock ? "Bodega Taller" : (it.supplierName === "Bodega Taller" ? "Proveedor General" : it.supplierName),
-          };
-        }
-        return it;
-      })
-    );
+  // Modificar Casillero: Sí hay en Bodega (Taller) vs Pedir a Proveedor Externo (CRUD Update)
+  const handleToggleStock = async (itemId: string) => {
+    const nuevosRepuestos = repuestos.map((it) => {
+      if (it.id === itemId) {
+        const nextStock = !it.inStock;
+        return {
+          ...it,
+          inStock: nextStock,
+          purchaseStatus: nextStock ? "STOCK_LOCAL" : "POR_PEDIR",
+          supplierName: nextStock ? "Bodega Taller" : (it.supplierName === "Bodega Taller" ? "Proveedor General" : it.supplierName),
+        };
+      }
+      return it;
+    });
+    setRepuestos(nuevosRepuestos);
+    await sincronizarConNeon(nuevosRepuestos, servicios);
   };
 
-  // Modificar proveedor asignado
-  const handleUpdateSupplier = (itemId: string, supplierName: string) => {
-    setRepuestos((prev) =>
-      prev.map((it) => (it.id === itemId ? { ...it, supplierName } : it))
-    );
+  // Modificar proveedor asignado (CRUD Update)
+  const handleUpdateSupplier = async (itemId: string, supplierName: string) => {
+    const nuevosRepuestos = repuestos.map((it) => (it.id === itemId ? { ...it, supplierName } : it));
+    setRepuestos(nuevosRepuestos);
+    await sincronizarConNeon(nuevosRepuestos, servicios);
   };
 
-  // Eliminar repuesto
-  const handleDeleteItem = (itemId: string) => {
-    setRepuestos((prev) => prev.filter((it) => it.id !== itemId));
+  // Eliminar repuesto de la propuesta y de Neon (CRUD Delete)
+  const handleDeleteItem = async (itemId: string) => {
+    const repuestosFiltrados = repuestos.filter((it) => it.id !== itemId);
+    setRepuestos(repuestosFiltrados);
+
+    // Limpiar de linkedItems en todos los hallazgos
+    const findingsActualizados = (orden?.inspectionFindings || hallazgos).map((h: any) => {
+      if (Array.isArray(h.linkedItems)) {
+        return {
+          ...h,
+          linkedItems: h.linkedItems.filter((li: any) => li.id !== itemId && li.name !== itemId),
+        };
+      }
+      return h;
+    });
+
+    setOrden((prev: any) => (prev ? { ...prev, inspectionFindings: findingsActualizados } : prev));
+    await sincronizarConNeon(repuestosFiltrados, servicios, findingsActualizados);
+    mostrarToast("✓ Ítem eliminado y sincronizado en Neon PostgreSQL.");
   };
 
-  // Eliminar servicio
-  const handleDeleteService = (srvId: string) => {
-    setServicios((prev) => prev.filter((sv) => sv.id !== srvId));
+  // Eliminar servicio de la propuesta y de Neon (CRUD Delete)
+  const handleDeleteService = async (srvId: string) => {
+    const serviciosFiltrados = servicios.filter((sv) => sv.id !== srvId);
+    setServicios(serviciosFiltrados);
+
+    // Limpiar de linkedItems en todos los hallazgos
+    const findingsActualizados = (orden?.inspectionFindings || hallazgos).map((h: any) => {
+      if (Array.isArray(h.linkedItems)) {
+        return {
+          ...h,
+          linkedItems: h.linkedItems.filter((li: any) => li.id !== srvId && li.name !== srvId),
+        };
+      }
+      return h;
+    });
+
+    setOrden((prev: any) => (prev ? { ...prev, inspectionFindings: findingsActualizados } : prev));
+    await sincronizarConNeon(repuestos, serviciosFiltrados, findingsActualizados);
+    mostrarToast("✓ Servicio eliminado y sincronizado en Neon PostgreSQL.");
   };
 
-  // Modificar precio de servicio en línea
+  // Modificar precio de servicio en línea (CRUD Update)
   const handleUpdateServicePrice = (srvId: string, valStr: string) => {
     const val = parseFloat(valStr) || 0;
-    setServicios((prev) =>
-      prev.map((sv) => (sv.id === srvId ? { ...sv, price: val } : sv))
-    );
+    const nuevosServicios = servicios.map((sv) => (sv.id === srvId ? { ...sv, price: val } : sv));
+    setServicios(nuevosServicios);
+
+    const findingsActualizados = (orden?.inspectionFindings || hallazgos).map((h: any) => {
+      if (Array.isArray(h.linkedItems)) {
+        return {
+          ...h,
+          linkedItems: h.linkedItems.map((li: any) => {
+            if (li.id === srvId) return { ...li, price: val };
+            return li;
+          }),
+        };
+      }
+      return h;
+    });
+    setOrden((prev: any) => (prev ? { ...prev, inspectionFindings: findingsActualizados } : prev));
+
+    dispararGuardadoDebounced(repuestos, nuevosServicios, findingsActualizados);
+  };
+
+  // Eliminar un hallazgo completo y sus ítems vinculados de Neon (CRUD Delete Hallazgo)
+  const handleEliminarHallazgo = async (pinId: string) => {
+    if (!confirm("¿Estás seguro de eliminar este hallazgo y sus productos vinculados de la propuesta?")) return;
+
+    const listBase = orden?.inspectionFindings && orden.inspectionFindings.length > 0
+      ? orden.inspectionFindings
+      : hallazgos;
+
+    const findingsActualizados = listBase.filter((h: any) => h.id !== pinId && h.originalId !== pinId);
+    setOrden((prev: any) => (prev ? { ...prev, inspectionFindings: findingsActualizados } : prev));
+
+    const repuestosFiltrados = repuestos.filter((r) => r.findingId !== pinId);
+    const serviciosFiltrados = servicios.filter((s) => s.findingId !== pinId);
+    setRepuestos(repuestosFiltrados);
+    setServicios(serviciosFiltrados);
+
+    setFlotanteDetalles(null);
+    setFlotanteManual(null);
+
+    await sincronizarConNeon(repuestosFiltrados, serviciosFiltrados, findingsActualizados);
+    mostrarToast("✓ Hallazgo y sus ítems eliminados de Neon PostgreSQL.");
+  };
+
+  // Guardar edición de un hallazgo en Neon (CRUD Update Hallazgo)
+  const handleActualizarDatosHallazgo = async (pinId: string, tipo: string, descripcion: string, vista?: string) => {
+    const listBase = orden?.inspectionFindings && orden.inspectionFindings.length > 0
+      ? orden.inspectionFindings
+      : hallazgos;
+
+    const findingsActualizados = listBase.map((h: any) => {
+      if (h.id === pinId || h.originalId === pinId) {
+        return {
+          ...h,
+          tipo: tipo.trim(),
+          descripcion: descripcion.trim(),
+          ...(vista ? { vista, vistaLabel: vista.charAt(0).toUpperCase() + vista.slice(1).replace(/_/g, " ") } : {}),
+        };
+      }
+      return h;
+    });
+
+    setOrden((prev: any) => (prev ? { ...prev, inspectionFindings: findingsActualizados } : prev));
+    setFlotanteDetalles((prev) => prev ? { ...prev, pin: { ...prev.pin, tipo, descripcion, ...(vista ? { vista } : {}) } } : null);
+
+    await sincronizarConNeon(repuestos, servicios, findingsActualizados);
+    mostrarToast("✓ Detalles del hallazgo actualizados en Neon.");
+  };
+
+  // Crear nuevo hallazgo en Neon (CRUD Create Hallazgo)
+  const handleCrearNuevoHallazgo = async () => {
+    if (!nuevoHallazgoTipo.trim() && !nuevoHallazgoDescripcion.trim()) {
+      mostrarToast("Ingresa al menos el tipo de daño o una descripción.", "err");
+      return;
+    }
+
+    const listBase = orden?.inspectionFindings && orden.inspectionFindings.length > 0
+      ? orden.inspectionFindings
+      : hallazgos;
+
+    const nuevoNumero = listBase.length + 1;
+    const nuevoPinId = `pin-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const vistaNorm = (nuevoHallazgoVista || "frontal").toLowerCase().replace(/\s+/g, "_");
+    const vistaLabel = vistaNorm.charAt(0).toUpperCase() + vistaNorm.slice(1).replace(/_/g, " ");
+
+    const nuevoFinding = {
+      id: nuevoPinId,
+      pinNumber: nuevoNumero,
+      numeroEvidencia: nuevoNumero,
+      vista: vistaNorm,
+      vistaLabel,
+      tipo: nuevoHallazgoTipo.trim() || "Hallazgo",
+      descripcion: nuevoHallazgoDescripcion.trim(),
+      solicitaRepuesto: nuevoHallazgoSolicitaRepuesto,
+      solicitaServicio: nuevoHallazgoSolicitaServicio,
+      linkedItems: [],
+      photoUrls: fotosVehiculo.length > 0 ? [fotosVehiculo[0]] : [],
+    };
+
+    const findingsActualizados = [...listBase, nuevoFinding];
+    setOrden((prev: any) => (prev ? { ...prev, inspectionFindings: findingsActualizados } : prev));
+
+    setModalNuevoHallazgo({ abierto: false });
+    setNuevoHallazgoTipo("");
+    setNuevoHallazgoDescripcion("");
+
+    await sincronizarConNeon(repuestos, servicios, findingsActualizados);
+    mostrarToast("✓ Nuevo hallazgo registrado y guardado en Neon PostgreSQL.");
   };
 
   // Totales financieros calculados en tiempo real estilo liquidación de Factura
@@ -728,7 +1079,19 @@ export default function PaginaDetallePropuesta() {
         }
       }
     }
-    return Array.from(new Set(list.filter(Boolean)));
+    return Array.from(
+      new Set(
+        list
+          .filter((x): x is string => typeof x === "string" && Boolean(x.trim()) && !x.startsWith("blob:"))
+          .map((f) => {
+            const trimmed = f.trim();
+            if (trimmed.startsWith("http") || trimmed.startsWith("/") || trimmed.startsWith("data:")) {
+              return trimmed;
+            }
+            return `/api/storage/download?key=${encodeURIComponent(trimmed)}`;
+          })
+      )
+    );
   }, [orden]);
 
   // Hallazgos de inspección estructurados (Diagnóstico)
@@ -913,26 +1276,12 @@ export default function PaginaDetallePropuesta() {
     });
 
     setOrden((prev: any) => (prev ? { ...prev, inspectionFindings: nuevosFindings } : prev));
-
-    try {
-      await fetch("/api/presupuestos/guardar", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          orderId: orden?.id,
-          items: repuestos,
-          services: servicios,
-          inspectionFindings: nuevosFindings,
-        }),
-      });
-      mostrarToast(
-        valor
-          ? `✓ Marcado: se solicita ${campo === "solicitaRepuesto" ? "repuesto / producto" : "servicio"} para esta evidencia.`
-          : `✓ Solicitud desmarcada.`
-      );
-    } catch (err) {
-      console.error("Error al guardar solicitud:", err);
-    }
+    await sincronizarConNeon(repuestos, servicios, nuevosFindings);
+    mostrarToast(
+      valor
+        ? `✓ Marcado: se solicita ${campo === "solicitaRepuesto" ? "repuesto / producto" : "servicio"} para esta evidencia.`
+        : `✓ Solicitud desmarcada.`
+    );
   };
 
   // Obtener todos los productos y servicios asignados a una evidencia específica
@@ -970,43 +1319,7 @@ export default function PaginaDetallePropuesta() {
           subtotal: Number(s.price || 0),
         }));
 
-      // Extra de linkedItems si no están en prods ni en srvs
-      const extraProds = (pin.linkedItems || [])
-        .filter((li: any) => {
-          const esServicio = li.type === "SERVICE" || li.category?.toLowerCase().includes("servicio") || li.category?.toLowerCase().includes("mano de obra");
-          if (esServicio) return false;
-          return !prods.some((it) => it.id === li.id || (it.name && li.name && it.name.toLowerCase() === li.name.toLowerCase()));
-        })
-        .map((li: any) => ({
-          id: li.id,
-          name: li.name,
-          qty: Number(li.qty || 1),
-          costPrice: 0,
-          price: Number(li.price || 0),
-          subtotal: Number((Number(li.price || 0) * Number(li.qty || 1)).toFixed(2)),
-          isService: false,
-          inStock: true,
-          origin: "TALLER",
-        }));
-
-      const extraSrvs = (pin.linkedItems || [])
-        .filter((li: any) => {
-          const esServicio = li.type === "SERVICE" || li.category?.toLowerCase().includes("servicio") || li.category?.toLowerCase().includes("mano de obra");
-          if (!esServicio) return false;
-          return !srvs.some((sv) => sv.id === li.id || (sv.name && li.name && sv.name.toLowerCase() === li.name.toLowerCase()));
-        })
-        .map((li: any) => ({
-          id: li.id,
-          name: li.name,
-          qty: 1,
-          costPrice: 0,
-          price: Number(li.price || 0),
-          subtotal: Number(li.price || 0),
-          isService: true,
-          origin: "TALLER",
-        }));
-
-      const todos = [...prods, ...extraProds, ...srvs, ...extraSrvs];
+      const todos = [...prods, ...srvs];
       const vistos = new Set<string>();
       return todos.filter((it) => {
         const key = it.id ? String(it.id) : `${it.name}-${it.isService}`;
@@ -1204,6 +1517,7 @@ export default function PaginaDetallePropuesta() {
           }),
         });
         setOrden((prev) => (prev ? { ...prev, clientPhoto: photoUrl } : prev));
+        setFotoClienteError(false);
         mostrarToast("Foto de perfil del cliente actualizada con éxito.");
       } else {
         mostrarToast("No se pudo subir la foto del cliente.", "err");
@@ -1257,6 +1571,7 @@ export default function PaginaDetallePropuesta() {
             photos: prevPhotos.includes(photoUrl) ? prevPhotos : [photoUrl, ...prevPhotos],
           };
         });
+        setFotoVehiculoError(false);
         mostrarToast("Foto de perfil del vehículo actualizada con éxito.");
       } else {
         mostrarToast("No se pudo subir la foto del vehículo.", "err");
@@ -1269,48 +1584,14 @@ export default function PaginaDetallePropuesta() {
     }
   };
 
-  // Guardar Cambios en Neon PostgreSQL
+  // Guardar Cambios en Neon PostgreSQL (Manual)
   const handleGuardarBorrador = async () => {
     if (!orden) return;
-    try {
-      setGuardando(true);
-      const res = await fetch("/api/presupuestos/guardar", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          orderId: orden.id,
-          items: repuestos,
-          services: servicios,
-          notes: notasFactura,
-          quoteStatus: orden.quoteStatus || "Cotizando",
-          inspectionFindings: orden.inspectionFindings || hallazgos,
-        }),
-      });
-      if (!res.ok) {
-        let errText = `Error al guardar (${res.status})`;
-        try {
-          const isJson = res.headers.get("content-type")?.includes("application/json");
-          if (isJson) {
-            const errJson = await res.json();
-            errText = errJson.error || errText;
-          }
-        } catch { }
-        mostrarToast(errText, "err");
-        return;
-      }
-      let data: any = null;
-      try {
-        data = await res.json();
-      } catch { }
-      if (data?.success) {
-        mostrarToast("Factura / Presupuesto guardado correctamente.");
-      } else {
-        mostrarToast(data.error || "No se pudo guardar.", "err");
-      }
-    } catch {
-      mostrarToast("Error de conexión al guardar cambios.", "err");
-    } finally {
-      setGuardando(false);
+    const ok = await sincronizarConNeon();
+    if (ok) {
+      mostrarToast("✓ Propuesta sincronizada y guardada en Neon PostgreSQL.");
+    } else {
+      mostrarToast("Error al guardar en Neon.", "err");
     }
   };
 
@@ -1362,8 +1643,8 @@ export default function PaginaDetallePropuesta() {
     }
   };
 
-  // Agregar nuevo repuesto
-  const handleAgregarRepuesto = () => {
+  // Agregar nuevo repuesto (CRUD Create)
+  const handleAgregarRepuesto = async () => {
     if (!nuevoNombre.trim()) return;
     const qty = parseInt(nuevaCantidad, 10) || 1;
     const cost = parseFloat(nuevoCosto) || 0;
@@ -1372,11 +1653,15 @@ export default function PaginaDetallePropuesta() {
     const subtotalCosto = Number((cost * qty).toFixed(2));
     const margin = Number(((pvp - cost) * qty).toFixed(2));
     const marginPercent = pvp > 0 ? Math.round(((pvp - cost) / pvp) * 100) : 0;
+    const pinActivo = hallazgoActivoParaAsignar;
 
     const nuevoItem: ItemPropuesta = {
-      id: `rep_manual_${Date.now()}`,
-      findingId: hallazgoActivoParaAsignar?.id,
+      id: `rep_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      productId: nuevoProductId || null,
+      findingId: pinActivo?.id || null,
+      code: nuevoCodigo.trim() || `REP-${Date.now().toString().slice(-4)}`,
       name: nuevoNombre.trim(),
+      category: nuevoCategoria || "Repuestos",
       qty,
       costPrice: cost,
       price: pvp,
@@ -1384,47 +1669,109 @@ export default function PaginaDetallePropuesta() {
       subtotalCosto,
       margin,
       marginPercent,
-      supplierName: nuevoEnStock ? "Bodega Taller" : nuevoProveedor,
+      supplierName: nuevoEnStock ? "Bodega Taller" : (nuevoProveedor || "Proveedor General"),
       purchaseStatus: nuevoEnStock ? "STOCK_LOCAL" : "POR_PEDIR",
       inStock: nuevoEnStock,
       origin: nuevoOrigen,
-      notes: hallazgoActivoParaAsignar
-        ? `[Evidencia #${hallazgoActivoParaAsignar.numeroEvidencia}] ${hallazgoActivoParaAsignar.tipo}`
+      notes: pinActivo
+        ? `[Evidencia #${pinActivo.numeroEvidencia || pinActivo.pinNumber || 1}] ${pinActivo.tipo || ""}`.trim()
         : undefined,
     };
 
-    setRepuestos((prev) => [...prev, nuevoItem]);
+    const nuevosRepuestos = [...repuestos, nuevoItem];
+    setRepuestos(nuevosRepuestos);
+
+    let findingsActualizados = orden?.inspectionFindings || hallazgos;
+    if (pinActivo) {
+      findingsActualizados = findingsActualizados.map((h: any) => {
+        if (h.id === pinActivo.id || h.originalId === pinActivo.id) {
+          const linked = Array.isArray(h.linkedItems) ? [...h.linkedItems] : [];
+          linked.push({
+            id: nuevoItem.id,
+            name: nuevoItem.name,
+            code: nuevoItem.code,
+            price: nuevoItem.price,
+            costPrice: nuevoItem.costPrice,
+            qty: nuevoItem.qty,
+            type: "PART",
+            productId: nuevoItem.productId,
+            category: nuevoItem.category,
+          });
+          return { ...h, linkedItems: linked };
+        }
+        return h;
+      });
+      setOrden((prev: any) => (prev ? { ...prev, inspectionFindings: findingsActualizados } : prev));
+    }
+
     setNuevoNombre("");
+    setNuevoCodigo("");
+    setNuevoCategoria("");
+    setNuevoProductId(null);
     setNuevoCosto("0");
     setNuevoPvp("0");
     setNuevaCantidad("1");
     setHallazgoActivoParaAsignar(null);
     setModalNuevoRepuesto(false);
-    mostrarToast("Ítem agregado a la factura.");
+    setBusquedaProductoNeon("");
+
+    await sincronizarConNeon(nuevosRepuestos, servicios, findingsActualizados);
+    mostrarToast("✓ Producto registrado y guardado en Neon PostgreSQL.");
   };
 
-  // Agregar nuevo servicio
-  const handleAgregarServicio = () => {
+  // Agregar nuevo servicio (CRUD Create)
+  const handleAgregarServicio = async () => {
     if (!nuevoServicioNombre.trim()) return;
     const precio = parseFloat(nuevoServicioPrecio) || 0;
+    const pinActivo = hallazgoActivoParaAsignar;
+
     const nuevoSrv: ServicioPropuesta = {
-      id: `srv_manual_${Date.now()}`,
-      findingId: hallazgoActivoParaAsignar?.id,
+      id: `srv_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      findingId: pinActivo?.id || null,
+      code: nuevoServicioCodigo.trim() || `SRV-${Date.now().toString().slice(-4)}`,
       name: nuevoServicioNombre.trim(),
       category: "Mano de Obra",
       price: precio,
       mechanic: orden?.mechanic || "Taller",
       origin: nuevoServicioOrigen,
-      notes: hallazgoActivoParaAsignar
-        ? `[Evidencia #${hallazgoActivoParaAsignar.numeroEvidencia}] ${hallazgoActivoParaAsignar.tipo}`
+      notes: pinActivo
+        ? `[Evidencia #${pinActivo.numeroEvidencia || pinActivo.pinNumber || 1}] ${pinActivo.tipo || ""}`.trim()
         : undefined,
     };
-    setServicios((prev) => [...prev, nuevoSrv]);
+
+    const nuevosServicios = [...servicios, nuevoSrv];
+    setServicios(nuevosServicios);
+
+    let findingsActualizados = orden?.inspectionFindings || hallazgos;
+    if (pinActivo) {
+      findingsActualizados = findingsActualizados.map((h: any) => {
+        if (h.id === pinActivo.id || h.originalId === pinActivo.id) {
+          const linked = Array.isArray(h.linkedItems) ? [...h.linkedItems] : [];
+          linked.push({
+            id: nuevoSrv.id,
+            name: nuevoSrv.name,
+            code: nuevoSrv.code,
+            price: nuevoSrv.price,
+            qty: 1,
+            type: "SERVICE",
+            category: "Mano de Obra",
+          });
+          return { ...h, linkedItems: linked };
+        }
+        return h;
+      });
+      setOrden((prev: any) => (prev ? { ...prev, inspectionFindings: findingsActualizados } : prev));
+    }
+
     setNuevoServicioNombre("");
+    setNuevoServicioCodigo("");
     setNuevoServicioPrecio("0");
     setHallazgoActivoParaAsignar(null);
     setModalNuevoServicio(false);
-    mostrarToast("Mano de obra agregada a la factura.");
+    setBusquedaServicioNeon("");
+
+    await sincronizarConNeon(repuestos, nuevosServicios, findingsActualizados);
+    mostrarToast("✓ Servicio registrado y guardado en Neon PostgreSQL.");
   };
 
   const handleImprimir = () => {
@@ -1563,12 +1910,57 @@ export default function PaginaDetallePropuesta() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                 </svg>
               </Link>
-              <h1 className="text-2xl sm:text-3xl font-normal tracking-tight text-zinc-900 dark:text-zinc-50 truncate">
-                Propuesta
-              </h1>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h1 className="text-2xl sm:text-3xl font-normal tracking-tight text-zinc-900 dark:text-zinc-50 truncate">
+                    Propuesta
+                  </h1>
+                  <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-md bg-zinc-200 dark:bg-white/10 text-zinc-700 dark:text-zinc-300">
+                    {orden.quoteNumber || `COT-${orden.orderNumber}`}
+                  </span>
+                </div>
+                {/* Indicador de Conexión en Tiempo Real con Neon */}
+                <div className="flex items-center gap-2 mt-1">
+                  {estadoSync === "guardando" && (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-amber-500/15 border border-amber-500/30 text-amber-700 dark:text-amber-300 animate-pulse">
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping" />
+                      <span>Guardando en Neon...</span>
+                    </span>
+                  )}
+                  {estadoSync === "guardado" && (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-emerald-500/15 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                      <span>Neon PostgreSQL Conectado</span>
+                      {ultimaSync && (
+                        <span className="text-[10px] text-zinc-400 font-mono hidden sm:inline">
+                          · {ultimaSync.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+                        </span>
+                      )}
+                    </span>
+                  )}
+                  {estadoSync === "error" && (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-rose-500/15 border border-rose-500/30 text-rose-700 dark:text-rose-300">
+                      <span>⚠️</span>
+                      <span>Error al guardar</span>
+                    </span>
+                  )}
+                </div>
+              </div>
             </div>
 
             <div className="flex items-center gap-2 sm:gap-2.5 shrink-0 flex-wrap sm:flex-nowrap">
+              {/* Botón Guardar en Neon */}
+              <button
+                type="button"
+                disabled={guardando}
+                onClick={handleGuardarBorrador}
+                className="h-10 px-3.5 rounded-2xl bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-black text-xs font-semibold transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer shadow-sm disabled:opacity-50 shrink-0"
+                title="Sincronizar y guardar todos los cambios en Neon PostgreSQL"
+              >
+                <span>{guardando ? "⏳" : "💾"}</span>
+                <span>{guardando ? "Guardando..." : "Guardar en Neon"}</span>
+              </button>
+
               {/* Mandar Todo el Pedido al Proveedor */}
               <button
                 type="button"
@@ -1843,12 +2235,17 @@ export default function PaginaDetallePropuesta() {
                   {/* Foto de Perfil / Avatar */}
                   <div className="relative group shrink-0">
                     <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl overflow-hidden border-2 border-zinc-200 dark:border-white/15 bg-gradient-to-br from-zinc-100 to-zinc-200 dark:from-zinc-800 dark:to-zinc-900 shadow-sm flex items-center justify-center">
-                      {orden.clientPhoto ? (
+                      {!fotoClienteError && orden.clientPhoto && !orden.clientPhoto.startsWith("blob:") ? (
                         <img
-                          src={orden.clientPhoto}
+                          src={
+                            orden.clientPhoto.startsWith("http") || orden.clientPhoto.startsWith("/") || orden.clientPhoto.startsWith("data:")
+                              ? orden.clientPhoto
+                              : `/api/storage/download?key=${encodeURIComponent(orden.clientPhoto)}`
+                          }
                           alt={orden.client}
                           className="w-full h-full object-cover cursor-pointer group-hover:scale-105 transition-transform duration-200"
                           onClick={() => setFotoZoom(orden.clientPhoto!)}
+                          onError={() => setFotoClienteError(true)}
                         />
                       ) : (
                         <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-blue-600 via-indigo-600 to-blue-800 text-white font-black text-lg sm:text-xl tracking-wider select-none">
@@ -1875,21 +2272,6 @@ export default function PaginaDetallePropuesta() {
                         />
                       </label>
                     </div>
-
-                    {/* Botón flotante para subir/cambiar foto */}
-                    <label
-                      className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-normal flex items-center justify-center shadow-md cursor-pointer border-2 border-white dark:border-[#121215] transition-all print:hidden active:scale-90"
-                      title="Subir foto del cliente"
-                    >
-                      <span>+</span>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        disabled={subiendoFotoCliente}
-                        onChange={handleSubirFotoCliente}
-                        className="hidden"
-                      />
-                    </label>
                   </div>
 
                   {/* Nombre y detalles de identificación rápida */}
@@ -1985,7 +2367,22 @@ export default function PaginaDetallePropuesta() {
                 <div className="pt-3.5 flex items-center gap-3.5 sm:gap-4">
                   {/* Foto de Perfil del Vehículo */}
                   {(() => {
-                    const fotoVehiculoPerfil = orden.vehiclePhoto || (fotosVehiculo.length > 0 ? fotosVehiculo[0] : null);
+                    let fotoVehiculoPerfil: string | null = null;
+                    if (!fotoVehiculoError) {
+                      const vPhoto =
+                        orden.vehiclePhoto && typeof orden.vehiclePhoto === "string" && !orden.vehiclePhoto.startsWith("blob:")
+                          ? orden.vehiclePhoto.trim()
+                          : null;
+                      if (vPhoto) {
+                        fotoVehiculoPerfil =
+                          vPhoto.startsWith("http") || vPhoto.startsWith("/") || vPhoto.startsWith("data:")
+                            ? vPhoto
+                            : `/api/storage/download?key=${encodeURIComponent(vPhoto)}`;
+                      } else if (fotosVehiculo.length > 0) {
+                        fotoVehiculoPerfil = fotosVehiculo[0];
+                      }
+                    }
+
                     return (
                       <div className="relative group shrink-0">
                         <div className="w-20 h-16 sm:w-24 sm:h-20 rounded-2xl overflow-hidden border-2 border-zinc-200 dark:border-white/15 bg-gradient-to-br from-zinc-100 to-zinc-200 dark:from-zinc-800 dark:to-zinc-900 shadow-sm flex items-center justify-center">
@@ -1995,6 +2392,7 @@ export default function PaginaDetallePropuesta() {
                               alt={orden.vehicle}
                               className="w-full h-full object-cover cursor-pointer group-hover:scale-105 transition-transform duration-200"
                               onClick={() => setFotoZoom(fotoVehiculoPerfil)}
+                              onError={() => setFotoVehiculoError(true)}
                             />
                           ) : (
                             <div className="w-full h-full flex flex-col items-center justify-center text-zinc-400 dark:text-zinc-500 bg-zinc-100 dark:bg-zinc-800/80 p-1 text-center">
@@ -2019,21 +2417,6 @@ export default function PaginaDetallePropuesta() {
                             />
                           </label>
                         </div>
-
-                        {/* Botón flotante para subir/cambiar foto */}
-                        <label
-                          className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-amber-500 hover:bg-amber-400 text-black text-[11px] font-normal flex items-center justify-center shadow-md cursor-pointer border-2 border-white dark:border-[#121215] transition-all print:hidden active:scale-90"
-                          title="Subir foto de perfil del vehículo"
-                        >
-                          <span>+</span>
-                          <input
-                            type="file"
-                            accept="image/*"
-                            disabled={subiendoFotoVehiculoPrincipal}
-                            onChange={handleSubirFotoVehiculoPrincipal}
-                            className="hidden"
-                          />
-                        </label>
                       </div>
                     );
                   })()}
@@ -2168,9 +2551,29 @@ export default function PaginaDetallePropuesta() {
                             </span>
                           </div>
                         </div>
-                        <span className="text-xs bg-zinc-200 dark:bg-white/10 px-2 py-0.5 rounded font-normal text-zinc-700 dark:text-zinc-300 shrink-0">
-                          {sec.items.length} {sec.items.length === 1 ? "punto" : "puntos"}
-                        </span>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className="text-xs bg-zinc-200 dark:bg-white/10 px-2 py-0.5 rounded font-normal text-zinc-700 dark:text-zinc-300">
+                            {sec.items.length} {sec.items.length === 1 ? "punto" : "puntos"}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const vistaSugerida = sec.id === "motor" ? "motor" : (sec.id === "frenos" ? "frenos" : (sec.id === "suspension" ? "suspension" : (sec.id === "electrico" ? "electrico" : (sec.id === "aire" ? "aire" : "frontal"))));
+                              setNuevoHallazgoVista(vistaSugerida);
+                              setModalNuevoHallazgo({
+                                abierto: true,
+                                seccionId: sec.id,
+                                seccionNombre: sec.nombre,
+                                vistaDefault: vistaSugerida,
+                              });
+                            }}
+                            className="h-7 px-2.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-medium transition-all active:scale-95 flex items-center gap-1 cursor-pointer shadow-2xs"
+                            title={`Crear nuevo hallazgo en ${sec.nombre}`}
+                          >
+                            <span>+</span>
+                            <span>Nuevo Hallazgo</span>
+                          </button>
+                        </div>
                       </div>
                     </div>
 
@@ -2226,14 +2629,14 @@ export default function PaginaDetallePropuesta() {
                                 )}
                               </div>
 
-                              {/* ACCIONES AL LADO DERECHO: DETALLES, MANUAL Y PROVEEDOR */}
-                              <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+                              {/* ACCIONES AL LADO DERECHO: DETALLES, MANUAL, PROVEEDOR, + PRODUCTO Y ELIMINAR */}
+                              <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 flex-wrap">
                                 {/* 1. DETALLES */}
                                 <button
                                   type="button"
                                   onClick={() => setFlotanteDetalles({ pin, sec })}
                                   className="h-8 px-2.5 sm:px-3 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700/80 text-xs font-medium flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer shadow-2xs"
-                                  title="Ver detalles completos del hallazgo"
+                                  title="Ver y editar detalles del hallazgo"
                                 >
                                   <svg className="w-3.5 h-3.5 text-zinc-600 dark:text-zinc-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -2265,6 +2668,34 @@ export default function PaginaDetallePropuesta() {
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.175V14.25m0 0H2.25m12 0v4.5m0-4.5H16.5" />
                                   </svg>
                                   <span className="hidden sm:inline">Proveedor</span>
+                                </button>
+
+                                {/* 4. AGREGAR PRODUCTO A ESTA EVIDENCIA */}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setHallazgoActivoParaAsignar(pin);
+                                    setNuevoOrigen("TALLER");
+                                    setNuevoEnStock(true);
+                                    setModalNuevoRepuesto(true);
+                                  }}
+                                  className="h-8 px-2 sm:px-2.5 rounded-xl bg-blue-50/90 hover:bg-blue-100/90 dark:bg-blue-950/30 dark:hover:bg-blue-900/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800/60 text-xs font-medium flex items-center gap-1 transition-all active:scale-95 cursor-pointer shadow-2xs"
+                                  title="Asignar producto/repuesto a este hallazgo"
+                                >
+                                  <span>+</span>
+                                  <span className="hidden md:inline">Producto</span>
+                                </button>
+
+                                {/* 5. ELIMINAR HALLAZGO DE NEON */}
+                                <button
+                                  type="button"
+                                  onClick={() => handleEliminarHallazgo(pin.id)}
+                                  className="w-8 h-8 rounded-xl bg-rose-50/80 hover:bg-rose-100 dark:bg-rose-950/30 dark:hover:bg-rose-900/40 text-rose-600 dark:text-rose-400 border border-rose-200/80 dark:border-rose-800/60 text-xs flex items-center justify-center transition-all active:scale-95 cursor-pointer shadow-2xs shrink-0"
+                                  title="Eliminar este hallazgo y sus productos vinculados de Neon"
+                                >
+                                  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                  </svg>
                                 </button>
                               </div>
                             </div>
@@ -3518,6 +3949,58 @@ export default function PaginaDetallePropuesta() {
             )}
 
             <div className="space-y-3">
+              {/* Buscador en Catálogo Real de Neon */}
+              <div className="relative">
+                <label className="text-xs text-zinc-600 dark:text-zinc-400 font-semibold flex items-center justify-between mb-1">
+                  <span>🔍 Buscar en Catálogo Neon (PostgreSQL)</span>
+                  {buscandoProductoNeon && <span className="text-[10px] text-blue-500 animate-pulse font-normal">Buscando...</span>}
+                </label>
+                <input
+                  type="text"
+                  placeholder="Escribe para buscar (ej: Amalie, Aceite, Filtro, Pastillas)..."
+                  value={busquedaProductoNeon}
+                  onChange={(e) => setBusquedaProductoNeon(e.target.value)}
+                  className="w-full h-10 px-3 rounded-xl bg-blue-50/50 dark:bg-blue-950/20 border border-blue-300 dark:border-blue-700/60 text-xs text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                />
+                {productosEncontradosNeon.length > 0 && (
+                  <div className="mt-1.5 max-h-48 overflow-y-auto rounded-xl border border-blue-200 dark:border-blue-800 bg-white dark:bg-[#16161a] shadow-xl divide-y divide-zinc-100 dark:divide-white/5 z-30 relative">
+                    {productosEncontradosNeon.map((p) => (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => {
+                          setNuevoNombre(p.name);
+                          setNuevoCodigo(p.sku || p.id);
+                          setNuevoPvp(String(p.salePrice ?? "0"));
+                          setNuevoCosto(String(p.costPrice ?? "0"));
+                          setNuevoCategoria(p.category || "TALLER");
+                          setNuevoProductId(p.id);
+                          setNuevoEnStock((p.stockCurrent ?? 0) > 0);
+                          setBusquedaProductoNeon("");
+                          setProductosEncontradosNeon([]);
+                        }}
+                        className="w-full p-2.5 text-left hover:bg-blue-50 dark:hover:bg-blue-950/50 flex items-center justify-between transition-colors text-xs cursor-pointer"
+                      >
+                        <div className="min-w-0 pr-2">
+                          <p className="font-semibold text-zinc-900 dark:text-white truncate">{p.name}</p>
+                          <p className="text-[10px] text-zinc-500 dark:text-zinc-400 font-mono">
+                            SKU: {p.sku || "S/C"} · Stock: {p.stockCurrent ?? 0} {p.unit || "und"}
+                          </p>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <p className="font-bold text-emerald-600 dark:text-emerald-400 font-mono">
+                            ${Number(p.salePrice ?? 0).toFixed(2)}
+                          </p>
+                          <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300 font-medium">
+                            Neon DB
+                          </span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               <div>
                 <label className="text-xs text-zinc-600 dark:text-zinc-400 font-medium block mb-1">
                   Descripción del Repuesto o Producto
@@ -3528,6 +4011,19 @@ export default function PaginaDetallePropuesta() {
                   value={nuevoNombre}
                   onChange={(e) => setNuevoNombre(e.target.value)}
                   className="w-full h-10 px-3 rounded-xl bg-zinc-50 dark:bg-black border border-zinc-300 dark:border-white/10 text-xs text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs text-zinc-600 dark:text-zinc-400 font-medium block mb-1">
+                  Código / Referencia / SKU
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ej: AM-75697-36"
+                  value={nuevoCodigo}
+                  onChange={(e) => setNuevoCodigo(e.target.value)}
+                  className="w-full h-10 px-3 rounded-xl bg-zinc-50 dark:bg-black border border-zinc-300 dark:border-white/10 text-xs text-zinc-900 dark:text-white font-mono placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                 />
               </div>
 
@@ -3666,6 +4162,55 @@ export default function PaginaDetallePropuesta() {
             )}
 
             <div className="space-y-3">
+              {/* Buscador en Catálogo de Servicios Neon */}
+              <div className="relative">
+                <label className="text-xs text-zinc-600 dark:text-zinc-400 font-semibold flex items-center justify-between mb-1">
+                  <span>🔍 Buscar en Catálogo de Servicios Neon</span>
+                  {buscandoServicioNeon && <span className="text-[10px] text-purple-500 animate-pulse font-normal">Buscando...</span>}
+                </label>
+                <input
+                  type="text"
+                  placeholder="Escribe para buscar (ej: Cambio de aceite, Frenos, Mantenimiento)..."
+                  value={busquedaServicioNeon}
+                  onChange={(e) => setBusquedaServicioNeon(e.target.value)}
+                  className="w-full h-10 px-3 rounded-xl bg-purple-50/50 dark:bg-purple-950/20 border border-purple-300 dark:border-purple-700/60 text-xs text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-purple-500/30"
+                />
+                {serviciosEncontradosNeon.length > 0 && (
+                  <div className="mt-1.5 max-h-48 overflow-y-auto rounded-xl border border-purple-200 dark:border-purple-800 bg-white dark:bg-[#16161a] shadow-xl divide-y divide-zinc-100 dark:divide-white/5 z-30 relative">
+                    {serviciosEncontradosNeon.map((s) => (
+                      <button
+                        key={s.id}
+                        type="button"
+                        onClick={() => {
+                          setNuevoServicioNombre(s.name);
+                          setNuevoServicioCodigo(s.code || s.id);
+                          setNuevoServicioPrecio(String(s.standardPrice ?? s.price ?? "0"));
+                          setNuevoServicioOrigen((s.category as EspecialidadTipo) || "TALLER");
+                          setBusquedaServicioNeon("");
+                          setServiciosEncontradosNeon([]);
+                        }}
+                        className="w-full p-2.5 text-left hover:bg-purple-50 dark:hover:bg-purple-950/50 flex items-center justify-between transition-colors text-xs cursor-pointer"
+                      >
+                        <div className="min-w-0 pr-2">
+                          <p className="font-semibold text-zinc-900 dark:text-white truncate">{s.name}</p>
+                          <p className="text-[10px] text-zinc-500 dark:text-zinc-400 font-mono">
+                            Código: {s.code || "S/C"} · Categoría: {s.category || "General"}
+                          </p>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <p className="font-bold text-purple-600 dark:text-purple-400 font-mono">
+                            ${Number(s.standardPrice ?? s.price ?? 0).toFixed(2)}
+                          </p>
+                          <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900/60 text-purple-700 dark:text-purple-300 font-medium">
+                            Neon DB
+                          </span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               <div>
                 <label className="text-xs text-zinc-600 dark:text-zinc-400 font-medium block mb-1">
                   Descripción del Servicio Técnico
@@ -3676,6 +4221,19 @@ export default function PaginaDetallePropuesta() {
                   value={nuevoServicioNombre}
                   onChange={(e) => setNuevoServicioNombre(e.target.value)}
                   className="w-full h-10 px-3 rounded-xl bg-zinc-50 dark:bg-black border border-zinc-300 dark:border-white/10 text-xs text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs text-zinc-600 dark:text-zinc-400 font-medium block mb-1">
+                  Código de Servicio
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ej: SRV-7170"
+                  value={nuevoServicioCodigo}
+                  onChange={(e) => setNuevoServicioCodigo(e.target.value)}
+                  className="w-full h-10 px-3 rounded-xl bg-zinc-50 dark:bg-black border border-zinc-300 dark:border-white/10 text-xs text-zinc-900 dark:text-white font-mono placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
                 />
               </div>
 
@@ -3971,37 +4529,72 @@ export default function PaginaDetallePropuesta() {
 
             {/* Contenido scrolleable */}
             <div className="space-y-4 overflow-y-auto flex-1 pr-1 text-xs">
-              <div className="p-3.5 rounded-2xl bg-zinc-50 dark:bg-white/[0.02] border border-zinc-200/80 dark:border-white/10 space-y-2.5">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-zinc-500 dark:text-zinc-400">Tipo de Hallazgo / Daño:</span>
-                  <span className="font-semibold text-rose-600 dark:text-rose-400">
-                    {formatoPrimeraMayuscula(flotanteDetalles.pin.tipo)}
-                  </span>
+              <div className="p-3.5 rounded-2xl bg-zinc-50 dark:bg-white/[0.02] border border-zinc-200/80 dark:border-white/10 space-y-3">
+                <div>
+                  <label className="text-[11px] text-zinc-500 dark:text-zinc-400 font-medium block mb-1">
+                    Tipo de Hallazgo / Daño:
+                  </label>
+                  <input
+                    type="text"
+                    value={flotanteDetalles.pin.tipo || ""}
+                    onChange={(e) => {
+                      const nuevoTipo = e.target.value;
+                      setFlotanteDetalles((prev) => prev ? { ...prev, pin: { ...prev.pin, tipo: nuevoTipo } } : null);
+                    }}
+                    placeholder="Ej: Raspón, Abolladura, Fuga de aceite..."
+                    className="w-full h-9 px-3 rounded-xl bg-white dark:bg-black border border-zinc-300 dark:border-white/10 font-semibold text-rose-600 dark:text-rose-400 focus:outline-none focus:ring-2 focus:ring-rose-500/20"
+                  />
                 </div>
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-zinc-500 dark:text-zinc-400">Vista del Vehículo:</span>
-                  <span className="font-medium text-zinc-800 dark:text-zinc-200">
-                    {formatoPrimeraMayuscula(flotanteDetalles.pin.vistaLabel || flotanteDetalles.pin.vista || "Frontal")}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-zinc-500 dark:text-zinc-400">Sistema Automotriz:</span>
-                  <span className="font-medium text-zinc-800 dark:text-zinc-200">
-                    {flotanteDetalles.sec?.nombre || "Taller"}
-                  </span>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-[11px] text-zinc-500 dark:text-zinc-400 font-medium block mb-1">
+                      Vista del Vehículo:
+                    </label>
+                    <select
+                      value={flotanteDetalles.pin.vista || "frontal"}
+                      onChange={(e) => {
+                        const nuevaVista = e.target.value;
+                        const vistaLabel = nuevaVista.charAt(0).toUpperCase() + nuevaVista.slice(1).replace(/_/g, " ");
+                        setFlotanteDetalles((prev) => prev ? { ...prev, pin: { ...prev.pin, vista: nuevaVista, vistaLabel } } : null);
+                      }}
+                      className="w-full h-9 px-2 rounded-xl bg-white dark:bg-black border border-zinc-300 dark:border-white/10 text-zinc-800 dark:text-zinc-200 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                    >
+                      <option value="frontal">Frontal</option>
+                      <option value="posterior">Posterior</option>
+                      <option value="lateral_izq">Lateral Izquierdo</option>
+                      <option value="lateral_der">Lateral Derecho</option>
+                      <option value="techo">Techo / Superior</option>
+                      <option value="interior">Interior / Habitáculo</option>
+                      <option value="motor">Compartimiento Motor</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-[11px] text-zinc-500 dark:text-zinc-400 font-medium block mb-1">
+                      Sistema Automotriz:
+                    </label>
+                    <div className="h-9 px-3 rounded-xl bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/5 flex items-center font-medium text-zinc-800 dark:text-zinc-200 truncate">
+                      {flotanteDetalles.sec?.nombre || "Taller"}
+                    </div>
+                  </div>
                 </div>
               </div>
 
               {/* Observación / Descripción */}
               <div className="space-y-1.5">
                 <label className="font-semibold text-zinc-800 dark:text-zinc-200 block text-xs">
-                  Observaciones Técnicas:
+                  Observaciones Técnicas (Editable):
                 </label>
-                <div className="p-3 rounded-2xl bg-zinc-50 dark:bg-black/40 border border-zinc-200/80 dark:border-white/10 text-zinc-700 dark:text-zinc-300 leading-relaxed italic">
-                  {flotanteDetalles.pin.descripcion
-                    ? `"${flotanteDetalles.pin.descripcion}"`
-                    : "Sin notas técnicas adicionales registradas."}
-                </div>
+                <textarea
+                  rows={3}
+                  value={flotanteDetalles.pin.descripcion || ""}
+                  onChange={(e) => {
+                    const desc = e.target.value;
+                    setFlotanteDetalles((prev) => prev ? { ...prev, pin: { ...prev.pin, descripcion: desc } } : null);
+                  }}
+                  placeholder="Escribe notas técnicas de este hallazgo..."
+                  className="w-full p-3 rounded-2xl bg-zinc-50 dark:bg-black/40 border border-zinc-300 dark:border-white/10 text-zinc-800 dark:text-zinc-200 text-xs leading-relaxed focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                />
               </div>
 
               {/* Solicitudes de Repuesto y Servicio */}
@@ -4088,6 +4681,24 @@ export default function PaginaDetallePropuesta() {
                   className="h-8 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white flex items-center gap-1.5 cursor-pointer shadow-xs ml-auto"
                 >
                   <span>🚚 Pedir a Proveedor</span>
+                </button>
+              </div>
+
+              {/* Acciones CRUD Neon del Hallazgo */}
+              <div className="pt-2 flex items-center justify-between gap-2 border-t border-zinc-200 dark:border-white/10">
+                <button
+                  type="button"
+                  onClick={() => handleEliminarHallazgo(flotanteDetalles.pin.id)}
+                  className="h-9 px-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 text-rose-600 dark:text-rose-300 border border-rose-200 dark:border-rose-900/50 flex items-center gap-1.5 cursor-pointer font-medium"
+                >
+                  <span>🗑️ Eliminar Hallazgo</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleActualizarDatosHallazgo(flotanteDetalles.pin.id, flotanteDetalles.pin.tipo, flotanteDetalles.pin.descripcion || "", flotanteDetalles.pin.vista)}
+                  className="h-9 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white flex items-center gap-1.5 cursor-pointer font-bold shadow-md shadow-blue-600/30 ml-auto"
+                >
+                  <span>💾 Guardar Cambios en Neon</span>
                 </button>
               </div>
             </div>
@@ -4232,6 +4843,133 @@ export default function PaginaDetallePropuesta() {
               ✕
             </button>
             <img src={fotoZoom} alt="Foto ampliada" className="max-h-[85vh] w-auto max-w-full rounded-2xl object-contain shadow-2xl border border-white/10" />
+          </div>
+        </div>
+      )}
+
+      {/* MODAL REGISTRAR NUEVO HALLAZGO EN NEON */}
+      {modalNuevoHallazgo.abierto && (
+        <div
+          onClick={() => setModalNuevoHallazgo({ abierto: false })}
+          className="fixed inset-0 z-50 bg-black/70 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white dark:bg-[#121216] border border-zinc-200 dark:border-white/10 rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl animate-scale-up text-zinc-900 dark:text-white"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-2xl bg-rose-500/10 border border-rose-500/25 text-rose-600 dark:text-rose-400 flex items-center justify-center font-bold text-sm">
+                  +
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-zinc-900 dark:text-white">
+                    Registrar Nuevo Hallazgo
+                  </h3>
+                  <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
+                    {modalNuevoHallazgo.seccionNombre || "Taller"} · Persistencia directa a Neon
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setModalNuevoHallazgo({ abierto: false })}
+                className="w-8 h-8 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white flex items-center justify-center cursor-pointer transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div>
+                <label className="text-xs text-zinc-600 dark:text-zinc-400 font-medium block mb-1">
+                  Tipo de Hallazgo / Daño
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ej: Fuga de aceite, Pastillas desgastadas, Golpe guardafangos..."
+                  value={nuevoHallazgoTipo}
+                  onChange={(e) => setNuevoHallazgoTipo(e.target.value)}
+                  className="w-full h-10 px-3 rounded-xl bg-zinc-50 dark:bg-black border border-zinc-300 dark:border-white/10 text-xs text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs text-zinc-600 dark:text-zinc-400 font-medium block mb-1">
+                  Vista del Vehículo
+                </label>
+                <select
+                  value={nuevoHallazgoVista}
+                  onChange={(e) => setNuevoHallazgoVista(e.target.value)}
+                  className="w-full h-10 px-3 rounded-xl bg-zinc-50 dark:bg-black border border-zinc-300 dark:border-white/10 text-xs text-zinc-900 dark:text-white cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                >
+                  <option value="frontal">Frontal</option>
+                  <option value="posterior">Posterior</option>
+                  <option value="lateral_izq">Lateral Izquierdo</option>
+                  <option value="lateral_der">Lateral Derecho</option>
+                  <option value="techo">Techo / Superior</option>
+                  <option value="interior">Interior / Habitáculo</option>
+                  <option value="motor">Compartimiento Motor</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="text-xs text-zinc-600 dark:text-zinc-400 font-medium block mb-1">
+                  Descripción Técnica y Detalle del Hallazgo
+                </label>
+                <textarea
+                  rows={3}
+                  placeholder="Describe la condición encontrada, gravedad o diagnóstico preliminar..."
+                  value={nuevoHallazgoDescripcion}
+                  onChange={(e) => setNuevoHallazgoDescripcion(e.target.value)}
+                  className="w-full p-3 rounded-xl bg-zinc-50 dark:bg-black border border-zinc-300 dark:border-white/10 text-xs text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 pt-1">
+                <label
+                  className={`p-2.5 rounded-xl border flex items-center gap-2 cursor-pointer transition-all ${
+                    nuevoHallazgoSolicitaRepuesto
+                      ? "bg-amber-500/10 border-amber-500/40 text-amber-700 dark:text-amber-300 font-semibold"
+                      : "bg-zinc-50 dark:bg-white/[0.02] border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-400"
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={nuevoHallazgoSolicitaRepuesto}
+                    onChange={(e) => setNuevoHallazgoSolicitaRepuesto(e.target.checked)}
+                    className="w-4 h-4 rounded text-amber-600 accent-amber-500 cursor-pointer"
+                  />
+                  <span>📦 Requiere Producto</span>
+                </label>
+
+                <label
+                  className={`p-2.5 rounded-xl border flex items-center gap-2 cursor-pointer transition-all ${
+                    nuevoHallazgoSolicitaServicio
+                      ? "bg-purple-500/10 border-purple-500/40 text-purple-700 dark:text-purple-300 font-semibold"
+                      : "bg-zinc-50 dark:bg-white/[0.02] border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-400"
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={nuevoHallazgoSolicitaServicio}
+                    onChange={(e) => setNuevoHallazgoSolicitaServicio(e.target.checked)}
+                    className="w-4 h-4 rounded text-purple-600 accent-purple-500 cursor-pointer"
+                  />
+                  <span>🔧 Requiere Servicio</span>
+                </label>
+              </div>
+
+              <div className="pt-2">
+                <button
+                  type="button"
+                  onClick={handleCrearNuevoHallazgo}
+                  className="w-full h-10 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition-all shadow-md shadow-rose-600/30 cursor-pointer active:scale-95 flex items-center justify-center gap-2"
+                >
+                  <span>💾 Registrar Hallazgo en Neon PostgreSQL</span>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
