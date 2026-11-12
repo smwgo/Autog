@@ -1919,48 +1919,11 @@ export default function PaginaDetallePropuesta() {
                     {orden.quoteNumber || `COT-${orden.orderNumber}`}
                   </span>
                 </div>
-                {/* Indicador de Conexión en Tiempo Real con Neon */}
-                <div className="flex items-center gap-2 mt-1">
-                  {estadoSync === "guardando" && (
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-amber-500/15 border border-amber-500/30 text-amber-700 dark:text-amber-300 animate-pulse">
-                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping" />
-                      <span>Guardando en Neon...</span>
-                    </span>
-                  )}
-                  {estadoSync === "guardado" && (
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-emerald-500/15 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                      <span>Neon PostgreSQL Conectado</span>
-                      {ultimaSync && (
-                        <span className="text-[10px] text-zinc-400 font-mono hidden sm:inline">
-                          · {ultimaSync.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
-                        </span>
-                      )}
-                    </span>
-                  )}
-                  {estadoSync === "error" && (
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-rose-500/15 border border-rose-500/30 text-rose-700 dark:text-rose-300">
-                      <span>⚠️</span>
-                      <span>Error al guardar</span>
-                    </span>
-                  )}
-                </div>
+
               </div>
             </div>
 
             <div className="flex items-center gap-2 sm:gap-2.5 shrink-0 flex-wrap sm:flex-nowrap">
-              {/* Botón Guardar en Neon */}
-              <button
-                type="button"
-                disabled={guardando}
-                onClick={handleGuardarBorrador}
-                className="h-10 px-3.5 rounded-2xl bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-black text-xs font-semibold transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer shadow-sm disabled:opacity-50 shrink-0"
-                title="Sincronizar y guardar todos los cambios en Neon PostgreSQL"
-              >
-                <span>{guardando ? "⏳" : "💾"}</span>
-                <span>{guardando ? "Guardando..." : "Guardar en Neon"}</span>
-              </button>
-
               {/* Mandar Todo el Pedido al Proveedor */}
               <button
                 type="button"
@@ -2720,7 +2683,15 @@ export default function PaginaDetallePropuesta() {
   <tbody className="divide-y divide-zinc-200/60 dark:divide-white/5">
     {pinItems.map((item: any, itemIdx: number) => {
       const esServicio = item.isService;
-      const textoDanio = item.danio || (pin.tipo ? formatoPrimeraMayuscula(pin.tipo) : (pin.descripcion ? formatoPrimeraMayuscula(pin.descripcion) : `${formatoPrimeraMayuscula(sec.nombre)} (Evidencia #${numEvidencia})`));
+      const textoDanio = item.danio || (pin.tipo ? formatoPrimeraMayuscula(pin.tipo) : `${formatoPrimeraMayuscula(sec.nombre)} (Evidencia #${numEvidencia})`);
+      const textoDescripcion =
+        (pin.descripcion && pin.descripcion.trim()) ||
+        (pin.description && pin.description.trim()) ||
+        (pin.desc && pin.desc.trim()) ||
+        (item.descripcion && item.descripcion.trim()) ||
+        (item.description && item.description.trim()) ||
+        (item.notes && !item.notes.startsWith("[Evidencia") ? item.notes.trim() : "") ||
+        "";
       const modoLinea = modosLineas[item.id] || "DETALLES";
 
       return (
@@ -2739,9 +2710,9 @@ export default function PaginaDetallePropuesta() {
             <span className="font-semibold text-rose-600 dark:text-rose-400 block text-xs">
               {textoDanio}
             </span>
-            {pin.descripcion && pin.tipo && !item.danio && (
-              <span className="text-[10px] text-zinc-500 dark:text-zinc-400 block truncate max-w-[150px]" title={pin.descripcion}>
-                {pin.descripcion}
+            {item.danio && item.danio !== textoDanio && (
+              <span className="text-[10px] text-zinc-500 dark:text-zinc-400 block truncate max-w-[150px]">
+                {item.danio}
               </span>
             )}
           </td>
@@ -2753,11 +2724,15 @@ export default function PaginaDetallePropuesta() {
                 <span className="text-zinc-900 dark:text-white font-medium block">
                   {item.name}
                 </span>
-                {item.code && (
+                {textoDescripcion ? (
+                  <span className="text-[11px] text-zinc-500 dark:text-zinc-400 block mt-0.5 truncate" title={textoDescripcion}>
+                    {textoDescripcion}
+                  </span>
+                ) : item.code ? (
                   <span className="text-[10px] text-zinc-400 font-mono block">
                     {item.code}
                   </span>
-                )}
+                ) : null}
               </div>
               <div className="flex items-center gap-1.5 shrink-0">
                 <button
