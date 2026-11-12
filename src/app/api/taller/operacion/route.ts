@@ -666,7 +666,7 @@ export async function GET(request: Request) {
           const brand = ordAny.brand || row.brand || "";
           const model = ordAny.model || row.model || "";
           const year = ordAny.year || row.year || "";
-          const dateVal = ord.updatedAt || row.updatedAt || ord.dateIn || row.dateIn || ord.createdAt || row.createdAt || new Date();
+          const dateVal = ord.updatedAt || row.updatedAt || ord.dateIn || row.dateIn || ordAny.createdAt || row.createdAt || new Date();
 
           const totalCost = Number(ord.totalCost ?? row.totalCost ?? 0);
           const totalPaid = Number(ord.totalPaid ?? row.totalPaid ?? 0);

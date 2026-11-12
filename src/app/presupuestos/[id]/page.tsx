@@ -1532,7 +1532,7 @@ export default function PaginaDetallePropuesta() {
               <button
                 type="button"
                 onClick={() => {
-                  const targetToken = orden.quoteToken || orden.id || params?.id;
+                  const targetToken = (orden as any)?.quoteToken || orden.id || (params as any)?.id;
                   if (typeof window !== "undefined" && targetToken) {
                     window.open(`/taller/presupuesto/${encodeURIComponent(String(targetToken))}`, "_blank");
                   }

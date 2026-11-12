@@ -1189,6 +1189,16 @@ export default function InspeccionVehiculo({
     mostrarToast(`Pin #${mismoNumero} eliminado.`);
   };
 
+  const handleIniciarReubicarPin = (id: string) => {
+    const p = hallazgos.find((h) => h.id === id);
+    setPinReubicandoId(id);
+    mostrarToast(`Toca en el vehículo para cambiar la posición del Pin #${p?.pinNumber || 1}`);
+  };
+
+  const handleEliminarPinCompleto = (id: string) => {
+    void handleEliminarPin(id);
+  };
+
   const handleEliminarHallazgoEspecifico = (hallazgoId: string) => {
     const pinAEliminar = hallazgos.find((h) => h.id === hallazgoId);
     if (!pinAEliminar) return;
