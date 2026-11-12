@@ -565,6 +565,31 @@ function executeMirrorRawQuery(queryOrStrings: any, params: any[] = []): any[] {
     }
   }
 
+  if (modelName === "workshopOrder" && /HISTORIAL_SEMANAL/i.test(sql)) {
+    const minTime = params[0] ? new Date(params[0]).getTime() : 0;
+    const maxTime = params[1] ? new Date(params[1]).getTime() : Infinity;
+    return rows.filter((r) => {
+      const st = String(r.status || "").toLowerCase();
+      if (st === "cancelado") return false;
+      const t1 = r.updatedAt ? new Date(r.updatedAt).getTime() : 0;
+      const t2 = r.createdAt ? new Date(r.createdAt).getTime() : 0;
+      const t3 = r.dateIn ? new Date(r.dateIn).getTime() : 0;
+      const t = Math.max(t1, t2, t3);
+      if (isNaN(t) || t === 0) return true;
+      return t >= minTime && t <= maxTime;
+    }).sort((a, b) => (String(a.updatedAt || "") < String(b.updatedAt || "") ? 1 : -1));
+  }
+
+  if (modelName === "workshopHistory" && /HISTORIAL_SEMANAL/i.test(sql)) {
+    const minTime = params[0] ? new Date(params[0]).getTime() : 0;
+    const maxTime = params[1] ? new Date(params[1]).getTime() : Infinity;
+    return rows.filter((r) => {
+      const t = r.createdAt ? new Date(r.createdAt).getTime() : r.date ? new Date(r.date).getTime() : 0;
+      if (isNaN(t) || t === 0) return true;
+      return t >= minTime && t <= maxTime;
+    }).sort((a, b) => (String(a.createdAt || "") < String(b.createdAt || "") ? 1 : -1));
+  }
+
   if (modelName === "workshopOrder" && /NOT\s+IN/i.test(sql)) {
     const excluded = new Set([
       "Entregado",

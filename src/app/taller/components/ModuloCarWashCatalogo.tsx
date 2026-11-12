@@ -214,6 +214,22 @@ function extractKeyword(name: string): string {
   return (first || name).toUpperCase();
 }
 
+export function formatearPrimeraMayuscula(texto?: string | null): string {
+  if (!texto) return "";
+  const s = String(texto).trim();
+  if (!s) return "";
+  if (/^\d{1,2}W[-]?\d{2,3}$/i.test(s)) return s.toUpperCase();
+  if (/^\d{3}\/\d{2}\s*R\d{2}\+?$/i.test(s)) return s.toUpperCase();
+  if (/^R\d{2}$/i.test(s)) return s.toUpperCase();
+
+  let formatted = s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
+  formatted = formatted.replace(/-([a-záéíóúñ])/gi, (_, letter) => `-${letter.toUpperCase()}`);
+  formatted = formatted.replace(/\b(\d{1,2})w([-]?\d{2,3})\b/gi, (_, n, m) => `${n}W${m}`);
+  formatted = formatted.replace(/\b(\d{3}\/\d{2})\s*r(\d{2})\b/gi, (_, p, r) => `${p}R${r}`);
+  formatted = formatted.replace(/\br(\d{2})\b/gi, (_, r) => `R${r}`);
+  return formatted;
+}
+
 const FALLBACK_KEYWORD_ICONS: Record<string, string> = {
   EXPRÉS: "⚡",
   COMPLETO: "🌊",
@@ -582,12 +598,21 @@ export default function ModuloCarWashCatalogo({
   const [objetosVerificados, setObjetosVerificados] = useState<boolean>(true);
   const [comboSeleccionado, setComboSeleccionado] = useState<string>("Completo");
   const [menuCatAbierto, setMenuCatAbierto] = useState<boolean>(false);
+  const dropdownCatRef = useRef<HTMLDivElement>(null);
+  const [filtroTipo, setFiltroTipo] = useState<"todos" | "PART" | "SERVICE">("todos");
   const [menuSubcatAbierto, setMenuSubcatAbierto] = useState<boolean>(false);
   const [menuPorteAbierto, setMenuPorteAbierto] = useState<boolean>(false);
   const [filtrosFlotantesAbiertos, setFiltrosFlotantesAbiertos] = useState<boolean>(false);
   const [fotosEstado, setFotosEstado] = useState<string[]>([]);
   const [subiendoFoto, setSubiendoFoto] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Estados para paginación y puntos manuales del Semáforo
+  const [itemsManualesSemaforo, setItemsManualesSemaforo] = useState<Array<{ id: string; label: string; detalle: string }>>([]);
+  const [nuevoManualTexto, setNuevoManualTexto] = useState('');
+  const [mostrarInputManual, setMostrarInputManual] = useState(false);
+  const [paginaSemaforo, setPaginaSemaforo] = useState<number>(0);
+  const touchStartXRef = useRef<number | null>(null);
 
   // Categorías y subcategorías contraíbles
   const [categoriaActivaId, setCategoriaActivaId] = useState<string>("TODO");
@@ -616,6 +641,13 @@ export default function ModuloCarWashCatalogo({
 
   useEffect(() => {
     setMounted(true);
+    const handleClickOutside = (e: MouseEvent) => {
+      if (dropdownCatRef.current && !dropdownCatRef.current.contains(e.target as Node)) {
+        setMenuCatAbierto(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   // Escuchar trigger de cabecera exterior
@@ -990,8 +1022,28 @@ export default function ModuloCarWashCatalogo({
       .trim();
 
     return todosLosItemsPOS.filter((item) => {
-      if (categoriaActivaId !== "TODO" && item.categoryMapped !== categoriaActivaId) {
+      // 1. Filtro Tipo P / S
+      if (filtroTipo === "PART" && item.kind !== "PRODUCT") {
         return false;
+      }
+      if (filtroTipo === "SERVICE" && item.kind === "PRODUCT") {
+        return false;
+      }
+
+      // 2. Filtro Categoría
+      if (categoriaActivaId !== "TODO") {
+        const catNorm = categoriaActivaId.toUpperCase();
+        const itemCat = String(item.categoryMapped || "").toUpperCase();
+        const itemSub = String(item.subcategoryMapped || "").toUpperCase();
+        const itemKw = String(item.keyword || "").toUpperCase();
+        const itemName = String(item.name || "").toUpperCase();
+
+        const match =
+          itemCat === catNorm ||
+          itemSub === catNorm ||
+          itemKw.includes(catNorm) ||
+          itemName.includes(catNorm);
+        if (!match) return false;
       }
       if (subcategoriaActivaId !== "TODOS" && item.subcategoryMapped !== subcategoriaActivaId) {
         return false;
@@ -1005,7 +1057,7 @@ export default function ModuloCarWashCatalogo({
       }
       return true;
     });
-  }, [todosLosItemsPOS, categoriaActivaId, subcategoriaActivaId, searchQuery]);
+  }, [todosLosItemsPOS, filtroTipo, categoriaActivaId, subcategoriaActivaId, searchQuery]);
 
   // Obtener cantidad en la orden activa para un ítem
   const obtenerCantidadEnPedido = (item: { id: string; code?: string; kind?: string }) => {
@@ -1108,6 +1160,57 @@ export default function ModuloCarWashCatalogo({
       }
     } catch {
       mostrarToast("Error al actualizar ítem en la orden", "err");
+    }
+  };
+
+  const handleAjustarItemOrden = async (it: any, delta: number) => {
+    try {
+      const targetId = it.id || it.productId || it.serviceId || it.code;
+      const listaActual = [...(itemsOrden || [])];
+      const idx = listaActual.findIndex(
+        (x) =>
+          x === it ||
+          (targetId && (x.id === targetId || x.productId === targetId || x.serviceId === targetId)) ||
+          (x.code && it.code && x.code === it.code)
+      );
+      if (idx < 0) return;
+      const actualQty = Number(listaActual[idx].qty) || 1;
+      const nextQty = actualQty + delta;
+      if (nextQty <= 0) {
+        const filtrados = listaActual.filter((_, i) => i !== idx);
+        await onActualizarItemsOrden(filtrados);
+      } else {
+        const priceUnit = Number(listaActual[idx].price || 0);
+        const actualizados = listaActual.map((item, i) =>
+          i === idx
+            ? {
+                ...item,
+                qty: nextQty,
+                price: priceUnit,
+                total: Number((priceUnit * nextQty).toFixed(2)),
+              }
+            : item
+        );
+        await onActualizarItemsOrden(actualizados);
+      }
+    } catch {
+      mostrarToast("Error al actualizar ítem en la orden", "err");
+    }
+  };
+
+  const handleEliminarItemOrden = async (it: any) => {
+    try {
+      const targetId = it.id || it.productId || it.serviceId || it.code;
+      const filtrados = (itemsOrden || []).filter(
+        (x: any) =>
+          x !== it &&
+          (!targetId || (x.id !== targetId && x.productId !== targetId && x.serviceId !== targetId)) &&
+          (!x.code || !it.code || x.code !== it.code)
+      );
+      await onActualizarItemsOrden(filtrados);
+      mostrarToast?.(`Eliminado: ${it.name || it.fullName}`, "ok");
+    } catch {
+      mostrarToast("Error al eliminar ítem de la orden", "err");
     }
   };
 
@@ -1372,65 +1475,343 @@ export default function ModuloCarWashCatalogo({
   }, [estadoAfecciones]);
 
 
-  const ESTADO_CIRCULOS_RECEPCION = useMemo(() => [
+  interface SemaforoItemCarWash {
+    id: string;
+    label: string;
+    detalle: string;
+    tipo?: "afeccion" | "objetos" | "foto";
+    iconSvg: (className: string) => React.ReactNode;
+  }
+
+  const SEMAFORO_CARWASH_BASE: SemaforoItemCarWash[] = useMemo(() => [
+    // PÁGINA 1: 9 ítems principales de Car Wash (incluye Objetos y Foto de recepción)
     {
-      id: "Lodo" as const,
+      id: "Lodo",
       label: "Lodo",
-      sublabel: estadoAfecciones.Lodo === "EXTREMO" ? "Extremo (+ $5.00)" : estadoAfecciones.Lodo === "MODERADO" ? "Moderado" : "Normal",
-      color: estadoAfecciones.Lodo === "EXTREMO" ? "bg-rose-500 text-white shadow-md shadow-rose-500/30 ring-2 ring-rose-400/60" : estadoAfecciones.Lodo === "MODERADO" ? "bg-amber-400 text-white ring-2 ring-amber-300" : "bg-zinc-100 hover:bg-zinc-200/80 dark:bg-white/10 text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-white/10",
-      sublabelColor: estadoAfecciones.Lodo === "EXTREMO" ? "text-rose-600 dark:text-rose-400 font-bold" : estadoAfecciones.Lodo === "MODERADO" ? "text-amber-600 dark:text-amber-400 font-bold" : "text-emerald-600 dark:text-emerald-400 font-bold",
-      badge: estadoAfecciones.Lodo === "EXTREMO" ? "⚠️" : null,
-      icon: (
-        <svg viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
+      detalle: "Barro / bajos",
+      iconSvg: (cls) => (
+        <svg viewBox="0 0 24 24" fill="currentColor" className={cls}>
           <path d="M12 2C8.5 2 6 4.5 6 7c0 1.2.5 2.3 1.2 3.1C5 11 3 13.5 3 16.5 3 20 6 22 10 22c2 0 4-.8 5.5-2.2C17 21 19 22 21 22c1.7 0 3-1.3 3-3 0-2.2-2.5-3.8-4-4.8 0-.4.1-.8.1-1.2 0-3.9-3.6-7-8.1-7zm-1 8c-.6 0-1-.4-1-1s.4-1 1-1 1 .4 1 1-.4 1-1 1zm4 4c-.6 0-1-.4-1-1s.4-1 1-1 1 .4 1 1-.4 1-1 1zm-6 2c-.6 0-1-.4-1-1s.4-1 1-1 1 .4 1 1-.4 1-1 1z" />
         </svg>
       ),
     },
     {
-      id: "Pelos" as const,
+      id: "Pelos",
       label: "Pelos",
-      sublabel: estadoAfecciones.Pelos === "EXTREMO" ? "Extremo (+ $5.00)" : estadoAfecciones.Pelos === "MODERADO" ? "Moderado" : "Normal",
-      color: estadoAfecciones.Pelos === "EXTREMO" ? "bg-rose-500 text-white shadow-md shadow-rose-500/30 ring-2 ring-rose-400/60" : estadoAfecciones.Pelos === "MODERADO" ? "bg-amber-400 text-white shadow-md shadow-amber-400/30 ring-2 ring-amber-300" : "bg-zinc-100 hover:bg-zinc-200/80 dark:bg-white/10 text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-white/10",
-      sublabelColor: estadoAfecciones.Pelos === "EXTREMO" ? "text-rose-600 dark:text-rose-400 font-bold" : estadoAfecciones.Pelos === "MODERADO" ? "text-amber-600 dark:text-amber-400 font-bold" : "text-emerald-600 dark:text-emerald-400 font-bold",
-      badge: estadoAfecciones.Pelos === "EXTREMO" ? "⚠️" : null,
-      icon: (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
+      detalle: "Mascotas / alfombra",
+      iconSvg: (cls) => (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={cls}>
           <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z" />
         </svg>
       ),
     },
     {
-      id: "Manchas" as const,
+      id: "Manchas",
       label: "Manchas",
-      sublabel: estadoAfecciones.Manchas === "EXTREMO" ? "Recargo" : estadoAfecciones.Manchas === "MODERADO" ? "Moderado" : "Normal",
-      color: estadoAfecciones.Manchas === "EXTREMO" ? "bg-rose-500 text-white shadow-md shadow-rose-500/30 ring-2 ring-rose-400/60" : estadoAfecciones.Manchas === "MODERADO" ? "bg-amber-400 text-white ring-2 ring-amber-300" : "bg-zinc-100 hover:bg-zinc-200/80 dark:bg-white/10 text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-white/10",
-      sublabelColor: estadoAfecciones.Manchas === "EXTREMO" ? "text-rose-600 dark:text-rose-400 font-bold" : estadoAfecciones.Manchas === "MODERADO" ? "text-amber-600 dark:text-amber-400 font-bold" : "text-emerald-600 dark:text-emerald-400 font-bold",
-      badge: null,
-      icon: (
-        <svg viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
+      detalle: "Tapicería / tela",
+      iconSvg: (cls) => (
+        <svg viewBox="0 0 24 24" fill="currentColor" className={cls}>
           <path d="M12 3c-1.5 0-2.8.8-3.5 2C7.3 4.4 6 5.2 5.5 6.5 4.3 6.9 3.5 8 3.5 9.3c0 .8.3 1.5.8 2C3.5 12.3 3 13.6 3 15c0 3.3 2.7 6 6 6 1.2 0 2.3-.4 3.2-1 .7.6 1.7 1 2.8 1 2.8 0 5-2.2 5-5 0-.8-.2-1.5-.5-2.2 1.1-.9 1.8-2.2 1.8-3.8 0-2.8-2.2-5-5-5-.4 0-.8.1-1.2.2C14.4 3.9 13.3 3 12 3z" />
         </svg>
       ),
     },
     {
-      id: "Gotaseca" as const,
+      id: "Gotaseca",
       label: "Gotaseca",
-      sublabel: estadoAfecciones.Gotaseca === "EXTREMO" ? "Recargo" : estadoAfecciones.Gotaseca === "MODERADO" ? "Moderado" : "Normal",
-      color: estadoAfecciones.Gotaseca === "EXTREMO" ? "bg-rose-500 text-white shadow-md shadow-rose-500/30 ring-2 ring-rose-400/60" : estadoAfecciones.Gotaseca === "MODERADO" ? "bg-amber-400 text-white ring-2 ring-amber-300" : "bg-zinc-100 hover:bg-zinc-200/80 dark:bg-white/10 text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-white/10",
-      sublabelColor: estadoAfecciones.Gotaseca === "EXTREMO" ? "text-rose-600 dark:text-rose-400 font-bold" : estadoAfecciones.Gotaseca === "MODERADO" ? "text-amber-600 dark:text-amber-400 font-bold" : "text-emerald-600 dark:text-emerald-400 font-bold",
-      badge: null,
-      icon: (
-        <svg viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
+      detalle: "Sarro / pintura",
+      iconSvg: (cls) => (
+        <svg viewBox="0 0 24 24" fill="currentColor" className={cls}>
           <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" />
         </svg>
       ),
     },
-  ], [estadoAfecciones]);
+    {
+      id: "Rayones",
+      label: "Rayones",
+      detalle: "Microrrayas",
+      iconSvg: (cls) => (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={cls}>
+          <path d="M5 19L19 5M2 12l10-10M12 22l10-10" />
+        </svg>
+      ),
+    },
+    {
+      id: "Tapicería",
+      label: "Tapicería",
+      detalle: "Suciedad interior",
+      iconSvg: (cls) => (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={cls}>
+          <path d="M6 4h12a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" />
+          <path d="M4 18v2M20 18v2M6 16v-6M18 16v-6" />
+        </svg>
+      ),
+    },
+    {
+      id: "Motor",
+      label: "Motor",
+      detalle: "Grasa / vano motor",
+      iconSvg: (cls) => (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={cls}>
+          <path d="M4 10h2V7h3V5h6v2h3v3h2v4h-2v3h-3v2H9v-2H6v-3H4v-4z" />
+          <circle cx="12" cy="12" r="2" />
+        </svg>
+      ),
+    },
+    {
+      id: "Chasis",
+      label: "Chasis",
+      detalle: "Bajos / suspensión",
+      iconSvg: (cls) => (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={cls}>
+          <rect x="3" y="10" width="18" height="4" rx="1" />
+          <circle cx="6" cy="12" r="3" />
+          <circle cx="18" cy="12" r="3" />
+          <path d="M12 6v12M9 6h6M9 18h6" />
+        </svg>
+      ),
+    },
+    {
+      id: "Objetos",
+      label: "Objetos",
+      detalle: "Cabina / baúl",
+      tipo: "objetos" as const,
+      iconSvg: (cls) => (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={cls}>
+          <polyline points="20 6 9 17 4 12" />
+        </svg>
+      ),
+    },
+
+    // PÁGINA 2: 9 ítems complementarios de inspección Car Wash
+    {
+      id: "Faros",
+      label: "Faros",
+      detalle: "Opacos / sarro",
+      iconSvg: (cls) => (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={cls}>
+          <path d="M4 12a8 8 0 0 1 8-8v16a8 8 0 0 1-8-8z" />
+          <path d="M15 8l5-2M15 12h6M15 16l5 2" />
+        </svg>
+      ),
+    },
+    {
+      id: "Plásticos",
+      label: "Plásticos",
+      detalle: "Molduras resecas",
+      iconSvg: (cls) => (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={cls}>
+          <rect x="2" y="6" width="20" height="12" rx="3" />
+          <path d="M6 10h12M6 14h8" />
+        </svg>
+      ),
+    },
+    {
+      id: "Vidrios",
+      label: "Vidrios",
+      detalle: "Película grasa",
+      iconSvg: (cls) => (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={cls}>
+          <polygon points="4 18 6 6 18 6 20 18 4 18" />
+          <line x1="12" y1="6" x2="12" y2="18" />
+        </svg>
+      ),
+    },
+    {
+      id: "Aros",
+      label: "Aros",
+      detalle: "Ferodo / frenos",
+      iconSvg: (cls) => (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={cls}>
+          <circle cx="12" cy="12" r="9" />
+          <circle cx="12" cy="12" r="3" />
+          <path d="M12 3v6M12 15v6M3 12h6M15 12h6" />
+        </svg>
+      ),
+    },
+    {
+      id: "Cera",
+      label: "Cera",
+      detalle: "Brillo / protección",
+      iconSvg: (cls) => (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={cls}>
+          <path d="M12 2l2.4 5 5.6.8-4 4 1 5.6-5-2.6-5 2.6 1-5.6-4-4 5.6-.8z" />
+        </svg>
+      ),
+    },
+    {
+      id: "Olores",
+      label: "Olores",
+      detalle: "Humedad / tabaco",
+      iconSvg: (cls) => (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={cls}>
+          <path d="M8 4c0 3-3 4-3 7a4 4 0 0 0 8 0c0-3-3-4-3-7z" />
+          <path d="M16 8c1.5 1.5 2 3.5 1.5 5.5M19 5c2.5 2.5 3.5 6 2.5 9.5" />
+        </svg>
+      ),
+    },
+    {
+      id: "Maletero",
+      label: "Maletero",
+      detalle: "Baúl / carga",
+      iconSvg: (cls) => (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={cls}>
+          <rect x="3" y="6" width="18" height="14" rx="2" />
+          <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 12h18" />
+        </svg>
+      ),
+    },
+    {
+      id: "Techo",
+      label: "Techo",
+      detalle: "Cielo interior",
+      iconSvg: (cls) => (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={cls}>
+          <path d="M4 16c1-4 4-8 8-8s7 4 8 8" />
+          <line x1="2" y1="16" x2="22" y2="16" />
+          <circle cx="7" cy="18" r="2" />
+          <circle cx="17" cy="18" r="2" />
+        </svg>
+      ),
+    },
+    {
+      id: "Espejos",
+      label: "Espejos",
+      detalle: "Lunas / retrovisores",
+      iconSvg: (cls) => (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={cls}>
+          <rect x="4" y="5" width="16" height="14" rx="3" />
+          <path d="M8 9l8 6M8 15l4-3" />
+        </svg>
+      ),
+    },
+  ], []);
+
+  const itemsManualesCompletos = useMemo(() => {
+    return itemsManualesSemaforo.map((m) => ({
+      id: m.id,
+      label: m.label,
+      detalle: m.detalle || "Manual",
+      tipo: "afeccion" as const,
+      iconSvg: (cls: string) => (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={cls}>
+          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+        </svg>
+      ),
+    }));
+  }, [itemsManualesSemaforo]);
+
+  const todosLosItemsSemaforo = useMemo(() => {
+    return [...SEMAFORO_CARWASH_BASE, ...itemsManualesCompletos];
+  }, [SEMAFORO_CARWASH_BASE, itemsManualesCompletos]);
+
+  const itemsPorPagina = 9;
+  const totalPaginas = Math.max(1, Math.ceil(todosLosItemsSemaforo.length / itemsPorPagina));
+
+  const itemsPaginaActual = useMemo(() => {
+    return todosLosItemsSemaforo.slice(paginaSemaforo * itemsPorPagina, (paginaSemaforo + 1) * itemsPorPagina);
+  }, [todosLosItemsSemaforo, paginaSemaforo]);
+
+  const handleAgregarItemManual = () => {
+    const nombre = nuevoManualTexto.trim();
+    if (!nombre) return;
+    const nuevoId = `manual_sem_${Date.now()}`;
+    setItemsManualesSemaforo((prev) => [
+      ...prev,
+      { id: nuevoId, label: nombre, detalle: "Manual" },
+    ]);
+    setNuevoManualTexto("");
+    setMostrarInputManual(false);
+    const nuevoTotal = todosLosItemsSemaforo.length + 1;
+    const nuevaPag = Math.floor((nuevoTotal - 1) / itemsPorPagina);
+    setPaginaSemaforo(nuevaPag);
+    mostrarToast?.(`✅ Chequeo manual "${nombre}" agregado al semáforo`, "ok");
+  };
 
   const labelCategoriaActiva = useMemo(() => {
     const cat = CARWASH_CATEGORIES.find((c) => c.id === categoriaActivaId);
     return cat ? `${cat.icon} ${cat.label}` : "🫧 Todo";
   }, [categoriaActivaId]);
+
+  const categoriasProductosCW = useMemo(() => {
+    const list: Array<{ id: string; label: string; icon: string }> = [];
+    const seen = new Set<string>();
+
+    todosLosItemsPOS.filter(it => it.kind === "PRODUCT").forEach(prod => {
+      const cat = prod.categoryMapped || "EXTRAS";
+      const rawLabel = CARWASH_CATEGORIES.find(c => c.id === cat)?.label || prod.categoryMapped || "Insumos";
+      const singleWord = rawLabel.trim().split(/\s+/)[0] || "Insumos";
+      const id = cat.toLowerCase();
+      if (!seen.has(id)) {
+        seen.add(id);
+        const icon = CARWASH_CATEGORIES.find(c => c.id === cat)?.icon || "📦";
+        list.push({ id: cat, label: singleWord, icon });
+      }
+    });
+
+    [
+      { id: "EXTRAS", label: "Extras", icon: "➕" },
+      { id: "INSUMOS", label: "Insumos", icon: "📦" },
+      { id: "SHAMPOO", label: "Shampoo", icon: "🫧" },
+      { id: "CERA", label: "Cera", icon: "✨" },
+      { id: "AROMAS", label: "Aromas", icon: "🌸" },
+    ].forEach(c => {
+      const id = c.id.toLowerCase();
+      if (!seen.has(id)) {
+        seen.add(id);
+        list.push(c);
+      }
+    });
+
+    return list;
+  }, [todosLosItemsPOS]);
+
+  const categoriasServiciosCW = useMemo(() => {
+    return [
+      { id: "LAVADO", label: "Lavado", icon: "🚿" },
+      { id: "CHASIS", label: "Chasis", icon: "🔩" },
+      { id: "INTERIOR", label: "Interior", icon: "🧹" },
+      { id: "DETAILING", label: "Detailing", icon: "💎" },
+      { id: "EXTRAS", label: "Extras", icon: "➕" },
+    ];
+  }, []);
+
+  const categoriasTodasCW = useMemo(() => {
+    const map = new Map<string, { id: string; label: string; icon: string }>();
+    categoriasServiciosCW.forEach(c => map.set(c.id, c));
+    categoriasProductosCW.forEach(c => {
+      if (!map.has(c.id)) map.set(c.id, c);
+    });
+    return Array.from(map.values());
+  }, [categoriasServiciosCW, categoriasProductosCW]);
+
+  const opcionesCategoriasMostrarCW = useMemo(() => {
+    if (filtroTipo === "PART") return categoriasProductosCW;
+    if (filtroTipo === "SERVICE") return categoriasServiciosCW;
+    return categoriasTodasCW;
+  }, [filtroTipo, categoriasProductosCW, categoriasServiciosCW, categoriasTodasCW]);
+
+  const labelCategoriaActivaCW = useMemo(() => {
+    if (categoriaActivaId === "TODO") return "Todas";
+    const cat = opcionesCategoriasMostrarCW.find((c) => c.id === categoriaActivaId);
+    if (cat) return cat.label.trim().split(/\s+/)[0];
+    return "Todas";
+  }, [categoriaActivaId, opcionesCategoriasMostrarCW]);
+
+  const iconoCategoriaActivaCW = useMemo(() => {
+    if (categoriaActivaId === "TODO") return "📋";
+    const cat = opcionesCategoriasMostrarCW.find((c) => c.id === categoriaActivaId);
+    return cat?.icon || "📋";
+  }, [categoriaActivaId, opcionesCategoriasMostrarCW]);
+
+  const toggleFiltroTipoCW = (tipo: "PART" | "SERVICE") => {
+    setFiltroTipo((prev) => {
+      const nuevo = prev === tipo ? "todos" : tipo;
+      setCategoriaActivaId("TODO");
+      setSubcategoriaActivaId("TODOS");
+      return nuevo;
+    });
+  };
 
   const labelSubcategoriaActiva = useMemo(() => {
     if (subcategoriaActivaId === "TODOS") return "🚿 Lavado";
@@ -1551,18 +1932,88 @@ export default function ModuloCarWashCatalogo({
             =================================================================== */}
         <div className="lg:col-span-7 rounded-2xl bg-white dark:bg-white/[0.03] border border-zinc-200/90 dark:border-white/10 p-3.5 sm:p-4 shadow-2xs">
           <div>
-            {/* Cabecera del semáforo */}
-            <div className="flex items-center gap-2 mb-2 pb-2 border-b border-zinc-100 dark:border-white/5">
+            {/* Cabecera del semáforo con título, botón manual y flechas de paginación */}
+            <div className="flex items-center justify-between gap-2 mb-2 pb-2 border-b border-zinc-100 dark:border-white/5">
               <div className="flex items-center gap-1.5 min-w-0">
                 <span className="text-base sm:text-lg">🚦</span>
                 <h2 className="text-sm sm:text-base font-bold text-zinc-900 dark:text-white leading-tight">
                   Semáforo
                 </h2>
               </div>
+
+              <div className="flex items-center gap-1.5">
+                {/* Botón para abrir input manual */}
+                <button
+                  type="button"
+                  onClick={() => setMostrarInputManual((prev) => !prev)}
+                  className={`h-7 px-2.5 rounded-lg text-xs font-semibold border flex items-center gap-1 transition-all cursor-pointer shadow-2xs ${
+                    mostrarInputManual
+                      ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 border-zinc-900 dark:border-white"
+                      : "bg-zinc-100 hover:bg-zinc-200/80 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-white/10"
+                  }`}
+                  title="Agregar chequeo manual al semáforo"
+                >
+                  <span>＋</span>
+                  <span>Manual</span>
+                </button>
+
+                {/* Flechas de paginación para ver más iconos (9 en cada página) */}
+                <div className="flex items-center gap-0.5 bg-zinc-100 dark:bg-white/5 p-0.5 rounded-lg border border-zinc-200/80 dark:border-white/10 shadow-2xs">
+                  <button
+                    type="button"
+                    onClick={() => setPaginaSemaforo((prev) => Math.max(0, prev - 1))}
+                    disabled={paginaSemaforo === 0}
+                    className="w-6 h-6 rounded-md flex items-center justify-center text-[10px] font-bold text-zinc-700 dark:text-zinc-200 hover:bg-white dark:hover:bg-white/15 disabled:opacity-25 disabled:cursor-not-allowed cursor-pointer transition-all"
+                    title="Página anterior"
+                  >
+                    ◀
+                  </button>
+                  <span className="px-1.5 text-[11px] font-bold text-zinc-600 dark:text-zinc-300 select-none">
+                    {paginaSemaforo + 1} / {totalPaginas}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setPaginaSemaforo((prev) => Math.min(totalPaginas - 1, prev + 1))}
+                    disabled={paginaSemaforo >= totalPaginas - 1}
+                    className="w-6 h-6 rounded-md flex items-center justify-center text-[10px] font-bold text-zinc-700 dark:text-zinc-200 hover:bg-white dark:hover:bg-white/15 disabled:opacity-25 disabled:cursor-not-allowed cursor-pointer transition-all"
+                    title="Ver más iconos"
+                  >
+                    ▶
+                  </button>
+                </div>
+              </div>
             </div>
 
+            {/* Campo para ingresar punto o chequeo manualmente */}
+            {mostrarInputManual && (
+              <div className="mb-2.5 p-2 rounded-xl bg-zinc-50 dark:bg-white/[0.03] border border-zinc-200 dark:border-white/10 flex items-center gap-2 animate-fade-in shadow-2xs">
+                <input
+                  type="text"
+                  value={nuevoManualTexto}
+                  onChange={(e) => setNuevoManualTexto(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleAgregarItemManual();
+                    }
+                  }}
+                  placeholder="Nombre del chequeo manual (ej. Parabrisas trizado)..."
+                  className="flex-1 h-8 rounded-lg bg-white dark:bg-white/[0.04] border border-zinc-200 dark:border-white/10 px-2.5 text-xs text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:border-zinc-400 dark:focus:border-white/30"
+                  autoFocus
+                />
+                <button
+                  type="button"
+                  onClick={handleAgregarItemManual}
+                  disabled={!nuevoManualTexto.trim()}
+                  className="h-8 px-3 rounded-lg bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-100 text-white dark:text-zinc-900 disabled:opacity-30 disabled:cursor-not-allowed text-xs font-semibold cursor-pointer transition-all shrink-0 active:scale-95"
+                >
+                  Agregar
+                </button>
+              </div>
+            )}
+
             {/* Guía semafórica de 3 niveles */}
-            <div className="grid grid-cols-3 gap-1.5 mb-2.5 px-1 py-1 rounded-xl bg-zinc-50 dark:bg-white/[0.02] border border-zinc-100 dark:border-white/5 text-[13px] sm:text-sm font-semibold">
+            <div className="grid grid-cols-3 gap-1.5 mb-2.5 px-1 py-1 rounded-xl bg-zinc-50 dark:bg-white/[0.02] border border-zinc-100 dark:border-white/5 text-center text-xs sm:text-sm font-semibold">
               <span className="text-emerald-700 dark:text-emerald-400">
                 Normal
               </span>
@@ -1574,105 +2025,185 @@ export default function ModuloCarWashCatalogo({
               </span>
             </div>
 
-            {/* Tablero de los 6 íconos semafóricos de CarWash */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 py-1">
-              {ESTADO_CIRCULOS_RECEPCION.map((btn) => {
-                const nivel = estadoAfecciones[btn.id];
-                const cardColor = nivel === "EXTREMO"
-                  ? "bg-rose-50 border-rose-300 dark:bg-rose-500/10 dark:border-rose-400/60"
-                  : nivel === "MODERADO"
-                    ? "bg-amber-50 border-amber-300 dark:bg-amber-500/10 dark:border-amber-400/60"
-                    : "bg-zinc-50 border-zinc-200 dark:bg-white/[0.03] dark:border-white/10";
-                const iconColor = nivel === "EXTREMO"
-                  ? "bg-rose-100 border-rose-400 text-rose-600 dark:bg-rose-500/20 dark:text-rose-300"
-                  : nivel === "MODERADO"
-                    ? "bg-amber-100 border-amber-400 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300"
-                    : "bg-zinc-100 border-zinc-300 text-zinc-600 dark:bg-white/10 dark:border-white/20 dark:text-zinc-300";
+            {/* Tablero de 9 íconos semafóricos (3x3) con soporte de swipe/deslizar */}
+            <div
+              onTouchStart={(e) => {
+                touchStartXRef.current = e.touches[0].clientX;
+              }}
+              onTouchEnd={(e) => {
+                if (touchStartXRef.current === null) return;
+                const diffX = touchStartXRef.current - e.changedTouches[0].clientX;
+                touchStartXRef.current = null;
+                if (Math.abs(diffX) > 40) {
+                  if (diffX > 0) {
+                    setPaginaSemaforo((prev) => Math.min(totalPaginas - 1, prev + 1));
+                  } else {
+                    setPaginaSemaforo((prev) => Math.max(0, prev - 1));
+                  }
+                }
+              }}
+              className="grid grid-cols-3 gap-y-3.5 gap-x-2 place-items-center py-1 transition-all"
+            >
+              {itemsPaginaActual.map((btn) => {
+                const esManual = btn.id.startsWith("manual_sem_");
+
+                // Caso A: Ítem Objetos (Verificación de pertenencias)
+                if (btn.tipo === "objetos") {
+                  return (
+                    <div key={btn.id} className="relative flex flex-col items-center gap-1 text-center w-full group">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const nuevo = !objetosVerificados;
+                          setObjetosVerificados(nuevo);
+                          if (nuevo) mostrarToast("✓ Pertenencias verificadas en cabina y baúl", "ok");
+                        }}
+                        className={`relative w-13 h-13 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center transition-all cursor-pointer active:scale-95 shadow-2xs ${
+                          objetosVerificados
+                            ? "bg-emerald-500 hover:bg-emerald-600 text-white shadow-md shadow-emerald-500/25 scale-102 ring-2 ring-emerald-400 border border-emerald-400"
+                            : "bg-white hover:bg-zinc-50 dark:bg-white/[0.04] dark:hover:bg-white/[0.08] text-zinc-700 dark:text-zinc-200 border border-zinc-200/90 dark:border-white/10 hover:border-zinc-300 dark:hover:border-white/20"
+                        }`}
+                        title="Verificación de pertenencias en cabina y baúl"
+                      >
+                        {btn.iconSvg("w-6 h-6 sm:w-6.5 sm:h-6.5")}
+                        {objetosVerificados && (
+                          <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-emerald-500 text-white border-2 border-white dark:border-zinc-900 flex items-center justify-center text-[9px] font-black shadow-xs">
+                            ✓
+                          </span>
+                        )}
+                      </button>
+                      <div className="flex flex-col items-center leading-tight mt-1 px-1 max-w-full">
+                        <span className={`text-xs sm:text-sm font-bold tracking-tight text-center truncate max-w-full ${
+                          objetosVerificados ? "text-emerald-600 dark:text-emerald-400" : "text-zinc-800 dark:text-zinc-200"
+                        }`}>
+                          {btn.label}
+                        </span>
+                        <span className={`text-[10px] sm:text-[11px] font-semibold mt-0.5 ${
+                          objetosVerificados ? "text-emerald-600 dark:text-emerald-400 font-bold" : "text-zinc-400 dark:text-zinc-500 font-normal"
+                        }`}>
+                          {objetosVerificados ? "Verificado" : "Pendiente"}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                }
+
+                // Caso B: Checkpoint estándar de afección o manual
+                const nivel = estadoAfecciones[btn.id] || "NORMAL";
+                const esExtremo = nivel === "EXTREMO";
+                const esModerado = nivel === "MODERADO";
+
+                const sublabelTexto = esExtremo
+                  ? btn.id === "Lodo" || btn.id === "Pelos"
+                    ? "Extremo"
+                    : btn.id === "Manchas" || btn.id === "Gotaseca"
+                      ? "Recargo"
+                      : "Extremo"
+                  : esModerado
+                    ? "Moderado"
+                    : "Normal";
 
                 return (
-                <button
-                  key={btn.id}
-                  type="button"
-                  onClick={() => handleCiclarEstadoAfeccion(btn.id)}
-                  className={`relative flex flex-col items-center justify-center gap-1 rounded-xl border py-3 px-1 transition-all active:scale-95 cursor-pointer ${cardColor}`}
-                  title={`${btn.label}: Toca para cambiar nivel (Normal, Moderado, Extremo)`}
-                >
-                  {btn.badge && (
-                    <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-rose-500 flex items-center justify-center text-[9px] text-white font-bold z-10">
-                      !
-                    </span>
-                  )}
-                  <span className={`w-10 h-10 rounded-full border-2 flex items-center justify-center ${iconColor}`}>
-                    {btn.icon}
-                  </span>
-                  <span className="text-xs sm:text-sm font-black text-zinc-800 dark:text-zinc-200">
-                    {btn.label}
-                  </span>
-                  <span className={`text-xs font-bold ${btn.sublabelColor}`}>
-                    {btn.sublabel}
-                  </span>
-                </button>
+                  <div key={btn.id} className="relative flex flex-col items-center gap-1 text-center w-full group">
+                    {/* Botón de eliminar si es un ítem creado manualmente */}
+                    {esManual && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setItemsManualesSemaforo((prev) => prev.filter((it) => it.id !== btn.id));
+                          setEstadoAfecciones((prev) => {
+                            const copy = { ...prev };
+                            delete copy[btn.id];
+                            return copy;
+                          });
+                        }}
+                        className="absolute -top-1.5 right-1 w-4 h-4 rounded-full bg-zinc-200 hover:bg-rose-500 hover:text-white dark:bg-white/10 dark:hover:bg-rose-500 text-zinc-400 text-[10px] flex items-center justify-center cursor-pointer transition-colors z-10"
+                        title="Eliminar chequeo manual"
+                      >
+                        ×
+                      </button>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={() => handleCiclarEstadoAfeccion(btn.id)}
+                      className={`relative w-13 h-13 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center transition-all cursor-pointer active:scale-95 shadow-2xs ${
+                        esExtremo
+                          ? "bg-rose-500 hover:bg-rose-600 text-white shadow-md shadow-rose-500/30 scale-105 ring-2 ring-rose-400 border border-rose-400"
+                          : esModerado
+                            ? "bg-amber-400 hover:bg-amber-500 text-zinc-950 shadow-md shadow-amber-400/30 scale-102 ring-2 ring-amber-300 border border-amber-300"
+                            : "bg-white hover:bg-zinc-50 dark:bg-white/[0.04] dark:hover:bg-white/[0.08] text-zinc-700 dark:text-zinc-200 border border-zinc-200/90 dark:border-white/10 hover:border-zinc-300 dark:hover:border-white/20"
+                      }`}
+                      title={`${btn.label} (${btn.detalle}): Estado [${nivel}]. Clic para cambiar nivel`}
+                    >
+                      {btn.iconSvg("w-6 h-6 sm:w-6.5 sm:h-6.5")}
+
+                      {/* Insignia en esquina */}
+                      {esExtremo && (
+                        <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-rose-600 text-white border-2 border-white dark:border-zinc-900 flex items-center justify-center text-[9px] font-black shadow-xs">
+                          ✕
+                        </span>
+                      )}
+                      {esModerado && (
+                        <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-amber-400 text-zinc-950 border-2 border-white dark:border-zinc-900 flex items-center justify-center text-[10px] font-black shadow-xs">
+                          !
+                        </span>
+                      )}
+                    </button>
+
+                    <div className="flex flex-col items-center leading-tight mt-1 px-1 max-w-full">
+                      <span className={`text-xs sm:text-sm font-bold tracking-tight text-center truncate max-w-full ${
+                        esExtremo
+                          ? "text-rose-600 dark:text-rose-400"
+                          : esModerado
+                            ? "text-amber-600 dark:text-amber-400"
+                            : "text-zinc-800 dark:text-zinc-200"
+                      }`}>
+                        {btn.label}
+                      </span>
+                      <span className={`text-[10px] sm:text-[11px] font-semibold mt-0.5 ${
+                        esExtremo
+                          ? "text-rose-600 dark:text-rose-400 font-bold"
+                          : esModerado
+                            ? "text-amber-600 dark:text-amber-400 font-bold"
+                            : "text-emerald-600 dark:text-emerald-400 font-bold"
+                      }`}>
+                        {sublabelTexto}
+                      </span>
+                    </div>
+                  </div>
                 );
               })}
-
-              {/* Botón 5: Objetos */}
-              <button
-                type="button"
-                onClick={() => {
-                  const nuevo = !objetosVerificados;
-                  setObjetosVerificados(nuevo);
-                  if (nuevo) mostrarToast("✓ Pertenencias verificadas en cabina y baúl", "ok");
-                }}
-                className={`relative flex flex-col items-center justify-center gap-1 rounded-xl border py-3 px-1 transition-all active:scale-95 cursor-pointer ${
-                  objetosVerificados
-                    ? "bg-emerald-50 border-emerald-300 dark:bg-emerald-500/10 dark:border-emerald-400/60"
-                    : "bg-zinc-50 border-zinc-200 dark:bg-white/[0.03] dark:border-white/10"
-                }`}
-                title="Verificación de objetos personales en cabina"
-              >
-                <span className={`w-10 h-10 rounded-full border-2 flex items-center justify-center ${
-                  objetosVerificados
-                    ? "bg-emerald-100 border-emerald-400 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-300"
-                    : "bg-zinc-100 border-zinc-300 text-zinc-600 dark:bg-white/10 dark:border-white/20 dark:text-zinc-300"
-                }`}>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
-                    <polyline points="20 6 9 17 4 12" />
-                  </svg>
-                </span>
-                <span className="text-xs sm:text-sm font-black text-zinc-800 dark:text-zinc-200">Objetos</span>
-                <span className={`text-xs font-bold ${objetosVerificados ? "text-emerald-600 dark:text-emerald-400" : "text-zinc-500 dark:text-zinc-400"}`}>
-                  {objetosVerificados ? "Verificado" : "Pendiente"}
-                </span>
-              </button>
-
-              {/* Botón 6: Foto */}
-              <button
-                type="button"
-                disabled={subiendoFoto}
-                onClick={() => fileInputRef.current?.click()}
-                className="relative flex flex-col items-center justify-center gap-1 rounded-xl border border-blue-200 bg-blue-50 py-3 px-1 transition-all active:scale-95 cursor-pointer dark:border-blue-400/40 dark:bg-blue-500/10"
-                title="Tomar o subir foto de recepción del vehículo"
-              >
-                <span className="w-10 h-10 rounded-full border-2 border-blue-300 bg-blue-100 text-blue-600 dark:border-blue-400/40 dark:bg-blue-500/20 dark:text-blue-300 flex items-center justify-center">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
-                    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
-                    <circle cx="12" cy="13" r="4" />
-                  </svg>
-                </span>
-                <span className="text-xs sm:text-sm font-black text-zinc-800 dark:text-zinc-200">Foto</span>
-                <span className="text-xs font-bold text-blue-600 dark:text-blue-300">
-                  {subiendoFoto ? "..." : fotosEstado.length > 0 ? `(${fotosEstado.length})` : "R2"}
-                </span>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  capture="environment"
-                  className="hidden"
-                  onChange={handleSubirFotoEstado}
-                />
-              </button>
             </div>
+
+            {/* Indicadores de puntos de página (Dots) si hay más de 1 página */}
+            {totalPaginas > 1 && (
+              <div className="flex items-center justify-center gap-1.5 pt-2 mt-1 border-t border-zinc-100 dark:border-white/5">
+                {Array.from({ length: totalPaginas }).map((_, pIdx) => (
+                  <button
+                    key={pIdx}
+                    type="button"
+                    onClick={() => setPaginaSemaforo(pIdx)}
+                    className={`h-1.5 rounded-full transition-all cursor-pointer ${
+                      paginaSemaforo === pIdx
+                        ? "w-6 bg-zinc-800 dark:bg-white"
+                        : "w-1.5 bg-zinc-300 dark:bg-white/20 hover:bg-zinc-400"
+                    }`}
+                    aria-label={`Ir a página ${pIdx + 1}`}
+                  />
+                ))}
+              </div>
+            )}
+
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              className="hidden"
+              onChange={handleSubirFotoEstado}
+            />
           </div>
 
           {/* Autoventa sugerida / conectada al POS */}
@@ -1689,144 +2220,81 @@ export default function ModuloCarWashCatalogo({
       {/* =====================================================================
           BUSCADOR Y FILTROS: ANCHO COMPLETO (CUBRE TODO EL ESPACIO EN PC Y MÓVIL)
           ===================================================================== */}
-      <div className="relative w-full rounded-2xl bg-white dark:bg-white/[0.03] border border-zinc-200/90 dark:border-white/10 p-3 sm:p-3.5 shadow-2xs">
-          {filtrosFlotantesAbiertos && (
-            <div className="absolute bottom-full left-0 right-0 z-50 mb-2 rounded-2xl border border-zinc-200 dark:border-white/15 bg-white dark:bg-[#1a1a1e] p-3 shadow-xl animate-fade-in">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-bold text-zinc-800 dark:text-zinc-100">Filtrar servicios</span>
+      <div className="relative w-full rounded-2xl bg-white dark:bg-white/[0.03] border border-zinc-200/90 dark:border-white/10 p-3 sm:p-3.5 shadow-2xs space-y-2">
+        {/* Fila 1: Dropdown de categorías desplegable (arriba) */}
+        <div className="relative w-full" ref={dropdownCatRef}>
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setMenuCatAbierto((prev) => !prev)}
+              className="w-full h-9 px-3 rounded-xl border border-zinc-200 dark:border-white/10 bg-white dark:bg-white/5 text-zinc-800 dark:text-zinc-100 text-xs font-bold flex items-center justify-between gap-2 cursor-pointer transition-all hover:bg-zinc-50 dark:hover:bg-white/10 shadow-2xs"
+            >
+              <div className="flex items-center gap-2 truncate">
+                <span>{iconoCategoriaActivaCW}</span>
+                <span className="truncate">{labelCategoriaActivaCW}</span>
+              </div>
+              <div className="flex items-center gap-1.5 shrink-0 text-zinc-400">
+                {categoriaActivaId !== "TODO" && (
+                  <span
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setCategoriaActivaId("TODO");
+                      setSubcategoriaActivaId("TODOS");
+                    }}
+                    className="w-4 h-4 rounded-full hover:bg-zinc-200 dark:hover:bg-white/20 flex items-center justify-center text-[11px] text-zinc-500 hover:text-zinc-800 transition-colors cursor-pointer"
+                    title="Quitar filtro de categoría"
+                  >
+                    ✕
+                  </span>
+                )}
+                <span className="text-[10px] opacity-75">▾</span>
+              </div>
+            </button>
+
+            {menuCatAbierto && (
+              <div className="absolute top-11 left-0 z-50 w-full max-h-60 overflow-y-auto rounded-xl border border-zinc-200 dark:border-white/15 bg-white dark:bg-[#1a1a1e] p-1 shadow-xl animate-fade-in space-y-0.5">
                 <button
                   type="button"
-                  onClick={() => setFiltrosFlotantesAbiertos(false)}
-                  className="w-7 h-7 rounded-lg text-zinc-500 hover:bg-zinc-100 dark:hover:bg-white/10 cursor-pointer"
-                  aria-label="Cerrar filtros"
+                  onClick={() => {
+                    setCategoriaActivaId("TODO");
+                    setSubcategoriaActivaId("TODOS");
+                    setMenuCatAbierto(false);
+                  }}
+                  className={`w-full h-8 px-2.5 rounded-lg text-left text-xs font-semibold flex items-center gap-2 cursor-pointer transition-colors ${
+                    categoriaActivaId === "TODO"
+                      ? "bg-blue-50 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300 font-bold"
+                      : "text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/10"
+                  }`}
                 >
-                  ✕
+                  <span>📋</span>
+                  <span>Todas</span>
                 </button>
-              </div>
-              <div className="flex flex-col gap-2">
-            {/* Píldora 1: Categoría */}
-            <div className="relative w-full">
-              <span className="block mb-1 text-[10px] font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">1. Categoría</span>
-              <button
-                type="button"
-                onClick={() => {
-                  setMenuCatAbierto((prev) => !prev);
-                  setMenuSubcatAbierto(false);
-                  setMenuPorteAbierto(false);
-                }}
-                className="w-full h-9 px-2.5 rounded-xl border border-blue-300 bg-blue-50 text-blue-800 dark:border-blue-400/40 dark:bg-blue-500/15 dark:text-blue-100 text-xs font-bold flex items-center justify-between gap-1 cursor-pointer transition-all active:scale-95 shadow-2xs truncate"
-              >
-                <span className="truncate">{labelCategoriaActiva}</span>
-                <span className="text-[10px] opacity-75">▾</span>
-              </button>
-              {menuCatAbierto && (
-                <div className="absolute top-11 left-0 z-40 w-44 rounded-xl border border-zinc-200 dark:border-white/15 bg-white dark:bg-[#1a1a1e] p-1 shadow-xl animate-fade-in space-y-0.5">
-                  {CARWASH_CATEGORIES.map((cat) => (
-                    <button
-                      key={cat.id}
-                      type="button"
-                      onClick={() => {
-                        setCategoriaActivaId(cat.id);
-                        setSubcategoriaActivaId("TODOS");
-                        setMenuCatAbierto(false);
-                      }}
-                      className="w-full h-8 px-2.5 rounded-lg text-left text-xs font-semibold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/10 flex items-center gap-2 cursor-pointer"
-                    >
-                      <span>{cat.icon}</span>
-                      <span>{cat.label}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Píldora 2: Subcategoría */}
-            <div className="relative w-full">
-              <span className="block mb-1 text-[10px] font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">2. Subcategoría</span>
-              <button
-                type="button"
-                onClick={() => {
-                  setMenuSubcatAbierto((prev) => !prev);
-                  setMenuCatAbierto(false);
-                  setMenuPorteAbierto(false);
-                }}
-                className="w-full h-9 px-2.5 rounded-xl border border-zinc-200 bg-zinc-50 text-zinc-700 dark:border-white/10 dark:bg-white/5 dark:text-zinc-200 text-xs font-bold flex items-center justify-between gap-1 cursor-pointer transition-all active:scale-95 shadow-2xs truncate"
-              >
-                <span className="truncate">{labelSubcategoriaActiva}</span>
-                <span className="text-[10px] opacity-75">▾</span>
-              </button>
-              {menuSubcatAbierto && (
-                <div className="absolute top-11 left-0 z-40 w-44 rounded-xl border border-zinc-200 dark:border-white/15 bg-white dark:bg-[#1a1a1e] p-1 shadow-xl animate-fade-in space-y-0.5 max-h-56 overflow-y-auto">
+                {opcionesCategoriasMostrarCW.map((cat) => (
                   <button
+                    key={cat.id}
                     type="button"
                     onClick={() => {
+                      setCategoriaActivaId(cat.id);
                       setSubcategoriaActivaId("TODOS");
-                      setMenuSubcatAbierto(false);
+                      setMenuCatAbierto(false);
                     }}
-                    className="w-full h-8 px-2.5 rounded-lg text-left text-xs font-semibold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/10 flex items-center gap-2 cursor-pointer"
+                    className={`w-full h-8 px-2.5 rounded-lg text-left text-xs font-semibold flex items-center gap-2 cursor-pointer transition-colors ${
+                      categoriaActivaId === cat.id
+                        ? "bg-blue-50 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300 font-bold"
+                        : "text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/10"
+                    }`}
                   >
-                    <span>✨</span>
-                    <span>Todos</span>
+                    <span>{cat.icon}</span>
+                    <span>{cat.label}</span>
                   </button>
-                  {(subcategoriasActivas.length > 0 ? subcategoriasActivas : CARWASH_CATEGORIES[1].subcategories).map((sub) => (
-                    <button
-                      key={sub.id}
-                      type="button"
-                      onClick={() => {
-                        setSubcategoriaActivaId(sub.id);
-                        setMenuSubcatAbierto(false);
-                      }}
-                      className="w-full h-8 px-2.5 rounded-lg text-left text-xs font-semibold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/10 flex items-center gap-2 cursor-pointer"
-                    >
-                      {sub.icon && <span>{sub.icon}</span>}
-                      <span>{sub.label}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Píldora 3: Porte / Chasis */}
-            <div className="relative w-full">
-              <span className="block mb-1 text-[10px] font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">3. Vehículo</span>
-              <button
-                type="button"
-                onClick={() => {
-                  setMenuPorteAbierto((prev) => !prev);
-                  setMenuCatAbierto(false);
-                  setMenuSubcatAbierto(false);
-                }}
-                className="w-full h-9 px-2.5 rounded-xl border border-zinc-200 bg-zinc-50 text-zinc-700 dark:border-white/10 dark:bg-white/5 dark:text-zinc-200 text-xs font-bold flex items-center justify-between gap-1 cursor-pointer transition-all active:scale-95 shadow-2xs truncate"
-              >
-                <span className="truncate">{labelPorteActivo}</span>
-                <span className="text-[10px] opacity-75">▾</span>
-              </button>
-              {menuPorteAbierto && (
-                <div className="absolute top-11 right-0 z-40 w-36 rounded-xl border border-zinc-200 dark:border-white/15 bg-white dark:bg-[#1a1a1e] p-1 shadow-xl animate-fade-in space-y-0.5">
-                  {VEHICULOS_CARWASH.map((v) => (
-                    <button
-                      key={v.id}
-                      type="button"
-                      onClick={() => {
-                        setVehiculoActivo(v.id);
-                        setSelectedVehicleTypeId(v.vehicleTypeId);
-                        setMenuPorteAbierto(false);
-                      }}
-                      className="w-full h-8 px-2.5 rounded-lg text-left text-xs font-semibold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/10 flex items-center gap-2 cursor-pointer"
-                    >
-                      <span>{v.icon}</span>
-                      <span>{v.label}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
-            </div>
-          )}
+        </div>
 
-          {/* Buscador */}
-          <div className="flex items-center gap-2">
+        {/* Fila 2: Buscador + Botones P y S */}
+        <div className="flex items-center gap-2">
           <div className="relative flex-1 min-w-0">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 text-xs">🔍</span>
             <input
@@ -1846,32 +2314,34 @@ export default function ModuloCarWashCatalogo({
               </button>
             )}
           </div>
-          <button
-            type="button"
-            onClick={() => {
-              setFiltrosFlotantesAbiertos((prev) => !prev);
-              setMenuCatAbierto(false);
-              setMenuSubcatAbierto(false);
-              setMenuPorteAbierto(false);
-            }}
-            className={`h-9 w-10 shrink-0 rounded-xl border flex items-center justify-center transition-colors cursor-pointer ${
-              filtrosFlotantesAbiertos
-                ? "border-blue-400 bg-blue-50 text-blue-700 dark:border-blue-400/50 dark:bg-blue-500/20 dark:text-blue-300"
-                : "border-zinc-200 bg-zinc-50 text-zinc-600 hover:bg-zinc-100 dark:border-white/10 dark:bg-white/5 dark:text-zinc-300 dark:hover:bg-white/10"
-            }`}
-            aria-label="Abrir filtros"
-            aria-expanded={filtrosFlotantesAbiertos}
-            title="Filtrar servicios"
-          >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
-              <path d="M4 7h16M7 12h10m-7 5h4" />
-              <circle cx="8" cy="7" r="1" fill="currentColor" />
-              <circle cx="15" cy="12" r="1" fill="currentColor" />
-              <circle cx="11" cy="17" r="1" fill="currentColor" />
-            </svg>
-          </button>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button
+              type="button"
+              onClick={() => toggleFiltroTipoCW("PART")}
+              className={`h-9 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-2xs select-none active:scale-95 ${
+                filtroTipo === "PART"
+                  ? "bg-blue-600 text-white border border-blue-600 shadow-xs"
+                  : "bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-white/10"
+              }`}
+              title="Filtrar por Productos"
+            >
+              P
+            </button>
+            <button
+              type="button"
+              onClick={() => toggleFiltroTipoCW("SERVICE")}
+              className={`h-9 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-2xs select-none active:scale-95 ${
+                filtroTipo === "SERVICE"
+                  ? "bg-blue-600 text-white border border-blue-600 shadow-xs"
+                  : "bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-white/10"
+              }`}
+              title="Filtrar por Servicios"
+            >
+              S
+            </button>
           </div>
         </div>
+      </div>
 
       {/* =====================================================================
           CUADRÍCULA DE SERVICIOS Y PRODUCTOS DEL POS (OPCIONES LIMPIAS)
@@ -1956,13 +2426,13 @@ export default function ModuloCarWashCatalogo({
                     )}
                   </div>
 
-                  {/* Palabra clave en letra normal sin negrita */}
+                  {/* Palabra clave y descripción sin precios */}
                   <div className="w-full text-center mt-2 px-1">
-                    <span className="text-sm sm:text-base font-normal tracking-tight text-zinc-900 dark:text-white block truncate">
-                      {item.keyword}
+                    <span className="text-sm sm:text-base font-medium tracking-tight text-zinc-900 dark:text-white block truncate">
+                      {formatearPrimeraMayuscula(item.keyword)}
                     </span>
-                    <span className="text-xs sm:text-sm font-normal font-mono text-zinc-700 dark:text-zinc-300 mt-0.5 block tabular-nums">
-                      ${item.price.toFixed(2)}
+                    <span className="text-[11px] sm:text-xs font-normal text-zinc-500 dark:text-zinc-400 block truncate mt-0.5" title={formatearPrimeraMayuscula(item.name)}>
+                      {formatearPrimeraMayuscula(item.name)}
                     </span>
                   </div>
                 </div>
@@ -1971,6 +2441,210 @@ export default function ModuloCarWashCatalogo({
           </div>
         )}
       </div>
+
+      {/* =====================================================================
+          RESUMEN DE ÍTEMS EN LA ORDEN ESTILO FACTURA: PRODUCTOS Y SERVICIOS
+          ===================================================================== */}
+      {(itemsOrden || []).length > 0 && (() => {
+        const esServicioItem = (it: any) =>
+          it.type === "SERVICE" ||
+          it.kind === "SERVICE" ||
+          it.kind === "PACKAGE" ||
+          it.kind === "ADDON" ||
+          (it.category && it.category.toLowerCase().includes("servicio")) ||
+          (it.category && it.category.toLowerCase().includes("lavado")) ||
+          (it.category && it.category.toLowerCase().includes("car wash")) ||
+          (it.category && it.category.toLowerCase().includes("tecnicentro")) ||
+          (it.code && it.code.toUpperCase().startsWith("CW-")) ||
+          (it.code && it.code.toUpperCase().startsWith("PKG-CW-")) ||
+          (it.code && it.code.toUpperCase().startsWith("ADD-CW-")) ||
+          (it.code && it.code.toUpperCase().startsWith("SRV"));
+
+        const esManual = (it: any) =>
+          it.category === "Manual" ||
+          it.code?.startsWith("MANUAL-") ||
+          it.id?.startsWith("manual-") ||
+          Boolean(it.isManual);
+
+        const productosSeleccionados = (itemsOrden || [])
+          .filter((it: any) => !esServicioItem(it))
+          .sort((a: any, b: any) => (esManual(a) ? 1 : 0) - (esManual(b) ? 1 : 0));
+
+        const serviciosSeleccionados = (itemsOrden || [])
+          .filter((it: any) => esServicioItem(it))
+          .sort((a: any, b: any) => (esManual(a) ? 1 : 0) - (esManual(b) ? 1 : 0));
+
+        const totalProductos = productosSeleccionados.reduce((acc: number, it: any) => acc + (Number(it.qty) || 1), 0);
+        const totalServicios = serviciosSeleccionados.reduce((acc: number, it: any) => acc + (Number(it.qty) || 1), 0);
+
+        return (
+          <div className="mt-4 p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-white/[0.03] border border-zinc-200/90 dark:border-white/10 shadow-2xs space-y-3.5 animate-fade-in">
+            {/* 1. SECCIÓN PRODUCTOS */}
+            {productosSeleccionados.length > 0 && (
+              <div className="space-y-1.5">
+                <span className="text-xs font-semibold text-blue-700 dark:text-blue-300 flex items-center gap-1.5">
+                  <span>📦</span>
+                  <span>Productos ({totalProductos}):</span>
+                </span>
+
+                <div className="overflow-x-auto rounded-xl border border-zinc-200/80 dark:border-white/10 bg-white dark:bg-black/20 shadow-2xs">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr className="border-b border-zinc-200/80 dark:border-white/10 bg-zinc-50/80 dark:bg-white/[0.03] text-zinc-500 dark:text-zinc-400 text-[11px] font-semibold">
+                        <th className="py-2 px-3 w-24 text-center">Cant.</th>
+                        <th className="py-2 px-3">Descripción</th>
+                        <th className="py-2 px-2.5 w-28">Detalle</th>
+                        <th className="py-2 px-2 w-12 text-center"></th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-zinc-200/60 dark:divide-white/5">
+                      {productosSeleccionados.map((it: any, idx: number) => {
+                        const cant = Number(it.qty) || 1;
+                        const detalle = it.presentation || it.viscosity || (esManual(it) ? "Manual" : (it.brand || "Producto"));
+                        return (
+                          <tr key={it.id || it.code || `cw-prod-${idx}`} className="hover:bg-zinc-50/60 dark:hover:bg-white/[0.02] transition-colors">
+                            <td className="py-2 px-3 text-center">
+                              <div className="inline-flex items-center border border-zinc-200 dark:border-white/10 rounded-lg overflow-hidden bg-zinc-50 dark:bg-white/[0.04]">
+                                <button
+                                  type="button"
+                                  onClick={() => void handleAjustarItemOrden(it, -1)}
+                                  className="w-5 h-5 flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-200/60 text-xs font-bold cursor-pointer transition-colors"
+                                  title="Restar 1"
+                                >
+                                  −
+                                </button>
+                                <span className="w-6 text-center text-xs font-bold text-zinc-800 dark:text-zinc-200">
+                                  {cant}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => void handleAjustarItemOrden(it, 1)}
+                                  className="w-5 h-5 flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-200/60 text-xs font-bold cursor-pointer transition-colors"
+                                  title="Sumar 1"
+                                >
+                                  +
+                                </button>
+                              </div>
+                            </td>
+                            <td className="py-2 px-3 font-medium text-zinc-800 dark:text-zinc-200">
+                              <span>{formatearPrimeraMayuscula(it.name || it.fullName)}</span>
+                            </td>
+                            <td className="py-2 px-2.5">
+                              {detalle ? (
+                                <span
+                                  className={`inline-block px-2 py-0.5 rounded-md text-[10px] font-semibold border ${
+                                    detalle === "Manual"
+                                      ? "bg-amber-50 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-300/80 dark:border-amber-500/30"
+                                      : "bg-blue-50 dark:bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-200/70 dark:border-blue-500/30"
+                                  }`}
+                                >
+                                  {formatearPrimeraMayuscula(detalle)}
+                                </span>
+                              ) : (
+                                <span className="text-zinc-400 text-[10px]">-</span>
+                              )}
+                            </td>
+                            <td className="py-2 px-2 text-center">
+                              <button
+                                type="button"
+                                onClick={() => void handleEliminarItemOrden(it)}
+                                className="w-6 h-6 inline-flex items-center justify-center rounded-lg text-zinc-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10 text-sm font-bold cursor-pointer transition-colors"
+                                title="Eliminar producto"
+                              >
+                                ×
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* 2. SECCIÓN SERVICIOS */}
+            {serviciosSeleccionados.length > 0 && (
+              <div className="space-y-1.5">
+                <span className="text-xs font-semibold text-purple-700 dark:text-purple-300 flex items-center gap-1.5">
+                  <span>🔧</span>
+                  <span>Servicios ({totalServicios}):</span>
+                </span>
+
+                <div className="overflow-x-auto rounded-xl border border-zinc-200/80 dark:border-white/10 bg-white dark:bg-black/20 shadow-2xs">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr className="border-b border-zinc-200/80 dark:border-white/10 bg-zinc-50/80 dark:bg-white/[0.03] text-zinc-500 dark:text-zinc-400 text-[11px] font-semibold">
+                        <th className="py-2 px-3 w-24 text-center">Cant.</th>
+                        <th className="py-2 px-3">Descripción</th>
+                        <th className="py-2 px-2.5 w-28">Detalle</th>
+                        <th className="py-2 px-2 w-12 text-center"></th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-zinc-200/60 dark:divide-white/5">
+                      {serviciosSeleccionados.map((it: any, idx: number) => {
+                        const cant = Number(it.qty) || 1;
+                        const detalle = it.vehicleType || it.category || (esManual(it) ? "Manual" : "Lavado");
+                        return (
+                          <tr key={it.id || it.code || `cw-srv-${idx}`} className="hover:bg-zinc-50/60 dark:hover:bg-white/[0.02] transition-colors">
+                            <td className="py-2 px-3 text-center">
+                              <div className="inline-flex items-center border border-zinc-200 dark:border-white/10 rounded-lg overflow-hidden bg-zinc-50 dark:bg-white/[0.04]">
+                                <button
+                                  type="button"
+                                  onClick={() => void handleAjustarItemOrden(it, -1)}
+                                  className="w-5 h-5 flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-200/60 text-xs font-bold cursor-pointer transition-colors"
+                                  title="Restar 1"
+                                >
+                                  −
+                                </button>
+                                <span className="w-6 text-center text-xs font-bold text-zinc-800 dark:text-zinc-200">
+                                  {cant}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => void handleAjustarItemOrden(it, 1)}
+                                  className="w-5 h-5 flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-200/60 text-xs font-bold cursor-pointer transition-colors"
+                                  title="Sumar 1"
+                                >
+                                  +
+                                </button>
+                              </div>
+                            </td>
+                            <td className="py-2 px-3 font-medium text-zinc-800 dark:text-zinc-200">
+                              <span>{formatearPrimeraMayuscula(it.name || it.fullName)}</span>
+                            </td>
+                            <td className="py-2 px-2.5">
+                              <span
+                                className={`inline-block px-2 py-0.5 rounded-md text-[10px] font-semibold border ${
+                                  detalle === "Manual"
+                                    ? "bg-amber-50 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-300/80 dark:border-amber-500/30"
+                                    : "bg-purple-50 dark:bg-purple-500/15 text-purple-700 dark:text-purple-300 border-purple-200/70 dark:border-purple-500/30"
+                                }`}
+                              >
+                                {formatearPrimeraMayuscula(detalle)}
+                              </span>
+                            </td>
+                            <td className="py-2 px-2 text-center">
+                              <button
+                                type="button"
+                                onClick={() => void handleEliminarItemOrden(it)}
+                                className="w-6 h-6 inline-flex items-center justify-center rounded-lg text-zinc-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10 text-sm font-bold cursor-pointer transition-colors"
+                                title="Eliminar servicio"
+                              >
+                                ×
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       </>
       )}

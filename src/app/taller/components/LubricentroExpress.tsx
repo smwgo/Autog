@@ -1008,6 +1008,8 @@ export default function LubricentroExpress({
               mostrarToast={mostrarToast}
               triggerAbrirConfig={triggerAbrirConfig}
               onActualizarItemsOrden={handleActualizarItemsOrdenGenerales}
+              productosCatalogo={productosCatalogo}
+              serviciosCatalogo={serviciosCatalogo}
               onGuardarDatosLubricentro={async (niveles, nextOilChangeKm, items) => {
                 const inspectionChecklist = {
                   ...(ordenEfectiva?.inspectionChecklist || {}),

@@ -3395,23 +3395,55 @@ ${urlSeguimiento}`;
             })}
           </div>
 
-          {pasoInspeccion === "marcar" && <button
-            type="button"
-            suppressHydrationWarning
-            onClick={() => {
-              setPinReubicandoId(null);
-              setModoColocandoPin(true);
-              mostrarToast(`Toca en el vehículo para ubicar el Pin #${proximoPinNumero}`);
-            }}
-            className={`h-7 px-2.5 rounded-lg border text-xs font-bold transition-all cursor-pointer flex items-center gap-1 shrink-0 active:scale-95 ${
-              modoColocandoPin
-                ? "bg-cyan-500 text-black border-cyan-400 animate-pulse font-black shadow-md shadow-cyan-500/30"
-                : "bg-cyan-50 dark:bg-cyan-500/15 hover:bg-cyan-100 dark:hover:bg-cyan-500/25 border-cyan-300 dark:border-cyan-500/40 text-cyan-700 dark:text-cyan-300 shadow-sm"
-            }`}
-          >
-            <span className="text-sm font-black">+</span>
-            <span suppressHydrationWarning translate="no">{modoColocandoPin ? "Toca la imagen" : "Marcar"}</span>
-          </button>}
+          <div className="flex items-center gap-1.5 shrink-0">
+            {popoverAbierto && pinActual && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => handleIniciarReubicarPin(pinActual.id)}
+                  className="h-8 px-2.5 rounded-lg bg-zinc-100 hover:bg-zinc-200 dark:bg-white/[0.04] dark:hover:bg-white/[0.08] border border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-300 text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 active:scale-95 shadow-xs"
+                  title={`Mover Pin #${pinActual.pinNumber || 1}`}
+                >
+                  <span>📍</span>
+                  <span>Mover</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleEliminarPinCompleto(pinActual.id)}
+                  className="h-8 px-2.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/25 text-rose-600 dark:text-rose-400 text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 active:scale-95 shadow-xs"
+                  title={`Eliminar Pin #${pinActual.pinNumber || 1}`}
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"
+                    />
+                  </svg>
+                  <span>Borrar</span>
+                </button>
+              </>
+            )}
+
+            {pasoInspeccion === "marcar" && <button
+              type="button"
+              suppressHydrationWarning
+              onClick={() => {
+                setPinReubicandoId(null);
+                setModoColocandoPin(true);
+                mostrarToast(`Toca en el vehículo para ubicar el Pin #${proximoPinNumero}`);
+              }}
+              className={`h-8 px-2.5 rounded-lg border text-xs font-bold transition-all cursor-pointer flex items-center gap-1 shrink-0 active:scale-95 ${
+                modoColocandoPin
+                  ? "bg-cyan-500 text-black border-cyan-400 animate-pulse font-black shadow-md shadow-cyan-500/30"
+                  : "bg-cyan-50 dark:bg-cyan-500/15 hover:bg-cyan-100 dark:hover:bg-cyan-500/25 border-cyan-300 dark:border-cyan-500/40 text-cyan-700 dark:text-cyan-300 shadow-sm"
+              }`}
+            >
+              <span className="text-sm font-black">+</span>
+              <span suppressHydrationWarning translate="no">{modoColocandoPin ? "Toca la imagen" : "Marcar"}</span>
+            </button>}
+          </div>
         </div>
 
         {/* DETALLE MODERNO DEL PIN ACTIVO (Audio voz bidireccional, fotos R2 y cotización de servicios/productos) */}
@@ -3447,7 +3479,7 @@ ${urlSeguimiento}`;
             onEliminarFoto={(idx, e, targetId) => handleEliminarFotoPin(targetId || pinActual.id, idx, e)}
             productosCatalogo={productosCatalogo}
             serviciosCatalogo={serviciosCatalogo}
-            onAgregarItemPin={(item, targetId) => handleAgregarItemPin(targetId || pinActual.id, item)}
+            onAgregarItemPin={(item, targetId, delta) => handleAgregarItemPin(targetId || pinActual.id, item, delta)}
             onEliminarItemPin={(itemId, targetId) => handleEliminarItemPin(targetId || pinActual.id, itemId)}
             onToggleSolicitaRepuesto={handleToggleSolicitaRepuestoPin}
             onDuplicarPin={() => handleDuplicarPin(pinActual)}
@@ -3853,23 +3885,55 @@ ${urlSeguimiento}`;
                 })}
               </div>
 
-              {pasoInspeccion === "marcar" && <button
-                type="button"
-                suppressHydrationWarning
-                onClick={() => {
-                  setPinReubicandoId(null);
-                  setModoColocandoPin(true);
-                  mostrarToast(`Toca en el esquema para ubicar el Pin #${proximoPinNumero}`);
-                }}
-                className={`h-7 px-2.5 rounded-lg border text-xs font-bold transition-all cursor-pointer flex items-center gap-1 shrink-0 active:scale-95 ${
-                  modoColocandoPin
-                    ? "bg-cyan-500 text-black border-cyan-400 animate-pulse font-black shadow-md shadow-cyan-500/30"
-                    : "bg-cyan-50 dark:bg-cyan-500/15 hover:bg-cyan-100 dark:hover:bg-cyan-500/25 border-cyan-300 dark:border-cyan-500/40 text-cyan-700 dark:text-cyan-300 shadow-sm"
-                }`}
-              >
-                <span className="text-sm font-black">+</span>
-                <span suppressHydrationWarning translate="no">{modoColocandoPin ? "Toca la imagen" : "Marcar"}</span>
-              </button>}
+              <div className="flex items-center gap-1.5 shrink-0">
+                {popoverAbierto && pinActual && pinActual.vista === seccionActiva && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => handleIniciarReubicarPin(pinActual.id)}
+                      className="h-8 px-2.5 rounded-lg bg-zinc-100 hover:bg-zinc-200 dark:bg-white/[0.04] dark:hover:bg-white/[0.08] border border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-300 text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 active:scale-95 shadow-xs"
+                      title={`Mover Pin #${pinActual.pinNumber || 1}`}
+                    >
+                      <span>📍</span>
+                      <span>Mover</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleEliminarPinCompleto(pinActual.id)}
+                      className="h-8 px-2.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/25 text-rose-600 dark:text-rose-400 text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 active:scale-95 shadow-xs"
+                      title={`Eliminar Pin #${pinActual.pinNumber || 1}`}
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"
+                        />
+                      </svg>
+                      <span>Borrar</span>
+                    </button>
+                  </>
+                )}
+
+                {pasoInspeccion === "marcar" && <button
+                  type="button"
+                  suppressHydrationWarning
+                  onClick={() => {
+                    setPinReubicandoId(null);
+                    setModoColocandoPin(true);
+                    mostrarToast(`Toca en el esquema para ubicar el Pin #${proximoPinNumero}`);
+                  }}
+                  className={`h-8 px-2.5 rounded-lg border text-xs font-bold transition-all cursor-pointer flex items-center gap-1 shrink-0 active:scale-95 ${
+                    modoColocandoPin
+                      ? "bg-cyan-500 text-black border-cyan-400 animate-pulse font-black shadow-md shadow-cyan-500/30"
+                      : "bg-cyan-50 dark:bg-cyan-500/15 hover:bg-cyan-100 dark:hover:bg-cyan-500/25 border-cyan-300 dark:border-cyan-500/40 text-cyan-700 dark:text-cyan-300 shadow-sm"
+                  }`}
+                >
+                  <span className="text-sm font-black">+</span>
+                  <span suppressHydrationWarning translate="no">{modoColocandoPin ? "Toca la imagen" : "Marcar"}</span>
+                </button>}
+              </div>
             </div>
 
             {/* DETALLE MODERNO PARA PINES DEL SISTEMA MECÁNICO O PERSONALIZADO */}
@@ -3905,7 +3969,7 @@ ${urlSeguimiento}`;
                 onEliminarFoto={(idx, e, targetId) => handleEliminarFotoPin(targetId || pinActual.id, idx, e)}
                 productosCatalogo={productosCatalogo}
                 serviciosCatalogo={serviciosCatalogo}
-                onAgregarItemPin={(item, targetId) => handleAgregarItemPin(targetId || pinActual.id, item)}
+                onAgregarItemPin={(item, targetId, delta) => handleAgregarItemPin(targetId || pinActual.id, item, delta)}
                 onEliminarItemPin={(itemId, targetId) => handleEliminarItemPin(targetId || pinActual.id, itemId)}
                 onToggleSolicitaRepuesto={handleToggleSolicitaRepuestoPin}
                 onDuplicarPin={() => handleDuplicarPin(pinActual)}

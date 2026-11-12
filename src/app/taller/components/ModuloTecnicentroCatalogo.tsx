@@ -188,6 +188,22 @@ function extractKeywordTecnicentro(name: string, tireSize?: string): string {
   return (first || name).toUpperCase();
 }
 
+export function formatearPrimeraMayuscula(texto?: string | null): string {
+  if (!texto) return "";
+  const s = String(texto).trim();
+  if (!s) return "";
+  if (/^\d{1,2}W[-]?\d{2,3}$/i.test(s)) return s.toUpperCase();
+  if (/^\d{3}\/\d{2}\s*R\d{2}\+?$/i.test(s)) return s.toUpperCase();
+  if (/^R\d{2}$/i.test(s)) return s.toUpperCase();
+
+  let formatted = s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
+  formatted = formatted.replace(/-([a-záéíóúñ])/gi, (_, letter) => `-${letter.toUpperCase()}`);
+  formatted = formatted.replace(/\b(\d{1,2})w([-]?\d{2,3})\b/gi, (_, n, m) => `${n}W${m}`);
+  formatted = formatted.replace(/\b(\d{3}\/\d{2})\s*r(\d{2})\b/gi, (_, p, r) => `${p}R${r}`);
+  formatted = formatted.replace(/\br(\d{2})\b/gi, (_, r) => `R${r}`);
+  return formatted;
+}
+
 const FALLBACK_TEC_ICONS: Record<string, string> = {
   ALINEACIÓN: "🎯",
   BALANCEO: "⚖️",
@@ -388,6 +404,8 @@ export default function ModuloTecnicentroCatalogo({
 
   // Categorías y subcategorías contraíbles
   const [categoriaActivaId, setCategoriaActivaId] = useState<string>("TODO");
+  const dropdownCatRef = React.useRef<HTMLDivElement>(null);
+  const [filtroTipo, setFiltroTipo] = useState<"todos" | "PART" | "SERVICE">("todos");
   const [mostrarCategorias, setMostrarCategorias] = useState<boolean>(true);
   const [subcategoriaActivaId, setSubcategoriaActivaId] = useState<string>("TODOS");
   const [mostrarSubcategorias, setMostrarSubcategorias] = useState<boolean>(true);
@@ -433,6 +451,13 @@ export default function ModuloTecnicentroCatalogo({
 
   useEffect(() => {
     setMounted(true);
+    const handleClickOutside = (e: MouseEvent) => {
+      if (dropdownCatRef.current && !dropdownCatRef.current.contains(e.target as Node)) {
+        setMenuCatAbierto(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   useEffect(() => {
@@ -810,6 +835,57 @@ export default function ModuloTecnicentroCatalogo({
       }
     } catch {
       mostrarToast("Error al actualizar ítem en la orden", "err");
+    }
+  };
+
+  const handleAjustarItemOrden = async (it: any, delta: number) => {
+    try {
+      const targetId = it.id || it.productId || it.serviceId || it.code;
+      const listaActual = [...(itemsOrden || [])];
+      const idx = listaActual.findIndex(
+        (x) =>
+          x === it ||
+          (targetId && (x.id === targetId || x.productId === targetId || x.serviceId === targetId)) ||
+          (x.code && it.code && x.code === it.code)
+      );
+      if (idx < 0) return;
+      const actualQty = Number(listaActual[idx].qty) || 1;
+      const nextQty = actualQty + delta;
+      if (nextQty <= 0) {
+        const filtrados = listaActual.filter((_, i) => i !== idx);
+        await onActualizarItemsOrden(filtrados);
+      } else {
+        const priceUnit = Number(listaActual[idx].price || 0);
+        const actualizados = listaActual.map((item, i) =>
+          i === idx
+            ? {
+                ...item,
+                qty: nextQty,
+                price: priceUnit,
+                total: Number((priceUnit * nextQty).toFixed(2)),
+              }
+            : item
+        );
+        await onActualizarItemsOrden(actualizados);
+      }
+    } catch {
+      mostrarToast?.("Error al actualizar ítem en la orden", "err");
+    }
+  };
+
+  const handleEliminarItemOrden = async (it: any) => {
+    try {
+      const targetId = it.id || it.productId || it.serviceId || it.code;
+      const filtrados = (itemsOrden || []).filter(
+        (x: any) =>
+          x !== it &&
+          (!targetId || (x.id !== targetId && x.productId !== targetId && x.serviceId !== targetId)) &&
+          (!x.code || !it.code || x.code !== it.code)
+      );
+      await onActualizarItemsOrden(filtrados);
+      mostrarToast?.(`Eliminado: ${it.name || it.fullName}`, "ok");
+    } catch {
+      mostrarToast?.("Error al eliminar ítem de la orden", "err");
     }
   };
 
@@ -1227,30 +1303,361 @@ export default function ModuloTecnicentroCatalogo({
   const [filtrosFlotantesAbiertos, setFiltrosFlotantesAbiertos] = React.useState(false);
   const [busquedaTec, setBusquedaTec] = React.useState('');
 
-  // Semaforo Bento de tren delantero (6 circulos)
+  // Semaforo Bento de tren delantero (18 items: 9 en pág 1, 9 en pág 2 + manuales)
   type EstadoSemaforoBento = 'ok' | 'revisar' | 'alerta';
-  const SEMAFORO_TREN_DEF = React.useMemo(() => [
-    { id: 'Llantas',      label: 'Llantas',     subLabel: 'Desgaste',    estado0: 'alerta'  as EstadoSemaforoBento, catId: 'LLANTAS',    subcatId: 'PISTERA'       },
-    { id: 'Frenos',       label: 'Frenos',       subLabel: 'Pastillas',   estado0: 'revisar' as EstadoSemaforoBento, catId: 'FRENOS',     subcatId: 'PASTILLAS'     },
-    { id: 'Suspension',   label: 'Suspensión',  subLabel: 'Revisar',     estado0: 'ok'      as EstadoSemaforoBento, catId: 'SUSPENSION', subcatId: 'AMORTIGUADOR'  },
-    { id: 'Amortiguador', label: 'Amortiguador', subLabel: 'OK',          estado0: 'ok'      as EstadoSemaforoBento, catId: 'SUSPENSION', subcatId: 'AMORTIGUADOR'  },
-    { id: 'Bateria',      label: 'Batería',      subLabel: 'Normal',      estado0: 'ok'      as EstadoSemaforoBento, catId: 'BATERIAS',   subcatId: 'LIVIANO'       },
-    { id: 'Rotacion',     label: 'Rotación',     subLabel: 'Recomendado', estado0: 'ok'      as EstadoSemaforoBento, catId: 'ALINEACION', subcatId: 'ROTACION'      },
+  const [itemsManualesSemaforo, setItemsManualesSemaforo] = React.useState<Array<{ id: string; label: string; detalle: string; catId?: string; subcatId?: string }>>([]);
+  const [nuevoManualTexto, setNuevoManualTexto] = React.useState('');
+  const [mostrarInputManual, setMostrarInputManual] = React.useState(false);
+  const [paginaSemaforo, setPaginaSemaforo] = React.useState<number>(0);
+  const touchStartXRef = React.useRef<number | null>(null);
+
+  interface SemaforoItemTecnicentro {
+    id: string;
+    label: string;
+    subLabel: string;
+    estado0?: EstadoSemaforoBento;
+    catId: string;
+    subcatId: string;
+    iconSvg: (className: string) => React.ReactNode;
+  }
+
+  const SEMAFORO_TREN_DEF: SemaforoItemTecnicentro[] = React.useMemo(() => [
+    // PÁGINA 1: 9 puntos prioritarios de inspección en Tecnicentro
+    {
+      id: 'Llantas',
+      label: 'Llantas',
+      subLabel: 'Desgaste',
+      estado0: 'alerta',
+      catId: 'LLANTAS',
+      subcatId: 'PISTERA',
+      iconSvg: (cls) => (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={cls}>
+          <circle cx="12" cy="12" r="9" />
+          <circle cx="12" cy="12" r="4" />
+          <line x1="12" y1="3" x2="12" y2="8" />
+          <line x1="12" y1="16" x2="12" y2="21" />
+          <line x1="3" y1="12" x2="8" y2="12" />
+          <line x1="16" y1="12" x2="21" y2="12" />
+        </svg>
+      ),
+    },
+    {
+      id: 'Frenos',
+      label: 'Frenos',
+      subLabel: 'Pastillas',
+      estado0: 'revisar',
+      catId: 'FRENOS',
+      subcatId: 'PASTILLAS',
+      iconSvg: (cls) => (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={cls}>
+          <circle cx="12" cy="12" r="9" />
+          <circle cx="12" cy="12" r="5" strokeDasharray="3 3" />
+          <path d="M7 9a7 7 0 0 1 10 0" />
+        </svg>
+      ),
+    },
+    {
+      id: 'Suspension',
+      label: 'Suspensión',
+      subLabel: 'Bujes/Brazos',
+      estado0: 'ok',
+      catId: 'SUSPENSION',
+      subcatId: 'AMORTIGUADOR',
+      iconSvg: (cls) => (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={cls}>
+          <path d="M12 2v3m0 14v3M9 5h6M9 19h6" />
+          <path d="M9 8h6l-6 3h6l-6 3h6" />
+        </svg>
+      ),
+    },
+    {
+      id: 'Amortiguador',
+      label: 'Amortiguador',
+      subLabel: 'Fugas/Rebote',
+      estado0: 'ok',
+      catId: 'SUSPENSION',
+      subcatId: 'AMORTIGUADOR',
+      iconSvg: (cls) => (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={cls}>
+          <rect x="8" y="2" width="8" height="4" rx="1" />
+          <path d="M12 6v3m0 9v4" />
+          <path d="M9 11h6l-6 2.5h6l-6 2.5h6" />
+          <rect x="9" y="18" width="6" height="3" rx="1" />
+        </svg>
+      ),
+    },
+    {
+      id: 'Alineacion',
+      label: 'Alineación',
+      subLabel: 'Dirección',
+      estado0: 'ok',
+      catId: 'ALINEACION',
+      subcatId: 'COMPLETA',
+      iconSvg: (cls) => (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={cls}>
+          <circle cx="12" cy="12" r="9" />
+          <line x1="12" y1="2" x2="12" y2="6" />
+          <line x1="12" y1="18" x2="12" y2="22" />
+          <line x1="2" y1="12" x2="6" y2="12" />
+          <line x1="18" y1="12" x2="22" y2="12" />
+        </svg>
+      ),
+    },
+    {
+      id: 'Balanceo',
+      label: 'Balanceo',
+      subLabel: 'Vibración',
+      estado0: 'ok',
+      catId: 'ALINEACION',
+      subcatId: 'BALANCEO',
+      iconSvg: (cls) => (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={cls}>
+          <circle cx="12" cy="12" r="9" />
+          <circle cx="12" cy="12" r="3" />
+          <path d="M12 3a9 9 0 0 1 9 9" />
+          <circle cx="12" cy="6" r="1.5" fill="currentColor" />
+        </svg>
+      ),
+    },
+    {
+      id: 'Rotacion',
+      label: 'Rotación',
+      subLabel: 'X / Cruzada',
+      estado0: 'ok',
+      catId: 'ALINEACION',
+      subcatId: 'ROTACION',
+      iconSvg: (cls) => (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={cls}>
+          <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-1.19" />
+        </svg>
+      ),
+    },
+    {
+      id: 'Bateria',
+      label: 'Batería',
+      subLabel: 'Voltaje/Bornes',
+      estado0: 'ok',
+      catId: 'BATERIAS',
+      subcatId: 'LIVIANO',
+      iconSvg: (cls) => (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={cls}>
+          <rect x="6" y="6" width="12" height="15" rx="2" />
+          <path d="M9 3v3M15 3v3M9 11h6M9 15h3" />
+        </svg>
+      ),
+    },
+    {
+      id: 'Presion',
+      label: 'Presión',
+      subLabel: 'Calibrar PSI',
+      estado0: 'ok',
+      catId: 'LLANTAS',
+      subcatId: 'PISTERA',
+      iconSvg: (cls) => (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={cls}>
+          <path d="M12 3a9 9 0 1 0 9 9 9 9 0 0 0-9-9zm0 5a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4" />
+          <line x1="12" y1="12" x2="15" y2="9" />
+        </svg>
+      ),
+    },
+
+    // PÁGINA 2: 9 puntos complementarios de inspección en Tecnicentro
+    {
+      id: 'Discos',
+      label: 'Discos',
+      subLabel: 'Rebase/Alabeo',
+      estado0: 'ok',
+      catId: 'FRENOS',
+      subcatId: 'PASTILLAS',
+      iconSvg: (cls) => (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={cls}>
+          <circle cx="12" cy="12" r="9" />
+          <circle cx="12" cy="12" r="4" />
+          <circle cx="12" cy="6" r="1" fill="currentColor" />
+          <circle cx="18" cy="12" r="1" fill="currentColor" />
+          <circle cx="12" cy="18" r="1" fill="currentColor" />
+          <circle cx="6" cy="12" r="1" fill="currentColor" />
+        </svg>
+      ),
+    },
+    {
+      id: 'LiquidoFrenos',
+      label: 'Líq. Frenos',
+      subLabel: 'DOT3 / DOT4',
+      estado0: 'ok',
+      catId: 'FRENOS',
+      subcatId: 'PASTILLAS',
+      iconSvg: (cls) => (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={cls}>
+          <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" />
+          <line x1="9" y1="13" x2="15" y2="13" />
+        </svg>
+      ),
+    },
+    {
+      id: 'Terminales',
+      label: 'Terminales',
+      subLabel: 'Juego dirección',
+      estado0: 'ok',
+      catId: 'SUSPENSION',
+      subcatId: 'AMORTIGUADOR',
+      iconSvg: (cls) => (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={cls}>
+          <circle cx="6" cy="12" r="3" />
+          <path d="M9 12h11M16 8l4 4-4 4" />
+        </svg>
+      ),
+    },
+    {
+      id: 'Rotulas',
+      label: 'Rótulas',
+      subLabel: 'Holgura/Juego',
+      estado0: 'ok',
+      catId: 'SUSPENSION',
+      subcatId: 'AMORTIGUADOR',
+      iconSvg: (cls) => (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={cls}>
+          <circle cx="12" cy="8" r="4" />
+          <path d="M12 12v8M8 20h8" />
+        </svg>
+      ),
+    },
+    {
+      id: 'Bujes',
+      label: 'Bujes',
+      subLabel: 'Mesas/Gomas',
+      estado0: 'ok',
+      catId: 'SUSPENSION',
+      subcatId: 'AMORTIGUADOR',
+      iconSvg: (cls) => (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={cls}>
+          <circle cx="12" cy="12" r="9" />
+          <circle cx="12" cy="12" r="6" />
+          <circle cx="12" cy="12" r="2" fill="currentColor" />
+        </svg>
+      ),
+    },
+    {
+      id: 'Cremallera',
+      label: 'Cremallera',
+      subLabel: 'Fuga/Juego',
+      estado0: 'ok',
+      catId: 'SUSPENSION',
+      subcatId: 'AMORTIGUADOR',
+      iconSvg: (cls) => (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={cls}>
+          <rect x="2" y="10" width="20" height="4" rx="1" />
+          <path d="M5 8v2M8 8v2M11 8v2M14 8v2M17 8v2M20 8v2" />
+          <circle cx="12" cy="12" r="2" />
+        </svg>
+      ),
+    },
+    {
+      id: 'Guardapolvos',
+      label: 'Guardapolvo',
+      subLabel: 'Palier/Semieje',
+      estado0: 'ok',
+      catId: 'SUSPENSION',
+      subcatId: 'AMORTIGUADOR',
+      iconSvg: (cls) => (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={cls}>
+          <ellipse cx="12" cy="6" rx="4" ry="2" />
+          <path d="M8 6l-2 4h12l-2-4M6 10l-2 4h16l-2-4M4 14l-1 4h18l-1-4" />
+          <ellipse cx="12" cy="18" rx="8" ry="2" />
+        </svg>
+      ),
+    },
+    {
+      id: 'Rines',
+      label: 'Aros/Rines',
+      subLabel: 'Golpes/Fisura',
+      estado0: 'ok',
+      catId: 'LLANTAS',
+      subcatId: 'PISTERA',
+      iconSvg: (cls) => (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={cls}>
+          <circle cx="12" cy="12" r="9" />
+          <circle cx="12" cy="12" r="3" />
+          <path d="M12 3v6M12 15v6M3 12h6M15 12h6" />
+        </svg>
+      ),
+    },
+    {
+      id: 'Valvulas',
+      label: 'Válvulas',
+      subLabel: 'TPMS/Pitones',
+      estado0: 'ok',
+      catId: 'LLANTAS',
+      subcatId: 'PISTERA',
+      iconSvg: (cls) => (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={cls}>
+          <path d="M12 2v6M9 8h6v12a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2V8z" />
+          <circle cx="12" cy="5" r="2" />
+        </svg>
+      ),
+    },
   ], []);
 
+  const itemsManualesCompletos = React.useMemo(() => {
+    return itemsManualesSemaforo.map((m) => ({
+      id: m.id,
+      label: m.label,
+      subLabel: m.detalle || "Manual",
+      catId: m.catId || "SUSPENSION",
+      subcatId: m.subcatId || "AMORTIGUADOR",
+      iconSvg: (cls: string) => (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={cls}>
+          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+        </svg>
+      ),
+    }));
+  }, [itemsManualesSemaforo]);
+
+  const todosLosItemsSemaforo = React.useMemo(() => {
+    return [...SEMAFORO_TREN_DEF, ...itemsManualesCompletos];
+  }, [SEMAFORO_TREN_DEF, itemsManualesCompletos]);
+
+  const itemsPorPagina = 9;
+  const totalPaginas = Math.max(1, Math.ceil(todosLosItemsSemaforo.length / itemsPorPagina));
+
+  const itemsPaginaActual = React.useMemo(() => {
+    return todosLosItemsSemaforo.slice(paginaSemaforo * itemsPorPagina, (paginaSemaforo + 1) * itemsPorPagina);
+  }, [todosLosItemsSemaforo, paginaSemaforo]);
+
+  const handleAgregarItemManual = () => {
+    const nombre = nuevoManualTexto.trim();
+    if (!nombre) return;
+    const nuevoId = `manual_sem_${Date.now()}`;
+    setItemsManualesSemaforo((prev) => [
+      ...prev,
+      { id: nuevoId, label: nombre, detalle: "Manual", catId: "SUSPENSION", subcatId: "AMORTIGUADOR" },
+    ]);
+    setNuevoManualTexto("");
+    setMostrarInputManual(false);
+    const nuevoTotal = todosLosItemsSemaforo.length + 1;
+    const nuevaPag = Math.floor((nuevoTotal - 1) / itemsPorPagina);
+    setPaginaSemaforo(nuevaPag);
+    mostrarToast?.(`✅ Chequeo manual "${nombre}" agregado al semáforo`, "ok");
+  };
+
   const [semaforoBentoEstados, setSemaforoBentoEstados] = React.useState<Record<string, EstadoSemaforoBento>>(():Record<string,EstadoSemaforoBento> => ({
-    Llantas: 'alerta', Frenos: 'revisar', Suspension: 'ok', Amortiguador: 'ok', Bateria: 'ok', Rotacion: 'ok'
+    Llantas: 'alerta', Frenos: 'revisar', Suspension: 'ok', Amortiguador: 'ok', Alineacion: 'ok', Balanceo: 'ok', Rotacion: 'ok', Bateria: 'ok', Presion: 'ok'
   }));
 
-  const handleToggleSemaforoBento = React.useCallback((defItem: { id: string; catId: string; subcatId: string }) => {
+  const handleToggleSemaforoBento = React.useCallback((id: string, catId?: string) => {
     const ciclo: EstadoSemaforoBento[] = ['ok', 'revisar', 'alerta'];
     setSemaforoBentoEstados(prev => {
-      const actual = prev[defItem.id] || 'ok';
+      const actual = prev[id] || 'ok';
       const idx = ciclo.indexOf(actual);
       const siguiente = ciclo[(idx + 1) % ciclo.length];
-      return { ...prev, [defItem.id]: siguiente };
+      if (siguiente === 'alerta' && catId) {
+        setCategoriaActivaId(catId);
+        mostrarToast?.(`⚠️ Alerta en ${id}: mostrando catálogo de ${catId}`, 'ok');
+      }
+      return { ...prev, [id]: siguiente };
     });
-  }, []);
+  }, [mostrarToast]);
 
   // Pre-carga automatica en primer render
   const autoCargaTecHecha = React.useRef(false);
@@ -1271,6 +1678,65 @@ export default function ModuloTecnicentroCatalogo({
     return cat ? cat.icon + ' ' + cat.label : '✨ Todo';
   }, [categoriaActivaId]);
 
+  const categoriasProductosTEC = React.useMemo(() => {
+    return [
+      { id: "LLANTAS", label: "Llantas", icon: "🛞" },
+      { id: "BATERIAS", label: "Baterías", icon: "🔋" },
+      { id: "AROS", label: "Aros", icon: "⚙️" },
+      { id: "FRENOS", label: "Frenos", icon: "🛑" },
+      { id: "SUSPENSION", label: "Suspensión", icon: "🔩" },
+    ];
+  }, []);
+
+  const categoriasServiciosTEC = React.useMemo(() => {
+    return [
+      { id: "ALINEACION", label: "Alineación", icon: "🎯" },
+      { id: "ENLLANTAJE", label: "Enllantaje", icon: "🔧" },
+      { id: "BALANCEO", label: "Balanceo", icon: "⚖️" },
+      { id: "FRENOS", label: "Frenos", icon: "🛑" },
+      { id: "SUSPENSION", label: "Suspensión", icon: "🔩" },
+    ];
+  }, []);
+
+  const categoriasTodasTEC = React.useMemo(() => {
+    return [
+      { id: "LLANTAS", label: "Llantas", icon: "🛞" },
+      { id: "ALINEACION", label: "Alineación", icon: "🎯" },
+      { id: "ENLLANTAJE", label: "Enllantaje", icon: "🔧" },
+      { id: "FRENOS", label: "Frenos", icon: "🛑" },
+      { id: "SUSPENSION", label: "Suspensión", icon: "🔩" },
+      { id: "BATERIAS", label: "Baterías", icon: "🔋" },
+    ];
+  }, []);
+
+  const opcionesCategoriasMostrarTEC = React.useMemo(() => {
+    if (filtroTipo === "PART") return categoriasProductosTEC;
+    if (filtroTipo === "SERVICE") return categoriasServiciosTEC;
+    return categoriasTodasTEC;
+  }, [filtroTipo, categoriasProductosTEC, categoriasServiciosTEC, categoriasTodasTEC]);
+
+  const labelCategoriaActivaTEC = React.useMemo(() => {
+    if (categoriaActivaId === "TODO") return "Todas";
+    const cat = opcionesCategoriasMostrarTEC.find((c) => c.id === categoriaActivaId);
+    if (cat) return cat.label.trim().split(/\s+/)[0];
+    return "Todas";
+  }, [categoriaActivaId, opcionesCategoriasMostrarTEC]);
+
+  const iconoCategoriaActivaTEC = React.useMemo(() => {
+    if (categoriaActivaId === "TODO") return "📋";
+    const cat = opcionesCategoriasMostrarTEC.find((c) => c.id === categoriaActivaId);
+    return cat?.icon || "📋";
+  }, [categoriaActivaId, opcionesCategoriasMostrarTEC]);
+
+  const toggleFiltroTipoTEC = (tipo: "PART" | "SERVICE") => {
+    setFiltroTipo((prev) => {
+      const nuevo = prev === tipo ? "todos" : tipo;
+      setCategoriaActivaId("TODO");
+      setSubcategoriaActivaId("TODOS");
+      return nuevo;
+    });
+  };
+
   const labelSubcatBento = React.useMemo((): string | null => {
     if (categoriaActivaId === 'TODO') return null;
     const cat = TECNICENTRO_CATEGORIES.find(c => c.id === categoriaActivaId);
@@ -1282,7 +1748,27 @@ export default function ModuloTecnicentroCatalogo({
   const productosBentoFiltrados = React.useMemo(() => {
     const q = busquedaTec.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
     return todosLosItemsPOS.filter(item => {
-      if (categoriaActivaId !== 'TODO' && item.categoryMapped !== categoriaActivaId) return false;
+      // 1. Filtro Tipo P / S
+      const esProd = item.kind === "TIRE" || item.kind === "PRODUCT";
+      if (filtroTipo === "PART" && !esProd) return false;
+      if (filtroTipo === "SERVICE" && esProd) return false;
+
+      // 2. Filtro Categoría
+      if (categoriaActivaId !== 'TODO') {
+        const catNorm = categoriaActivaId.toUpperCase();
+        const itemCat = String(item.categoryMapped || "").toUpperCase();
+        const itemSub = String(item.subcategoryMapped || "").toUpperCase();
+        const itemKw = String(item.keyword || "").toUpperCase();
+        const itemName = String(item.name || "").toUpperCase();
+
+        const match =
+          itemCat === catNorm ||
+          itemSub === catNorm ||
+          itemKw.includes(catNorm) ||
+          itemName.includes(catNorm);
+        if (!match) return false;
+      }
+
       if (subcategoriaActivaId !== 'TODOS' && item.subcategoryMapped !== subcategoriaActivaId) return false;
       if (rinActivo !== 'Aro' && item.categoryMapped === 'LLANTAS') {
         const itemRim = (item.rimDiameter || '').toUpperCase();
@@ -1296,16 +1782,7 @@ export default function ModuloTecnicentroCatalogo({
       }
       return true;
     });
-  }, [todosLosItemsPOS, categoriaActivaId, subcategoriaActivaId, rinActivo, busquedaTec]);
-
-  const sugerenciaSemaforoBento = React.useMemo(() => {
-    const alertas = SEMAFORO_TREN_DEF.filter(d => semaforoBentoEstados[d.id] === 'alerta' || semaforoBentoEstados[d.id] === 'revisar');
-    if (alertas.length === 0) return null;
-    const primera = alertas[0];
-    const match = todosLosItemsPOS.find(it => it.categoryMapped === primera.catId && it.subcategoryMapped === primera.subcatId);
-    if (!match) return null;
-    return { label: match.keyword, price: match.price, item: match };
-  }, [SEMAFORO_TREN_DEF, semaforoBentoEstados, todosLosItemsPOS]);
+  }, [todosLosItemsPOS, filtroTipo, categoriaActivaId, subcategoriaActivaId, rinActivo, busquedaTec]);
 
   const vehiculoTipo = React.useMemo(() => {
     const v = (String(ordenActiva?.vehicle || ordenActiva?.vehicleType || '')).toLowerCase();
@@ -1495,214 +1972,338 @@ export default function ModuloTecnicentroCatalogo({
           </div>
 
           {/* ===== CARD DERECHA: Semaforo ===== */}
-          <div className="lg:col-span-7 rounded-2xl bg-white dark:bg-white/[0.03] border border-zinc-200 dark:border-white/10 shadow-sm overflow-hidden">
-            <div className="px-4 pt-4 pb-3 border-b border-zinc-100 dark:border-white/[0.08]">
-              <p className="text-sm font-bold text-zinc-900 dark:text-white">Semáforo</p>
-            </div>
-            <div className="px-3 pt-2.5">
-              <div className="grid grid-cols-3 gap-1.5 px-1 py-1 rounded-xl bg-zinc-50 dark:bg-white/[0.02] border border-zinc-100 dark:border-white/5 text-center text-[13px] sm:text-sm font-semibold">
+          <div className="lg:col-span-7 rounded-2xl bg-white dark:bg-white/[0.03] border border-zinc-200/90 dark:border-white/10 p-3.5 sm:p-4 shadow-2xs">
+            <div>
+              {/* Cabecera del semáforo con título, botón manual y flechas de paginación */}
+              <div className="flex items-center justify-between gap-2 mb-2 pb-2 border-b border-zinc-100 dark:border-white/5">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <span className="text-base sm:text-lg">🚦</span>
+                  <h2 className="text-sm sm:text-base font-bold text-zinc-900 dark:text-white leading-tight">
+                    Semáforo
+                  </h2>
+                </div>
+
+                <div className="flex items-center gap-1.5">
+                  {/* Botón para abrir input manual */}
+                  <button
+                    type="button"
+                    onClick={() => setMostrarInputManual((prev) => !prev)}
+                    className={`h-7 px-2.5 rounded-lg text-xs font-semibold border flex items-center gap-1 transition-all cursor-pointer shadow-2xs ${
+                      mostrarInputManual
+                        ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 border-zinc-900 dark:border-white"
+                        : "bg-zinc-100 hover:bg-zinc-200/80 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-white/10"
+                    }`}
+                    title="Agregar chequeo manual al semáforo"
+                  >
+                    <span>＋</span>
+                    <span>Manual</span>
+                  </button>
+
+                  {/* Flechas de paginación para ver más iconos (9 en cada página) */}
+                  <div className="flex items-center gap-0.5 bg-zinc-100 dark:bg-white/5 p-0.5 rounded-lg border border-zinc-200/80 dark:border-white/10 shadow-2xs">
+                    <button
+                      type="button"
+                      onClick={() => setPaginaSemaforo((prev) => Math.max(0, prev - 1))}
+                      disabled={paginaSemaforo === 0}
+                      className="w-6 h-6 rounded-md flex items-center justify-center text-[10px] font-bold text-zinc-700 dark:text-zinc-200 hover:bg-white dark:hover:bg-white/15 disabled:opacity-25 disabled:cursor-not-allowed cursor-pointer transition-all"
+                      title="Página anterior"
+                    >
+                      ◀
+                    </button>
+                    <span className="px-1.5 text-[11px] font-bold text-zinc-600 dark:text-zinc-300 select-none">
+                      {paginaSemaforo + 1} / {totalPaginas}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setPaginaSemaforo((prev) => Math.min(totalPaginas - 1, prev + 1))}
+                      disabled={paginaSemaforo >= totalPaginas - 1}
+                      className="w-6 h-6 rounded-md flex items-center justify-center text-[10px] font-bold text-zinc-700 dark:text-zinc-200 hover:bg-white dark:hover:bg-white/15 disabled:opacity-25 disabled:cursor-not-allowed cursor-pointer transition-all"
+                      title="Ver más iconos"
+                    >
+                      ▶
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Campo para ingresar punto o chequeo manualmente */}
+              {mostrarInputManual && (
+                <div className="mb-2.5 p-2 rounded-xl bg-zinc-50 dark:bg-white/[0.03] border border-zinc-200 dark:border-white/10 flex items-center gap-2 animate-fade-in shadow-2xs">
+                  <input
+                    type="text"
+                    value={nuevoManualTexto}
+                    onChange={(e) => setNuevoManualTexto(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleAgregarItemManual();
+                      }
+                    }}
+                    placeholder="Nombre del chequeo manual (ej. Terminal de dirección)..."
+                    className="flex-1 h-8 rounded-lg bg-white dark:bg-white/[0.04] border border-zinc-200 dark:border-white/10 px-2.5 text-xs text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:border-zinc-400 dark:focus:border-white/30"
+                    autoFocus
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAgregarItemManual}
+                    disabled={!nuevoManualTexto.trim()}
+                    className="h-8 px-3 rounded-lg bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-100 text-white dark:text-zinc-900 disabled:opacity-30 disabled:cursor-not-allowed text-xs font-semibold cursor-pointer transition-all shrink-0 active:scale-95"
+                  >
+                    Agregar
+                  </button>
+                </div>
+              )}
+
+              {/* Guía semafórica de 3 niveles */}
+              <div className="grid grid-cols-3 gap-1.5 mb-2.5 px-1 py-1 rounded-xl bg-zinc-50 dark:bg-white/[0.02] border border-zinc-100 dark:border-white/5 text-center text-xs sm:text-sm font-semibold">
                 <span className="text-emerald-700 dark:text-emerald-400">Normal</span>
                 <span className="text-amber-700 dark:text-amber-400">Revisar</span>
                 <span className="text-rose-700 dark:text-rose-400">Cambiar</span>
               </div>
-            </div>
-            <div className="p-3 grid grid-cols-3 gap-2.5">
-              {SEMAFORO_TREN_DEF.map((defItem) => {
-                const estado = semaforoBentoEstados[defItem.id] || 'ok';
-                const esAlerta = estado === 'alerta';
-                const esRevisar = estado === 'revisar';
-                const wrapCls = esAlerta
-                  ? 'bg-rose-50 dark:bg-rose-500/10 border-rose-300 dark:border-rose-400/60'
-                  : esRevisar
-                  ? 'bg-amber-50 dark:bg-amber-500/10 border-amber-300 dark:border-amber-400/60'
-                  : 'bg-zinc-50 dark:bg-white/[0.03] border-zinc-200 dark:border-white/10';
-                const ringCls = esAlerta
-                  ? 'bg-rose-100 dark:bg-rose-500/20 border-rose-400'
-                  : esRevisar
-                  ? 'bg-amber-100 dark:bg-amber-500/20 border-amber-400'
-                  : (defItem.id === 'Amortiguador' || defItem.id === 'Rotacion')
-                  ? 'bg-emerald-100 dark:bg-emerald-500/20 border-emerald-400'
-                  : 'bg-zinc-100 dark:bg-white/10 border-zinc-300 dark:border-white/20';
-                const textCls = esAlerta
-                  ? 'text-rose-600 dark:text-rose-400'
-                  : esRevisar
-                  ? 'text-amber-600 dark:text-amber-400'
-                  : 'text-emerald-600 dark:text-emerald-400';
-                const labelSub = (esAlerta || esRevisar)
-                  ? defItem.subLabel
-                  : (defItem.id === 'Amortiguador' ? 'OK' : defItem.id === 'Rotacion' ? 'Recomendado' : 'Normal');
-                return (
-                  <button
-                    key={defItem.id}
-                    type="button"
-                    onClick={() => handleToggleSemaforoBento(defItem)}
-                    className={['relative flex flex-col items-center justify-center gap-1 rounded-xl border py-3 px-1 transition-all active:scale-95 cursor-pointer', wrapCls].join(' ')}
-                  >
-                    {(esAlerta || esRevisar) && (
-                      <span className="absolute -top-1 -right-1 w-4 h-4 bg-rose-500 rounded-full flex items-center justify-center text-[9px] text-white font-bold z-10">⚠</span>
-                    )}
-                    <div className={['w-10 h-10 rounded-full border-2 flex items-center justify-center text-lg', ringCls].join(' ')}>
-                      {defItem.id === 'Llantas' && <span>🛞</span>}
-                      {defItem.id === 'Frenos' && <span>🛑</span>}
-                      {defItem.id === 'Suspension' && <span>🔩</span>}
-                      {defItem.id === 'Amortiguador' && <span className="text-emerald-600 font-black">✓</span>}
-                      {defItem.id === 'Bateria' && <span>🔋</span>}
-                      {defItem.id === 'Rotacion' && <span className="text-emerald-600 font-black">↻</span>}
+
+              {/* Tablero de 9 íconos semafóricos (3x3) con soporte de swipe/deslizar */}
+              <div
+                onTouchStart={(e) => {
+                  touchStartXRef.current = e.touches[0].clientX;
+                }}
+                onTouchEnd={(e) => {
+                  if (touchStartXRef.current === null) return;
+                  const diffX = touchStartXRef.current - e.changedTouches[0].clientX;
+                  touchStartXRef.current = null;
+                  if (Math.abs(diffX) > 40) {
+                    if (diffX > 0) {
+                      setPaginaSemaforo((prev) => Math.min(totalPaginas - 1, prev + 1));
+                    } else {
+                      setPaginaSemaforo((prev) => Math.max(0, prev - 1));
+                    }
+                  }
+                }}
+                className="grid grid-cols-3 gap-y-3.5 gap-x-2 place-items-center py-1 transition-all"
+              >
+                {itemsPaginaActual.map((btn) => {
+                  const estado = semaforoBentoEstados[btn.id] || 'ok';
+                  const esAlerta = estado === 'alerta';
+                  const esRevisar = estado === 'revisar';
+                  const esOk = estado === 'ok';
+                  const esManual = btn.id.startsWith("manual_sem_");
+
+                  return (
+                    <div key={btn.id} className="relative flex flex-col items-center gap-1 text-center w-full group">
+                      {/* Botón de eliminar si es un ítem creado manualmente */}
+                      {esManual && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setItemsManualesSemaforo((prev) => prev.filter((it) => it.id !== btn.id));
+                            setSemaforoBentoEstados((prev) => {
+                              const copy = { ...prev };
+                              delete copy[btn.id];
+                              return copy;
+                            });
+                          }}
+                          className="absolute -top-1.5 right-1 w-4 h-4 rounded-full bg-zinc-200 hover:bg-rose-500 hover:text-white dark:bg-white/10 dark:hover:bg-rose-500 text-zinc-400 text-[10px] flex items-center justify-center cursor-pointer transition-colors z-10"
+                          title="Eliminar chequeo manual"
+                        >
+                          ×
+                        </button>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={() => handleToggleSemaforoBento(btn.id, btn.catId)}
+                        className={`relative w-13 h-13 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center transition-all cursor-pointer active:scale-95 shadow-2xs ${
+                          esAlerta
+                            ? "bg-rose-500 hover:bg-rose-600 text-white shadow-md shadow-rose-500/30 scale-105 ring-2 ring-rose-400 border border-rose-400"
+                            : esRevisar
+                              ? "bg-amber-400 hover:bg-amber-500 text-zinc-950 shadow-md shadow-amber-400/30 scale-102 ring-2 ring-amber-300 border border-amber-300"
+                              : "bg-white hover:bg-zinc-50 dark:bg-white/[0.04] dark:hover:bg-white/[0.08] text-zinc-700 dark:text-zinc-200 border border-zinc-200/90 dark:border-white/10 hover:border-zinc-300 dark:hover:border-white/20"
+                        }`}
+                        title={`${btn.label} (${btn.subLabel}): Estado [${esAlerta ? 'CAMBIAR' : esRevisar ? 'REVISAR' : 'NORMAL'}]. Clic para cambiar nivel`}
+                      >
+                        {btn.iconSvg("w-6 h-6 sm:w-6.5 sm:h-6.5")}
+
+                        {/* Insignia en esquina */}
+                        {esAlerta && (
+                          <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-rose-600 text-white border-2 border-white dark:border-zinc-900 flex items-center justify-center text-[9px] font-black shadow-xs">
+                            ✕
+                          </span>
+                        )}
+                        {esRevisar && (
+                          <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-amber-400 text-zinc-950 border-2 border-white dark:border-zinc-900 flex items-center justify-center text-[10px] font-black shadow-xs">
+                            !
+                          </span>
+                        )}
+                      </button>
+
+                      <div className="flex flex-col items-center leading-tight mt-1 px-1 max-w-full">
+                        <span className={`text-xs sm:text-sm font-bold tracking-tight text-center truncate max-w-full ${
+                          esAlerta
+                            ? "text-rose-600 dark:text-rose-400"
+                            : esRevisar
+                              ? "text-amber-600 dark:text-amber-400"
+                              : "text-zinc-800 dark:text-zinc-200"
+                        }`}>
+                          {btn.label}
+                        </span>
+                        <span className={`text-[10px] sm:text-[11px] font-semibold mt-0.5 ${
+                          esAlerta
+                            ? "text-rose-600 dark:text-rose-400 font-bold"
+                            : esRevisar
+                              ? "text-amber-600 dark:text-amber-400 font-bold"
+                              : "text-emerald-600 dark:text-emerald-400 font-bold"
+                        }`}>
+                          {esAlerta ? 'Cambiar' : esRevisar ? 'Revisar' : 'Normal'}
+                        </span>
+                      </div>
                     </div>
-                    <span className="text-xs sm:text-sm font-black text-zinc-800 dark:text-zinc-200">{defItem.label}</span>
-                    <span className={['text-xs font-bold', textCls].join(' ')}>{labelSub}</span>
-                  </button>
-                );
-              })}
+                  );
+                })}
+              </div>
+
+              {/* Indicadores de puntos de página (Dots) si hay más de 1 página */}
+              {totalPaginas > 1 && (
+                <div className="flex items-center justify-center gap-1.5 pt-2 mt-1 border-t border-zinc-100 dark:border-white/5">
+                  {Array.from({ length: totalPaginas }).map((_, pIdx) => (
+                    <button
+                      key={pIdx}
+                      type="button"
+                      onClick={() => setPaginaSemaforo(pIdx)}
+                      className={`h-1.5 rounded-full transition-all cursor-pointer ${
+                        paginaSemaforo === pIdx
+                          ? "w-6 bg-zinc-800 dark:bg-white"
+                          : "w-1.5 bg-zinc-300 dark:bg-white/20 hover:bg-zinc-400"
+                      }`}
+                      aria-label={`Ir a página ${pIdx + 1}`}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
 
         {/* ===== CONTENEDOR DE FILTROS, BÚSQUEDA Y CATÁLOGO DEBAJO DE SEMÁFORO (CUBRE TODA LA PÁGINA) ===== */}
         <div className="relative w-full rounded-2xl bg-white dark:bg-white/[0.03] border border-zinc-200/90 dark:border-white/10 shadow-2xs p-3.5 sm:p-4 mt-3">
-          {filtrosFlotantesAbiertos && (
-            <div className="absolute bottom-full left-0 right-0 z-50 mb-2 rounded-2xl border border-zinc-200 dark:border-white/15 bg-white dark:bg-[#1a1a1e] p-3 shadow-xl animate-fade-in">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-bold text-zinc-800 dark:text-zinc-100">Filtrar productos</span>
-                <button
-                  type="button"
-                  onClick={() => setFiltrosFlotantesAbiertos(false)}
-                  className="w-7 h-7 rounded-lg text-zinc-500 hover:bg-zinc-100 dark:hover:bg-white/10 cursor-pointer"
-                  aria-label="Cerrar filtros"
-                >
-                  ✕
-                </button>
-              </div>
-              <div className="flex flex-col gap-2">
-            {/* Píldora 1: Categoría */}
-            <div className="relative w-full">
-              <span className="block mb-1 text-[10px] font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">1. Categoría</span>
+          {/* Fila 1: Dropdown de categorías desplegable (arriba) */}
+          <div className="relative w-full mb-2" ref={dropdownCatRef}>
+            <div className="relative">
               <button
                 type="button"
-                onClick={() => { setMenuCatAbierto(p => !p); setMenuSubcatAbierto(false); setMenuRinAbierto(false); }}
-                className="w-full h-9 px-2.5 rounded-xl border border-blue-300 bg-blue-50 text-blue-800 dark:border-blue-400/40 dark:bg-blue-500/15 dark:text-blue-100 text-xs font-bold flex items-center justify-between gap-1 cursor-pointer transition-all active:scale-95 shadow-2xs truncate"
+                onClick={() => setMenuCatAbierto((prev) => !prev)}
+                className="w-full h-9 px-3 rounded-xl border border-zinc-200 dark:border-white/10 bg-white dark:bg-white/5 text-zinc-800 dark:text-zinc-100 text-xs font-bold flex items-center justify-between gap-2 cursor-pointer transition-all hover:bg-zinc-50 dark:hover:bg-white/10 shadow-2xs"
               >
-                <span className="truncate">{labelCatBento}</span>
-                <span className="text-[10px] opacity-75">▾</span>
+                <div className="flex items-center gap-2 truncate">
+                  <span>{iconoCategoriaActivaTEC}</span>
+                  <span className="truncate">{labelCategoriaActivaTEC}</span>
+                </div>
+                <div className="flex items-center gap-1.5 shrink-0 text-zinc-400">
+                  {categoriaActivaId !== "TODO" && (
+                    <span
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setCategoriaActivaId("TODO");
+                        setSubcategoriaActivaId("TODOS");
+                      }}
+                      className="w-4 h-4 rounded-full hover:bg-zinc-200 dark:hover:bg-white/20 flex items-center justify-center text-[11px] text-zinc-500 hover:text-zinc-800 transition-colors cursor-pointer"
+                      title="Quitar filtro de categoría"
+                    >
+                      ✕
+                    </span>
+                  )}
+                  <span className="text-[10px] opacity-75">▾</span>
+                </div>
               </button>
+
               {menuCatAbierto && (
-                <div className="absolute top-11 left-0 z-40 w-44 rounded-xl border border-zinc-200 dark:border-white/15 bg-white dark:bg-[#1a1a1e] p-1 shadow-xl animate-fade-in space-y-0.5">
-                  {TECNICENTRO_CATEGORIES.map(cat => (
+                <div className="absolute top-11 left-0 z-50 w-full max-h-60 overflow-y-auto rounded-xl border border-zinc-200 dark:border-white/15 bg-white dark:bg-[#1a1a1e] p-1 shadow-xl animate-fade-in space-y-0.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCategoriaActivaId("TODO");
+                      setSubcategoriaActivaId("TODOS");
+                      setMenuCatAbierto(false);
+                    }}
+                    className={`w-full h-8 px-2.5 rounded-lg text-left text-xs font-semibold flex items-center gap-2 cursor-pointer transition-colors ${
+                      categoriaActivaId === "TODO"
+                        ? "bg-blue-50 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300 font-bold"
+                        : "text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/10"
+                    }`}
+                  >
+                    <span>📋</span>
+                    <span>Todas</span>
+                  </button>
+                  {opcionesCategoriasMostrarTEC.map((cat) => (
                     <button
                       key={cat.id}
                       type="button"
-                      onClick={() => { setCategoriaActivaId(cat.id); setSubcategoriaActivaId('TODOS'); setMenuCatAbierto(false); }}
-                      className={['w-full h-8 px-2.5 rounded-lg text-left text-xs font-semibold flex items-center gap-2 cursor-pointer transition-colors', cat.id === categoriaActivaId ? 'bg-blue-50 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300 font-bold' : 'text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/10'].join(' ')}
+                      onClick={() => {
+                        setCategoriaActivaId(cat.id);
+                        setSubcategoriaActivaId("TODOS");
+                        setMenuCatAbierto(false);
+                      }}
+                      className={`w-full h-8 px-2.5 rounded-lg text-left text-xs font-semibold flex items-center gap-2 cursor-pointer transition-colors ${
+                        categoriaActivaId === cat.id
+                          ? "bg-blue-50 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300 font-bold"
+                        : "text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/10"
+                      }`}
                     >
-                      <span>{cat.icon}</span><span>{cat.label}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Píldora 2: Subcategoría */}
-            <div className="relative w-full">
-              <span className="block mb-1 text-[10px] font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">2. Subcategoría</span>
-              <button
-                type="button"
-                onClick={() => { setMenuSubcatAbierto(p => !p); setMenuCatAbierto(false); setMenuRinAbierto(false); }}
-                className="w-full h-9 px-2.5 rounded-xl border border-zinc-200 bg-zinc-50 text-zinc-700 dark:border-white/10 dark:bg-white/5 dark:text-zinc-200 text-xs font-bold flex items-center justify-between gap-1 cursor-pointer transition-all active:scale-95 shadow-2xs truncate"
-              >
-                <span className="truncate">{labelSubcatBento || '✨ Todos'}</span>
-                <span className="text-[10px] opacity-75">▾</span>
-              </button>
-              {menuSubcatAbierto && (
-                <div className="absolute top-11 left-0 z-40 w-44 rounded-xl border border-zinc-200 dark:border-white/15 bg-white dark:bg-[#1a1a1e] p-1 shadow-xl animate-fade-in space-y-0.5">
-                  {[{ id: 'TODOS', label: 'Todos', icon: '✨' }, ...((TECNICENTRO_CATEGORIES.find(c => c.id === categoriaActivaId)?.subcategories) || [])].map(sub => (
-                    <button
-                      key={sub.id}
-                      type="button"
-                      onClick={() => { setSubcategoriaActivaId(sub.id); setMenuSubcatAbierto(false); }}
-                      className={['w-full h-8 px-2.5 rounded-lg text-left text-xs font-semibold flex items-center gap-2 cursor-pointer transition-colors', sub.id === subcategoriaActivaId ? 'bg-blue-50 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300 font-bold' : 'text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/10'].join(' ')}
-                    >
-                      <span>{(sub as any).icon || '•'}</span><span>{sub.label}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Píldora 3: Rin / Aro */}
-            <div className="relative w-full">
-              <span className="block mb-1 text-[10px] font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">3. Rin / Aro</span>
-              <button
-                type="button"
-                onClick={() => { setMenuRinAbierto(p => !p); setMenuCatAbierto(false); setMenuSubcatAbierto(false); }}
-                className="w-full h-9 px-2.5 rounded-xl border border-zinc-200 bg-zinc-50 text-zinc-700 dark:border-white/10 dark:bg-white/5 dark:text-zinc-200 text-xs font-bold flex items-center justify-between gap-1 cursor-pointer transition-all active:scale-95 shadow-2xs truncate"
-              >
-                <span className="truncate">🛞 {rinActivo}</span>
-                <span className="text-[10px] opacity-75">▾</span>
-              </button>
-              {menuRinAbierto && (
-                <div className="absolute top-11 right-0 z-40 w-36 rounded-xl border border-zinc-200 dark:border-white/15 bg-white dark:bg-[#1a1a1e] p-1 shadow-xl animate-fade-in space-y-0.5">
-                  {RINES_TECNICENTRO.map(r => (
-                    <button
-                      key={r.id}
-                      type="button"
-                      onClick={() => { setRinActivo(r.id); setMenuRinAbierto(false); }}
-                      className={['w-full h-8 px-2.5 rounded-lg text-left text-xs font-semibold flex items-center gap-2 cursor-pointer transition-colors', r.id === rinActivo ? 'bg-blue-50 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300 font-bold' : 'text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/10'].join(' ')}
-                    >
-                      <span>🛞</span><span>{r.label}</span>
+                      <span>{cat.icon}</span>
+                      <span>{cat.label}</span>
                     </button>
                   ))}
                 </div>
               )}
             </div>
           </div>
-            </div>
-          )}
 
-          {/* Fila 2: Buscador ancho completo */}
+          {/* Fila 2: Buscador + Botones P y S */}
           <div className="mb-3 flex items-center gap-2">
-          <div className="relative flex-1 min-w-0">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 text-xs">🔍</span>
-            <input
-              type="text"
-              value={busquedaTec}
-              onChange={e => setBusquedaTec(e.target.value)}
-              placeholder="Buscar..."
-              className="w-full h-9 pl-8 pr-7 rounded-xl bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 text-xs text-zinc-900 dark:text-white placeholder-zinc-400 outline-none focus:ring-1 focus:ring-blue-400 shadow-2xs"
-            />
-            {busquedaTec && (
+            <div className="relative flex-1 min-w-0">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 text-xs">🔍</span>
+              <input
+                type="text"
+                value={busquedaTec}
+                onChange={(e) => setBusquedaTec(e.target.value)}
+                placeholder="Buscar..."
+                className="w-full h-9 pl-8 pr-7 rounded-xl bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 text-xs text-zinc-900 dark:text-white placeholder-zinc-400 outline-none focus:ring-1 focus:ring-blue-400 shadow-2xs"
+              />
+              {busquedaTec && (
+                <button
+                  type="button"
+                  onClick={() => setBusquedaTec("")}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 text-xs cursor-pointer"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+            <div className="flex items-center gap-1.5 shrink-0">
               <button
                 type="button"
-                onClick={() => setBusquedaTec('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 text-xs cursor-pointer"
+                onClick={() => toggleFiltroTipoTEC("PART")}
+                className={`h-9 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-2xs select-none active:scale-95 ${
+                  filtroTipo === "PART"
+                    ? "bg-blue-600 text-white border border-blue-600 shadow-xs"
+                    : "bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-white/10"
+                }`}
+                title="Filtrar por Productos"
               >
-                ✕
+                P
               </button>
-            )}
-          </div>
-          <button
-            type="button"
-            onClick={() => {
-              setFiltrosFlotantesAbiertos((prev) => !prev);
-              setMenuCatAbierto(false);
-              setMenuSubcatAbierto(false);
-              setMenuRinAbierto(false);
-            }}
-            className={`h-9 w-10 shrink-0 rounded-xl border flex items-center justify-center transition-colors cursor-pointer ${
-              filtrosFlotantesAbiertos
-                ? "border-blue-400 bg-blue-50 text-blue-700 dark:border-blue-400/50 dark:bg-blue-500/20 dark:text-blue-300"
-                : "border-zinc-200 bg-zinc-50 text-zinc-600 hover:bg-zinc-100 dark:border-white/10 dark:bg-white/5 dark:text-zinc-300 dark:hover:bg-white/10"
-            }`}
-            aria-label="Abrir filtros"
-            aria-expanded={filtrosFlotantesAbiertos}
-            title="Filtrar productos"
-          >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
-              <path d="M4 7h16M7 12h10m-7 5h4" />
-              <circle cx="8" cy="7" r="1" fill="currentColor" />
-              <circle cx="15" cy="12" r="1" fill="currentColor" />
-              <circle cx="11" cy="17" r="1" fill="currentColor" />
-            </svg>
-          </button>
+              <button
+                type="button"
+                onClick={() => toggleFiltroTipoTEC("SERVICE")}
+                className={`h-9 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-2xs select-none active:scale-95 ${
+                  filtroTipo === "SERVICE"
+                    ? "bg-blue-600 text-white border border-blue-600 shadow-xs"
+                    : "bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-white/10"
+                }`}
+                title="Filtrar por Servicios"
+              >
+                S
+              </button>
+            </div>
           </div>
 
           {/* Grid de productos a ancho completo cubriendo toda la pantalla */}
@@ -1785,13 +2386,13 @@ export default function ModuloTecnicentroCatalogo({
                         )}
                       </div>
 
-                      {/* Palabra clave en letra normal sin negrita */}
+                      {/* Palabra clave y descripción sin precios */}
                       <div className="w-full text-center mt-2 px-1">
-                        <span className="text-sm sm:text-base font-normal tracking-tight text-zinc-900 dark:text-white block truncate">
-                          {item.keyword}
+                        <span className="text-sm sm:text-base font-medium tracking-tight text-zinc-900 dark:text-white block truncate">
+                          {formatearPrimeraMayuscula(item.keyword)}
                         </span>
-                        <span className="text-xs sm:text-sm font-normal font-mono text-zinc-700 dark:text-zinc-300 mt-0.5 block tabular-nums">
-                          ${item.price.toFixed(2)}
+                        <span className="text-[11px] sm:text-xs font-normal text-zinc-500 dark:text-zinc-400 block truncate mt-0.5" title={formatearPrimeraMayuscula(item.name)}>
+                          {formatearPrimeraMayuscula(item.name)}
                         </span>
                       </div>
                     </div>
@@ -1802,6 +2403,210 @@ export default function ModuloTecnicentroCatalogo({
           </div>
         </div>
       </div>
+
+      {/* =====================================================================
+          RESUMEN DE ÍTEMS EN LA ORDEN ESTILO FACTURA: PRODUCTOS Y SERVICIOS
+          ===================================================================== */}
+      {(itemsOrden || []).length > 0 && (() => {
+        const esServicioItem = (it: any) =>
+          it.type === "SERVICE" ||
+          it.kind === "SERVICE" ||
+          (it.category && it.category.toLowerCase().includes("servicio")) ||
+          (it.category && it.category.toLowerCase().includes("alineacion")) ||
+          (it.category && it.category.toLowerCase().includes("alineación")) ||
+          (it.category && it.category.toLowerCase().includes("balanceo")) ||
+          (it.category && it.category.toLowerCase().includes("enllantaje")) ||
+          (it.category && it.category.toLowerCase().includes("lavado")) ||
+          (it.category && it.category.toLowerCase().includes("car wash")) ||
+          (it.code && it.code.toUpperCase().startsWith("TC-SRV")) ||
+          (it.code && it.code.toUpperCase().startsWith("SRV")) ||
+          (it.code && it.code.toUpperCase().startsWith("CW-"));
+
+        const esManual = (it: any) =>
+          it.category === "Manual" ||
+          it.code?.startsWith("MANUAL-") ||
+          it.id?.startsWith("manual-") ||
+          Boolean(it.isManual);
+
+        const productosSeleccionados = (itemsOrden || [])
+          .filter((it: any) => !esServicioItem(it))
+          .sort((a: any, b: any) => (esManual(a) ? 1 : 0) - (esManual(b) ? 1 : 0));
+
+        const serviciosSeleccionados = (itemsOrden || [])
+          .filter((it: any) => esServicioItem(it))
+          .sort((a: any, b: any) => (esManual(a) ? 1 : 0) - (esManual(b) ? 1 : 0));
+
+        const totalProductos = productosSeleccionados.reduce((acc: number, it: any) => acc + (Number(it.qty) || 1), 0);
+        const totalServicios = serviciosSeleccionados.reduce((acc: number, it: any) => acc + (Number(it.qty) || 1), 0);
+
+        return (
+          <div className="mt-4 p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-white/[0.03] border border-zinc-200/90 dark:border-white/10 shadow-2xs space-y-3.5 animate-fade-in">
+            {/* 1. SECCIÓN PRODUCTOS */}
+            {productosSeleccionados.length > 0 && (
+              <div className="space-y-1.5">
+                <span className="text-xs font-semibold text-blue-700 dark:text-blue-300 flex items-center gap-1.5">
+                  <span>📦</span>
+                  <span>Productos ({totalProductos}):</span>
+                </span>
+
+                <div className="overflow-x-auto rounded-xl border border-zinc-200/80 dark:border-white/10 bg-white dark:bg-black/20 shadow-2xs">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr className="border-b border-zinc-200/80 dark:border-white/10 bg-zinc-50/80 dark:bg-white/[0.03] text-zinc-500 dark:text-zinc-400 text-[11px] font-semibold">
+                        <th className="py-2 px-3 w-24 text-center">Cant.</th>
+                        <th className="py-2 px-3">Descripción</th>
+                        <th className="py-2 px-2.5 w-28">Detalle</th>
+                        <th className="py-2 px-2 w-12 text-center"></th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-zinc-200/60 dark:divide-white/5">
+                      {productosSeleccionados.map((it: any, idx: number) => {
+                        const cant = Number(it.qty) || 1;
+                        const detalle = it.presentation || it.viscosity || it.rimDiameter || it.subCategory || (esManual(it) ? "Manual" : (it.brand || "Producto"));
+                        return (
+                          <tr key={it.id || it.code || `tec-prod-${idx}`} className="hover:bg-zinc-50/60 dark:hover:bg-white/[0.02] transition-colors">
+                            <td className="py-2 px-3 text-center">
+                              <div className="inline-flex items-center border border-zinc-200 dark:border-white/10 rounded-lg overflow-hidden bg-zinc-50 dark:bg-white/[0.04]">
+                                <button
+                                  type="button"
+                                  onClick={() => void handleAjustarItemOrden(it, -1)}
+                                  className="w-5 h-5 flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-200/60 text-xs font-bold cursor-pointer transition-colors"
+                                  title="Restar 1"
+                                >
+                                  −
+                                </button>
+                                <span className="w-6 text-center text-xs font-bold text-zinc-800 dark:text-zinc-200">
+                                  {cant}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => void handleAjustarItemOrden(it, 1)}
+                                  className="w-5 h-5 flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-200/60 text-xs font-bold cursor-pointer transition-colors"
+                                  title="Sumar 1"
+                                >
+                                  +
+                                </button>
+                              </div>
+                            </td>
+                            <td className="py-2 px-3 font-medium text-zinc-800 dark:text-zinc-200">
+                              <span>{formatearPrimeraMayuscula(it.name || it.fullName)}</span>
+                            </td>
+                            <td className="py-2 px-2.5">
+                              {detalle ? (
+                                <span
+                                  className={`inline-block px-2 py-0.5 rounded-md text-[10px] font-semibold border ${
+                                    detalle === "Manual"
+                                      ? "bg-amber-50 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-300/80 dark:border-amber-500/30"
+                                      : "bg-blue-50 dark:bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-200/70 dark:border-blue-500/30"
+                                  }`}
+                                >
+                                  {formatearPrimeraMayuscula(detalle)}
+                                </span>
+                              ) : (
+                                <span className="text-zinc-400 text-[10px]">-</span>
+                              )}
+                            </td>
+                            <td className="py-2 px-2 text-center">
+                              <button
+                                type="button"
+                                onClick={() => void handleEliminarItemOrden(it)}
+                                className="w-6 h-6 inline-flex items-center justify-center rounded-lg text-zinc-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10 text-sm font-bold cursor-pointer transition-colors"
+                                title="Eliminar producto"
+                              >
+                                ×
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* 2. SECCIÓN SERVICIOS */}
+            {serviciosSeleccionados.length > 0 && (
+              <div className="space-y-1.5">
+                <span className="text-xs font-semibold text-purple-700 dark:text-purple-300 flex items-center gap-1.5">
+                  <span>🔧</span>
+                  <span>Servicios ({totalServicios}):</span>
+                </span>
+
+                <div className="overflow-x-auto rounded-xl border border-zinc-200/80 dark:border-white/10 bg-white dark:bg-black/20 shadow-2xs">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr className="border-b border-zinc-200/80 dark:border-white/10 bg-zinc-50/80 dark:bg-white/[0.03] text-zinc-500 dark:text-zinc-400 text-[11px] font-semibold">
+                        <th className="py-2 px-3 w-24 text-center">Cant.</th>
+                        <th className="py-2 px-3">Descripción</th>
+                        <th className="py-2 px-2.5 w-28">Detalle</th>
+                        <th className="py-2 px-2 w-12 text-center"></th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-zinc-200/60 dark:divide-white/5">
+                      {serviciosSeleccionados.map((it: any, idx: number) => {
+                        const cant = Number(it.qty) || 1;
+                        const detalle = it.category || it.subCategory || (esManual(it) ? "Manual" : "Tecnicentro");
+                        return (
+                          <tr key={it.id || it.code || `tec-srv-${idx}`} className="hover:bg-zinc-50/60 dark:hover:bg-white/[0.02] transition-colors">
+                            <td className="py-2 px-3 text-center">
+                              <div className="inline-flex items-center border border-zinc-200 dark:border-white/10 rounded-lg overflow-hidden bg-zinc-50 dark:bg-white/[0.04]">
+                                <button
+                                  type="button"
+                                  onClick={() => void handleAjustarItemOrden(it, -1)}
+                                  className="w-5 h-5 flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-200/60 text-xs font-bold cursor-pointer transition-colors"
+                                  title="Restar 1"
+                                >
+                                  −
+                                </button>
+                                <span className="w-6 text-center text-xs font-bold text-zinc-800 dark:text-zinc-200">
+                                  {cant}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => void handleAjustarItemOrden(it, 1)}
+                                  className="w-5 h-5 flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-200/60 text-xs font-bold cursor-pointer transition-colors"
+                                  title="Sumar 1"
+                                >
+                                  +
+                                </button>
+                              </div>
+                            </td>
+                            <td className="py-2 px-3 font-medium text-zinc-800 dark:text-zinc-200">
+                              <span>{formatearPrimeraMayuscula(it.name || it.fullName)}</span>
+                            </td>
+                            <td className="py-2 px-2.5">
+                              <span
+                                className={`inline-block px-2 py-0.5 rounded-md text-[10px] font-semibold border ${
+                                  detalle === "Manual"
+                                    ? "bg-amber-50 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-300/80 dark:border-amber-500/30"
+                                    : "bg-purple-50 dark:bg-purple-500/15 text-purple-700 dark:text-purple-300 border-purple-200/70 dark:border-purple-500/30"
+                                }`}
+                              >
+                                {formatearPrimeraMayuscula(detalle)}
+                              </span>
+                            </td>
+                            <td className="py-2 px-2 text-center">
+                              <button
+                                type="button"
+                                onClick={() => void handleEliminarItemOrden(it)}
+                                className="w-6 h-6 inline-flex items-center justify-center rounded-lg text-zinc-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10 text-sm font-bold cursor-pointer transition-colors"
+                                title="Eliminar servicio"
+                              >
+                                ×
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {navegacionActiva && (
         <div className="w-full border-t border-zinc-200 dark:border-white/15 py-3 mt-6">
@@ -1816,17 +2621,19 @@ export default function ModuloTecnicentroCatalogo({
               </button>
             )}
 
-            {/* Resumen PC (Imagen 1) */}
+            {/* Resumen PC */}
             <div className="hidden sm:flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-300 dark:border-emerald-500/30 text-emerald-800 dark:text-emerald-300 text-xs sm:text-sm font-semibold shadow-xs">
               <span className="text-base">🛒</span>
               <span>
-                {totalUnidadesTecnicentro} {totalUnidadesTecnicentro === 1 ? 'servicio' : 'servicios'} | Total: ${totalMontoTecnicentro.toFixed(2)} • ⏱ {tiempoEstimadoTecnicentro} min
+                {totalUnidadesTecnicentro} {totalUnidadesTecnicentro === 1 ? 'servicio' : 'servicios'} • ⏱ {tiempoEstimadoTecnicentro} min
               </span>
             </div>
 
-            {/* Resumen Móvil (Imagen 1 Móvil) */}
+            {/* Resumen Móvil */}
             <div className="sm:hidden flex flex-col items-center justify-center text-center">
-              <span className="text-xs font-bold text-zinc-900 dark:text-white">Total: ${totalMontoTecnicentro.toFixed(2)}</span>
+              <span className="text-xs font-bold text-zinc-900 dark:text-white">
+                {totalUnidadesTecnicentro} {totalUnidadesTecnicentro === 1 ? 'servicio' : 'servicios'}
+              </span>
               <span className="text-[10px] text-zinc-500 dark:text-zinc-400">• ⏱ {tiempoEstimadoTecnicentro} min</span>
             </div>
 

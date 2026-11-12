@@ -899,7 +899,14 @@ export default function PaginaDetallePropuesta() {
           origin: "TALLER",
         }));
 
-      return [...prods, ...extraProds, ...srvs, ...extraSrvs];
+      const todos = [...prods, ...extraProds, ...srvs, ...extraSrvs];
+      const vistos = new Set<string>();
+      return todos.filter((it) => {
+        const key = it.id ? String(it.id) : `${it.name}-${it.isService}`;
+        if (vistos.has(key)) return false;
+        vistos.add(key);
+        return true;
+      });
     },
     [repuestos, servicios]
   );
@@ -1476,27 +1483,67 @@ export default function PaginaDetallePropuesta() {
               </h1>
             </div>
 
-            <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
-              {/* Botón Imprimir */}
+            <div className="flex items-center gap-2 sm:gap-2.5 shrink-0 flex-wrap sm:flex-nowrap">
+              {/* 1. Vista Link Proveedor */}
               <button
                 type="button"
-                onClick={handleImprimir}
-                className="w-10 h-10 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 text-zinc-700 dark:text-zinc-200 active:scale-95 text-base shadow-xs transition-all flex items-center justify-center cursor-pointer shrink-0"
-                title="Imprimir Proforma"
-                aria-label="Imprimir Proforma"
+                onClick={() => {
+                  const targetId = orden.id || params?.id;
+                  if (typeof window !== "undefined" && targetId) {
+                    window.open(`/pedidos-proveedor/${encodeURIComponent(String(targetId))}`, "_blank");
+                  }
+                }}
+                className="h-10 px-3.5 sm:px-4 rounded-2xl bg-amber-50/90 dark:bg-amber-950/20 border border-amber-300 dark:border-amber-700/60 hover:bg-amber-100/80 dark:hover:bg-amber-900/30 text-amber-700 dark:text-amber-400 text-xs sm:text-sm font-medium transition-all active:scale-95 flex items-center gap-2 cursor-pointer shadow-2xs shrink-0"
+                title="Abrir Vista de Pedido para Proveedor"
               >
-                <span>🖨️</span>
+                <svg className="w-4 h-4 text-amber-600 dark:text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                </svg>
+                <span>Vista Link Proveedor</span>
               </button>
 
-              {/* Botón WhatsApp Catálogo */}
+              {/* 2. Proveedores */}
               <button
                 type="button"
                 onClick={() => setModalWhatsApp(true)}
-                className="w-10 h-10 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/35 text-emerald-600 dark:text-emerald-300 text-base transition-all active:scale-95 flex items-center justify-center cursor-pointer shadow-xs shrink-0"
-                title="Catálogo Proveedores WhatsApp"
-                aria-label="Catálogo Proveedores WhatsApp"
+                className="h-10 px-3.5 sm:px-4 rounded-2xl bg-indigo-50/80 dark:bg-indigo-950/25 border border-indigo-200 dark:border-indigo-800/60 hover:bg-indigo-100/80 dark:hover:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 text-xs sm:text-sm font-medium transition-all active:scale-95 flex items-center gap-2 cursor-pointer shadow-2xs shrink-0"
+                title="Gestión de Proveedores y Envíos WhatsApp"
               >
-                <span>📲</span>
+                <svg className="w-4 h-4 text-indigo-600 dark:text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.175V14.25m0 0H2.25m12 0v4.5m0-4.5H16.5" />
+                </svg>
+                <span>Proveedores</span>
+              </button>
+
+              {/* 3. Botón Imprimir */}
+              <button
+                type="button"
+                onClick={handleImprimir}
+                className="w-10 h-10 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200/90 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 text-zinc-700 dark:text-zinc-200 active:scale-95 text-base shadow-2xs transition-all flex items-center justify-center cursor-pointer shrink-0"
+                title="Imprimir Proforma"
+                aria-label="Imprimir Proforma"
+              >
+                <svg className="w-4 h-4 text-zinc-700 dark:text-zinc-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4H7v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                </svg>
+              </button>
+
+              {/* 4. Botón Vista Móvil / Cliente */}
+              <button
+                type="button"
+                onClick={() => {
+                  const targetToken = orden.quoteToken || orden.id || params?.id;
+                  if (typeof window !== "undefined" && targetToken) {
+                    window.open(`/taller/presupuesto/${encodeURIComponent(String(targetToken))}`, "_blank");
+                  }
+                }}
+                className="w-10 h-10 rounded-2xl bg-teal-50 dark:bg-teal-950/30 border border-teal-200 dark:border-teal-800/60 hover:bg-teal-100/70 dark:hover:bg-teal-900/40 text-teal-700 dark:text-teal-300 active:scale-95 transition-all flex items-center justify-center cursor-pointer shadow-2xs shrink-0"
+                title="Abrir Vista Móvil para el Cliente"
+                aria-label="Abrir Vista Móvil para el Cliente"
+              >
+                <svg className="w-4 h-4 text-teal-700 dark:text-teal-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                </svg>
               </button>
             </div>
           </div>
@@ -1510,55 +1557,86 @@ export default function PaginaDetallePropuesta() {
           const countArea = (orig: EspecialidadTipo) =>
             repuestos.filter((r) => (r.origin || "TALLER") === orig).length +
             servicios.filter((s) => (s.origin || "TALLER") === orig).length;
-          const isAreaDone = (orig: EspecialidadTipo) => {
-            if (areasVerificadas[orig]) return true;
-            const rIds = repuestos.filter((r) => (r.origin || "TALLER") === orig).map((r) => r.id);
-            const sIds = servicios.filter((s) => (s.origin || "TALLER") === orig).map((s) => s.id);
-            const allIds = [...rIds, ...sIds];
-            return allIds.length > 0 && allIds.every((i) => verificadosIds[i]);
-          };
+
+          const totalItemsPago =
+            countArea("TALLER") +
+            countArea("LUBRICENTRO") +
+            countArea("CARWASH") +
+            countArea("TECNICENTRO");
+
           const tarjetasMeta = [
-            { idx: 0, titulo: "Vehículo", icon: "👤", badge: orden.plate, done: true },
+            {
+              idx: 0,
+              titulo: "Vehículo",
+              iconBg: "bg-blue-500/10 text-blue-500",
+              icon: (
+                <svg className="w-4 h-4 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+              ),
+              count: undefined,
+            },
             {
               idx: 1,
               titulo: "Taller",
-              icon: "🔧",
-              badge: `${hallazgos.length} diag · ${countArea("TALLER")} ítems`,
-              done: isAreaDone("TALLER"),
+              iconBg: "bg-purple-500/10 text-purple-600 dark:text-purple-400",
+              icon: (
+                <svg className="w-4 h-4 text-purple-600 dark:text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 11-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.743-.07a4.5 4.5 0 004.486-6.336l-3.276 3.277a3.004 3.004 0 01-2.25-2.25l3.276-3.276a4.5 4.5 0 00-6.336 4.486c.091.455.087.935-.012 1.39" />
+                </svg>
+              ),
+              count: countArea("TALLER"),
             },
             {
               idx: 2,
               titulo: "Lubricentro",
-              icon: "🛢️",
-              badge: `${countArea("LUBRICENTRO")} ítems`,
-              done: isAreaDone("LUBRICENTRO"),
+              iconBg: "bg-red-500/10 text-red-500",
+              icon: (
+                <svg className="w-4 h-4 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 3c-4 5-6 8.5-6 12a6 6 0 1012 0c0-3.5-2-7-6-12z" />
+                </svg>
+              ),
+              count: countArea("LUBRICENTRO"),
             },
             {
               idx: 3,
               titulo: "Carwash",
-              icon: "🚿",
-              badge: `${countArea("CARWASH")} ítems`,
-              done: isAreaDone("CARWASH"),
+              iconBg: "bg-cyan-500/10 text-cyan-500",
+              icon: (
+                <svg className="w-4 h-4 text-cyan-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                </svg>
+              ),
+              count: countArea("CARWASH"),
             },
             {
               idx: 4,
               titulo: "Tecnicentro",
-              icon: "⚙️",
-              badge: `${countArea("TECNICENTRO")} ítems`,
-              done: isAreaDone("TECNICENTRO"),
+              iconBg: "bg-amber-500/10 text-amber-500",
+              icon: (
+                <svg className="w-4 h-4 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+              ),
+              count: countArea("TECNICENTRO"),
             },
             {
               idx: 5,
               titulo: "Pago",
-              icon: "📦",
-              badge: `${calculos.itemsPorComprar.length} pedir · $${calculos.totalFacturaCliente.toFixed(2)}`,
-              done: esPagado || esAprobado,
+              iconBg: "bg-emerald-500/10 text-emerald-500",
+              icon: (
+                <svg className="w-4 h-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                </svg>
+              ),
+              count: totalItemsPago,
             },
           ];
 
           return (
-            <div className="print:hidden bg-white dark:bg-[#0f0f13] border border-zinc-200 dark:border-white/10 rounded-2xl p-2.5 sm:p-3 shadow-sm">
-              <div className="flex items-center justify-between gap-2 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+            <div className="print:hidden bg-white dark:bg-[#0f0f13] border border-zinc-200 dark:border-white/10 rounded-2xl p-2 sm:p-2.5 shadow-2xs">
+              <div className="flex items-center gap-2 sm:gap-2.5 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
                 {tarjetasMeta.map((t) => {
                   const activa = tarjetaActiva === t.idx;
                   return (
@@ -1566,21 +1644,21 @@ export default function PaginaDetallePropuesta() {
                       key={t.idx}
                       type="button"
                       onClick={() => setTarjetaActiva(t.idx)}
-                      className={`flex items-center gap-2 px-3.5 py-2.5 rounded-xl border text-center transition-all cursor-pointer shrink-0 ${
+                      className={`flex items-center gap-2.5 px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-2xl border text-center transition-all cursor-pointer shrink-0 ${
                         activa
-                          ? "bg-blue-600/15 border-blue-500/50 text-blue-600 dark:text-blue-300 shadow-xs"
-                          : t.done
-                          ? "bg-emerald-500/5 border-emerald-500/25 text-zinc-700 dark:text-zinc-300 hover:bg-emerald-500/10"
-                          : "bg-zinc-50 dark:bg-white/[0.02] border-zinc-200/80 dark:border-white/10 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-white/5"
+                          ? "bg-indigo-50/60 dark:bg-indigo-950/25 border-indigo-400 dark:border-indigo-500 text-indigo-700 dark:text-indigo-300 font-semibold shadow-2xs"
+                          : "bg-white dark:bg-[#16161b] border-zinc-200/80 dark:border-white/10 text-zinc-700 dark:text-zinc-300 hover:border-zinc-300 dark:hover:border-white/20 hover:bg-zinc-50 dark:hover:bg-white/5"
                       }`}
                     >
-                      <span className="text-base">{t.icon}</span>
-                      <span className="text-xs font-normal whitespace-nowrap">
+                      <span className={`w-7 h-7 rounded-xl flex items-center justify-center shrink-0 ${t.iconBg}`}>
+                        {t.icon}
+                      </span>
+                      <span className="text-xs sm:text-sm whitespace-nowrap">
                         {t.titulo}
                       </span>
-                      {t.done && t.idx > 0 && (
-                        <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400">
-                          ✓
+                      {t.count !== undefined && (
+                        <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-white/10 text-zinc-600 dark:text-zinc-300 border border-zinc-200/60 dark:border-white/10">
+                          {t.count}
                         </span>
                       )}
                     </button>
@@ -2142,10 +2220,10 @@ export default function PaginaDetallePropuesta() {
                                         </tr>
                                       </thead>
                                       <tbody className="divide-y divide-zinc-200/60 dark:divide-white/5">
-                                        {pinItems.map((item: any) => {
+                                        {pinItems.map((item: any, itemIdx: number) => {
                                           const esServicio = item.isService;
                                           return (
-                                            <tr key={item.id} className="hover:bg-white/80 dark:hover:bg-white/[0.02]">
+                                            <tr key={item.id ? `${item.id}-${itemIdx}` : `pin-item-${itemIdx}`} className="hover:bg-white/80 dark:hover:bg-white/[0.02]">
                                               <td className="py-2 px-3 text-center">
                                                 <input
                                                   type="checkbox"
@@ -2456,10 +2534,10 @@ export default function PaginaDetallePropuesta() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-zinc-200/60 dark:divide-white/5">
-                        {itemsGeneralesTaller.map((item: any) => {
+                        {itemsGeneralesTaller.map((item: any, itemIdx: number) => {
                           const esServicio = item.isService;
                           return (
-                            <tr key={item.id} className="hover:bg-white/80 dark:hover:bg-white/[0.02]">
+                            <tr key={item.id ? `${item.id}-${itemIdx}` : `general-item-${itemIdx}`} className="hover:bg-white/80 dark:hover:bg-white/[0.02]">
                               <td className="py-2 px-3 text-center">
                                 <input
                                   type="checkbox"
@@ -2729,8 +2807,8 @@ export default function PaginaDetallePropuesta() {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-zinc-200 dark:divide-white/5">
-                          {repArea.map((item) => (
-                            <tr key={item.id} className="hover:bg-zinc-50/80 dark:hover:bg-white/[0.02]">
+                          {repArea.map((item, itemIdx) => (
+                            <tr key={item.id ? `${item.id}-${itemIdx}` : `area-item-${itemIdx}`} className="hover:bg-zinc-50/80 dark:hover:bg-white/[0.02]">
                               <td className="py-2.5 px-3 text-center">
                                 <input
                                   type="checkbox"
@@ -2925,12 +3003,12 @@ export default function PaginaDetallePropuesta() {
                 </div>
               ) : (
                 <div className="divide-y divide-zinc-200 dark:divide-white/10 border border-zinc-200 dark:border-white/10 rounded-xl bg-white dark:bg-[#141418] overflow-hidden">
-                  {calculos.itemsPorComprar.map((item) => {
+                  {calculos.itemsPorComprar.map((item, itemIdx) => {
                     const itemLink = `${typeof window !== "undefined" ? window.location.origin : ""}/pedidos-proveedor/${orden.id}?item=${encodeURIComponent(item.name)}`;
                     const waText = `Hola, necesito cotizar/pedir este repuesto para ${orden.vehicle} (${orden.plate}):\n• ${item.qty}x ${item.name}\nVer detalle y fotos aquí: ${itemLink}`;
                     return (
                       <div
-                        key={item.id}
+                        key={item.id ? `${item.id}-${itemIdx}` : `comprar-item-${itemIdx}`}
                         className="p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs hover:bg-zinc-50/70 dark:hover:bg-white/[0.02]"
                       >
                         <div className="space-y-1 min-w-0 flex-1">

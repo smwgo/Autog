@@ -136,6 +136,39 @@ export function DetallePinModerno({
   const streamCamaraPcRef = React.useRef<MediaStream | null>(null);
   const inputCamaraFallbackRef = React.useRef<HTMLInputElement | null>(null);
 
+  // Estado para formulario de producto o servicio manual
+  const [manualBloqueId, setManualBloqueId] = useState<string | null>(null);
+  const [manualTipo, setManualTipo] = useState<"PART" | "SERVICE">("PART");
+  const [manualNombre, setManualNombre] = useState<string>("");
+  const [manualCant, setManualCant] = useState<number>(1);
+
+  const handleAgregarManual = (bloqueId: string) => {
+    const nombreLimpio = manualNombre.trim();
+    if (!nombreLimpio) return;
+
+    const manualId = `manual-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const manualCode = `MANUAL-${manualTipo === "PART" ? "PRD" : "SRV"}-${Date.now().toString(36).slice(-4).toUpperCase()}`;
+
+    if (onAgregarItemPin) {
+      onAgregarItemPin(
+        {
+          id: manualId,
+          name: nombreLimpio,
+          code: manualCode,
+          category: "Manual",
+          type: manualTipo,
+          qty: manualCant,
+          price: 0,
+        },
+        bloqueId,
+        manualCant
+      );
+    }
+
+    setManualNombre("");
+    setManualCant(1);
+  };
+
   const detenerCamaraPc = () => {
     if (streamCamaraPcRef.current) {
       streamCamaraPcRef.current.getTracks().forEach((t) => t.stop());
@@ -291,48 +324,18 @@ export function DetallePinModerno({
 
   return (
     <div className="mt-3 rounded-2xl bg-white dark:bg-[#09090b] text-zinc-900 dark:text-zinc-100 border border-zinc-200 dark:border-white/10 p-4 sm:p-5 shadow-xl space-y-4 animate-fade-in font-sans">
-      {/* Título de la tarjeta y botón cerrar / acciones rápidas */}
+      {/* Título de la tarjeta: Etiqueta Evidencia */}
       <div className="flex items-center justify-between">
-        <h3 className="text-xs sm:text-sm font-normal text-zinc-900 dark:text-zinc-100 tracking-tight flex items-center gap-2">
-          <span>Registrar</span>
-          <span
-            suppressHydrationWarning
-            translate="no"
-            className="w-4 h-4 rounded-full bg-blue-500/15 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 border border-blue-500/25 font-mono text-[10px] font-normal flex items-center justify-center shrink-0"
-          >
-            {`#${mismoNumero}`}
+        <div className="flex items-center gap-2">
+          <span className="px-2.5 py-1 rounded-md bg-blue-600 dark:bg-blue-500/15 text-white dark:text-blue-300 border border-transparent dark:border-blue-400/30 text-xs sm:text-sm font-bold tracking-tight flex items-center gap-1.5 shadow-xs">
+            <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="m18.375 12.739-7.693 7.693a4.5 4.5 0 0 1-6.364-6.364l10.607-10.607a3 3 0 0 1 4.243 4.243L8.914 17.958a1.5 1.5 0 0 1-2.122-2.121l9.9-9.9" />
+            </svg>
+            <span>Evidencia #{mismoNumero}</span>
           </span>
-        </h3>
+        </div>
 
         <div className="flex items-center gap-1.5 shrink-0">
-          {onReubicarPin && (
-            <button
-              type="button"
-              onClick={onReubicarPin}
-              className="h-7 px-2.5 rounded-lg bg-zinc-100 hover:bg-zinc-200 dark:bg-white/[0.04] dark:hover:bg-white/[0.08] border border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-300 text-[11px] font-semibold transition-all cursor-pointer flex items-center gap-1.5 active:scale-95"
-              title={`Mover Pin #${mismoNumero}`}
-            >
-              <span>📍</span>
-              <span className="hidden sm:inline">Mover</span>
-            </button>
-          )}
-
-          <button
-            type="button"
-            onClick={onEliminarPin}
-            className="h-7 px-2.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/25 text-rose-600 dark:text-rose-400 text-[11px] font-semibold transition-all cursor-pointer flex items-center gap-1.5 active:scale-95"
-            title={`Eliminar Pin #${mismoNumero}`}
-          >
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"
-              />
-            </svg>
-            <span className="hidden sm:inline">Borrar</span>
-          </button>
-
           <button
             type="button"
             onClick={onCerrar}
@@ -477,12 +480,14 @@ export function DetallePinModerno({
               {/* Cabecera del Bloque Asociado (identifica a qué foto/grupo pertenece el texto y audio) */}
               <div className="flex items-center justify-between gap-2 border-b border-zinc-200/70 dark:border-white/10 pb-2">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="px-2.5 py-1 rounded-md bg-blue-600 dark:bg-blue-500/15 text-white dark:text-blue-300 border border-transparent dark:border-blue-400/30 text-xs sm:text-sm font-bold tracking-tight flex items-center gap-1.5 shadow-xs">
-                    <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="m18.375 12.739-7.693 7.693a4.5 4.5 0 0 1-6.364-6.364l10.607-10.607a3 3 0 0 1 4.243 4.243L8.914 17.958a1.5 1.5 0 0 1-2.122-2.121l9.9-9.9" />
-                    </svg>
-                    <span>Evidencia #{numBloque}</span>
-                  </span>
+                  {bloquesEvidencia.length > 1 && (
+                    <span className="px-2.5 py-1 rounded-md bg-blue-600 dark:bg-blue-500/15 text-white dark:text-blue-300 border border-transparent dark:border-blue-400/30 text-xs sm:text-sm font-bold tracking-tight flex items-center gap-1.5 shadow-xs">
+                      <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="m18.375 12.739-7.693 7.693a4.5 4.5 0 0 1-6.364-6.364l10.607-10.607a3 3 0 0 1 4.243 4.243L8.914 17.958a1.5 1.5 0 0 1-2.122-2.121l9.9-9.9" />
+                      </svg>
+                      <span>Evidencia #{numBloque}</span>
+                    </span>
+                  )}
 
                   {soloFotosBloque.length > 0 && (
                     <span className="px-2.5 py-1 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 text-xs sm:text-sm font-semibold">
@@ -655,7 +660,138 @@ export function DetallePinModerno({
                       </svg>
                     )}
                   </button>
+
+                  {/* Botón Agregar Producto o Servicio Manual */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setManualBloqueId((prev) => (prev === bloque.id ? null : bloque.id));
+                    }}
+                    title={`Agregar producto o servicio manual para Evidencia #${numBloque}`}
+                    className={`relative h-12 w-12 sm:h-14 sm:w-14 rounded-xl border flex flex-col items-center justify-center shrink-0 transition-all cursor-pointer overflow-hidden active:scale-95 shadow-sm touch-manipulation select-none ${
+                      manualBloqueId === bloque.id
+                        ? "bg-emerald-600 text-white border-emerald-700 ring-2 ring-emerald-400/50 shadow-md"
+                        : "bg-emerald-50/80 hover:bg-emerald-100 dark:bg-emerald-500/10 dark:hover:bg-emerald-500/20 border-emerald-200 dark:border-emerald-500/30 text-emerald-600 dark:text-emerald-400"
+                    }`}
+                  >
+                    <svg className="w-5 h-5 sm:w-6 sm:h-6 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10"
+                      />
+                    </svg>
+                  </button>
                 </div>
+
+                {/* Formulario para agregar Producto o Servicio Manualmente (Diseño Moderno y Minimalista) */}
+                {manualBloqueId === bloque.id && (
+                  <div
+                    onClick={(e) => e.stopPropagation()}
+                    className="p-3 rounded-lg border border-zinc-200 dark:border-white/10 bg-zinc-50/70 dark:bg-white/[0.02] backdrop-blur-xs space-y-2.5 animate-fade-in shadow-2xs"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                        <span className="text-[11px] font-medium text-zinc-600 dark:text-zinc-400">
+                          Agregar manual
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setManualBloqueId(null)}
+                        className="w-5 h-5 rounded flex items-center justify-center text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-200/50 dark:hover:bg-white/10 text-xs transition-colors cursor-pointer"
+                        title="Cerrar"
+                      >
+                        ✕
+                      </button>
+                    </div>
+
+                    {/* Segmented Control Minimalista: Producto / Servicio con filos no tan redondos */}
+                    <div className="inline-flex p-0.5 rounded-md bg-zinc-200/60 dark:bg-white/5 border border-zinc-200/50 dark:border-white/5 w-full">
+                      <button
+                        type="button"
+                        onClick={() => setManualTipo("PART")}
+                        className={`flex-1 py-1.5 px-3 rounded text-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                          manualTipo === "PART"
+                            ? "bg-white dark:bg-white/15 text-zinc-900 dark:text-white shadow-2xs font-semibold"
+                            : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white font-normal"
+                        }`}
+                      >
+                        <span className="text-[11px]">📦</span>
+                        <span>Producto</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setManualTipo("SERVICE")}
+                        className={`flex-1 py-1.5 px-3 rounded text-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                          manualTipo === "SERVICE"
+                            ? "bg-white dark:bg-white/15 text-zinc-900 dark:text-white shadow-2xs font-semibold"
+                            : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white font-normal"
+                        }`}
+                      >
+                        <span className="text-[11px]">🔧</span>
+                        <span>Servicio</span>
+                      </button>
+                    </div>
+
+                    {/* Input, Stepper y Botón con bordes suaves no tan redondos */}
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={manualNombre}
+                        onChange={(e) => setManualNombre(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            handleAgregarManual(bloque.id);
+                          }
+                        }}
+                        placeholder={
+                          manualTipo === "PART"
+                            ? "Nombre del producto..."
+                            : "Descripción del servicio..."
+                        }
+                        className="flex-1 h-9 rounded-md bg-white dark:bg-white/[0.04] border border-zinc-200 dark:border-white/10 px-3 text-xs text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:border-zinc-400 dark:focus:border-white/30 shadow-2xs transition-colors"
+                        autoFocus
+                      />
+
+                      {/* Contador de Cantidad */}
+                      <div className="h-9 px-1 inline-flex items-center border border-zinc-200 dark:border-white/10 rounded-md bg-white dark:bg-white/[0.04] shadow-2xs shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => setManualCant((prev) => Math.max(1, prev - 1))}
+                          className="w-6 h-7 flex items-center justify-center text-zinc-400 hover:text-zinc-900 dark:hover:text-white text-xs font-bold cursor-pointer transition-colors"
+                          title="Restar 1"
+                        >
+                          −
+                        </button>
+                        <span className="w-5 text-center text-xs font-semibold text-zinc-800 dark:text-zinc-200 select-none">
+                          {manualCant}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setManualCant((prev) => prev + 1)}
+                          className="w-6 h-7 flex items-center justify-center text-zinc-400 hover:text-zinc-900 dark:hover:text-white text-xs font-bold cursor-pointer transition-colors"
+                          title="Sumar 1"
+                        >
+                          +
+                        </button>
+                      </div>
+
+                      {/* Botón Agregar */}
+                      <button
+                        type="button"
+                        onClick={() => handleAgregarManual(bloque.id)}
+                        disabled={!manualNombre.trim()}
+                        className="h-9 px-3.5 rounded-md bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-100 text-white dark:text-zinc-900 disabled:opacity-30 disabled:cursor-not-allowed text-xs font-medium flex items-center justify-center cursor-pointer transition-all shadow-2xs shrink-0 active:scale-95"
+                      >
+                        Agregar
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 {/* Indicador activo con diseño moderno de ondas al grabar audio en este bloque */}
                 {escuchandoEsteBloque && (
@@ -1001,52 +1137,6 @@ export function DetallePinModerno({
                   className="pt-2 border-t border-zinc-200/70 dark:border-white/10 space-y-2.5"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  {/* Selector a la izquierda sin filos (sin bordes duros) */}
-                  <div className="space-y-1">
-                    <span className="text-[11px] font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider block">
-                      Solicitar
-                    </span>
-                    <div className="flex items-center justify-start gap-2 flex-wrap">
-                      <label
-                        className={`inline-flex items-center gap-1.5 py-1.5 px-3.5 rounded-full text-xs font-semibold cursor-pointer transition-all select-none ${
-                          bloque.solicitaRepuesto
-                            ? "bg-amber-100 dark:bg-amber-500/20 text-amber-900 dark:text-amber-200"
-                            : "bg-zinc-100 hover:bg-zinc-200/80 dark:bg-white/[0.06] dark:hover:bg-white/10 text-zinc-600 dark:text-zinc-400"
-                        }`}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={!!bloque.solicitaRepuesto}
-                          onChange={(e) => onToggleSolicitaRepuesto?.(bloque.id, "repuesto", e.target.checked)}
-                          className="w-4 h-4 rounded accent-amber-500 cursor-pointer"
-                        />
-                        <span className="flex items-center gap-1.5">
-                          <span>📦</span>
-                          <span>Producto</span>
-                        </span>
-                      </label>
-
-                      <label
-                        className={`inline-flex items-center gap-1.5 py-1.5 px-3.5 rounded-full text-xs font-semibold cursor-pointer transition-all select-none ${
-                          bloque.solicitaServicio
-                            ? "bg-purple-100 dark:bg-purple-500/20 text-purple-900 dark:text-purple-200"
-                            : "bg-zinc-100 hover:bg-zinc-200/80 dark:bg-white/[0.06] dark:hover:bg-white/10 text-zinc-600 dark:text-zinc-400"
-                        }`}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={!!bloque.solicitaServicio}
-                          onChange={(e) => onToggleSolicitaRepuesto?.(bloque.id, "servicio", e.target.checked)}
-                          className="w-4 h-4 rounded accent-purple-600 cursor-pointer"
-                        />
-                        <span className="flex items-center gap-1.5">
-                          <span>🔧</span>
-                          <span>Servicio</span>
-                        </span>
-                      </label>
-                    </div>
-                  </div>
-
                   <CatalogoProductosServiciosTaller
                     itemsSeleccionados={bloque.linkedItems || []}
                     onAgregarItem={(item, delta) => onAgregarItemPin?.(item, bloque.id, delta)}

@@ -164,69 +164,25 @@ export interface ItemCatalogoTaller {
 
 const ITEMS_BASE_TALLER: ItemCatalogoTaller[] = [];
 
-const OPCIONES_CATEGORIAS = [
+export const CATEGORIAS_PRODUCTOS_BASE = [
   { id: "aceite", label: "Aceites", icon: "🛢️" },
-  { id: "transmision", label: "Transmisión", icon: "⚙️" },
   { id: "filtros", label: "Filtros", icon: "🌪️" },
   { id: "fluidos", label: "Fluidos", icon: "🌡️" },
   { id: "baterias", label: "Baterías", icon: "🔋" },
-  { id: "servicios", label: "Servicios", icon: "🛠️" },
-  { id: "todos", label: "Todos", icon: "📋" },
+  { id: "transmision", label: "Transmisión", icon: "⚙️" },
 ];
 
-const SUBCATEGORIAS_MAP: Record<string, { id: string; label: string; icon: string }[]> = {
-  aceite: [
-    { id: "motor", label: "Motor", icon: "🚗" },
-    { id: "aditivos", label: "Aditivos", icon: "🧪" },
-    { id: "flush", label: "Flush", icon: "🧼" },
-    { id: "grasa", label: "Grasa", icon: "🧈" },
-    { id: "todos", label: "Todos", icon: "📋" },
-  ],
-  transmision: [
-    { id: "atf", label: "ATF Automática", icon: "⚙️" },
-    { id: "cvt", label: "CVT", icon: "⚡" },
-    { id: "manual", label: "Manual", icon: "⚙️" },
-    { id: "diferencial", label: "Corona / Dif", icon: "🔩" },
-    { id: "todos", label: "Todos", icon: "📋" },
-  ],
-  filtros: [
-    { id: "fil_aceite", label: "Aceite", icon: "🛢️" },
-    { id: "fil_aire", label: "Aire", icon: "🌪️" },
-    { id: "fil_cabina", label: "Cabina A/C", icon: "❄️" },
-    { id: "fil_combustible", label: "Combustible", icon: "⛽" },
-    { id: "todos", label: "Todos", icon: "📋" },
-  ],
-  fluidos: [
-    { id: "coolant", label: "Refrigerante", icon: "🌡️" },
-    { id: "frenos", label: "Frenos", icon: "🛑" },
-    { id: "hidraulico", label: "Hidráulico", icon: "🛞" },
-    { id: "parabrisas", label: "Parabrisas", icon: "🌧️" },
-    { id: "todos", label: "Todos", icon: "📋" },
-  ],
-  baterias: [
-    { id: "convencional", label: "Convencional", icon: "🔋" },
-    { id: "agm", label: "AGM", icon: "⚡" },
-    { id: "start_stop", label: "Start-Stop", icon: "🚀" },
-    { id: "todos", label: "Todos", icon: "📋" },
-  ],
-  servicios: [
-    { id: "afinamiento", label: "Afinamiento", icon: "🛠️" },
-    { id: "diagnostico", label: "Diagnóstico", icon: "🔍" },
-    { id: "frenos", label: "Frenos", icon: "🛑" },
-    { id: "suspension", label: "Suspensión", icon: "🔩" },
-    { id: "motor", label: "Motor", icon: "⚙️" },
-    { id: "todos", label: "Todos", icon: "📋" },
-  ],
-  todos: [{ id: "todos", label: "Todos", icon: "📋" }],
-};
-
-const OPCIONES_PRESENTACIONES = [
-  { id: "Galón", label: "Galón", icon: "🧴" },
-  { id: "Litro", label: "Litro", icon: "🍶" },
-  { id: "Cuarto", label: "Cuarto (Qt)", icon: "🥫" },
-  { id: "Caneca", label: "Caneca", icon: "🪣" },
-  { id: "Unidad", label: "Unidad", icon: "📦" },
-  { id: "Todos", label: "Todos", icon: "📋" },
+export const CATEGORIAS_SERVICIOS_BASE = [
+  { id: "srv_mantenimiento", label: "Mantenimiento", icon: "🛠️" },
+  { id: "srv_frenos", label: "Frenos", icon: "🛑" },
+  { id: "srv_suspension", label: "Suspensión", icon: "🔩" },
+  { id: "srv_diagnostico", label: "Diagnóstico", icon: "🔍" },
+  { id: "srv_electrico", label: "Eléctrico", icon: "⚡" },
+  { id: "srv_transmision", label: "Transmisión", icon: "🔄" },
+  { id: "srv_aire", label: "Aire", icon: "❄️" },
+  { id: "srv_motor", label: "Motor", icon: "⚙️" },
+  { id: "srv_carwash", label: "Lavado", icon: "🚿" },
+  { id: "servicios", label: "Servicios", icon: "📋" },
 ];
 
 export interface ItemSeleccionadoRef {
@@ -251,6 +207,81 @@ export interface CatalogoProductosServiciosTallerProps {
   mostrarChipsSeleccionados?: boolean;
   className?: string;
   siempreAbierto?: boolean;
+  mostrarPrecios?: boolean;
+}
+
+export function extraerDetalleCaracteristica(item: ItemCatalogoTaller): {
+  nombrePrincipal: string;
+  caracteristica: string;
+} {
+  const nombreCompleto = (item.fullName || item.name || "").trim();
+  if (!nombreCompleto) return { nombrePrincipal: "", caracteristica: "" };
+
+  if (
+    item.category === "Manual" ||
+    item.code?.startsWith("MANUAL-") ||
+    (item as any).isManual ||
+    item.id?.startsWith("manual-")
+  ) {
+    return {
+      nombrePrincipal: nombreCompleto,
+      caracteristica: "Manual",
+    };
+  }
+
+  // 1. Viscosidad / Grado (5W30, 20W50, 10W30, 15W40, 80W90, 75W85, etc.)
+  const regexVisc = /\b(\d{1,2}W[-]?\d{2}|\d{2}W\d{2,3}|(?:GL|DOT)[-]?\d+)\b/i;
+  const matchVisc = nombreCompleto.match(regexVisc);
+
+  // 2. Litros / Volumen (1L, 4L, 5L, Galón, Litro, Cuarto, etc.)
+  const regexLitros = /\b(\d+(?:\.\d+)?\s*(?:L|LT|LITROS?|GL|GALONES?|QT|CUARTO))\b/i;
+  const matchLitros = nombreCompleto.match(regexLitros);
+
+  let caracteristica = "";
+  if (item.presentation && item.presentation.trim() && item.presentation.trim().toLowerCase() !== "unidad") {
+    caracteristica = item.presentation.trim();
+  } else if (matchLitros) {
+    caracteristica = matchLitros[1].replace(/\s+/g, "").toUpperCase();
+  } else if (matchVisc) {
+    caracteristica = matchVisc[1].toUpperCase();
+  } else if (item.viscosity && item.viscosity.trim() && item.viscosity !== item.name) {
+    caracteristica = item.viscosity.trim();
+  }
+
+  // Si no hay aún y tiene subcategoría específica
+  if (!caracteristica && item.subCategory && item.subCategory !== "General" && item.subCategory !== "Todos") {
+    caracteristica = item.subCategory.split(" ")[0];
+  }
+
+  // Nombre limpio sin duplicar la característica al final
+  let nombrePrincipal = nombreCompleto;
+  if (caracteristica) {
+    nombrePrincipal = nombrePrincipal
+      .replace(new RegExp(`\\s*${caracteristica}\\b`, "i"), "")
+      .replace(/\s*GL[-]?\d+\b/i, "")
+      .trim();
+  }
+
+  return {
+    nombrePrincipal: nombrePrincipal || nombreCompleto,
+    caracteristica: caracteristica || "",
+  };
+}
+
+export function formatearPrimeraMayuscula(texto?: string | null): string {
+  if (!texto) return "";
+  const s = String(texto).trim();
+  if (!s) return "";
+  if (/^\d{1,2}W[-]?\d{2,3}$/i.test(s)) return s.toUpperCase();
+  if (/^\d{3}\/\d{2}\s*R\d{2}\+?$/i.test(s)) return s.toUpperCase();
+  if (/^R\d{2}$/i.test(s)) return s.toUpperCase();
+
+  let formatted = s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
+  formatted = formatted.replace(/-([a-záéíóúñ])/gi, (_, letter) => `-${letter.toUpperCase()}`);
+  formatted = formatted.replace(/\b(\d{1,2})w([-]?\d{2,3})\b/gi, (_, n, m) => `${n}W${m}`);
+  formatted = formatted.replace(/\b(\d{3}\/\d{2})\s*r(\d{2})\b/gi, (_, p, r) => `${p}R${r}`);
+  formatted = formatted.replace(/\br(\d{2})\b/gi, (_, r) => `R${r}`);
+  return formatted;
 }
 
 export default function CatalogoProductosServiciosTaller({
@@ -264,10 +295,12 @@ export default function CatalogoProductosServiciosTaller({
   mostrarChipsSeleccionados = true,
   className = "",
   siempreAbierto = false,
+  mostrarPrecios = false,
 }: CatalogoProductosServiciosTallerProps) {
   const [expandido, setExpandido] = useState<boolean>(siempreAbierto || inicialmenteExpandido);
 
   // Estados de los 3 Dropdowns superiores
+  const [filtroTipo, setFiltroTipo] = useState<"todos" | "PART" | "SERVICE">("todos");
   const [categoriaActivaId, setCategoriaActivaId] = useState<string>("aceite");
   const [subcategoriaActivaId, setSubcategoriaActivaId] = useState<string>("motor");
   const [presentacionActiva, setPresentacionActiva] = useState<string>("Galón");
@@ -308,21 +341,31 @@ export default function CatalogoProductosServiciosTaller({
           codigosExistentes.add(key);
           const categoriaProducto = String(p.category || "").trim();
           const categoriaNormalizada = categoriaProducto.toLowerCase();
-          const categoriaId =
-            p.lubCategoryId ||
-            (categoriaNormalizada.includes("aceit") || categoriaNormalizada.includes("lubric")
-              ? "aceite"
-              : categoriaNormalizada.includes("transmi")
-                ? "transmision"
-                : categoriaNormalizada.includes("filtro")
-                  ? "filtros"
-                  : categoriaNormalizada.includes("fluido")
-                    ? "fluidos"
-                    : categoriaNormalizada.includes("bater")
-                      ? "baterias"
-                      : categoriaProducto && categoriaNormalizada !== "general"
-                        ? `custom:${categoriaNormalizada}`
-                        : "filtros");
+          const textoCompleto = `${categoriaProducto} ${p.subCategory || ""} ${p.name || ""}`.toLowerCase();
+
+          let categoriaId = "otros_prod";
+          let labelCategoria = categoriaProducto ? categoriaProducto.trim().split(/\s+/)[0] : "Productos";
+
+          if (categoriaNormalizada.includes("aceit") || categoriaNormalizada.includes("lubric") || Boolean(p.viscosity) || textoCompleto.includes("aceite")) {
+            categoriaId = "aceite";
+            labelCategoria = "Aceites";
+          } else if (categoriaNormalizada.includes("filtro") || textoCompleto.includes("filtro")) {
+            categoriaId = "filtros";
+            labelCategoria = "Filtros";
+          } else if (categoriaNormalizada.includes("fluido") || textoCompleto.includes("refrigerante") || textoCompleto.includes("coolant") || textoCompleto.includes("liquido")) {
+            categoriaId = "fluidos";
+            labelCategoria = "Fluidos";
+          } else if (categoriaNormalizada.includes("bater") || textoCompleto.includes("bateria")) {
+            categoriaId = "baterias";
+            labelCategoria = "Baterías";
+          } else if (categoriaNormalizada.includes("transmi") || textoCompleto.includes("atf") || textoCompleto.includes("caja")) {
+            categoriaId = "transmision";
+            labelCategoria = "Transmisión";
+          } else if (categoriaProducto && categoriaNormalizada !== "general" && categoriaNormalizada !== "productos") {
+            categoriaId = `custom:${categoriaNormalizada}`;
+            labelCategoria = categoriaProducto.trim().split(/\s+/)[0];
+          }
+
           const esAceite = categoriaId === "aceite" || Boolean(p.viscosity);
           base.push({
             id: String(p.id || key),
@@ -332,7 +375,7 @@ export default function CatalogoProductosServiciosTaller({
             brand: p.brand || "Genérico",
             price: Number(p.price) || 0,
             viscosity: p.viscosity || (esAceite ? p.name : undefined),
-            category: categoriaProducto || "Productos",
+            category: labelCategoria,
             subCategory: p.subCategory || "General",
             lubCategoryId: categoriaId,
             lubSubcategoryId:
@@ -359,6 +402,44 @@ export default function CatalogoProductosServiciosTaller({
         const key = (s.code || s.name || s.title || `S-${s.id}`).toLowerCase();
         if (!codigosExistentes.has(key) && (s.name || s.title)) {
           codigosExistentes.add(key);
+          const categoriaServicio = String(s.category || s.specialty || "").trim();
+          const textoCompleto = `${categoriaServicio} ${s.subCategory || ""} ${s.name || s.title || ""}`.toLowerCase();
+          
+          let srvCatId = "servicios";
+          let labelCategoria = categoriaServicio ? categoriaServicio.trim().split(/\s+/)[0] : "Servicios";
+
+          if (textoCompleto.includes("freno") || textoCompleto.includes("pastilla") || textoCompleto.includes("disco")) {
+            srvCatId = "srv_frenos";
+            labelCategoria = "Frenos";
+          } else if (textoCompleto.includes("suspens") || textoCompleto.includes("direcc") || textoCompleto.includes("amortigu")) {
+            srvCatId = "srv_suspension";
+            labelCategoria = "Suspensión";
+          } else if (textoCompleto.includes("electric") || textoCompleto.includes("bater") || textoCompleto.includes("alternador") || textoCompleto.includes("arranque")) {
+            srvCatId = "srv_electrico";
+            labelCategoria = "Eléctrico";
+          } else if (textoCompleto.includes("transmi") || textoCompleto.includes("embrague") || textoCompleto.includes("clutch")) {
+            srvCatId = "srv_transmision";
+            labelCategoria = "Transmisión";
+          } else if (textoCompleto.includes("aire") || textoCompleto.includes("clima") || textoCompleto.includes("acondicionad") || textoCompleto.includes("r134")) {
+            srvCatId = "srv_aire";
+            labelCategoria = "Aire";
+          } else if (textoCompleto.includes("diag") || textoCompleto.includes("escan") || textoCompleto.includes("scanner") || textoCompleto.includes("computariz")) {
+            srvCatId = "srv_diagnostico";
+            labelCategoria = "Diagnóstico";
+          } else if (textoCompleto.includes("manten") || textoCompleto.includes("afin") || textoCompleto.includes("inyector") || textoCompleto.includes("bujia")) {
+            srvCatId = "srv_mantenimiento";
+            labelCategoria = "Mantenimiento";
+          } else if (textoCompleto.includes("lavad") || textoCompleto.includes("wash") || textoCompleto.includes("aspirad") || textoCompleto.includes("pulid")) {
+            srvCatId = "srv_carwash";
+            labelCategoria = "Lavado";
+          } else if (textoCompleto.includes("motor") || textoCompleto.includes("culata") || textoCompleto.includes("valvula") || textoCompleto.includes("distribucion")) {
+            srvCatId = "srv_motor";
+            labelCategoria = "Motor";
+          } else if (categoriaServicio && categoriaServicio.toLowerCase() !== "general" && categoriaServicio.toLowerCase() !== "servicios") {
+            srvCatId = `custom_srv:${categoriaServicio.toLowerCase()}`;
+            labelCategoria = categoriaServicio.trim().split(/\s+/)[0];
+          }
+
           base.push({
             id: String(s.id || key),
             code: s.code || `SRV-${s.id}`,
@@ -366,9 +447,9 @@ export default function CatalogoProductosServiciosTaller({
             fullName: s.name || s.title,
             brand: "Taller Mecánico",
             price: Number(s.price) || 0,
-            category: s.category || "Servicios",
-            subCategory: s.subCategory || "Servicios",
-            lubCategoryId: "servicios",
+            category: labelCategoria,
+            subCategory: s.subCategory || labelCategoria,
+            lubCategoryId: srvCatId,
             lubSubcategoryId: "todos",
             presentation: "Servicio",
             unitOfMeasure: "Servicio",
@@ -382,102 +463,108 @@ export default function CatalogoProductosServiciosTaller({
     return base;
   }, [productosCatalogo, serviciosCatalogo]);
 
-  const opcionesCategoriasDinamicas = useMemo(() => {
-    const categorias = new Map(
-      OPCIONES_CATEGORIAS.map((category) => [category.id, category])
-    );
-    todosLosItems.forEach((item) => {
-      if (
-        item.lubCategoryId?.startsWith("custom:") &&
-        item.category &&
-        item.category !== "General" &&
-        item.category !== "Productos"
-      ) {
-        categorias.set(item.lubCategoryId, {
-          id: item.lubCategoryId,
-          label: item.category,
-          icon: "📁",
-        });
-      }
-    });
-    return [...categorias.values()];
-  }, [todosLosItems]);
+  // Categorías de productos dinámicas (P)
+  const categoriasProductos = useMemo(() => {
+    const mapa = new Map<string, { id: string; label: string; icon: string }>();
 
-  // Subcategorías dinámicas según la categoría activa
-  const opcionesSubcategorias = useMemo(() => {
-    const opciones = [...(SUBCATEGORIAS_MAP[categoriaActivaId] || SUBCATEGORIAS_MAP.todos)];
+    CATEGORIAS_PRODUCTOS_BASE.forEach((cat) => mapa.set(cat.id, cat));
+
     todosLosItems
-      .filter(
-        (item) =>
-          item.lubCategoryId === categoriaActivaId &&
-          item.subCategory &&
-          item.subCategory !== "General" &&
-          item.lubSubcategoryId
-      )
+      .filter((item) => item.type === "PART")
       .forEach((item) => {
-        if (!opciones.some((option) => option.id === item.lubSubcategoryId)) {
-          opciones.push({
-            id: item.lubSubcategoryId!,
-            label: item.subCategory!,
-            icon: "🔧",
+        if (item.lubCategoryId && !mapa.has(item.lubCategoryId)) {
+          mapa.set(item.lubCategoryId, {
+            id: item.lubCategoryId,
+            label: item.category || item.lubCategoryId,
+            icon: "📦",
           });
         }
       });
-    return opciones;
-  }, [categoriaActivaId, todosLosItems]);
 
-  const opcionesPresentacionesDinamicas = useMemo(() => {
-    const opciones = [...OPCIONES_PRESENTACIONES];
-    todosLosItems.forEach((item) => {
-      const presentation = String(item.presentation || "").trim();
-      if (
-        presentation &&
-        presentation !== "Servicio" &&
-        !opciones.some(
-          (option) => option.id.toLocaleLowerCase() === presentation.toLocaleLowerCase()
-        )
-      ) {
-        opciones.push({ id: presentation, label: presentation, icon: "🧴" });
-      }
-    });
-    return opciones;
+    return Array.from(mapa.values());
   }, [todosLosItems]);
 
-  // Filtrado de productos para la cuadrícula
+  // Categorías de servicios dinámicas (S)
+  const categoriasServicios = useMemo(() => {
+    const mapa = new Map<string, { id: string; label: string; icon: string }>();
+    const servicios = todosLosItems.filter((item) => item.type === "SERVICE");
+
+    CATEGORIAS_SERVICIOS_BASE.forEach((cat) => {
+      const tieneItems = servicios.some(
+        (s) =>
+          s.lubCategoryId === cat.id ||
+          (s.category && s.category.toLowerCase().includes(cat.id.replace("srv_", "")))
+      );
+      if (tieneItems || servicios.length === 0) {
+        mapa.set(cat.id, cat);
+      }
+    });
+
+    servicios.forEach((item) => {
+      if (item.lubCategoryId && !mapa.has(item.lubCategoryId)) {
+        mapa.set(item.lubCategoryId, {
+          id: item.lubCategoryId,
+          label: item.category || "Servicios",
+          icon: "🛠️",
+        });
+      }
+    });
+
+    if (mapa.size === 0) {
+      mapa.set("servicios", { id: "servicios", label: "Servicios", icon: "🛠️" });
+    }
+
+    return Array.from(mapa.values());
+  }, [todosLosItems]);
+
+  // Categorías a mostrar según el filtro P/S activo:
+  // - Al marcar P: salen categorías de productos
+  // - Al marcar S: salen categorías de servicios
+  // - Ninguno marcado: salen todas las categorías
+  const opcionesCategoriasDinamicas = useMemo(() => {
+    const todasOpt = {
+      id: "todos",
+      label: "Todas",
+      icon: "📋",
+    };
+
+    let lista: { id: string; label: string; icon: string }[] = [];
+    if (filtroTipo === "PART") {
+      lista = [todasOpt, ...categoriasProductos];
+    } else if (filtroTipo === "SERVICE") {
+      lista = [todasOpt, ...categoriasServicios];
+    } else {
+      lista = [todasOpt, ...categoriasProductos, ...categoriasServicios];
+    }
+
+    // Asegurar que cada opción sea de una sola palabra
+    return lista.map((cat) => ({
+      ...cat,
+      label: cat.label.trim().split(/\s+/)[0] || cat.label,
+    }));
+  }, [filtroTipo, categoriasProductos, categoriasServicios]);
+
+  // Filtrado de productos y servicios para la cuadrícula
   const itemsFiltrados = useMemo(() => {
     const q = busqueda.trim().toLowerCase();
 
     return todosLosItems.filter((item) => {
-      // 1. Filtro por Categoría
+      // 1. Filtro Tipo: P (Productos) o S (Servicios)
+      if (filtroTipo === "PART" && item.type !== "PART") return false;
+      if (filtroTipo === "SERVICE" && item.type !== "SERVICE") return false;
+
+      // 2. Filtro por Categoría
       if (categoriaActivaId !== "todos") {
+        const catNorm = categoriaActivaId.replace(/^custom:|^cat:/, "").toLowerCase();
         const matchCat =
           item.lubCategoryId === categoriaActivaId ||
-          (item.category || "").toLowerCase().includes(categoriaActivaId);
+          (item.category || "").toLowerCase() === catNorm ||
+          (item.category || "").toLowerCase().includes(catNorm) ||
+          (item.lubCategoryId || "").toLowerCase().includes(catNorm);
         if (!matchCat) return false;
       }
 
-      // 2. Filtro por Subcategoría
-      if (subcategoriaActivaId !== "todos") {
-        const matchSub =
-          item.lubSubcategoryId === subcategoriaActivaId ||
-          (item.subCategory || "").toLowerCase().includes(subcategoriaActivaId) ||
-          (item.name || "").toLowerCase().includes(subcategoriaActivaId);
-        if (!matchSub) return false;
-      }
-
-      // 3. Filtro por Presentación
-      if (presentacionActiva !== "Todos") {
-        const pres = (item.presentation || item.unitOfMeasure || "").toLowerCase();
-        const buscada = presentacionActiva.toLowerCase();
-        if (!pres.includes(buscada) && !buscada.includes(pres)) {
-          // Si es aceite y se filtra por galón pero el item no especifica presentación, permitir si es aceite
-          if (!(item.viscosity && buscada === "galón")) {
-            return false;
-          }
-        }
-      }
-
-      // 4. Filtro por texto de búsqueda
+      // 3. Filtro por texto de búsqueda
       if (q) {
         const matchText =
           item.name.toLowerCase().includes(q) ||
@@ -493,7 +580,7 @@ export default function CatalogoProductosServiciosTaller({
 
       return true;
     });
-  }, [todosLosItems, categoriaActivaId, subcategoriaActivaId, presentacionActiva, busqueda]);
+  }, [todosLosItems, filtroTipo, categoriaActivaId, busqueda]);
 
   // Helper para saber la cantidad de un ítem en la orden / selección actual
   const obtenerCantidadItem = (item: ItemCatalogoTaller): number => {
@@ -513,18 +600,63 @@ export default function CatalogoProductosServiciosTaller({
     0
   );
 
+  const totalProductosSeleccionados = useMemo(() => {
+    return itemsSeleccionados
+      .filter(
+        (it) =>
+          it.type !== "SERVICE" &&
+          !it.category?.toLowerCase().includes("servicio") &&
+          !it.code?.toUpperCase().startsWith("SRV")
+      )
+      .reduce((acc, it) => acc + (Number(it.qty) || 1), 0);
+  }, [itemsSeleccionados]);
+
+  const totalServiciosSeleccionados = useMemo(() => {
+    return itemsSeleccionados
+      .filter(
+        (it) =>
+          it.type === "SERVICE" ||
+          it.category?.toLowerCase().includes("servicio") ||
+          it.code?.toUpperCase().startsWith("SRV")
+      )
+      .reduce((acc, it) => acc + (Number(it.qty) || 1), 0);
+  }, [itemsSeleccionados]);
+
+  const renderBadgeTotales = () => {
+    if (totalSeleccionados === 0) return null;
+
+    if (totalProductosSeleccionados > 0 && totalServiciosSeleccionados > 0) {
+      return (
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs sm:text-sm font-normal bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/25 shadow-2xs">
+          <span>📦 {totalProductosSeleccionados} {totalProductosSeleccionados === 1 ? "Producto" : "Productos"}</span>
+          <span className="text-zinc-300 dark:text-white/20">·</span>
+          <span>🔧 {totalServiciosSeleccionados} {totalServiciosSeleccionados === 1 ? "Servicio" : "Servicios"}</span>
+        </span>
+      );
+    }
+
+    if (totalProductosSeleccionados > 0) {
+      return (
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs sm:text-sm font-normal bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/25 shadow-2xs">
+          <span>📦</span>
+          <span>{totalProductosSeleccionados} {totalProductosSeleccionados === 1 ? "Producto" : "Productos"}</span>
+        </span>
+      );
+    }
+
+    return (
+      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs sm:text-sm font-normal bg-purple-500/10 text-purple-700 dark:text-purple-300 border border-purple-500/25 shadow-2xs">
+        <span>🔧</span>
+        <span>{totalServiciosSeleccionados} {totalServiciosSeleccionados === 1 ? "Servicio" : "Servicios"}</span>
+      </span>
+    );
+  };
+
   const labelCatActiva =
-    opcionesCategoriasDinamicas.find((c) => c.id === categoriaActivaId)?.label || "Categoría";
+    opcionesCategoriasDinamicas.find((c) => c.id === categoriaActivaId)?.label ||
+    "Todas";
   const iconCatActiva =
-    opcionesCategoriasDinamicas.find((c) => c.id === categoriaActivaId)?.icon || "🛢️";
-
-  const labelSubcatActiva =
-    opcionesSubcategorias.find((s) => s.id === subcategoriaActivaId)?.label || "Subcategoría";
-  const iconSubcatActiva =
-    opcionesSubcategorias.find((s) => s.id === subcategoriaActivaId)?.icon || "🚗";
-
-  const iconPresActiva =
-    opcionesPresentacionesDinamicas.find((p) => p.id === presentacionActiva)?.icon || "🧴";
+    opcionesCategoriasDinamicas.find((c) => c.id === categoriaActivaId)?.icon || "📋";
 
   return (
     <div
@@ -559,22 +691,14 @@ export default function CatalogoProductosServiciosTaller({
             </button>
           </div>
 
-          {totalSeleccionados > 0 && (
-            <span className="px-2 py-0.5 rounded-md text-[10px] font-medium bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/20">
-              {totalSeleccionados} {totalSeleccionados === 1 ? "ítem" : "ítems"}
-            </span>
-          )}
+          {renderBadgeTotales()}
         </div>
       ) : (
         <div className="px-4 py-2.5 flex items-center justify-between gap-3 border-b border-zinc-200/70 dark:border-white/10">
           <span className="text-xs sm:text-sm font-normal text-zinc-900 dark:text-zinc-100 tracking-tight">
             {titulo || "Catálogo"}
           </span>
-          {totalSeleccionados > 0 && (
-            <span className="px-2 py-0.5 rounded-md text-[10px] font-medium bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/20">
-              {totalSeleccionados} {totalSeleccionados === 1 ? "ítem" : "ítems"}
-            </span>
-          )}
+          {renderBadgeTotales()}
         </div>
       )}
 
@@ -584,214 +708,138 @@ export default function CatalogoProductosServiciosTaller({
       {(siempreAbierto || expandido) && (
         <div className={`p-3 sm:p-4 rounded-b-2xl space-y-3.5 animate-fade-in bg-zinc-50/40 dark:bg-black/20 ${!siempreAbierto ? "border-t border-zinc-200/80 dark:border-white/10" : ""}`}>
           {/* ===================================================================
-              FILA 1: 3 DROPDOWNS DESPLEGABLES (IDÉNTICO A LA CAPTURA)
-              Píldora 1: Aceites | Píldora 2: Motor | Píldora 3: Galón
+              MÁS ARRIBA: ICONO DE CATEGORÍA DESPLEGABLE (SOLO CATEGORÍAS)
               =================================================================== */}
           <div className="relative">
-          {filtrosFlotantesAbiertos && (
-            <div className="absolute bottom-full left-0 right-0 z-50 mb-2 rounded-2xl border border-zinc-200 dark:border-white/15 bg-white dark:bg-[#1a1a1e] p-3 shadow-xl animate-fade-in">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-bold text-zinc-800 dark:text-zinc-100">Filtrar productos</span>
-                <button
-                  type="button"
-                  onClick={() => setFiltrosFlotantesAbiertos(false)}
-                  className="w-7 h-7 rounded-lg text-zinc-500 hover:bg-zinc-100 dark:hover:bg-white/10 cursor-pointer"
-                  aria-label="Cerrar filtros"
-                >
-                  ✕
-                </button>
-              </div>
-          <div className="flex flex-col gap-2">
-            {/* Píldora 1: Categoría */}
-            <div className="relative w-full">
-              <span className="block mb-1 text-[10px] font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">1. Categoría</span>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setMenuCatAbierto((prev) => !prev);
-                  setMenuSubcatAbierto(false);
-                  setMenuPresAbierto(false);
-                }}
-                className={`w-full h-10 px-3 rounded-2xl border text-xs font-bold flex items-center justify-between gap-1.5 cursor-pointer transition-all active:scale-95 shadow-2xs truncate ${
-                  categoriaActivaId === "aceite"
-                    ? "border-blue-400 bg-blue-50/90 text-blue-700 dark:border-blue-400/40 dark:bg-blue-500/15 dark:text-blue-100 ring-1 ring-blue-300/60"
-                    : "border-zinc-200 bg-white text-zinc-800 dark:border-white/10 dark:bg-white/5 dark:text-zinc-200"
-                }`}
-              >
-                <span className="truncate flex items-center gap-1.5">
-                  <span className="text-sm shrink-0">{iconCatActiva}</span>
-                  <span className="truncate">{labelCatActiva}</span>
+            <button
+              type="button"
+              onClick={() => setMenuCatAbierto((prev) => !prev)}
+              className="w-full h-10 px-3.5 rounded-2xl border border-zinc-200 bg-white text-zinc-800 dark:border-white/10 dark:bg-white/5 dark:text-zinc-200 text-xs font-bold flex items-center justify-between gap-2 shadow-2xs hover:bg-zinc-50 dark:hover:bg-white/10 transition-all cursor-pointer select-none"
+              aria-label="Seleccionar categoría"
+              aria-expanded={menuCatAbierto}
+            >
+              <div className="flex items-center gap-2 truncate">
+                <span className="text-sm shrink-0">{iconCatActiva}</span>
+                <span className="truncate">
+                  {categoriaActivaId === "todos" ? "Todas" : labelCatActiva}
                 </span>
-                <span className="text-[10px] opacity-75 shrink-0">▾</span>
-              </button>
+              </div>
+              <div className="flex items-center gap-1.5 shrink-0 text-zinc-400">
+                {categoriaActivaId !== "todos" && (
+                  <span
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setCategoriaActivaId("todos");
+                    }}
+                    className="hover:text-zinc-600 dark:hover:text-zinc-200 px-1 text-xs cursor-pointer"
+                    title="Restablecer a Todas"
+                  >
+                    ✕
+                  </span>
+                )}
+                <svg
+                  className={`w-3.5 h-3.5 transition-transform duration-200 ${menuCatAbierto ? "rotate-180" : ""}`}
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
+            </button>
 
-              {menuCatAbierto && (
-                <div className="absolute top-12 left-0 z-40 w-44 rounded-2xl border border-zinc-200 dark:border-white/15 bg-white dark:bg-[#1a1a1e] p-1.5 shadow-2xl animate-fade-in space-y-0.5">
-                  {opcionesCategoriasDinamicas.map((cat) => (
+            {menuCatAbierto && (
+              <div className="absolute top-11 left-0 right-0 z-40 max-h-64 overflow-y-auto rounded-2xl border border-zinc-200 dark:border-white/15 bg-white dark:bg-[#1a1a1e] p-1.5 shadow-2xl animate-fade-in space-y-0.5">
+                {opcionesCategoriasDinamicas.map((cat) => {
+                  const esActiva = categoriaActivaId === cat.id;
+                  return (
                     <button
                       key={cat.id}
                       type="button"
                       onClick={() => {
                         setCategoriaActivaId(cat.id);
-                        setSubcategoriaActivaId("todos");
                         setMenuCatAbierto(false);
                       }}
-                      className={`w-full h-8 px-2.5 rounded-xl text-left text-xs font-semibold flex items-center gap-2 cursor-pointer transition-colors ${
-                        categoriaActivaId === cat.id
+                      className={`w-full h-8 px-2.5 rounded-xl text-left text-xs font-semibold flex items-center justify-between gap-2 cursor-pointer transition-colors ${
+                        esActiva
                           ? "bg-blue-50 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300 font-bold"
                           : "text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/10"
                       }`}
                     >
-                      <span className="text-sm shrink-0">{cat.icon}</span>
-                      <span className="truncate">{cat.label}</span>
+                      <div className="flex items-center gap-2 truncate">
+                        <span className="text-sm shrink-0">{cat.icon}</span>
+                        <span className="truncate">{cat.label}</span>
+                      </div>
+                      {esActiva && <span className="text-blue-600 dark:text-blue-400 text-xs font-bold">✓</span>}
                     </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Píldora 2: Subcategoría */}
-            <div className="relative w-full">
-              <span className="block mb-1 text-[10px] font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">2. Subcategoría</span>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setMenuSubcatAbierto((prev) => !prev);
-                  setMenuCatAbierto(false);
-                  setMenuPresAbierto(false);
-                }}
-                className="w-full h-10 px-3 rounded-2xl border border-zinc-200 bg-white text-zinc-800 dark:border-white/10 dark:bg-white/5 dark:text-zinc-200 text-xs font-bold flex items-center justify-between gap-1.5 cursor-pointer transition-all active:scale-95 shadow-2xs truncate"
-              >
-                <span className="truncate flex items-center gap-1.5">
-                  <span className="text-sm shrink-0">{iconSubcatActiva}</span>
-                  <span className="truncate">{labelSubcatActiva}</span>
-                </span>
-                <span className="text-[10px] opacity-75 shrink-0">▾</span>
-              </button>
-
-              {menuSubcatAbierto && (
-                <div className="absolute top-12 left-0 z-40 w-48 rounded-2xl border border-zinc-200 dark:border-white/15 bg-white dark:bg-[#1a1a1e] p-1.5 shadow-2xl animate-fade-in space-y-0.5 max-h-56 overflow-y-auto">
-                  {opcionesSubcategorias.map((sub) => (
-                    <button
-                      key={sub.id}
-                      type="button"
-                      onClick={() => {
-                        setSubcategoriaActivaId(sub.id);
-                        setMenuSubcatAbierto(false);
-                      }}
-                      className={`w-full h-8 px-2.5 rounded-xl text-left text-xs font-semibold flex items-center gap-2 cursor-pointer transition-colors ${
-                        subcategoriaActivaId === sub.id
-                          ? "bg-blue-50 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300 font-bold"
-                          : "text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/10"
-                      }`}
-                    >
-                      <span className="text-sm shrink-0">{sub.icon}</span>
-                      <span className="truncate">{sub.label}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Píldora 3: Envase / Presentación */}
-            <div className="relative w-full">
-              <span className="block mb-1 text-[10px] font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">3. Presentación</span>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setMenuPresAbierto((prev) => !prev);
-                  setMenuCatAbierto(false);
-                  setMenuSubcatAbierto(false);
-                }}
-                className="w-full h-10 px-3 rounded-2xl border border-zinc-200 bg-white text-zinc-800 dark:border-white/10 dark:bg-white/5 dark:text-zinc-200 text-xs font-bold flex items-center justify-between gap-1.5 cursor-pointer transition-all active:scale-95 shadow-2xs truncate"
-              >
-                <span className="truncate flex items-center gap-1.5">
-                  <span className="text-sm shrink-0">{iconPresActiva}</span>
-                  <span className="truncate">{presentacionActiva}</span>
-                </span>
-                <span className="text-[10px] opacity-75 shrink-0">▾</span>
-              </button>
-
-              {menuPresAbierto && (
-                <div className="absolute top-12 right-0 z-40 w-40 rounded-2xl border border-zinc-200 dark:border-white/15 bg-white dark:bg-[#1a1a1e] p-1.5 shadow-2xl animate-fade-in space-y-0.5">
-                  {opcionesPresentacionesDinamicas.map((pres) => (
-                    <button
-                      key={pres.id}
-                      type="button"
-                      onClick={() => {
-                        setPresentacionActiva(pres.id);
-                        setMenuPresAbierto(false);
-                      }}
-                      className={`w-full h-8 px-2.5 rounded-xl text-left text-xs font-semibold flex items-center gap-2 cursor-pointer transition-colors ${
-                        presentacionActiva === pres.id
-                          ? "bg-blue-50 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300 font-bold"
-                          : "text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/10"
-                      }`}
-                    >
-                      <span className="text-sm shrink-0">{pres.icon}</span>
-                      <span className="truncate">{pres.label}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-            </div>
-          )}
-
-          {/* ===================================================================
-              FILA 2: BARRA DE BÚSQUEDA (IDÉNTICA A LA CAPTURA)
-              =================================================================== */}
-          <div className="mb-3 flex items-center gap-2">
-          <div className="relative flex-1 min-w-0">
-            <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400 text-xs pointer-events-none">
-              🔍
-            </span>
-            <input
-              type="text"
-              value={busqueda}
-              onChange={(e) => setBusqueda(e.target.value)}
-              placeholder="Buscar..."
-              className="w-full h-10 pl-9 pr-8 rounded-2xl bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/10 text-xs text-zinc-900 dark:text-white placeholder-zinc-400 outline-none focus:ring-1 focus:ring-blue-400 shadow-2xs transition-all"
-            />
-            {busqueda && (
-              <button
-                type="button"
-                onClick={() => setBusqueda("")}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 text-xs cursor-pointer"
-              >
-                ✕
-              </button>
+                  );
+                })}
+              </div>
             )}
           </div>
-          <button
-            type="button"
-            onClick={() => {
-              setFiltrosFlotantesAbiertos((prev) => !prev);
-              setMenuCatAbierto(false);
-              setMenuSubcatAbierto(false);
-              setMenuPresAbierto(false);
-            }}
-            className={`h-10 w-11 shrink-0 rounded-2xl border flex items-center justify-center transition-colors cursor-pointer ${
-              filtrosFlotantesAbiertos
-                ? "border-blue-400 bg-blue-50 text-blue-700 dark:border-blue-400/50 dark:bg-blue-500/20 dark:text-blue-300"
-                : "border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50 dark:border-white/10 dark:bg-white/5 dark:text-zinc-300 dark:hover:bg-white/10"
-            }`}
-            aria-label="Abrir filtros"
-            aria-expanded={filtrosFlotantesAbiertos}
-            title="Filtrar productos"
-          >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
-              <path d="M4 7h16M7 12h10m-7 5h4" />
-              <circle cx="8" cy="7" r="1" fill="currentColor" />
-              <circle cx="15" cy="12" r="1" fill="currentColor" />
-              <circle cx="11" cy="17" r="1" fill="currentColor" />
-            </svg>
-          </button>
-          </div>
+
+          {/* ===================================================================
+              AQUÍ: BARRA DE BÚSQUEDA + DOS ICONOS P S (FILTROS PRODUCTOS Y SERVICIOS)
+              =================================================================== */}
+          <div className="mb-3 flex items-center gap-2">
+            <div className="relative flex-1 min-w-0">
+              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400 text-xs pointer-events-none">
+                🔍
+              </span>
+              <input
+                type="text"
+                value={busqueda}
+                onChange={(e) => setBusqueda(e.target.value)}
+                placeholder="Buscar..."
+                className="w-full h-10 pl-9 pr-8 rounded-2xl bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/10 text-xs text-zinc-900 dark:text-white placeholder-zinc-400 outline-none focus:ring-1 focus:ring-blue-400 shadow-2xs transition-all"
+              />
+              {busqueda && (
+                <button
+                  type="button"
+                  onClick={() => setBusqueda("")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 text-xs cursor-pointer"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+
+            {/* Icono P: Filtro Productos */}
+            <button
+              type="button"
+              onClick={() => {
+                setFiltroTipo((prev) => (prev === "PART" ? "todos" : "PART"));
+                setCategoriaActivaId("todos");
+              }}
+              className={`h-10 w-10 shrink-0 rounded-2xl border flex items-center justify-center font-black text-sm transition-all cursor-pointer shadow-2xs active:scale-95 ${
+                filtroTipo === "PART"
+                  ? "border-blue-500 bg-blue-50 text-blue-700 dark:border-blue-400 dark:bg-blue-500/20 dark:text-blue-300 ring-2 ring-blue-400/40 shadow-xs"
+                  : "border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900 dark:border-white/10 dark:bg-white/5 dark:text-zinc-400 dark:hover:bg-white/10 dark:hover:text-zinc-200"
+              }`}
+              title={filtroTipo === "PART" ? "Filtro activo: Productos (clic para ver todos)" : "Filtrar por Productos (P)"}
+              aria-label="Filtrar por Productos"
+            >
+              <span>P</span>
+            </button>
+
+            {/* Icono S: Filtro Servicios */}
+            <button
+              type="button"
+              onClick={() => {
+                setFiltroTipo((prev) => (prev === "SERVICE" ? "todos" : "SERVICE"));
+                setCategoriaActivaId("todos");
+              }}
+              className={`h-10 w-10 shrink-0 rounded-2xl border flex items-center justify-center font-black text-sm transition-all cursor-pointer shadow-2xs active:scale-95 ${
+                filtroTipo === "SERVICE"
+                  ? "border-emerald-500 bg-emerald-50 text-emerald-700 dark:border-emerald-400 dark:bg-emerald-500/20 dark:text-emerald-300 ring-2 ring-emerald-400/40 shadow-xs"
+                  : "border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900 dark:border-white/10 dark:bg-white/5 dark:text-zinc-400 dark:hover:bg-white/10 dark:hover:text-zinc-200"
+              }`}
+              title={filtroTipo === "SERVICE" ? "Filtro activo: Servicios (clic para ver todos)" : "Filtrar por Servicios (S)"}
+              aria-label="Filtrar por Servicios"
+            >
+              <span>S</span>
+            </button>
           </div>
 
           {/* ===================================================================
@@ -813,6 +861,7 @@ export default function CatalogoProductosServiciosTaller({
                   const stockVal =
                     item.stock !== undefined && item.stock !== null ? Number(item.stock) : 25;
                   const estaAgotado = stockVal <= 0;
+                  const { nombrePrincipal, caracteristica } = extraerDetalleCaracteristica(item);
 
                   return (
                     <div
@@ -825,38 +874,23 @@ export default function CatalogoProductosServiciosTaller({
                         enOrden
                           ? "bg-blue-50/70 dark:bg-blue-500/10 border-blue-400 dark:border-blue-400/50 ring-2 ring-blue-300/60 dark:ring-blue-400/30 shadow-xs"
                           : estaAgotado
-                          ? "bg-zinc-50/70 dark:bg-white/[0.02] border-zinc-200 dark:border-white/10 opacity-75"
+                          ? "bg-rose-500/[0.03] dark:bg-rose-500/[0.04] border-rose-300/80 dark:border-rose-500/30 opacity-80"
                           : "bg-white hover:bg-zinc-50 dark:bg-white/[0.03] dark:hover:bg-white/[0.06] border-zinc-200 dark:border-white/10 hover:border-blue-300 dark:hover:border-blue-500/40"
                       }`}
                     >
-                      {/* Botón restar "−" e indicador de Stock/Agotado (una sola letra: S en verde, A en rojo) */}
+                      {/* Indicador de Tipo/Stock */}
                       <div className="absolute top-2 left-2 flex items-center gap-1.5 z-10">
-                        {enOrden && (
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (cantEnOrden <= 1 && onEliminarItem) {
-                                onEliminarItem(item.id || item.code || item.name);
-                              } else {
-                                onAgregarItem?.(item, -1);
-                              }
-                            }}
-                            className="w-7 h-7 rounded-full bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-200 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-300 text-sm font-bold flex items-center justify-center shadow-xs active:scale-90 transition-all cursor-pointer"
-                            title="Restar 1"
-                          >
-                            −
-                          </button>
-                        )}
                         <span
-                          className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black border select-none ${
-                            estaAgotado
-                              ? "bg-rose-50 text-rose-600 border-rose-300 dark:bg-rose-500/20 dark:text-rose-400 dark:border-rose-500/40"
-                              : "bg-emerald-50 text-emerald-600 border-emerald-300 dark:bg-emerald-500/20 dark:text-emerald-400 dark:border-emerald-500/40"
+                          className={`px-2 py-0.5 rounded-full text-[10px] font-bold border select-none transition-colors ${
+                            item.type === "SERVICE"
+                              ? "bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-500/20 dark:text-purple-300 dark:border-purple-500/30"
+                              : estaAgotado
+                              ? "bg-rose-500 text-white border-rose-600 shadow-xs"
+                              : "bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-500/20 dark:text-emerald-400 dark:border-emerald-500/30"
                           }`}
-                          title={estaAgotado ? "Agotado (Sin stock)" : `Stock disponible (${stockVal})`}
+                          title={item.type === "SERVICE" ? "Servicio de taller" : estaAgotado ? "Agotado (Sin stock)" : `Stock disponible (${stockVal})`}
                         >
-                          {estaAgotado ? "A" : "S"}
+                          {item.type === "SERVICE" ? "Servicio" : estaAgotado ? "Agotado" : "Stock"}
                         </span>
                       </div>
 
@@ -877,7 +911,7 @@ export default function CatalogoProductosServiciosTaller({
                           />
                         ) : item.viscosity || item.lubCategoryId === "aceite" ? (
                           <BotellaAceiteGrafico
-                            viscosidad={item.viscosity || item.name}
+                            viscosidad={caracteristica || item.viscosity || item.name}
                             color={item.color || "#eab308"}
                           />
                         ) : (
@@ -888,14 +922,21 @@ export default function CatalogoProductosServiciosTaller({
                         )}
                       </div>
 
-                      {/* Texto de viscosidad/nombre y precio sin negrita (idéntico a la captura) */}
-                      <div className="w-full text-center mt-2 px-1">
-                        <span className="text-base sm:text-lg font-normal tracking-tight text-zinc-900 dark:text-white block truncate">
-                          {item.viscosity || item.name}
+                      {/* Texto de nombre y características (litros/viscosidad en una sola palabra) */}
+                      <div className="w-full text-center mt-2 px-1 flex flex-col items-center">
+                        <span className="text-xs sm:text-sm font-semibold tracking-tight text-zinc-900 dark:text-white block truncate max-w-full">
+                          {formatearPrimeraMayuscula(nombrePrincipal)}
                         </span>
-                        <span className="text-xs sm:text-sm font-normal font-mono text-zinc-700 dark:text-zinc-300 mt-0.5 block">
-                          ${Number(item.price || 0).toFixed(2)}
-                        </span>
+                        {caracteristica && (
+                          <span className="mt-1 inline-block px-2 py-0.5 rounded-md bg-zinc-100 dark:bg-white/10 text-zinc-700 dark:text-zinc-300 text-[10px] sm:text-[11px] font-semibold tracking-wide border border-zinc-200/60 dark:border-white/10 select-none truncate max-w-full">
+                            {formatearPrimeraMayuscula(caracteristica)}
+                          </span>
+                        )}
+                        {mostrarPrecios && (
+                          <span className="text-xs sm:text-sm font-normal font-mono text-zinc-700 dark:text-zinc-300 mt-0.5 block">
+                            ${Number(item.price || 0).toFixed(2)}
+                          </span>
+                        )}
                       </div>
                     </div>
                   );
@@ -905,48 +946,249 @@ export default function CatalogoProductosServiciosTaller({
           </div>
 
           {/* ===================================================================
-              RESUMEN DE ÍTEMS SELECCIONADOS / VINCULADOS
+              RESUMEN DE ÍTEMS SELECCIONADOS EN 2 SECCIONES ESTILO FACTURA: PRODUCTOS Y SERVICIOS
               =================================================================== */}
-          {mostrarChipsSeleccionados && itemsSeleccionados.length > 0 && (
-            <div className="pt-2 border-t border-zinc-200/60 dark:border-white/10 space-y-2">
-              <span className="text-xs font-semibold text-zinc-600 dark:text-zinc-400 block">
-                Ítems añadidos ({totalSeleccionados}):
-              </span>
-              <div className="flex flex-wrap gap-1.5">
-                {itemsSeleccionados.map((it, idx) => (
-                  <span
-                    key={it.id || it.code || idx}
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-medium bg-blue-50 text-blue-800 dark:bg-blue-500/15 dark:text-blue-200 border border-blue-200 dark:border-blue-500/30 shadow-2xs"
-                  >
-                    <span>{it.name}</span>
-                    {Number(it.qty) > 1 && (
-                      <span className="px-1.5 py-0.2 rounded-md bg-blue-200/80 dark:bg-blue-500/30 font-bold text-[10px]">
-                        x{it.qty}
-                      </span>
-                    )}
-                    {it.price !== undefined && (
-                      <span className="font-mono text-[11px] text-emerald-600 dark:text-emerald-400 font-bold">
-                        ${(Number(it.price) * (Number(it.qty) || 1)).toFixed(2)}
-                      </span>
-                    )}
-                    {onEliminarItem && (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onEliminarItem(it.id || it.code || it.name);
-                        }}
-                        className="ml-0.5 text-zinc-400 hover:text-rose-600 font-bold cursor-pointer"
-                        title="Eliminar ítem"
-                      >
-                        ×
-                      </button>
-                    )}
-                  </span>
-                ))}
+          {mostrarChipsSeleccionados && itemsSeleccionados.length > 0 && (() => {
+            const esServicioItem = (it: ItemSeleccionadoRef) =>
+              it.type === "SERVICE" ||
+              (it.category && it.category.toLowerCase().includes("servicio")) ||
+              (it.code && it.code.toUpperCase().startsWith("SRV"));
+
+            const esManual = (it: ItemSeleccionadoRef) =>
+              it.category === "Manual" ||
+              it.code?.startsWith("MANUAL-") ||
+              it.id?.startsWith("manual-") ||
+              Boolean((it as any).isManual);
+
+            const productosSeleccionados = itemsSeleccionados
+              .filter((it) => !esServicioItem(it))
+              .sort((a, b) => (esManual(a) ? 1 : 0) - (esManual(b) ? 1 : 0));
+
+            const serviciosSeleccionados = itemsSeleccionados
+              .filter((it) => esServicioItem(it))
+              .sort((a, b) => (esManual(a) ? 1 : 0) - (esManual(b) ? 1 : 0));
+
+            const totalProductos = productosSeleccionados.reduce((acc, it) => acc + (Number(it.qty) || 1), 0);
+            const totalServicios = serviciosSeleccionados.reduce((acc, it) => acc + (Number(it.qty) || 1), 0);
+
+            return (
+              <div className="pt-2.5 border-t border-zinc-200/60 dark:border-white/10 space-y-3.5">
+                {/* 1. SECCIÓN PRODUCTOS */}
+                {productosSeleccionados.length > 0 && (
+                  <div className="space-y-1.5">
+                    <span className="text-xs font-semibold text-blue-700 dark:text-blue-300 flex items-center gap-1.5">
+                      <span>📦</span>
+                      <span>Productos ({totalProductos}):</span>
+                    </span>
+
+                    <div className="overflow-x-auto rounded-xl border border-zinc-200/80 dark:border-white/10 bg-white dark:bg-black/20 shadow-2xs">
+                      <table className="w-full text-left text-xs border-collapse">
+                        <thead>
+                          <tr className="border-b border-zinc-200/80 dark:border-white/10 bg-zinc-50/80 dark:bg-white/[0.03] text-zinc-500 dark:text-zinc-400 text-[11px] font-semibold">
+                            <th className="py-2 px-3 w-24 text-center">Cant.</th>
+                            <th className="py-2 px-3">Descripción</th>
+                            <th className="py-2 px-2.5 w-28">Detalle</th>
+                            {mostrarPrecios && (
+                              <>
+                                <th className="py-2 px-2.5 w-20 text-right">PVP</th>
+                                <th className="py-2 px-2.5 w-24 text-right">Subtotal</th>
+                              </>
+                            )}
+                            <th className="py-2 px-2 w-12 text-center"></th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-zinc-200/60 dark:divide-white/5">
+                          {productosSeleccionados.map((it, idx) => {
+                            const { nombrePrincipal, caracteristica } = extraerDetalleCaracteristica(it as any);
+                            const cant = Number(it.qty) || 1;
+                            return (
+                              <tr key={it.id || it.code || `prod-${idx}`} className="hover:bg-zinc-50/60 dark:hover:bg-white/[0.02] transition-colors">
+                                <td className="py-2 px-3 text-center">
+                                  <div className="inline-flex items-center border border-zinc-200 dark:border-white/10 rounded-lg overflow-hidden bg-zinc-50 dark:bg-white/[0.04]">
+                                    {onAgregarItem && (
+                                      <button
+                                        type="button"
+                                        onClick={() => onAgregarItem(it as any, -1)}
+                                        className="w-5 h-5 flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-200/60 text-xs font-bold cursor-pointer transition-colors"
+                                        title="Restar 1"
+                                      >
+                                        −
+                                      </button>
+                                    )}
+                                    <span className="w-6 text-center text-xs font-bold text-zinc-800 dark:text-zinc-200">
+                                      {cant}
+                                    </span>
+                                    {onAgregarItem && (
+                                      <button
+                                        type="button"
+                                        onClick={() => onAgregarItem(it as any, 1)}
+                                        className="w-5 h-5 flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-200/60 text-xs font-bold cursor-pointer transition-colors"
+                                        title="Sumar 1"
+                                      >
+                                        +
+                                      </button>
+                                    )}
+                                  </div>
+                                </td>
+                                <td className="py-2 px-3 font-medium text-zinc-800 dark:text-zinc-200">
+                                  <span>{formatearPrimeraMayuscula(nombrePrincipal)}</span>
+                                </td>
+                                <td className="py-2 px-2.5">
+                                  {caracteristica ? (
+                                    <span
+                                      className={`inline-block px-2 py-0.5 rounded-md text-[10px] font-semibold border ${
+                                        caracteristica === "Manual"
+                                          ? "bg-amber-50 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-300/80 dark:border-amber-500/30"
+                                          : "bg-blue-50 dark:bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-200/70 dark:border-blue-500/30"
+                                      }`}
+                                    >
+                                      {formatearPrimeraMayuscula(caracteristica)}
+                                    </span>
+                                  ) : (
+                                    <span className="text-zinc-400 text-[10px]">-</span>
+                                  )}
+                                </td>
+                                {mostrarPrecios && (
+                                  <>
+                                    <td className="py-2 px-2.5 text-right font-mono text-zinc-600 dark:text-zinc-400">
+                                      ${Number(it.price || 0).toFixed(2)}
+                                    </td>
+                                    <td className="py-2 px-2.5 text-right font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                                      ${(Number(it.price || 0) * cant).toFixed(2)}
+                                    </td>
+                                  </>
+                                )}
+                                <td className="py-2 px-2 text-center">
+                                  {onEliminarItem && (
+                                    <button
+                                      type="button"
+                                      onClick={() => onEliminarItem(it.id || it.code || it.name)}
+                                      className="w-6 h-6 inline-flex items-center justify-center rounded-lg text-zinc-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10 text-sm font-bold cursor-pointer transition-colors"
+                                      title="Eliminar producto"
+                                    >
+                                      ×
+                                    </button>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {/* 2. SECCIÓN SERVICIOS */}
+                {serviciosSeleccionados.length > 0 && (
+                  <div className="space-y-1.5">
+                    <span className="text-xs font-semibold text-purple-700 dark:text-purple-300 flex items-center gap-1.5">
+                      <span>🔧</span>
+                      <span>Servicios ({totalServicios}):</span>
+                    </span>
+
+                    <div className="overflow-x-auto rounded-xl border border-zinc-200/80 dark:border-white/10 bg-white dark:bg-black/20 shadow-2xs">
+                      <table className="w-full text-left text-xs border-collapse">
+                        <thead>
+                          <tr className="border-b border-zinc-200/80 dark:border-white/10 bg-zinc-50/80 dark:bg-white/[0.03] text-zinc-500 dark:text-zinc-400 text-[11px] font-semibold">
+                            <th className="py-2 px-3 w-24 text-center">Cant.</th>
+                            <th className="py-2 px-3">Descripción</th>
+                            <th className="py-2 px-2.5 w-28">Detalle</th>
+                            {mostrarPrecios && (
+                              <>
+                                <th className="py-2 px-2.5 w-20 text-right">PVP</th>
+                                <th className="py-2 px-2.5 w-24 text-right">Subtotal</th>
+                              </>
+                            )}
+                            <th className="py-2 px-2 w-12 text-center"></th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-zinc-200/60 dark:divide-white/5">
+                          {serviciosSeleccionados.map((it, idx) => {
+                            const { nombrePrincipal, caracteristica } = extraerDetalleCaracteristica(it as any);
+                            const cant = Number(it.qty) || 1;
+                            return (
+                              <tr key={it.id || it.code || `srv-${idx}`} className="hover:bg-zinc-50/60 dark:hover:bg-white/[0.02] transition-colors">
+                                <td className="py-2 px-3 text-center">
+                                  <div className="inline-flex items-center border border-zinc-200 dark:border-white/10 rounded-lg overflow-hidden bg-zinc-50 dark:bg-white/[0.04]">
+                                    {onAgregarItem && (
+                                      <button
+                                        type="button"
+                                        onClick={() => onAgregarItem(it as any, -1)}
+                                        className="w-5 h-5 flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-200/60 text-xs font-bold cursor-pointer transition-colors"
+                                        title="Restar 1"
+                                      >
+                                        −
+                                      </button>
+                                    )}
+                                    <span className="w-6 text-center text-xs font-bold text-zinc-800 dark:text-zinc-200">
+                                      {cant}
+                                    </span>
+                                    {onAgregarItem && (
+                                      <button
+                                        type="button"
+                                        onClick={() => onAgregarItem(it as any, 1)}
+                                        className="w-5 h-5 flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-200/60 text-xs font-bold cursor-pointer transition-colors"
+                                        title="Sumar 1"
+                                      >
+                                        +
+                                      </button>
+                                    )}
+                                  </div>
+                                </td>
+                                <td className="py-2 px-3 font-medium text-zinc-800 dark:text-zinc-200">
+                                  <span>{formatearPrimeraMayuscula(nombrePrincipal)}</span>
+                                </td>
+                                <td className="py-2 px-2.5">
+                                  {caracteristica ? (
+                                    <span
+                                      className={`inline-block px-2 py-0.5 rounded-md text-[10px] font-semibold border ${
+                                        caracteristica === "Manual"
+                                          ? "bg-amber-50 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-300/80 dark:border-amber-500/30"
+                                          : "bg-purple-50 dark:bg-purple-500/15 text-purple-700 dark:text-purple-300 border-purple-200/70 dark:border-purple-500/30"
+                                      }`}
+                                    >
+                                      {formatearPrimeraMayuscula(caracteristica)}
+                                    </span>
+                                  ) : (
+                                    <span className="inline-block px-2 py-0.5 rounded-md bg-purple-50 dark:bg-purple-500/15 text-purple-700 dark:text-purple-300 text-[10px] font-semibold border border-purple-200/70 dark:border-purple-500/30">
+                                      Servicio
+                                    </span>
+                                  )}
+                                </td>
+                                {mostrarPrecios && (
+                                  <>
+                                    <td className="py-2 px-2.5 text-right font-mono text-zinc-600 dark:text-zinc-400">
+                                      ${Number(it.price || 0).toFixed(2)}
+                                    </td>
+                                    <td className="py-2 px-2.5 text-right font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                                      ${(Number(it.price || 0) * cant).toFixed(2)}
+                                    </td>
+                                  </>
+                                )}
+                                <td className="py-2 px-2 text-center">
+                                  {onEliminarItem && (
+                                    <button
+                                      type="button"
+                                      onClick={() => onEliminarItem(it.id || it.code || it.name)}
+                                      className="w-6 h-6 inline-flex items-center justify-center rounded-lg text-zinc-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10 text-sm font-bold cursor-pointer transition-colors"
+                                      title="Eliminar servicio"
+                                    >
+                                      ×
+                                    </button>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
               </div>
-            </div>
-          )}
+            );
+          })()}
         </div>
       )}
     </div>

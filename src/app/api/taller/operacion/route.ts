@@ -567,7 +567,8 @@ export async function GET(request: Request) {
         });
       }
 
-      // 0.96 Consulta de Historial Semanal: Vehículos atendidos y pagados en la semana en curso (Lunes a Domingo)
+      // 0.96 Consulta de Historial Semanal: Todos los vehículos atendidos en los 7 días (Lunes a Domingo / últimos 7 días)
+      // Requisito del usuario: Deben salir los 7 días sea que pague o no, sea que envíe la solicitud a propuesta o no.
       if (searchParams.get("historialSemanal") === "true") {
         const now = new Date();
         const currentDay = now.getDay(); // 0: domingo, 1: lunes, ..., 6: sábado
@@ -580,33 +581,72 @@ export async function GET(request: Request) {
         endOfWeek.setDate(startOfWeek.getDate() + 6);
         endOfWeek.setHours(23, 59, 59, 999);
 
-        // Consultar órdenes atendidas y pagadas dentro de la semana actual
-        const orderRows: any[] = (await prisma.$queryRawUnsafe(
-          `SELECT * FROM "WorkshopOrder"
-           WHERE (
-             "status" IN ('Pagado', 'PAGADO', 'Facturado', 'FACTURADO', 'Facturada', 'FACTURADA', 'Cobrado', 'COBRADO', 'Entregado', 'ENTREGADO', '05 Entregada', 'Entregada', 'Finalizado', 'FINALIZADO', 'Terminado', 'TERMINADO', 'Historial', 'HISTORIAL')
-             OR COALESCE("quoteStatus", '') IN ('Pagado', 'PAGADO', 'Facturado', 'FACTURADO', 'Facturada', 'FACTURADA')
-             OR COALESCE("deliveryStatus", '') IN ('Facturado', 'FACTURADO', 'Pagado', 'PAGADO')
-             OR ("totalCost" > 0 AND "totalPaid" >= "totalCost")
-           )
-           AND (
-             ("updatedAt" >= $1 AND "updatedAt" <= $2)
-             OR ("createdAt" >= $1 AND "createdAt" <= $2)
-           )
-           ORDER BY "updatedAt" DESC LIMIT 100`,
-          startOfWeek,
-          endOfWeek
-        ).catch(() => [])) as any[];
+        // Ventana de 7 días: cubre desde el inicio de la semana o al menos los últimos 7 días
+        const rolling7DaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        rolling7DaysAgo.setHours(0, 0, 0, 0);
+        const startRange = startOfWeek < rolling7DaysAgo ? startOfWeek : rolling7DaysAgo;
 
-        // Consultar historial de servicios registrados en la semana actual
-        const historyRows: any[] = (await prisma.$queryRawUnsafe(
-          `SELECT * FROM "WorkshopHistory"
-           WHERE ("createdAt" >= $1 AND "createdAt" <= $2)
-              OR ("updatedAt" >= $1 AND "updatedAt" <= $2)
-           ORDER BY "createdAt" DESC LIMIT 100`,
-          startOfWeek,
-          endOfWeek
-        ).catch(() => [])) as any[];
+        // Consultar órdenes de los 7 días: sea que hayan pagado o no, sea que hayan enviado propuesta o no
+        let orderRows: any[] = [];
+        try {
+          orderRows = (await prisma.$queryRawUnsafe(
+            `/* HISTORIAL_SEMANAL */ SELECT * FROM "WorkshopOrder"
+             WHERE (
+               COALESCE("status", '') != 'Cancelado'
+               AND COALESCE("status", '') != 'CANCELADO'
+             )
+             AND (
+               ("updatedAt" >= $1 AND "updatedAt" <= $2)
+               OR ("createdAt" >= $1 AND "createdAt" <= $2)
+               OR ("dateIn" >= $1 AND "dateIn" <= $2)
+             )
+             ORDER BY "updatedAt" DESC LIMIT 150`,
+            startRange,
+            endOfWeek
+          )) as any[];
+        } catch {
+          orderRows = [];
+        }
+
+        if (!orderRows || orderRows.length === 0) {
+          try {
+            orderRows = (await prisma.workshopOrder.findMany({
+              where: {
+                status: { notIn: ["Cancelado", "CANCELADO"] },
+              },
+              orderBy: { updatedAt: "desc" },
+              take: 150,
+            })) as any[];
+            const minTime = startRange.getTime();
+            const maxTime = endOfWeek.getTime();
+            orderRows = orderRows.filter((r: any) => {
+              const t1 = r.updatedAt ? new Date(r.updatedAt).getTime() : 0;
+              const t2 = r.createdAt ? new Date(r.createdAt).getTime() : 0;
+              const t3 = r.dateIn ? new Date(r.dateIn).getTime() : 0;
+              const t = Math.max(t1, t2, t3);
+              if (isNaN(t) || t === 0) return true;
+              return t >= minTime && t <= maxTime;
+            });
+          } catch {
+            orderRows = [];
+          }
+        }
+
+        // Consultar historial de servicios registrados en la semana actual si existen
+        let historyRows: any[] = [];
+        try {
+          historyRows = (await prisma.$queryRawUnsafe(
+            `/* HISTORIAL_SEMANAL */ SELECT * FROM "WorkshopHistory"
+             WHERE ("createdAt" >= $1 AND "createdAt" <= $2)
+                OR ("updatedAt" >= $1 AND "updatedAt" <= $2)
+                OR ("date" >= $1 AND "date" <= $2)
+             ORDER BY "createdAt" DESC LIMIT 100`,
+            startRange,
+            endOfWeek
+          )) as any[];
+        } catch {
+          historyRows = [];
+        }
 
         const vistos = new Set<string>();
         const attendedVehicles: any[] = [];
@@ -614,6 +654,7 @@ export async function GET(request: Request) {
         for (const row of orderRows) {
           const ord = mapOrderRow(row);
           const key = (ord.orderNumber || ord.id || "").toUpperCase();
+          if (key && vistos.has(key)) continue;
           if (key) vistos.add(key);
           if (ord.plate) vistos.add(ord.plate.toUpperCase());
 
@@ -625,7 +666,10 @@ export async function GET(request: Request) {
           const brand = ordAny.brand || row.brand || "";
           const model = ordAny.model || row.model || "";
           const year = ordAny.year || row.year || "";
-          const dateVal = ord.updatedAt || row.updatedAt || row.createdAt || new Date();
+          const dateVal = ord.updatedAt || row.updatedAt || ord.dateIn || row.dateIn || ord.createdAt || row.createdAt || new Date();
+
+          const totalCost = Number(ord.totalCost ?? row.totalCost ?? 0);
+          const totalPaid = Number(ord.totalPaid ?? row.totalPaid ?? 0);
 
           attendedVehicles.push({
             id: ord.id,
@@ -638,14 +682,16 @@ export async function GET(request: Request) {
             client: ord.client || "Cliente General",
             clientPhone: ord.clientPhone || "",
             services,
-            cost: Number(ord.totalPaid || ord.totalCost || 0),
-            totalCost: Number(ord.totalCost || 0),
-            totalPaid: Number(ord.totalPaid || ord.totalCost || 0),
+            cost: totalCost || totalPaid || 0,
+            totalCost,
+            totalPaid,
             mechanic: ord.mechanic || "Taller",
             mileage: ord.mileage ? `${ord.mileage.toLocaleString()} km` : "N/A",
             date: dateVal,
             photos: [...(ord.receptionPhotos || []), ...(ord.evidencePhotos || [])],
-            status: ord.status || "Atendido y Pagado",
+            status: ord.status || row.status || "En Proceso",
+            quoteStatus: ord.quoteStatus || row.quoteStatus || "Borrador",
+            deliveryStatus: ord.deliveryStatus || row.deliveryStatus || "",
             source: "order",
           });
         }
@@ -654,7 +700,9 @@ export async function GET(request: Request) {
           const histKey = (h.orderNumber || h.serviceCode || h.id || "").toUpperCase();
           const histPlate = (h.plate || "").toUpperCase();
           if (vistos.has(histKey) || (histPlate && vistos.has(histPlate))) continue;
+          if (histKey) vistos.add(histKey);
 
+          const hCost = Number(h.cost || 0);
           attendedVehicles.push({
             id: h.id,
             orderNumber: h.orderNumber || h.serviceCode,
@@ -666,24 +714,30 @@ export async function GET(request: Request) {
             client: h.client || "Cliente General",
             clientPhone: "",
             services: safeParseJson<string[]>(h.servicesJson, []),
-            cost: Number(h.cost || 0),
-            totalCost: Number(h.cost || 0),
-            totalPaid: Number(h.cost || 0),
+            cost: hCost,
+            totalCost: hCost,
+            totalPaid: hCost,
             mechanic: h.mechanic || "Taller",
             mileage: h.mileage || "N/A",
             date: h.createdAt || h.date,
             photos: safeParseJson<string[]>(h.photosJson, []),
-            status: "Pagado",
+            status: "Entregado",
+            quoteStatus: "Aprobada",
+            deliveryStatus: "Entregado",
             source: "history",
           });
         }
+
+        const totalCostSum = attendedVehicles.reduce((sum, a) => sum + (Number(a.totalCost || a.cost) || 0), 0);
+        const totalPaidSum = attendedVehicles.reduce((sum, a) => sum + (Number(a.totalPaid) || 0), 0);
 
         return NextResponse.json({
           success: true,
           weekStart: startOfWeek.toISOString(),
           weekEnd: endOfWeek.toISOString(),
           totalCount: attendedVehicles.length,
-          totalRevenue: attendedVehicles.reduce((sum, a) => sum + (Number(a.cost) || 0), 0),
+          totalRevenue: totalPaidSum,
+          totalCostSum,
           attendedVehicles,
         });
       }

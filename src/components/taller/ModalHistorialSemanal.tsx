@@ -21,17 +21,21 @@ export interface VehiculoAtendidoSemanal {
   date: string;
   photos: string[];
   status: string;
+  quoteStatus?: string;
+  deliveryStatus?: string;
   source?: string;
 }
 
 interface ModalHistorialSemanalProps {
   isOpen: boolean;
   onClose: () => void;
+  onSeleccionarAuto?: (auto: any) => void;
 }
 
 export default function ModalHistorialSemanal({
   isOpen,
   onClose,
+  onSeleccionarAuto,
 }: ModalHistorialSemanalProps) {
   const [cargando, setCargando] = useState(false);
   const [vehiculos, setVehiculos] = useState<VehiculoAtendidoSemanal[]>([]);
@@ -104,15 +108,36 @@ export default function ModalHistorialSemanal({
         (v.vehicle && v.vehicle.toLowerCase().includes(q)) ||
         (v.orderNumber && v.orderNumber.toLowerCase().includes(q)) ||
         (v.mechanic && v.mechanic.toLowerCase().includes(q)) ||
+        (v.status && v.status.toLowerCase().includes(q)) ||
+        (v.quoteStatus && v.quoteStatus.toLowerCase().includes(q)) ||
         (Array.isArray(v.services) && v.services.some((s) => s.toLowerCase().includes(q)))
       );
     });
   }, [vehiculos, busqueda]);
 
-  // Totales
+  // Totales de la semana
   const totalVehiculos = vehiculos.length;
-  const totalDinero = useMemo(() => {
-    return vehiculos.reduce((acc, v) => acc + (Number(v.totalPaid || v.cost) || 0), 0);
+  const { totalPagados, totalNoPagados } = useMemo(() => {
+    let pagados = 0;
+    let noPagados = 0;
+
+    for (const v of vehiculos) {
+      const pagado =
+        (Number(v.totalPaid) > 0 && Number(v.totalPaid) >= Number(v.totalCost)) ||
+        ["pagado", "cobrado", "facturado"].some(
+          (s) =>
+            (v.status || "").toLowerCase().includes(s) ||
+            (v.deliveryStatus || "").toLowerCase().includes(s) ||
+            (v.quoteStatus || "").toLowerCase().includes(s)
+        );
+      if (pagado) {
+        pagados++;
+      } else {
+        noPagados++;
+      }
+    }
+
+    return { totalPagados: pagados, totalNoPagados: noPagados };
   }, [vehiculos]);
 
   if (!isOpen) return null;
@@ -168,11 +193,23 @@ export default function ModalHistorialSemanal({
         </div>
 
         {/* BARRA DE ESTADÍSTICAS */}
-        <div className="px-5 sm:px-6 py-3 bg-zinc-100/60 dark:bg-black/20 border-b border-zinc-200 dark:border-white/5 flex items-center justify-between gap-3">
+        <div className="px-5 sm:px-6 py-3 bg-zinc-100/60 dark:bg-black/20 border-b border-zinc-200 dark:border-white/5 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <span className="text-xs text-zinc-500 dark:text-zinc-400">Atendidos esta semana:</span>
-            <span className="text-sm font-bold text-zinc-900 dark:text-white px-2 py-0.5 rounded-lg bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/10 shadow-2xs">
+            <span className="text-sm font-bold text-zinc-900 dark:text-white px-2.5 py-0.5 rounded-lg bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/10 shadow-2xs">
               {totalVehiculos} {totalVehiculos === 1 ? "vehículo" : "vehículos"}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2 text-xs">
+            <span className="text-zinc-500 dark:text-zinc-400">Pagados:</span>
+            <span className="font-bold text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+              {totalPagados}
+            </span>
+            <span className="text-zinc-300 dark:text-zinc-700">•</span>
+            <span className="text-zinc-500 dark:text-zinc-400">No pagados:</span>
+            <span className="font-bold text-amber-600 dark:text-amber-400 px-2 py-0.5 rounded-lg bg-amber-500/10 border border-amber-500/20">
+              {totalNoPagados}
             </span>
           </div>
         </div>
@@ -223,16 +260,25 @@ export default function ModalHistorialSemanal({
               <div className="w-16 h-16 mx-auto rounded-2xl bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/10 flex items-center justify-center text-3xl">
                 🚗
               </div>
-              <h3 className="text-sm sm:text-base font-semibold text-zinc-800 dark:text-zinc-200">
-                {busqueda
-                  ? "No se encontraron vehículos que coincidan con la búsqueda"
-                  : "No hay vehículos atendidos y pagados en esta semana"}
-              </h3>
-              <p className="text-xs text-zinc-500 dark:text-zinc-400 max-w-md mx-auto">
-                {busqueda
-                  ? "Prueba buscando con otro término, placa o nombre de cliente."
-                  : "Cuando se finalice y pague una orden durante esta semana, aparecerá automáticamente en este historial."}
-              </p>
+              {busqueda ? (
+                <>
+                  <h3 className="text-sm sm:text-base font-semibold text-zinc-800 dark:text-zinc-200">
+                    No se encontraron vehículos que coincidan con la búsqueda
+                  </h3>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400 max-w-md mx-auto">
+                    Prueba buscando con otro término, placa o nombre de cliente.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <h3 className="text-sm sm:text-base font-semibold text-zinc-800 dark:text-zinc-200">
+                    No hay vehículos registrados en los 7 días de esta semana
+                  </h3>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400 max-w-md mx-auto">
+                    Los vehículos recibidos o atendidos durante la semana aparecerán aquí automáticamente.
+                  </p>
+                </>
+              )}
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-3">
@@ -248,38 +294,135 @@ export default function ModalHistorialSemanal({
                     })
                   : "Esta semana";
 
+                // Estado de Pago (sea que pague o no)
+                const estaPagado =
+                  (Number(v.totalPaid) > 0 && Number(v.totalPaid) >= Number(v.totalCost)) ||
+                  ["pagado", "cobrado", "facturado"].some(
+                    (s) =>
+                      (v.status || "").toLowerCase().includes(s) ||
+                      (v.deliveryStatus || "").toLowerCase().includes(s)
+                  );
+
+                // Estado de Solicitud / Propuesta (sea que envíe la solicitud a propuesta o no)
+                const quoteSt = (v.quoteStatus || "").toLowerCase();
+                const tienePropuestaEnviada =
+                  quoteSt.includes("pendiente") ||
+                  quoteSt.includes("propuesta") ||
+                  quoteSt.includes("aprobaci");
+                const propuestaAprobada =
+                  quoteSt.includes("aprobada") || quoteSt.includes("aprobado");
+                const propuestaRechazada = quoteSt.includes("rechazad");
+
+                // Estado operativo de la orden
+                const stLower = (v.status || "En Proceso").toLowerCase();
+
                 return (
                   <div
                     key={v.id || v.orderNumber}
-                    className="p-4 sm:p-5 rounded-2xl border border-zinc-200/80 dark:border-white/10 bg-white dark:bg-[#16161b] hover:border-purple-500/40 dark:hover:border-purple-500/40 transition-all shadow-xs flex flex-col gap-3 group"
+                    onClick={() => onSeleccionarAuto && onSeleccionarAuto(v)}
+                    className={`p-4 sm:p-5 rounded-2xl border border-zinc-200/80 dark:border-white/10 bg-white dark:bg-[#16161b] hover:border-purple-500/40 dark:hover:border-purple-500/40 transition-all shadow-xs flex flex-col gap-3 group ${
+                      onSeleccionarAuto ? "cursor-pointer" : ""
+                    }`}
                   >
-                    {/* FILA SUPERIOR: Placa, Vehículo, Cliente y Estado Pagado */}
+                    {/* FILA SUPERIOR: Placa, Vehículo, Cliente, Costo y Badges */}
                     <div className="flex flex-wrap items-center justify-between gap-2.5">
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
                         {/* PLACA */}
                         <div className="px-2.5 py-1 rounded-lg bg-blue-500/10 dark:bg-blue-500/15 border border-blue-500/25 text-blue-700 dark:text-blue-300 font-mono font-normal text-xs sm:text-sm tracking-wider shrink-0 flex items-center gap-1.5">
                           <span className="text-[10px] text-blue-500/70 font-sans font-normal">EC</span>
                           <span className="font-normal">{v.plate || "S/P"}</span>
                         </div>
 
-                        <div>
-                          <h4 className="text-sm sm:text-base font-bold text-zinc-900 dark:text-white">
-                            {v.vehicle || `${v.brand || ''} ${v.model || ''}`.trim() || "Vehículo"} {v.year ? `(${v.year})` : ""}
+                        <div className="min-w-0">
+                          <h4 className="text-sm sm:text-base font-bold text-zinc-900 dark:text-white truncate">
+                            {v.vehicle || `${v.brand || ""} ${v.model || ""}`.trim() || "Vehículo"}{" "}
+                            {v.year ? `(${v.year})` : ""}
                           </h4>
-                          <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                          <p className="text-xs text-zinc-500 dark:text-zinc-400 truncate">
                             <span className="font-semibold text-zinc-700 dark:text-zinc-300">👤 {v.client}</span>
+                            {v.orderNumber && (
+                              <span className="ml-2 text-[11px] text-zinc-400">
+                                • {v.orderNumber}
+                              </span>
+                            )}
                           </p>
                         </div>
                       </div>
 
-                      <div className="ml-auto">
-                        <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
-                          ✓ PAGADO
-                        </span>
+                      {/* BADGES: Propuesta, Estado de orden, Estado de Pago, y Monto */}
+                      <div className="flex flex-wrap items-center gap-2 ml-auto">
+                        {/* 1. Badge de Solicitud / Propuesta (sea que envíe a propuesta o no) */}
+                        {propuestaAprobada ? (
+                          <span className="px-2 py-0.5 rounded-lg text-[10px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
+                            ✓ Propuesta Aprobada
+                          </span>
+                        ) : tienePropuestaEnviada ? (
+                          <span className="px-2 py-0.5 rounded-lg text-[10px] font-semibold bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 flex items-center gap-1">
+                            📋 Propuesta Enviada
+                          </span>
+                        ) : propuestaRechazada ? (
+                          <span className="px-2 py-0.5 rounded-lg text-[10px] font-semibold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 flex items-center gap-1">
+                            ✕ Rechazada
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded-lg text-[10px] font-semibold bg-zinc-500/10 text-zinc-500 dark:text-zinc-400 border border-zinc-500/20 flex items-center gap-1">
+                            📝 Sin propuesta
+                          </span>
+                        )}
+
+                        {/* 2. Badge de Estado de la Orden */}
+                        {stLower.includes("pausad") ? (
+                          <span className="px-2 py-0.5 rounded-lg text-[10px] font-semibold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 flex items-center gap-1">
+                            ⏸️ Pausada
+                          </span>
+                        ) : stLower.includes("entreg") || stLower.includes("finaliz") ? (
+                          <span className="px-2 py-0.5 rounded-lg text-[10px] font-semibold bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20 flex items-center gap-1">
+                            🚗 Entregado
+                          </span>
+                        ) : stLower.includes("listo") ? (
+                          <span className="px-2 py-0.5 rounded-lg text-[10px] font-semibold bg-teal-500/10 text-teal-600 dark:text-teal-400 border border-teal-500/20 flex items-center gap-1">
+                            ✅ Listo
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded-lg text-[10px] font-semibold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 flex items-center gap-1">
+                            ⚙️ {v.status || "En Proceso"}
+                          </span>
+                        )}
+
+                        {/* 3. Badge de Pago (sea que pague o no) */}
+                        {estaPagado ? (
+                          <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
+                            ✓ PAGADO
+                          </span>
+                        ) : (
+                          <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 flex items-center gap-1">
+                            ⏳ NO PAGADO
+                          </span>
+                        )}
                       </div>
                     </div>
 
-                    {/* FILA INFERIOR: Mecánico y Fecha / Hora de ingreso */}
+                    {/* SERVICIOS / ITEMS */}
+                    {Array.isArray(v.services) && v.services.length > 0 && (
+                      <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                        <span className="text-[10px] font-medium text-zinc-400">Servicios:</span>
+                        {v.services.slice(0, 4).map((srv, sIdx) => (
+                          <span
+                            key={sIdx}
+                            className="px-2 py-0.5 rounded-md text-[10px] font-medium bg-zinc-100 dark:bg-white/5 text-zinc-600 dark:text-zinc-300 border border-zinc-200/60 dark:border-white/5"
+                          >
+                            {srv}
+                          </span>
+                        ))}
+                        {v.services.length > 4 && (
+                          <span className="text-[10px] text-zinc-400 font-medium">
+                            +{v.services.length - 4} más
+                          </span>
+                        )}
+                      </div>
+                    )}
+
+                    {/* FILA INFERIOR: Mecánico y Fecha / Hora de atención */}
                     <div className="pt-2 border-t border-zinc-100 dark:border-white/5 flex flex-wrap items-center justify-between gap-2 text-[11px] text-zinc-500 dark:text-zinc-400">
                       <div>
                         <strong className="text-zinc-600 dark:text-zinc-300">Mecánico:</strong> {v.mechanic || "Taller"}

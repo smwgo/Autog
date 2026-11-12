@@ -828,6 +828,34 @@ export default function TallerPanel() {
     }
   };
 
+  // Referencia y handler para abrir edición con doble clic o doble toque (dos veces con los dedos)
+  const ultimoToqueAutoRef = useRef<{ id: string; time: number }>({ id: "", time: 0 });
+
+  const handleAbrirEditarOrden = useCallback((autoParaEditar: UnifiedOrder) => {
+    if (!autoParaEditar || !autoParaEditar.id) return;
+    try {
+      const cliMatch = clientesCatalogo.find(
+        (c) =>
+          c.id === (autoParaEditar as any).customerId ||
+          (c.name && autoParaEditar.client && c.name.toLowerCase() === autoParaEditar.client.toLowerCase()) ||
+          (Array.isArray(c.vehicles) && c.vehicles.some((v: any) => v.plate === autoParaEditar.plate || v.id === autoParaEditar.vehicleId))
+      );
+      const vehMatch = clientesCatalogo
+        .flatMap((c) => (Array.isArray(c.vehicles) ? c.vehicles : []))
+        .find((v: any) => v.id === autoParaEditar.vehicleId || v.plate === autoParaEditar.plate);
+      sessionStorage.setItem(
+        "taller_orden_editar_cache",
+        JSON.stringify({
+          editId: autoParaEditar.id,
+          order: autoParaEditar,
+          customer: cliMatch || null,
+          vehicle: vehMatch || null,
+        })
+      );
+    } catch {}
+    router.push(`/taller/nueva-orden?editId=${encodeURIComponent(autoParaEditar.id)}`);
+  }, [clientesCatalogo, router]);
+
   // FLOTANTE NUEVA ORDEN DE TRABAJO (SOLO SE ABRE AL PULSAR BOTÓN NUEVA ORDEN)
   const [mostrarModalNuevaOrden, setMostrarModalNuevaOrden] = useState(false);
   // HISTORIAL SEMANAL DE VEHÍCULOS ATENDIDOS Y PAGADOS
@@ -5040,40 +5068,6 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                   <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </button>
-              {ordenActiva && ordenActiva.plate && ordenActiva.plate !== "EXPRESS" && (
-                <Link
-                  href={`/taller/nueva-orden?editId=${encodeURIComponent(ordenActiva.id)}`}
-                  onClick={() => {
-                    try {
-                      const cliMatch = clientesCatalogo.find(
-                        (c) =>
-                          c.id === (ordenActiva as any).customerId ||
-                          (c.name && ordenActiva.client && c.name.toLowerCase() === ordenActiva.client.toLowerCase()) ||
-                          (Array.isArray(c.vehicles) && c.vehicles.some((v: any) => v.plate === ordenActiva.plate || v.id === ordenActiva.vehicleId))
-                      );
-                      const vehMatch = clientesCatalogo
-                        .flatMap((c) => (Array.isArray(c.vehicles) ? c.vehicles : []))
-                        .find((v: any) => v.id === ordenActiva.vehicleId || v.plate === ordenActiva.plate);
-                      sessionStorage.setItem(
-                        "taller_orden_editar_cache",
-                        JSON.stringify({
-                          editId: ordenActiva.id,
-                          order: ordenActiva,
-                          customer: cliMatch || null,
-                          vehicle: vehMatch || null,
-                        })
-                      );
-                    } catch {}
-                  }}
-                  aria-label="Editar Orden"
-                  title="Editar datos de la Orden (Cliente, Vehículo, Placa, Ingreso)"
-                  className="w-11 h-11 sm:w-9 sm:h-9 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/35 text-amber-600 dark:text-amber-400 flex items-center justify-center transition-all cursor-pointer shadow-xs active:scale-95 shrink-0"
-                >
-                  <svg className="w-4.5 h-4.5 sm:w-4 sm:h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                  </svg>
-                </Link>
-              )}
               <Link
                 href="/taller/nueva-orden"
                 aria-label="Nueva Orden"
@@ -5218,7 +5212,18 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                       data-order-carousel-card
                       data-order-id={auto.id}
                       type="button"
+                      title="Doble clic o doble toque para editar orden"
                       onClick={() => {
+                        const ahora = Date.now();
+                        const diff = ahora - ultimoToqueAutoRef.current.time;
+                        if (ultimoToqueAutoRef.current.id === auto.id && diff < 350) {
+                          // Doble toque con los dedos o doble clic abre edición
+                          ultimoToqueAutoRef.current = { id: "", time: 0 };
+                          handleAbrirEditarOrden(auto);
+                          return;
+                        }
+                        ultimoToqueAutoRef.current = { id: auto.id, time: ahora };
+
                         if (autosEnPista.length < 2) return;
                         const index = autosEnPista.findIndex((item) => item.id === auto.id);
                         const nextIndex = (index + 1) % autosEnPista.length;
@@ -5228,6 +5233,10 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                           left: nextIndex * (container.clientWidth + 8),
                           behavior: "smooth",
                         });
+                      }}
+                      onDoubleClick={(e) => {
+                        e.preventDefault();
+                        handleAbrirEditarOrden(auto);
                       }}
                       aria-pressed={esActivo}
                       className={`snap-start shrink-0 w-full min-h-[76px] sm:min-h-[68px] px-3.5 py-2.5 sm:px-3 sm:py-2 rounded-2xl sm:rounded-xl border text-left flex items-center justify-between gap-3 transition-colors ${
@@ -5448,55 +5457,6 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
               })}
             </div>
 
-            {/* BOTÓN ENGRANAJE: REGISTRO MANUAL / MODO FORMULARIO (SOLO EN LUBRICENTRO, CARWASH Y TECNICENTRO) */}
-            {moduloTaller !== "taller" && etapaActiva !== 4 && (
-              <button
-                type="button"
-                onClick={() => setModoRapidoActivo((prev) => !prev)}
-                className={`h-10 w-10 sm:h-11 sm:w-11 flex items-center justify-center rounded-2xl border backdrop-blur-md shadow-sm dark:shadow-xl transition-all cursor-pointer group shrink-0 ${
-                  modoRapidoActivo
-                    ? moduloTaller === "lubricentro"
-                      ? "bg-amber-500/15 border-amber-400 text-amber-600 dark:text-amber-300"
-                      : moduloTaller === "carwash"
-                        ? "bg-teal-500/15 border-teal-400 text-teal-600 dark:text-teal-300"
-                        : "bg-emerald-500/15 border-emerald-400 text-emerald-600 dark:text-emerald-300"
-                    : "bg-white dark:bg-[#0d0d0e] border-zinc-200 dark:border-white/10 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5"
-                }`}
-                title={
-                  moduloTaller === "lubricentro"
-                    ? "Cambiar vista de Lubricentro"
-                    : moduloTaller === "carwash"
-                      ? "Cambiar vista de Car Wash"
-                      : moduloTaller === "tecnicentro"
-                        ? "Cambiar vista de Tecnicentro"
-                        : "Registro Manual"
-                }
-                aria-label={
-                  moduloTaller === "lubricentro"
-                    ? "Cambiar vista de Lubricentro"
-                    : moduloTaller === "carwash"
-                      ? "Cambiar vista de Car Wash"
-                      : moduloTaller === "tecnicentro"
-                        ? "Cambiar vista de Tecnicentro"
-                        : "Abrir formulario manual"
-                }
-              >
-                <svg
-                  className="w-5 h-5 transition-transform duration-300 group-hover:rotate-45"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={1.8}
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-                  />
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-              </button>
-            )}
           </div>
 
           {/* A LADO DERECHO: ETIQUETA DE APROBACIÓN */}
