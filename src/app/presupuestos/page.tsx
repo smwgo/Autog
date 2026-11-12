@@ -309,9 +309,9 @@ export default function PanelPresupuestosPage() {
   // CARGA DE DATOS DESDE NEON
   // ============================================================================
 
-  const cargarOrdenes = useCallback(async () => {
+  const cargarOrdenes = useCallback(async (isSilent = false) => {
     try {
-      setCargando(true);
+      if (!isSilent) setCargando(true);
       const params = new URLSearchParams();
       if (busqueda) params.set("busqueda", busqueda);
       if (filtroEstado !== "TODOS") params.set("estado", filtroEstado);
@@ -319,24 +319,24 @@ export default function PanelPresupuestosPage() {
 
       const res = await fetch(`/api/presupuestos/ordenes?${params.toString()}`);
       if (!res.ok) {
-        let errText = `Error al consultar órdenes (${res.status})`;
-        try {
-          const isJson = res.headers.get("content-type")?.includes("application/json");
-          if (isJson) {
-            const errData = await res.json();
-            errText = errData.error || errText;
-          }
-        } catch {
-          // El servidor devolvió HTML (404/500)
+        if (!isSilent) {
+          let errText = `Error al consultar órdenes (${res.status})`;
+          try {
+            const isJson = res.headers.get("content-type")?.includes("application/json");
+            if (isJson) {
+              const errData = await res.json();
+              errText = errData.error || errText;
+            }
+          } catch {}
+          mostrarToast(errText, "err");
         }
-        mostrarToast(errText, "err");
         return;
       }
       let data: any = null;
       try {
         data = await res.json();
       } catch {
-        mostrarToast("Respuesta inválida del servidor al listar órdenes", "err");
+        if (!isSilent) mostrarToast("Respuesta inválida del servidor al listar órdenes", "err");
         return;
       }
 
@@ -350,19 +350,23 @@ export default function PanelPresupuestosPage() {
         });
         setOrdenes(ordenesUnicas);
         if (data.kpis) setKpis(data.kpis);
-      } else {
+      } else if (!isSilent) {
         mostrarToast(data.error || "Error al cargar órdenes", "err");
       }
     } catch (err: any) {
       console.error(err);
-      mostrarToast("Error de conexión al cargar órdenes", "err");
+      if (!isSilent) mostrarToast("Error de conexión al cargar órdenes", "err");
     } finally {
-      setCargando(false);
+      if (!isSilent) setCargando(false);
     }
   }, [busqueda, filtroEstado, filtroTipo]);
 
   useEffect(() => {
-    cargarOrdenes();
+    cargarOrdenes(false);
+    const interval = setInterval(() => {
+      cargarOrdenes(true);
+    }, 4000);
+    return () => clearInterval(interval);
   }, [cargarOrdenes]);
 
   // ============================================================================

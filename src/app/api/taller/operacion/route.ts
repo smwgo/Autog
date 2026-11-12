@@ -1628,44 +1628,110 @@ export async function POST(request: Request) {
             0
           );
 
-        await prisma.$executeRawUnsafe(
-          `INSERT INTO "WorkshopOrder" (
-            "id", "orderNumber", "customerId", "vehicleId", "vehicle", "plate",
-            "client", "clientPhone", "clientIdDoc", "mechanic", "status", "progress",
-            "mileage", "nextOilChangeKm", "fuelLevel", "receptionInventoryJson",
-            "servicesJson", "itemsJson",
-            "receptionPhotosJson", "evidencePhotosJson", "voiceNotesJson", "notes", "estimatedOut",
-            "totalCost", "branch", "dateIn", "createdAt", "updatedAt"
-          ) VALUES (
-            $1, $2, $3, $4, $5, $6,
-            $7, $8, $9, $10, 'En Pista', 10,
-            $11, $12, $13, $14,
-            $19, $20,
-            $15, '[]', $16, $17, 'Hoy',
-            $21, $18, NOW(), NOW(), NOW()
-          )`,
-          orderId,
-          orderNumber,
-          customer.id,
-          vehicle?.id || null,
-          finalVehicleTitle,
-          finalPlate,
-          customer.name,
-          customer.phone || "",
-          customer.identification || "",
-          mechanic || "Hernan Marquez",
-          kmNum || null,
-          nextOilKm,
-          fuelLevel || "1/2",
-          jsonInventario,
-          jsonFotos,
-          jsonVoiceNotes,
-          notesFormatted,
-          orderBranch,
-          finalServicesJson,
-          finalItemsJson,
-          finalTotalCost
-        );
+        // Garantizar que Customer y Vehicle existan en PostgreSQL para evitar fallos de Foreign Key
+        if (customer?.id) {
+          try {
+            await prisma.$executeRawUnsafe(
+              `INSERT INTO "Customer" ("id", "identification", "name", "phone", "email", "type", "createdAt", "updatedAt")
+               VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
+               ON CONFLICT ("id") DO UPDATE SET "name" = EXCLUDED."name", "phone" = EXCLUDED."phone"`,
+              customer.id,
+              cleanIdent,
+              cleanName,
+              cleanPhone,
+              cleanEmail,
+              dbType
+            );
+          } catch {}
+        }
+        if (vehicle?.id) {
+          try {
+            await prisma.$executeRawUnsafe(
+              `INSERT INTO "Vehicle" ("id", "customerId", "plate", "brand", "model", "year", "vehicleType", "createdAt", "updatedAt")
+               VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
+               ON CONFLICT ("id") DO NOTHING`,
+              vehicle.id,
+              customer.id,
+              finalPlate,
+              (marca || "Vehículo").trim(),
+              (modelo || "General").trim(),
+              body.anio ? parseInt(String(body.anio), 10) || new Date().getFullYear() : new Date().getFullYear(),
+              (body.tipoVehiculo || "Auto").trim()
+            );
+          } catch {}
+        }
+
+        try {
+          await prisma.$executeRawUnsafe(
+            `INSERT INTO "WorkshopOrder" (
+              "id", "orderNumber", "customerId", "vehicleId", "vehicle", "plate",
+              "client", "clientPhone", "clientIdDoc", "mechanic", "status", "progress",
+              "mileage", "nextOilChangeKm", "fuelLevel", "receptionInventoryJson",
+              "servicesJson", "itemsJson",
+              "receptionPhotosJson", "evidencePhotosJson", "voiceNotesJson", "notes", "estimatedOut",
+              "totalCost", "branch", "dateIn", "createdAt", "updatedAt"
+            ) VALUES (
+              $1, $2, $3, $4, $5, $6,
+              $7, $8, $9, $10, 'En Pista', 10,
+              $11, $12, $13, $14,
+              $19, $20,
+              $15, '[]', $16, $17, 'Hoy',
+              $21, $18, NOW(), NOW(), NOW()
+            )`,
+            orderId,
+            orderNumber,
+            customer.id,
+            vehicle?.id || null,
+            finalVehicleTitle,
+            finalPlate,
+            customer.name,
+            customer.phone || "",
+            customer.identification || "",
+            mechanic || "Hernan Marquez",
+            kmNum || null,
+            nextOilKm,
+            fuelLevel || "1/2",
+            jsonInventario,
+            jsonFotos,
+            jsonVoiceNotes,
+            notesFormatted,
+            orderBranch,
+            finalServicesJson,
+            finalItemsJson,
+            finalTotalCost
+          );
+        } catch (rawInsertErr) {
+          console.warn("Fallo raw insert de WorkshopOrder, usando prisma.workshopOrder.create:", rawInsertErr);
+          await prisma.workshopOrder.create({
+            data: {
+              id: orderId,
+              orderNumber,
+              customerId: customer.id,
+              vehicleId: vehicle?.id || null,
+              vehicle: finalVehicleTitle,
+              plate: finalPlate,
+              client: customer.name,
+              clientPhone: customer.phone || "",
+              clientIdDoc: customer.identification || "",
+              mechanic: mechanic || "Hernan Marquez",
+              status: "En Pista",
+              progress: 10,
+              mileage: kmNum || null,
+              nextOilChangeKm: nextOilKm,
+              fuelLevel: fuelLevel || "1/2",
+              receptionInventoryJson: jsonInventario,
+              servicesJson: finalServicesJson,
+              itemsJson: finalItemsJson,
+              receptionPhotosJson: jsonFotos,
+              evidencePhotosJson: "[]",
+              voiceNotesJson: jsonVoiceNotes,
+              notes: notesFormatted,
+              estimatedOut: "Hoy",
+              totalCost: finalTotalCost,
+              branch: orderBranch,
+            }
+          });
+        }
 
         // Vincular evidencias multimedia a la nueva orden de trabajo en Neon DB
         try {

@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma, withRetry } from "@/lib/prisma";
+import fs from "fs";
+import path from "path";
 
 export const dynamic = "force-dynamic";
 
@@ -150,6 +152,35 @@ export async function GET(request: Request) {
           take: 150,
         }).catch(() => [])) as any[];
       }
+
+      // Fusionar órdenes almacenadas en el mirror local si no están en PostgreSQL
+      try {
+        const mirrorPath = path.join(process.cwd(), "prisma", "neon-local-mirror.json");
+        if (fs.existsSync(mirrorPath)) {
+          const mirrorData = JSON.parse(fs.readFileSync(mirrorPath, "utf-8"));
+          if (Array.isArray(mirrorData?.workshopOrder)) {
+            const existingIds = new Set(rows.map((r: any) => r.id));
+            const existingNumbers = new Set(rows.map((r: any) => r.orderNumber));
+            for (const mo of mirrorData.workshopOrder) {
+              if (mo?.id && !existingIds.has(mo.id) && !existingNumbers.has(mo.orderNumber)) {
+                // Aplicar filtros básicos si corresponden
+                if (busqueda) {
+                  const bStr = `${mo.plate || ""} ${mo.client || ""} ${mo.orderNumber || ""} ${mo.vehicle || ""}`.toLowerCase();
+                  if (!bStr.includes(busqueda)) continue;
+                }
+                rows.push(mo);
+              }
+            }
+          }
+        }
+      } catch {}
+
+      // Ordenar por fecha de creación descendente
+      rows.sort((a, b) => {
+        const timeA = new Date(a.createdAt || 0).getTime();
+        const timeB = new Date(b.createdAt || 0).getTime();
+        return timeB - timeA;
+      });
 
       // Deduplicar filas por ID para garantizar unicidad absoluta
       const seenRowIds = new Set<string>();

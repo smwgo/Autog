@@ -274,6 +274,113 @@ export default function PaginaDetallePropuesta() {
   const [subiendoFotoCliente, setSubiendoFotoCliente] = useState(false);
   const [subiendoFotoVehiculoPrincipal, setSubiendoFotoVehiculoPrincipal] = useState(false);
 
+  // Modales flotantes minimalistas de fotos y audios por evidencia
+  const [flotanteFotos, setFlotanteFotos] = useState<{
+    pin: any;
+    fotos: string[];
+    fotoActivaIdx: number;
+  } | null>(null);
+
+    // Estado dinámico por línea: DETALLES -> MANUAL -> PROVEEDOR (o regresar)
+  const [modosLineas, setModosLineas] = useState<Record<string, "DETALLES" | "MANUAL" | "PROVEEDOR">>({});
+
+  const avanzarModoLinea = (itemId: string) => {
+    setModosLineas((prev) => {
+      const actual = prev[itemId] || "DETALLES";
+      const siguiente =
+        actual === "DETALLES"
+          ? "MANUAL"
+          : actual === "MANUAL"
+          ? "PROVEEDOR"
+          : "DETALLES";
+      return { ...prev, [itemId]: siguiente };
+    });
+  };
+
+  const retrocederModoLinea = (itemId: string) => {
+    setModosLineas((prev) => {
+      const actual = prev[itemId] || "DETALLES";
+      const anterior =
+        actual === "PROVEEDOR"
+          ? "MANUAL"
+          : actual === "MANUAL"
+          ? "DETALLES"
+          : "PROVEEDOR";
+      return { ...prev, [itemId]: anterior };
+    });
+  };
+
+  const [flotanteAudios, setFlotanteAudios] = useState<{
+    pin: any;
+    audios: any[];
+  } | null>(null);
+
+  // Modales de Detalles y Manual Técnico por evidencia
+  const [flotanteDetalles, setFlotanteDetalles] = useState<{
+    pin: any;
+    sec: any;
+  } | null>(null);
+
+  const [flotanteManual, setFlotanteManual] = useState<{
+    pin: any;
+    sec: any;
+  } | null>(null);
+
+  const handleAbrirFlotanteFotos = (pin: any) => {
+    const list: string[] = [];
+    if (Array.isArray(pin.photoUrls) && pin.photoUrls.length > 0) {
+      list.push(...pin.photoUrls);
+    } else if (pin.photoUrl) {
+      list.push(pin.photoUrl);
+    }
+    if (list.length === 0 && orden?.evidencias) {
+      const imgEvs = orden.evidencias.filter((e) => e.type === "image").map((e) => e.url);
+      list.push(...imgEvs);
+    }
+    if (list.length === 0 && Array.isArray(orden?.receptionPhotos)) {
+      list.push(...orden.receptionPhotos);
+    }
+    if (list.length === 0 && Array.isArray(orden?.evidencePhotos)) {
+      list.push(...orden.evidencePhotos);
+    }
+    if (list.length === 0 && Array.isArray(fotosVehiculo) && fotosVehiculo.length > 0) {
+      list.push(...fotosVehiculo);
+    }
+    const fotosUnicas = Array.from(new Set(list.filter(Boolean)));
+    setFlotanteFotos({
+      pin,
+      fotos: fotosUnicas,
+      fotoActivaIdx: 0,
+    });
+  };
+
+  const handleAbrirFlotanteAudios = (pin: any) => {
+    const list: any[] = [];
+    if (pin.audioUrl) {
+      list.push({
+        id: `pin-aud-${pin.id}`,
+        url: pin.audioUrl,
+        transcriptionText: pin.transcriptionText || null,
+        durationSeconds: pin.durationSeconds || null,
+      });
+    }
+    if (Array.isArray(pin.voiceNotes) && pin.voiceNotes.length > 0) {
+      list.push(...pin.voiceNotes);
+    }
+    if (orden?.evidencias) {
+      const audEvs = orden.evidencias.filter((e) => e.type === "audio");
+      for (const ae of audEvs) {
+        if (!list.some((it) => it.url === ae.url || it.id === ae.id)) {
+          list.push(ae);
+        }
+      }
+    }
+    setFlotanteAudios({
+      pin,
+      audios: list,
+    });
+  };
+
   // Navegación por tarjetas deslizables e indicadores de verificación inteligente
   const [tarjetaActiva, setTarjetaActiva] = useState<number>(0);
   const [verificadosIds, setVerificadosIds] = useState<Record<string, boolean>>({});
@@ -911,28 +1018,6 @@ export default function PaginaDetallePropuesta() {
     [repuestos, servicios]
   );
 
-  // Ítems de taller que no pertenecen a ninguna evidencia específica
-  const itemsGeneralesTaller = useMemo(() => {
-    const prods = repuestos
-      .filter((r) => (r.origin || "TALLER") === "TALLER" && !obtenerEvidenciaDeItem(r))
-      .map((r) => ({
-        ...r,
-        isService: false,
-        subtotal: r.subtotalVenta || Number((Number(r.price || 0) * Number(r.qty || 1)).toFixed(2)),
-      }));
-
-    const srvs = servicios
-      .filter((s) => (s.origin || "TALLER") === "TALLER" && !obtenerEvidenciaDeItem(s))
-      .map((s) => ({
-        ...s,
-        qty: 1,
-        isService: true,
-        subtotal: Number(s.price || 0),
-      }));
-
-    return [...prods, ...srvs];
-  }, [repuestos, servicios, obtenerEvidenciaDeItem]);
-
   // Manejo de envíos a proveedores (individual y masivo)
   const abrirModalProveedor = (modo: "MASIVO" | "INDIVIDUAL", item?: any, pin?: any) => {
     setModalProveedor({ abierto: true, modo, item, pin });
@@ -1467,7 +1552,7 @@ export default function PaginaDetallePropuesta() {
 
         {/* Barra de Título Propuesta y Acciones */}
         <section className="border-b border-zinc-200/80 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950">
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="w-full max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-center gap-3 min-w-0">
               <Link
                 href="/presupuestos"
@@ -1484,6 +1569,17 @@ export default function PaginaDetallePropuesta() {
             </div>
 
             <div className="flex items-center gap-2 sm:gap-2.5 shrink-0 flex-wrap sm:flex-nowrap">
+              {/* Mandar Todo el Pedido al Proveedor */}
+              <button
+                type="button"
+                onClick={() => abrirModalProveedor("MASIVO")}
+                className="h-10 px-3.5 sm:px-4 rounded-2xl bg-emerald-50/90 dark:bg-emerald-950/20 border border-emerald-300 dark:border-emerald-700/60 hover:bg-emerald-100/80 dark:hover:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 text-xs sm:text-sm font-medium transition-all active:scale-95 flex items-center gap-2 cursor-pointer shadow-2xs shrink-0"
+                title="Mandar Todo el Pedido al Proveedor"
+              >
+                <span>🚚</span>
+                <span>Mandar Todo el Pedido al Proveedor</span>
+              </button>
+
               {/* 1. Vista Link Proveedor */}
               <button
                 type="button"
@@ -1493,26 +1589,26 @@ export default function PaginaDetallePropuesta() {
                     window.open(`/pedidos-proveedor/${encodeURIComponent(String(targetId))}`, "_blank");
                   }
                 }}
-                className="h-10 px-3.5 sm:px-4 rounded-2xl bg-amber-50/90 dark:bg-amber-950/20 border border-amber-300 dark:border-amber-700/60 hover:bg-amber-100/80 dark:hover:bg-amber-900/30 text-amber-700 dark:text-amber-400 text-xs sm:text-sm font-medium transition-all active:scale-95 flex items-center gap-2 cursor-pointer shadow-2xs shrink-0"
-                title="Abrir Vista de Pedido para Proveedor"
+                className="w-10 h-10 rounded-2xl bg-amber-50/90 dark:bg-amber-950/20 border border-amber-300 dark:border-amber-700/60 hover:bg-amber-100/80 dark:hover:bg-amber-900/30 text-amber-700 dark:text-amber-400 active:scale-95 flex items-center justify-center cursor-pointer shadow-2xs shrink-0 transition-all"
+                title="Vista Link Proveedor"
+                aria-label="Vista Link Proveedor"
               >
                 <svg className="w-4 h-4 text-amber-600 dark:text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                 </svg>
-                <span>Vista Link Proveedor</span>
               </button>
 
               {/* 2. Proveedores */}
               <button
                 type="button"
                 onClick={() => setModalWhatsApp(true)}
-                className="h-10 px-3.5 sm:px-4 rounded-2xl bg-indigo-50/80 dark:bg-indigo-950/25 border border-indigo-200 dark:border-indigo-800/60 hover:bg-indigo-100/80 dark:hover:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 text-xs sm:text-sm font-medium transition-all active:scale-95 flex items-center gap-2 cursor-pointer shadow-2xs shrink-0"
-                title="Gestión de Proveedores y Envíos WhatsApp"
+                className="w-10 h-10 rounded-2xl bg-indigo-50/80 dark:bg-indigo-950/25 border border-indigo-200 dark:border-indigo-800/60 hover:bg-indigo-100/80 dark:hover:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 active:scale-95 flex items-center justify-center cursor-pointer shadow-2xs shrink-0 transition-all"
+                title="Proveedores y Envíos WhatsApp"
+                aria-label="Proveedores"
               >
                 <svg className="w-4 h-4 text-indigo-600 dark:text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.175V14.25m0 0H2.25m12 0v4.5m0-4.5H16.5" />
                 </svg>
-                <span>Proveedores</span>
               </button>
 
               {/* 3. Botón Imprimir */}
@@ -1551,7 +1647,7 @@ export default function PaginaDetallePropuesta() {
       </div>
 
       {/* DOCUMENTO PRINCIPAL POR TARJETAS DESLIZABLES INTELIGENTES */}
-      <main className="max-w-6xl mx-auto p-3 sm:p-6 md:p-8 mt-2 sm:mt-4 print:m-0 print:p-0 print:max-w-none space-y-4">
+      <main className="w-full max-w-[1920px] mx-auto p-3 sm:p-6 md:p-8 lg:px-8 mt-2 sm:mt-4 print:m-0 print:p-0 print:max-w-none space-y-4">
         {/* BARRA DE TARJETAS DESLIZABLES (STEPPER INTELIGENTE) */}
         {(() => {
           const countArea = (orig: EspecialidadTipo) =>
@@ -2015,66 +2111,6 @@ export default function PaginaDetallePropuesta() {
               TARJETA 2 (idx 1): TALLER (PROPUESTA TIPO FACTURA: SISTEMAS + EVIDENCIAS + PRODUCTOS/SERVICIOS)
               =================================================================== */}
           <div className={tarjetaActiva === 1 ? "space-y-6" : "hidden print:block print:space-y-6"}>
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-zinc-200 dark:border-white/10">
-              <div className="flex items-center gap-2.5">
-                <span className="w-9 h-9 rounded-xl bg-blue-500/15 border border-blue-500/30 text-blue-500 flex items-center justify-center text-base">
-                  🔧
-                </span>
-                <div>
-                  <h2 className="text-base font-medium text-zinc-900 dark:text-white">
-                    Taller · Propuesta & Diagnóstico
-                  </h2>
-                  <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                    Estructura estilo factura organizada por sistema y evidencias
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2 print:hidden flex-wrap">
-                <button
-                  type="button"
-                  onClick={() => abrirModalProveedor("MASIVO")}
-                  className="h-9 px-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer shadow-sm"
-                  title="Buscar proveedor y enviar el pedido consolidado por WhatsApp"
-                >
-                  <span>🚚</span>
-                  <span>Mandar Todo el Pedido al Proveedor</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setNuevoOrigen("TALLER");
-                    setModalNuevoRepuesto(true);
-                  }}
-                  className="h-9 px-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-normal transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer"
-                >
-                  <span>+ Asignar Producto</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setNuevoServicioOrigen("TALLER");
-                    setModalNuevoServicio(true);
-                  }}
-                  className="h-9 px-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-normal transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer"
-                >
-                  <span>+ Asignar Servicio</span>
-                </button>
-              </div>
-            </div>
-
-            {/* BARRA DE RESUMEN DE DIAGNÓSTICO */}
-            <div className="flex items-center justify-between px-4 py-2.5 rounded-xl bg-zinc-50 dark:bg-white/[0.03] border border-zinc-200 dark:border-white/10 text-xs">
-              <span className="text-zinc-700 dark:text-zinc-300 font-medium flex items-center gap-1.5">
-                <span>🔍</span>
-                <span>Diagnóstico e Inspección ({hallazgos.length} {hallazgos.length === 1 ? "hallazgo" : "hallazgos"})</span>
-              </span>
-              <span className="text-zinc-500 dark:text-zinc-400">
-                📷 {fotosVehiculo.length} imágenes · 🎙️{" "}
-                {(orden.evidencias || []).filter((e) => e.type === "audio" || e.url?.includes(".mp3")).length} audios
-              </span>
-            </div>
-
             {secciones.length === 0 ? (
               <div className="py-8 text-center text-sm font-normal text-zinc-400 italic bg-zinc-50/50 dark:bg-white/[0.01] rounded-2xl border border-dashed border-zinc-200 dark:border-white/10 space-y-3">
                 <p>Sin hallazgos de inspección reportados en Taller.</p>
@@ -2108,15 +2144,34 @@ export default function PaginaDetallePropuesta() {
                     key={sec.id}
                     className="rounded-2xl border border-zinc-200 dark:border-white/10 overflow-hidden bg-white dark:bg-[#121216] shadow-xs"
                   >
-                    {/* ENCABEZADO DEL SISTEMA (Ej: ⚙️ Motor) */}
-                    <div className="bg-zinc-100/90 dark:bg-white/[0.04] px-4 py-2.5 font-medium text-zinc-900 dark:text-zinc-100 flex items-center justify-between border-b border-zinc-200 dark:border-white/10 text-sm">
-                      <div className="flex items-center gap-2">
-                        <span className="text-base">{sec.icon}</span>
-                        <span className="font-semibold">{formatoPrimeraMayuscula(sec.nombre)}</span>
+                    {/* ENCABEZADO: EVIDENCIA ARRIBA DE CARROCERÍA / SISTEMA */}
+                    <div className="bg-zinc-100/90 dark:bg-white/[0.04] px-4 py-2.5 font-medium text-zinc-900 dark:text-zinc-100 border-b border-zinc-200 dark:border-white/10 text-sm">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            {sec.items.map((pin: any) => {
+                              const num = pin.numeroEvidencia || pin.pinNumber || 1;
+                              return (
+                                <span
+                                  key={pin.id}
+                                  className="text-xs font-medium text-rose-600 dark:text-rose-400 bg-rose-500/10 border border-rose-500/20 px-2 py-0.5 rounded inline-block"
+                                >
+                                  Evidencia #{num}
+                                </span>
+                              );
+                            })}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-base">{sec.icon}</span>
+                            <span className="font-semibold text-zinc-800 dark:text-zinc-200">
+                              {formatoPrimeraMayuscula(sec.nombre)}
+                            </span>
+                          </div>
+                        </div>
+                        <span className="text-xs bg-zinc-200 dark:bg-white/10 px-2 py-0.5 rounded font-normal text-zinc-700 dark:text-zinc-300 shrink-0">
+                          {sec.items.length} {sec.items.length === 1 ? "punto" : "puntos"}
+                        </span>
                       </div>
-                      <span className="text-xs bg-zinc-200 dark:bg-white/10 px-2 py-0.5 rounded font-normal text-zinc-700 dark:text-zinc-300">
-                        {sec.items.length} {sec.items.length === 1 ? "punto" : "puntos"}
-                      </span>
                     </div>
 
                     {/* LISTA DE EVIDENCIAS DENTRO DE ESTE SISTEMA */}
@@ -2139,7 +2194,7 @@ export default function PaginaDetallePropuesta() {
                         return (
                           <div key={pin.id} className="p-4 space-y-3">
                             {/* Cabecera de la Evidencia */}
-                            <div className="flex items-start justify-between gap-3 flex-wrap">
+                            <div className="flex items-center justify-between gap-3 flex-wrap">
                               <div className="space-y-1 min-w-0 flex-1">
                                 <div className="flex items-center gap-2 flex-wrap">
                                   <span className="w-5 h-5 rounded-full bg-rose-600 text-white font-medium text-xs flex items-center justify-center shrink-0">
@@ -2147,9 +2202,6 @@ export default function PaginaDetallePropuesta() {
                                   </span>
                                   <span className="font-semibold text-zinc-900 dark:text-zinc-100 text-sm">
                                     {formatoPrimeraMayuscula(pin.tipo)}
-                                  </span>
-                                  <span className="text-xs font-medium text-rose-600 dark:text-rose-400 bg-rose-500/10 border border-rose-500/20 px-2 py-0.5 rounded">
-                                    Evidencia #{numEvidencia}
                                   </span>
                                   <span className="text-xs font-normal text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-white/5 px-2 py-0.5 rounded">
                                     {formatoPrimeraMayuscula(pin.vistaLabel || pin.vista)}
@@ -2174,263 +2226,371 @@ export default function PaginaDetallePropuesta() {
                                 )}
                               </div>
 
-                              {/* Miniaturas de fotos tomadas en el pin y botón para cotizar evidencia */}
-                              <div className="flex items-center gap-2 shrink-0">
-                                {fotosPin.length > 0 && (
-                                  <div className="flex items-center gap-1.5">
-                                    {fotosPin.slice(0, 3).map((fUrl: string, fIdx: number) => (
-                                      <img
-                                        key={fIdx}
-                                        src={fUrl}
-                                        alt={`Evidencia #${numEvidencia}`}
-                                        onClick={() => setFotoZoom(fUrl)}
-                                        className="w-10 h-10 rounded-lg object-cover border border-zinc-200 dark:border-white/10 cursor-pointer hover:scale-105 transition-transform"
-                                      />
-                                    ))}
-                                  </div>
-                                )}
-                                {/* UN SOLO ICONO PARA COTIZAR / ENVIAR ESTA EVIDENCIA AL PROVEEDOR */}
+                              {/* ACCIONES AL LADO DERECHO: DETALLES, MANUAL Y PROVEEDOR */}
+                              <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+                                {/* 1. DETALLES */}
+                                <button
+                                  type="button"
+                                  onClick={() => setFlotanteDetalles({ pin, sec })}
+                                  className="h-8 px-2.5 sm:px-3 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700/80 text-xs font-medium flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer shadow-2xs"
+                                  title="Ver detalles completos del hallazgo"
+                                >
+                                  <svg className="w-3.5 h-3.5 text-zinc-600 dark:text-zinc-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                  </svg>
+                                  <span className="hidden sm:inline">Detalles</span>
+                                </button>
+
+                                {/* 2. MANUAL */}
+                                <button
+                                  type="button"
+                                  onClick={() => setFlotanteManual({ pin, sec })}
+                                  className="h-8 px-2.5 sm:px-3 rounded-xl bg-purple-50/90 hover:bg-purple-100/90 dark:bg-purple-950/30 dark:hover:bg-purple-900/40 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800/60 text-xs font-medium flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer shadow-2xs"
+                                  title="Manual de servicio técnico y asignación manual"
+                                >
+                                  <svg className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                                  </svg>
+                                  <span className="hidden sm:inline">Manual</span>
+                                </button>
+
+                                {/* 3. PROVEEDOR */}
                                 <button
                                   type="button"
                                   onClick={() => abrirModalProveedor("INDIVIDUAL", undefined, pin)}
-                                  className="w-8 h-8 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center cursor-pointer transition-all active:scale-95 border border-emerald-500/30 shrink-0"
-                                  title="Cotizar / Enviar esta evidencia al proveedor por WhatsApp"
+                                  className="h-8 px-2.5 sm:px-3 rounded-xl bg-emerald-50/90 hover:bg-emerald-100/90 dark:bg-emerald-950/30 dark:hover:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60 text-xs font-medium flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer shadow-2xs"
+                                  title="Enviar cotización al proveedor por WhatsApp"
                                 >
-                                  📤
+                                  <svg className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.175V14.25m0 0H2.25m12 0v4.5m0-4.5H16.5" />
+                                  </svg>
+                                  <span className="hidden sm:inline">Proveedor</span>
                                 </button>
                               </div>
                             </div>
 
                             {/* TABLA ESTILO FACTURA PARA LOS PRODUCTOS Y SERVICIOS DE ESTA EVIDENCIA */}
                             {pinItems.length > 0 ? (
-                              <div className="pl-0 sm:pl-7 space-y-2">
+                              <div className="w-full space-y-2">
                                 <div className="border border-zinc-200 dark:border-white/10 rounded-xl overflow-hidden bg-zinc-50/50 dark:bg-black/30">
                                   <div className="overflow-x-auto">
                                     <table className="w-full text-left border-collapse table-auto text-xs font-normal">
-                                      <thead>
-                                        <tr className="border-b border-zinc-200 dark:border-white/10 bg-zinc-100/70 dark:bg-white/[0.04] text-zinc-500 dark:text-zinc-400">
-                                          <th className="py-2 px-3 w-8 text-center font-normal">✓</th>
-                                          <th className="py-2 px-3 min-w-[170px] font-normal">Descripción</th>
-                                          <th className="py-2 px-2.5 w-28 font-normal">Tipo</th>
-                                          <th className="py-2 px-2 w-20 text-center font-normal">Cant.</th>
-                                          <th className="py-2 px-2.5 w-24 text-right font-normal">PVP</th>
-                                          <th className="py-2 px-2.5 w-24 text-right font-normal">Subtotal</th>
-                                          <th className="py-2 px-2.5 w-32 font-normal">Proveedor / Stock</th>
-                                          <th className="py-2 px-2 w-16 text-center font-normal">Acciones</th>
-                                        </tr>
-                                      </thead>
-                                      <tbody className="divide-y divide-zinc-200/60 dark:divide-white/5">
-                                        {pinItems.map((item: any, itemIdx: number) => {
-                                          const esServicio = item.isService;
-                                          return (
-                                            <tr key={item.id ? `${item.id}-${itemIdx}` : `pin-item-${itemIdx}`} className="hover:bg-white/80 dark:hover:bg-white/[0.02]">
-                                              <td className="py-2 px-3 text-center">
-                                                <input
-                                                  type="checkbox"
-                                                  checked={!!verificadosIds[item.id]}
-                                                  onChange={() => toggleVerificadoItem(item.id)}
-                                                  className="w-3.5 h-3.5 rounded accent-emerald-500 cursor-pointer"
-                                                />
-                                              </td>
-                                              <td className="py-2 px-3">
-                                                <span className="text-zinc-900 dark:text-white font-medium block">
-                                                  {item.name}
-                                                </span>
-                                                <span className="text-[10px] text-zinc-400">
-                                                  {esServicio ? "Mano de Obra / Servicio" : "Repuesto / Insumo"}
-                                                </span>
-                                              </td>
-                                              <td className="py-2 px-2.5">
-                                                {esServicio ? (
-                                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-purple-500/10 border border-purple-500/25 text-purple-600 dark:text-purple-400 text-[11px] font-semibold">
-                                                    🔧 Servicio
-                                                  </span>
-                                                ) : (
-                                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-500/10 border border-blue-500/25 text-blue-600 dark:text-blue-400 text-[11px] font-semibold">
-                                                    📦 Producto
-                                                  </span>
-                                                )}
-                                              </td>
-                                              <td className="py-2 px-2 text-center">
-                                                {esServicio ? (
-                                                  <span className="font-mono text-zinc-700 dark:text-zinc-300">1</span>
-                                                ) : (
-                                                  <div className="inline-flex items-center border border-zinc-200 dark:border-white/10 rounded-lg overflow-hidden bg-white dark:bg-black">
-                                                    <button
-                                                      type="button"
-                                                      onClick={() => handleUpdateQty(item.id, -1)}
-                                                      className="w-5 h-6 text-zinc-500 hover:text-white flex items-center justify-center cursor-pointer"
-                                                    >
-                                                      -
-                                                    </button>
-                                                    <span className="w-6 text-center font-mono text-zinc-900 dark:text-white text-xs">
-                                                      {item.qty || 1}
-                                                    </span>
-                                                    <button
-                                                      type="button"
-                                                      onClick={() => handleUpdateQty(item.id, 1)}
-                                                      className="w-5 h-6 text-zinc-500 hover:text-white flex items-center justify-center cursor-pointer"
-                                                    >
-                                                      +
-                                                    </button>
-                                                  </div>
-                                                )}
-                                              </td>
-                                              <td className="py-2 px-2.5 text-right">
-                                                {esServicio ? (
-                                                  <input
-                                                    type="number"
-                                                    step="0.01"
-                                                    min="0"
-                                                    value={item.price}
-                                                    onChange={(e) => handleUpdateServicePrice(item.id, e.target.value)}
-                                                    className="w-20 h-6 px-1.5 text-right rounded bg-white dark:bg-black border border-purple-500/30 font-mono text-purple-600 dark:text-purple-400 text-xs"
-                                                  />
-                                                ) : (
-                                                  <input
-                                                    type="number"
-                                                    step="0.01"
-                                                    min="0"
-                                                    value={item.price}
-                                                    onChange={(e) => handleUpdatePrice(item.id, "price", e.target.value)}
-                                                    className="w-20 h-6 px-1.5 text-right rounded bg-white dark:bg-black border border-emerald-500/30 font-mono text-emerald-600 dark:text-emerald-400 text-xs"
-                                                  />
-                                                )}
-                                              </td>
-                                              <td className="py-2 px-2.5 text-right font-mono font-medium text-zinc-900 dark:text-white">
-                                                ${Number(item.subtotal || item.subtotalVenta || (item.price * (item.qty || 1))).toFixed(2)}
-                                              </td>
-                                              <td className="py-2 px-2.5">
-                                                {esServicio ? (
-                                                  <span className="text-[11px] text-zinc-400">Servicio Interno</span>
-                                                ) : (
-                                                  <button
-                                                    type="button"
-                                                    onClick={() => handleToggleStock(item.id)}
-                                                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold cursor-pointer border transition-all ${
-                                                      item.inStock
-                                                        ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-700 dark:text-emerald-300"
-                                                        : "bg-amber-500/15 border-amber-500/30 text-amber-700 dark:text-amber-300"
-                                                    }`}
-                                                    title="Alternar: Bodega local vs Pedir a Proveedor"
-                                                  >
-                                                    <span>{item.inStock ? "🏢 Bodega" : "🚚 Pedir Proveedor"}</span>
-                                                  </button>
-                                                )}
-                                              </td>
-                                              <td className="py-2 px-2 text-center">
-                                                <div className="flex items-center justify-center gap-1.5">
-                                                  {/* UN SOLO ICONO PARA COTIZAR / ENVIAR INDIVIDUAL AL PROVEEDOR */}
-                                                  <button
-                                                    type="button"
-                                                    onClick={() => abrirModalProveedor("INDIVIDUAL", item, pin)}
-                                                    className="w-7 h-7 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center cursor-pointer transition-all active:scale-95 border border-emerald-500/20"
-                                                    title="Enviar / Cotizar este repuesto al proveedor por WhatsApp"
-                                                  >
-                                                    📤
-                                                  </button>
-                                                  <button
-                                                    type="button"
-                                                    onClick={() => (esServicio ? handleDeleteService(item.id) : handleDeleteItem(item.id))}
-                                                    className="w-7 h-7 rounded-lg hover:bg-rose-500/10 text-zinc-400 hover:text-rose-500 flex items-center justify-center cursor-pointer transition-colors"
-                                                    title="Eliminar"
-                                                  >
-                                                    ✕
-                                                  </button>
-                                                </div>
-                                              </td>
-                                            </tr>
-                                          );
-                                        })}
-                                      </tbody>
-                                    </table>
-                                  </div>
-                                </div>
+  <thead>
+    <tr className="border-b border-zinc-200 dark:border-white/10 bg-zinc-100/70 dark:bg-white/[0.04] text-zinc-500 dark:text-zinc-400">
+      <th className="py-2 px-3 w-8 text-center font-normal">✓</th>
+      <th className="py-2 px-3 min-w-[120px] font-normal">Daño</th>
+      <th className="py-2 px-3 min-w-[200px] font-normal">Descripción</th>
+      <th className="py-2 px-2.5 w-28 font-normal text-center">Tipo / Estado</th>
+      <th className="py-2 px-2 w-24 text-center font-normal">Cant. / Detalle</th>
+      <th className="py-2 px-2.5 w-24 text-right font-normal">Subtotal</th>
+      <th className="py-2 px-2 min-w-[140px] text-center font-normal">Acciones</th>
+    </tr>
+  </thead>
+  <tbody className="divide-y divide-zinc-200/60 dark:divide-white/5">
+    {pinItems.map((item: any, itemIdx: number) => {
+      const esServicio = item.isService;
+      const textoDanio = item.danio || (pin.tipo ? formatoPrimeraMayuscula(pin.tipo) : (pin.descripcion ? formatoPrimeraMayuscula(pin.descripcion) : `${formatoPrimeraMayuscula(sec.nombre)} (Evidencia #${numEvidencia})`));
+      const modoLinea = modosLineas[item.id] || "DETALLES";
 
-                                {/* Casilleros sin filos a la izquierda y botones para agregar más ítems a esta evidencia */}
-                                <div className="flex items-center justify-between gap-2 flex-wrap pt-1 text-xs">
-                                  <div className="flex items-center gap-2 flex-wrap">
-                                    <label
-                                      className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md border text-[11px] font-medium cursor-pointer select-none transition-all ${
-                                        solicitaRepuesto
-                                          ? "bg-amber-500/10 border-amber-500/40 text-amber-800 dark:text-amber-200 font-semibold"
-                                          : "bg-white hover:bg-zinc-100 dark:bg-white/[0.03] border-zinc-200/80 dark:border-white/10 text-zinc-600 dark:text-zinc-400"
-                                      }`}
-                                    >
-                                      <input
-                                        type="checkbox"
-                                        checked={solicitaRepuesto}
-                                        onChange={(e) => handleToggleSolicitaPropuesta(pin.id, "solicitaRepuesto", e.target.checked)}
-                                        className="w-3 h-3 rounded text-amber-600 accent-amber-500 cursor-pointer"
-                                      />
-                                      <span>📦 Producto</span>
-                                    </label>
+      return (
+        <tr key={item.id ? `${item.id}-${itemIdx}` : `pin-item-${itemIdx}`} className="hover:bg-white/80 dark:hover:bg-white/[0.02]">
+          <td className="py-2 px-3 text-center">
+            <input
+              type="checkbox"
+              checked={!!verificadosIds[item.id]}
+              onChange={() => toggleVerificadoItem(item.id)}
+              className="w-3.5 h-3.5 rounded accent-emerald-500 cursor-pointer"
+            />
+          </td>
 
-                                    <label
-                                      className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md border text-[11px] font-medium cursor-pointer select-none transition-all ${
-                                        solicitaServicio
-                                          ? "bg-purple-500/10 border-purple-500/40 text-purple-800 dark:text-purple-200 font-semibold"
-                                          : "bg-white hover:bg-zinc-100 dark:bg-white/[0.03] border-zinc-200/80 dark:border-white/10 text-zinc-600 dark:text-zinc-400"
-                                      }`}
-                                    >
-                                      <input
-                                        type="checkbox"
-                                        checked={solicitaServicio}
-                                        onChange={(e) => handleToggleSolicitaPropuesta(pin.id, "solicitaServicio", e.target.checked)}
-                                        className="w-3 h-3 rounded text-purple-600 accent-purple-500 cursor-pointer"
-                                      />
-                                      <span>🔧 Servicio</span>
-                                    </label>
-                                  </div>
+          {/* 1. DAÑO */}
+          <td className="py-2 px-3">
+            <span className="font-semibold text-rose-600 dark:text-rose-400 block text-xs">
+              {textoDanio}
+            </span>
+            {pin.descripcion && pin.tipo && !item.danio && (
+              <span className="text-[10px] text-zinc-500 dark:text-zinc-400 block truncate max-w-[150px]" title={pin.descripcion}>
+                {pin.descripcion}
+              </span>
+            )}
+          </td>
 
-                                  <div className="flex items-center gap-1.5">
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        setHallazgoActivoParaAsignar(pin);
-                                        setNuevoNombre(pin.descripcion ? `Repuesto para ${pin.tipo}: ${pin.descripcion}` : `Repuesto para ${pin.tipo}`);
-                                        setNuevoEnStock(true);
-                                        setNuevoProveedor("Bodega Taller");
-                                        setNuevoOrigen("TALLER");
-                                        setModalNuevoRepuesto(true);
-                                      }}
-                                      className="h-6 px-2 rounded-md bg-blue-50 dark:bg-blue-500/10 hover:bg-blue-100 text-blue-700 dark:text-blue-300 text-[11px] font-normal transition-all cursor-pointer border border-blue-200 dark:border-blue-500/20 flex items-center gap-1"
-                                    >
-                                      <span>+ Producto</span>
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        setHallazgoActivoParaAsignar(pin);
-                                        setNuevoServicioNombre(pin.descripcion ? `Servicio de ${pin.tipo}: ${pin.descripcion}` : `Servicio de ${pin.tipo}`);
-                                        setNuevoServicioOrigen("TALLER");
-                                        setModalNuevoServicio(true);
-                                      }}
-                                      className="h-6 px-2 rounded-md bg-purple-50 dark:bg-purple-500/10 hover:bg-purple-100 text-purple-700 dark:text-purple-300 text-[11px] font-normal transition-all cursor-pointer border border-purple-200 dark:border-purple-500/20 flex items-center gap-1"
-                                    >
-                                      <span>+ Servicio</span>
-                                    </button>
+          {/* 2. DESCRIPCIÓN CON ICONOS FLOTANTES AL LADO */}
+          <td className="py-2 px-3">
+            <div className="flex items-center justify-between gap-2.5">
+              <div className="min-w-0 flex-1">
+                <span className="text-zinc-900 dark:text-white font-medium block">
+                  {item.name}
+                </span>
+                {item.code && (
+                  <span className="text-[10px] text-zinc-400 font-mono block">
+                    {item.code}
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => handleAbrirFlotanteFotos(pin)}
+                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-blue-50/90 dark:bg-blue-500/15 border border-blue-200/80 dark:border-blue-500/30 flex items-center justify-center text-blue-600 dark:text-blue-400 hover:bg-blue-100 hover:border-blue-300 dark:hover:bg-blue-500/25 transition-all cursor-pointer shadow-xs active:scale-95"
+                  title="Ver fotos de esta evidencia"
+                >
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect width="18" height="18" x="3" y="3" rx="4" />
+                    <circle cx="8.5" cy="8.5" r="1.5" />
+                    <path d="m21 15-5-5L5 21" />
+                  </svg>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleAbrirFlotanteAudios(pin)}
+                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-amber-50/90 dark:bg-amber-500/15 border border-amber-200/80 dark:border-amber-500/30 flex items-center justify-center text-amber-600 dark:text-amber-400 hover:bg-amber-100 hover:border-amber-300 dark:hover:bg-amber-500/25 transition-all cursor-pointer shadow-xs active:scale-95"
+                  title="Escuchar notas de voz / audios"
+                >
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+                    <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                    <line x1="12" x2="12" y1="19" y2="22" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </td>
+
+          {/* COLUMNAS DINÁMICAS SEGÚN EL MODO DE ESTA LÍNEA (DETALLES / MANUAL / PROVEEDOR) */}
+          {modoLinea === "DETALLES" && (
+            <>
+              {/* TIPO */}
+              <td className="py-2 px-2.5 text-center">
+                {esServicio ? (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-purple-500/10 border border-purple-500/25 text-purple-600 dark:text-purple-400 text-[11px] font-semibold">
+                    🔧 Servicio
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-500/10 border border-blue-500/25 text-blue-600 dark:text-blue-400 text-[11px] font-semibold">
+                    📦 Producto
+                  </span>
+                )}
+              </td>
+              {/* CANTIDAD */}
+              <td className="py-2 px-2 text-center">
+                {esServicio ? (
+                  <span className="font-mono text-zinc-700 dark:text-zinc-300">1</span>
+                ) : (
+                  <div className="inline-flex items-center border border-zinc-200 dark:border-white/10 rounded-lg overflow-hidden bg-white dark:bg-black">
+                    <button
+                      type="button"
+                      onClick={() => handleUpdateQty(item.id, -1)}
+                      className="w-5 h-6 text-zinc-500 hover:text-white flex items-center justify-center cursor-pointer"
+                    >
+                      -
+                    </button>
+                    <span className="w-6 text-center font-mono text-zinc-900 dark:text-white text-xs">
+                      {item.qty || 1}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleUpdateQty(item.id, 1)}
+                      className="w-5 h-6 text-zinc-500 hover:text-white flex items-center justify-center cursor-pointer"
+                    >
+                      +
+                    </button>
+                  </div>
+                )}
+              </td>
+              {/* SUBTOTAL */}
+              <td className="py-2 px-2.5 text-right font-mono font-medium text-zinc-900 dark:text-white">
+                ${Number(item.subtotal || item.subtotalVenta || (item.price * (item.qty || 1))).toFixed(2)}
+              </td>
+            </>
+          )}
+
+          {modoLinea === "MANUAL" && (
+            <>
+              {/* COSTO */}
+              <td className="py-2 px-2 text-center">
+                <div className="inline-flex flex-col items-center">
+                  <span className="text-[9px] text-zinc-400 uppercase font-semibold leading-none mb-1">Costo</span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={item.costPrice || 0}
+                    onChange={(e) => handleUpdatePrice(item.id, "costPrice", e.target.value)}
+                    className="w-16 h-6 px-1 text-right rounded bg-zinc-50 dark:bg-black border border-zinc-200 dark:border-white/10 font-mono text-zinc-700 dark:text-zinc-300 text-xs"
+                    placeholder="0.00"
+                  />
+                </div>
+              </td>
+              {/* PVP */}
+              <td className="py-2 px-2 text-center">
+                <div className="inline-flex flex-col items-center">
+                  <span className="text-[9px] text-zinc-400 uppercase font-semibold leading-none mb-1">PVP</span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={item.price || 0}
+                    onChange={(e) => (esServicio ? handleUpdateServicePrice(item.id, e.target.value) : handleUpdatePrice(item.id, "price", e.target.value))}
+                    className="w-16 h-6 px-1 text-right rounded bg-purple-50/50 dark:bg-black border border-purple-500/30 font-mono text-purple-700 dark:text-purple-300 font-bold text-xs"
+                    placeholder="0.00"
+                  />
+                </div>
+              </td>
+              {/* MARGEN */}
+              <td className="py-2 px-2.5 text-right">
+                <div className="flex flex-col items-end">
+                  <span className="text-[9px] text-zinc-400 uppercase font-semibold leading-none mb-0.5">Margen</span>
+                  <span className="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                    {item.price > 0 ? `${Math.round(((item.price - (item.costPrice || 0)) / item.price) * 100)}%` : "0%"}
+                  </span>
+                </div>
+              </td>
+            </>
+          )}
+
+          {modoLinea === "PROVEEDOR" && (
+            <>
+              {/* DISPONIBILIDAD BODEGA / PEDIR */}
+              <td className="py-2 px-2.5 text-center">
+                {esServicio ? (
+                  <span className="text-[11px] text-zinc-400">Interno</span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => handleToggleStock(item.id)}
+                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold cursor-pointer border transition-all ${
+                      item.inStock
+                        ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-700 dark:text-emerald-300"
+                        : "bg-amber-500/15 border-amber-500/30 text-amber-700 dark:text-amber-300"
+                    }`}
+                    title="Alternar: Bodega local vs Pedir a Proveedor"
+                  >
+                    <span>{item.inStock ? "🏢 Bodega" : "🚚 Pedir"}</span>
+                  </button>
+                )}
+              </td>
+              {/* PROVEEDOR */}
+              <td className="py-2 px-2 text-center">
+                <span className="text-[11px] font-medium text-zinc-600 dark:text-zinc-400 block truncate max-w-[90px] mx-auto" title={item.supplierName || (item.inStock ? "Bodega Taller" : "Proveedor")}>
+                  {item.inStock ? "Bodega" : (item.supplierName || "Proveedor")}
+                </span>
+              </td>
+              {/* COTIZAR WHATSAPP */}
+              <td className="py-2 px-2.5 text-right">
+                <button
+                  type="button"
+                  onClick={() => abrirModalProveedor("INDIVIDUAL", item, pin)}
+                  className="h-6 px-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-medium transition-all active:scale-95 inline-flex items-center gap-1 cursor-pointer shadow-2xs"
+                  title="Enviar cotización al proveedor por WhatsApp"
+                >
+                  <span>📤</span>
+                  <span>WhatsApp</span>
+                </button>
+              </td>
+            </>
+          )}
+
+          {/* ACCIONES: FLECHA PARA CAMBIAR SOLO ESTA LÍNEA + ELIMINAR */}
+          <td className="py-2 px-2 text-center">
+            <div className="flex items-center justify-center gap-1">
+              {/* Botón para REGRESAR si no está en DETALLES */}
+              {modoLinea !== "DETALLES" && (
+                <button
+                  type="button"
+                  onClick={() => retrocederModoLinea(item.id)}
+                  className="w-6 h-6 rounded-lg bg-zinc-100 hover:bg-zinc-200 dark:bg-white/10 dark:hover:bg-white/20 text-zinc-600 dark:text-zinc-300 flex items-center justify-center text-xs font-bold transition-all cursor-pointer shadow-2xs active:scale-95"
+                  title="Regresar al modo anterior"
+                >
+                  ←
+                </button>
+              )}
+
+              {/* Flecha para AVANZAR de DETALLES a MANUAL a PROVEEDOR */}
+              <button
+                type="button"
+                onClick={() => avanzarModoLinea(item.id)}
+                className={`h-6 px-1.5 rounded-lg border text-[10px] font-semibold flex items-center gap-0.5 transition-all cursor-pointer shadow-2xs active:scale-95 ${
+                  modoLinea === "DETALLES"
+                    ? "bg-purple-50 hover:bg-purple-100 dark:bg-purple-500/10 border-purple-300/80 dark:border-purple-500/30 text-purple-700 dark:text-purple-300"
+                    : modoLinea === "MANUAL"
+                    ? "bg-amber-50 hover:bg-amber-100 dark:bg-amber-500/10 border-amber-300/80 dark:border-amber-500/30 text-amber-700 dark:text-amber-300"
+                    : "bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-500/10 border-emerald-300/80 dark:border-emerald-500/30 text-emerald-700 dark:text-emerald-300"
+                }`}
+                title={
+                  modoLinea === "DETALLES"
+                    ? "Cambiar esta línea a Manual"
+                    : modoLinea === "MANUAL"
+                    ? "Cambiar esta línea a Proveedor"
+                    : "Regresar esta línea a Detalles"
+                }
+              >
+                <span>
+                  {modoLinea === "DETALLES"
+                    ? "Manual"
+                    : modoLinea === "MANUAL"
+                    ? "Proveedor"
+                    : "Detalles"}
+                </span>
+                <span>→</span>
+              </button>
+
+              {/* Botón Eliminar Fila */}
+              <button
+                type="button"
+                onClick={() => (esServicio ? handleDeleteService(item.id) : handleDeleteItem(item.id))}
+                className="w-6 h-6 rounded-lg hover:bg-rose-500/10 text-zinc-400 hover:text-rose-500 flex items-center justify-center cursor-pointer transition-colors text-xs"
+                title="Eliminar fila"
+              >
+                ✕
+              </button>
+            </div>
+          </td>
+        </tr>
+      );
+    })}
+  </tbody>
+</table>
                                   </div>
                                 </div>
                               </div>
                             ) : (
                               /* ESTADO SIN PRODUCTOS NI SERVICIOS ASIGNADOS */
-                              <div className="pl-0 sm:pl-7 p-3 rounded-xl bg-zinc-50 dark:bg-white/[0.02] border border-dashed border-zinc-200 dark:border-white/10 space-y-2">
+                              <div className="w-full p-3 rounded-xl bg-zinc-50 dark:bg-white/[0.02] border border-dashed border-zinc-200 dark:border-white/10 space-y-2">
                                 <div className="flex items-center justify-between gap-2 flex-wrap">
-                                  <span className="text-xs text-zinc-500 dark:text-zinc-400 italic">
-                                    Sin productos ni servicios asignados a esta evidencia.
-                                  </span>
-                                  {solicitaRepuesto && (
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-xs text-zinc-500 dark:text-zinc-400 italic">
+                                      Sin productos ni servicios asignados a esta evidencia.
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    {/* ICONOS FLOTANTES DE FOTO Y AUDIO */}
                                     <button
                                       type="button"
-                                      onClick={() => abrirModalProveedor("INDIVIDUAL", undefined, pin)}
-                                      className="h-7 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-normal transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer shadow-xs"
-                                      title="Enviar cotización para esta evidencia directamente al proveedor"
+                                      onClick={() => handleAbrirFlotanteFotos(pin)}
+                                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-blue-50/90 dark:bg-blue-500/15 border border-blue-200/80 dark:border-blue-500/30 flex items-center justify-center text-blue-600 dark:text-blue-400 hover:bg-blue-100 hover:border-blue-300 dark:hover:bg-blue-500/25 transition-all cursor-pointer shadow-xs active:scale-95"
+                                      title="Ver fotos de esta evidencia"
                                     >
-                                      <span>📤</span>
-                                      <span>Pedir a Proveedor</span>
+                                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <rect width="18" height="18" x="3" y="3" rx="4" />
+                                        <circle cx="8.5" cy="8.5" r="1.5" />
+                                        <path d="m21 15-5-5L5 21" />
+                                      </svg>
                                     </button>
-                                  )}
+                                    <button
+                                      type="button"
+                                      onClick={() => handleAbrirFlotanteAudios(pin)}
+                                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-amber-50/90 dark:bg-amber-500/15 border border-amber-200/80 dark:border-amber-500/30 flex items-center justify-center text-amber-600 dark:text-amber-400 hover:bg-amber-100 hover:border-amber-300 dark:hover:bg-amber-500/25 transition-all cursor-pointer shadow-xs active:scale-95"
+                                      title="Escuchar notas de voz / audios"
+                                    >
+                                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+                                        <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                                        <line x1="12" x2="12" y1="19" y2="22" />
+                                      </svg>
+                                    </button>
+                                    
+                                  </div>
                                 </div>
 
                                 <div className="flex items-center gap-2 flex-wrap pt-0.5">
@@ -2503,165 +2663,6 @@ export default function PaginaDetallePropuesta() {
                 ))}
               </div>
             )}
-
-          {/* PRODUCTOS Y SERVICIOS GENERALES DE TALLER (NO ASOCIADOS A EVIDENCIA ESPECÍFICA) */}
-          {itemsGeneralesTaller.length > 0 && (
-            <div className="rounded-2xl border border-zinc-200 dark:border-white/10 overflow-hidden bg-white dark:bg-[#121216] shadow-xs">
-              <div className="bg-zinc-100/90 dark:bg-white/[0.04] px-4 py-2.5 font-medium text-zinc-900 dark:text-zinc-100 flex items-center justify-between border-b border-zinc-200 dark:border-white/10 text-sm">
-                <div className="flex items-center gap-2">
-                  <span>📦</span>
-                  <span className="font-semibold">Otros Productos y Servicios Generales de Taller</span>
-                </div>
-                <span className="text-xs bg-zinc-200 dark:bg-white/10 px-2 py-0.5 rounded font-normal text-zinc-700 dark:text-zinc-300">
-                  {itemsGeneralesTaller.length} {itemsGeneralesTaller.length === 1 ? "ítem" : "ítems"}
-                </span>
-              </div>
-
-              <div className="p-4">
-                <div className="border border-zinc-200 dark:border-white/10 rounded-xl overflow-hidden bg-zinc-50/50 dark:bg-black/30">
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse table-auto text-xs font-normal">
-                      <thead>
-                        <tr className="border-b border-zinc-200 dark:border-white/10 bg-zinc-100/70 dark:bg-white/[0.04] text-zinc-500 dark:text-zinc-400">
-                          <th className="py-2 px-3 w-8 text-center font-normal">✓</th>
-                          <th className="py-2 px-3 min-w-[170px] font-normal">Descripción</th>
-                          <th className="py-2 px-2.5 w-28 font-normal">Tipo</th>
-                          <th className="py-2 px-2 w-20 text-center font-normal">Cant.</th>
-                          <th className="py-2 px-2.5 w-24 text-right font-normal">PVP</th>
-                          <th className="py-2 px-2.5 w-24 text-right font-normal">Subtotal</th>
-                          <th className="py-2 px-2.5 w-32 font-normal">Proveedor / Stock</th>
-                          <th className="py-2 px-2 w-16 text-center font-normal">Acciones</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-zinc-200/60 dark:divide-white/5">
-                        {itemsGeneralesTaller.map((item: any, itemIdx: number) => {
-                          const esServicio = item.isService;
-                          return (
-                            <tr key={item.id ? `${item.id}-${itemIdx}` : `general-item-${itemIdx}`} className="hover:bg-white/80 dark:hover:bg-white/[0.02]">
-                              <td className="py-2 px-3 text-center">
-                                <input
-                                  type="checkbox"
-                                  checked={!!verificadosIds[item.id]}
-                                  onChange={() => toggleVerificadoItem(item.id)}
-                                  className="w-3.5 h-3.5 rounded accent-emerald-500 cursor-pointer"
-                                />
-                              </td>
-                              <td className="py-2 px-3">
-                                <span className="text-zinc-900 dark:text-white font-medium block">
-                                  {item.name}
-                                </span>
-                                <span className="text-[10px] text-zinc-400">
-                                  {esServicio ? "Mano de Obra / Servicio" : "Repuesto / Insumo"}
-                                </span>
-                              </td>
-                              <td className="py-2 px-2.5">
-                                {esServicio ? (
-                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-purple-500/10 border border-purple-500/25 text-purple-600 dark:text-purple-400 text-[11px] font-semibold">
-                                    🔧 Servicio
-                                  </span>
-                                ) : (
-                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-500/10 border border-blue-500/25 text-blue-600 dark:text-blue-400 text-[11px] font-semibold">
-                                    📦 Producto
-                                  </span>
-                                )}
-                              </td>
-                              <td className="py-2 px-2 text-center">
-                                {esServicio ? (
-                                  <span className="font-mono text-zinc-700 dark:text-zinc-300">1</span>
-                                ) : (
-                                  <div className="inline-flex items-center border border-zinc-200 dark:border-white/10 rounded-lg overflow-hidden bg-white dark:bg-black">
-                                    <button
-                                      type="button"
-                                      onClick={() => handleUpdateQty(item.id, -1)}
-                                      className="w-5 h-6 text-zinc-500 hover:text-white flex items-center justify-center cursor-pointer"
-                                    >
-                                      -
-                                    </button>
-                                    <span className="w-6 text-center font-mono text-zinc-900 dark:text-white text-xs">
-                                      {item.qty || 1}
-                                    </span>
-                                    <button
-                                      type="button"
-                                      onClick={() => handleUpdateQty(item.id, 1)}
-                                      className="w-5 h-6 text-zinc-500 hover:text-white flex items-center justify-center cursor-pointer"
-                                    >
-                                      +
-                                    </button>
-                                  </div>
-                                )}
-                              </td>
-                              <td className="py-2 px-2.5 text-right">
-                                {esServicio ? (
-                                  <input
-                                    type="number"
-                                    step="0.01"
-                                    min="0"
-                                    value={item.price}
-                                    onChange={(e) => handleUpdateServicePrice(item.id, e.target.value)}
-                                    className="w-20 h-6 px-1.5 text-right rounded bg-white dark:bg-black border border-purple-500/30 font-mono text-purple-600 dark:text-purple-400 text-xs"
-                                  />
-                                ) : (
-                                  <input
-                                    type="number"
-                                    step="0.01"
-                                    min="0"
-                                    value={item.price}
-                                    onChange={(e) => handleUpdatePrice(item.id, "price", e.target.value)}
-                                    className="w-20 h-6 px-1.5 text-right rounded bg-white dark:bg-black border border-emerald-500/30 font-mono text-emerald-600 dark:text-emerald-400 text-xs"
-                                  />
-                                )}
-                              </td>
-                              <td className="py-2 px-2.5 text-right font-mono font-medium text-zinc-900 dark:text-white">
-                                ${Number(item.subtotal || item.subtotalVenta || (item.price * (item.qty || 1))).toFixed(2)}
-                              </td>
-                              <td className="py-2 px-2.5">
-                                {esServicio ? (
-                                  <span className="text-[11px] text-zinc-400">Servicio Interno</span>
-                                ) : (
-                                  <button
-                                    type="button"
-                                    onClick={() => handleToggleStock(item.id)}
-                                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold cursor-pointer border transition-all ${
-                                      item.inStock
-                                        ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-700 dark:text-emerald-300"
-                                        : "bg-amber-500/15 border-amber-500/30 text-amber-700 dark:text-amber-300"
-                                    }`}
-                                    title="Alternar: Bodega local vs Pedir a Proveedor"
-                                  >
-                                    <span>{item.inStock ? "🏢 Bodega" : "🚚 Pedir Proveedor"}</span>
-                                  </button>
-                                )}
-                              </td>
-                              <td className="py-2 px-2 text-center">
-                                <div className="flex items-center justify-center gap-1.5">
-                                  <button
-                                    type="button"
-                                    onClick={() => abrirModalProveedor("INDIVIDUAL", item)}
-                                    className="w-7 h-7 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center cursor-pointer transition-all active:scale-95 border border-emerald-500/20"
-                                    title="Enviar / Cotizar este repuesto al proveedor por WhatsApp"
-                                  >
-                                    📤
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => (esServicio ? handleDeleteService(item.id) : handleDeleteItem(item.id))}
-                                    className="w-7 h-7 rounded-lg hover:bg-rose-500/10 text-zinc-400 hover:text-rose-500 flex items-center justify-center cursor-pointer transition-colors"
-                                    title="Eliminar"
-                                  >
-                                    ✕
-                                  </button>
-                                </div>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* Pie de navegación Tarjeta 2 (Taller) */}
           <div className="print:hidden flex items-center justify-between pt-4 border-t border-zinc-200 dark:border-white/10">
@@ -3714,6 +3715,502 @@ export default function PaginaDetallePropuesta() {
                 >
                   Agregar Servicio
                 </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL FLOTANTE MINIMALISTA DE FOTOS POR EVIDENCIA */}
+      {flotanteFotos && (
+        <div
+          onClick={() => setFlotanteFotos(null)}
+          className="fixed inset-0 z-50 bg-black/70 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 animate-fade-in"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white dark:bg-[#121216] border border-zinc-200 dark:border-white/10 rounded-3xl max-w-lg w-full p-4 sm:p-5 space-y-3.5 shadow-2xl animate-scale-up text-zinc-900 dark:text-white"
+          >
+            {/* Header del modal */}
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-9 h-9 rounded-2xl bg-blue-500/10 border border-blue-500/25 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect width="18" height="18" x="3" y="3" rx="4" />
+                    <circle cx="8.5" cy="8.5" r="1.5" />
+                    <path d="m21 15-5-5L5 21" />
+                  </svg>
+                </div>
+                <div className="min-w-0">
+                  <h3 className="text-sm font-bold text-zinc-900 dark:text-white truncate">
+                    Fotos de Evidencia #{flotanteFotos.pin.numeroEvidencia || flotanteFotos.pin.pinNumber || 1}
+                  </h3>
+                  <p className="text-[11px] text-zinc-500 dark:text-zinc-400 truncate">
+                    {flotanteFotos.pin.tipo ? formatoPrimeraMayuscula(flotanteFotos.pin.tipo) : (flotanteFotos.pin.descripcion || "Inspección")}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                {flotanteFotos.fotos.length > 0 && (
+                  <span className="text-[11px] font-mono font-medium px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-white/10 text-zinc-600 dark:text-zinc-300">
+                    {flotanteFotos.fotoActivaIdx + 1} / {flotanteFotos.fotos.length}
+                  </span>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setFlotanteFotos(null)}
+                  className="w-8 h-8 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white flex items-center justify-center cursor-pointer transition-colors"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+
+            {/* Imagen principal */}
+            {flotanteFotos.fotos.length > 0 ? (
+              <div className="space-y-3">
+                <div className="relative aspect-video sm:aspect-4/3 w-full rounded-2xl overflow-hidden bg-black/90 border border-zinc-200/80 dark:border-white/10 flex items-center justify-center group">
+                  <img
+                    src={flotanteFotos.fotos[flotanteFotos.fotoActivaIdx]}
+                    alt={`Evidencia ${flotanteFotos.fotoActivaIdx + 1}`}
+                    className="w-full h-full object-contain cursor-zoom-in"
+                    onClick={() => setFotoZoom(flotanteFotos.fotos[flotanteFotos.fotoActivaIdx])}
+                  />
+
+                  {/* Flechas de navegación si hay más de 1 foto */}
+                  {flotanteFotos.fotos.length > 1 && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setFlotanteFotos((prev) => prev ? {
+                            ...prev,
+                            fotoActivaIdx: (prev.fotoActivaIdx - 1 + prev.fotos.length) % prev.fotos.length,
+                          } : null);
+                        }}
+                        className="absolute left-2 w-8 h-8 rounded-full bg-black/60 hover:bg-black text-white flex items-center justify-center text-sm backdrop-blur-xs cursor-pointer opacity-80 group-hover:opacity-100 transition-opacity"
+                      >
+                        ‹
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setFlotanteFotos((prev) => prev ? {
+                            ...prev,
+                            fotoActivaIdx: (prev.fotoActivaIdx + 1) % prev.fotos.length,
+                          } : null);
+                        }}
+                        className="absolute right-2 w-8 h-8 rounded-full bg-black/60 hover:bg-black text-white flex items-center justify-center text-sm backdrop-blur-xs cursor-pointer opacity-80 group-hover:opacity-100 transition-opacity"
+                      >
+                        ›
+                      </button>
+                    </>
+                  )}
+                </div>
+
+                {/* Tiras de miniaturas */}
+                {flotanteFotos.fotos.length > 1 && (
+                  <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+                    {flotanteFotos.fotos.map((f, idx) => (
+                      <button
+                        key={`thumb-${idx}`}
+                        type="button"
+                        onClick={() => setFlotanteFotos((prev) => prev ? { ...prev, fotoActivaIdx: idx } : null)}
+                        className={`w-14 h-12 rounded-xl overflow-hidden shrink-0 border-2 transition-all cursor-pointer ${
+                          flotanteFotos.fotoActivaIdx === idx
+                            ? "border-blue-500 scale-105 shadow-md shadow-blue-500/20"
+                            : "border-transparent opacity-60 hover:opacity-100"
+                        }`}
+                      >
+                        <img src={f} alt={`Miniatura ${idx + 1}`} className="w-full h-full object-cover" />
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="p-8 text-center rounded-2xl bg-zinc-50 dark:bg-white/[0.02] border border-dashed border-zinc-200 dark:border-white/10 space-y-1">
+                <span className="text-2xl">📷</span>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 font-medium">
+                  No hay fotos adjuntas para esta evidencia aún.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* MODAL FLOTANTE MINIMALISTA DE AUDIO POR EVIDENCIA */}
+      {flotanteAudios && (
+        <div
+          onClick={() => setFlotanteAudios(null)}
+          className="fixed inset-0 z-50 bg-black/70 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 animate-fade-in"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white dark:bg-[#121216] border border-zinc-200 dark:border-white/10 rounded-3xl max-w-md w-full p-5 space-y-4 shadow-2xl animate-scale-up text-zinc-900 dark:text-white"
+          >
+            {/* Header del modal */}
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-9 h-9 rounded-2xl bg-amber-500/10 border border-amber-500/25 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+                    <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                    <line x1="12" x2="12" y1="19" y2="22" />
+                  </svg>
+                </div>
+                <div className="min-w-0">
+                  <h3 className="text-sm font-bold text-zinc-900 dark:text-white truncate">
+                    Audios de Evidencia #{flotanteAudios.pin.numeroEvidencia || flotanteAudios.pin.pinNumber || 1}
+                  </h3>
+                  <p className="text-[11px] text-zinc-500 dark:text-zinc-400 truncate">
+                    {flotanteAudios.pin.tipo ? formatoPrimeraMayuscula(flotanteAudios.pin.tipo) : (flotanteAudios.pin.descripcion || "Nota de voz")}
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setFlotanteAudios(null)}
+                className="w-8 h-8 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white flex items-center justify-center cursor-pointer transition-colors shrink-0"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Lista de audios */}
+            {flotanteAudios.audios.length > 0 ? (
+              <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
+                {flotanteAudios.audios.map((aud, aIdx) => (
+                  <div
+                    key={aud.id || `aud-${aIdx}`}
+                    className="p-3.5 rounded-2xl bg-amber-500/5 border border-amber-500/20 space-y-2.5"
+                  >
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-semibold text-amber-700 dark:text-amber-300 flex items-center gap-1.5">
+                        <span className="inline-block w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                        Audio #{aIdx + 1}
+                      </span>
+                      {aud.durationSeconds && (
+                        <span className="text-[11px] font-mono text-zinc-500 dark:text-zinc-400">
+                          {Math.floor(aud.durationSeconds / 60)}:{(aud.durationSeconds % 60).toString().padStart(2, "0")}
+                        </span>
+                      )}
+                    </div>
+
+                    <audio
+                      controls
+                      src={aud.url}
+                      className="w-full h-9 accent-amber-500 rounded-xl"
+                      preload="metadata"
+                    />
+
+                    {aud.transcriptionText && (
+                      <div className="p-2.5 rounded-xl bg-white dark:bg-black/40 border border-zinc-200 dark:border-white/5 text-xs text-zinc-700 dark:text-zinc-300 italic">
+                        <span className="font-semibold not-italic block text-[10px] text-zinc-400 uppercase tracking-wider mb-0.5">
+                          Transcripción:
+                        </span>
+                        &quot;{aud.transcriptionText}&quot;
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="p-8 text-center rounded-2xl bg-zinc-50 dark:bg-white/[0.02] border border-dashed border-zinc-200 dark:border-white/10 space-y-1">
+                <span className="text-2xl">🎙️</span>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 font-medium">
+                  No se grabaron audios para esta evidencia.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* MODAL FLOTANTE DE DETALLES POR EVIDENCIA */}
+      {flotanteDetalles && (
+        <div
+          onClick={() => setFlotanteDetalles(null)}
+          className="fixed inset-0 z-50 bg-black/70 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 animate-fade-in"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white dark:bg-[#121216] border border-zinc-200 dark:border-white/10 rounded-3xl max-w-lg w-full p-5 space-y-4 shadow-2xl animate-scale-up text-zinc-900 dark:text-white max-h-[85vh] flex flex-col"
+          >
+            {/* Header del modal */}
+            <div className="flex items-center justify-between gap-3 shrink-0">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-9 h-9 rounded-2xl bg-zinc-100 dark:bg-white/10 border border-zinc-200 dark:border-white/15 text-zinc-700 dark:text-zinc-200 flex items-center justify-center shrink-0">
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                </div>
+                <div className="min-w-0">
+                  <h3 className="text-sm font-bold text-zinc-900 dark:text-white truncate">
+                    Detalles de Evidencia #{flotanteDetalles.pin.numeroEvidencia || flotanteDetalles.pin.pinNumber || 1}
+                  </h3>
+                  <p className="text-[11px] text-zinc-500 dark:text-zinc-400 truncate">
+                    {flotanteDetalles.sec?.nombre || "Taller"} · {formatoPrimeraMayuscula(flotanteDetalles.pin.vistaLabel || flotanteDetalles.pin.vista || "General")}
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setFlotanteDetalles(null)}
+                className="w-8 h-8 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white flex items-center justify-center cursor-pointer transition-colors shrink-0"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Contenido scrolleable */}
+            <div className="space-y-4 overflow-y-auto flex-1 pr-1 text-xs">
+              <div className="p-3.5 rounded-2xl bg-zinc-50 dark:bg-white/[0.02] border border-zinc-200/80 dark:border-white/10 space-y-2.5">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-zinc-500 dark:text-zinc-400">Tipo de Hallazgo / Daño:</span>
+                  <span className="font-semibold text-rose-600 dark:text-rose-400">
+                    {formatoPrimeraMayuscula(flotanteDetalles.pin.tipo)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-zinc-500 dark:text-zinc-400">Vista del Vehículo:</span>
+                  <span className="font-medium text-zinc-800 dark:text-zinc-200">
+                    {formatoPrimeraMayuscula(flotanteDetalles.pin.vistaLabel || flotanteDetalles.pin.vista || "Frontal")}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-zinc-500 dark:text-zinc-400">Sistema Automotriz:</span>
+                  <span className="font-medium text-zinc-800 dark:text-zinc-200">
+                    {flotanteDetalles.sec?.nombre || "Taller"}
+                  </span>
+                </div>
+              </div>
+
+              {/* Observación / Descripción */}
+              <div className="space-y-1.5">
+                <label className="font-semibold text-zinc-800 dark:text-zinc-200 block text-xs">
+                  Observaciones Técnicas:
+                </label>
+                <div className="p-3 rounded-2xl bg-zinc-50 dark:bg-black/40 border border-zinc-200/80 dark:border-white/10 text-zinc-700 dark:text-zinc-300 leading-relaxed italic">
+                  {flotanteDetalles.pin.descripcion
+                    ? `"${flotanteDetalles.pin.descripcion}"`
+                    : "Sin notas técnicas adicionales registradas."}
+                </div>
+              </div>
+
+              {/* Solicitudes de Repuesto y Servicio */}
+              <div className="space-y-2">
+                <label className="font-semibold text-zinc-800 dark:text-zinc-200 block text-xs">
+                  Requerimientos del Hallazgo:
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <label
+                    className={`p-2.5 rounded-xl border flex items-center gap-2 cursor-pointer transition-all ${
+                      flotanteDetalles.pin.solicitaRepuesto
+                        ? "bg-amber-500/10 border-amber-500/40 text-amber-700 dark:text-amber-300 font-semibold"
+                        : "bg-zinc-50 dark:bg-white/[0.02] border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-400"
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={Boolean(flotanteDetalles.pin.solicitaRepuesto)}
+                      onChange={(e) => {
+                        handleToggleSolicitaPropuesta(flotanteDetalles.pin.id, "solicitaRepuesto", e.target.checked);
+                        setFlotanteDetalles((prev) =>
+                          prev ? { ...prev, pin: { ...prev.pin, solicitaRepuesto: e.target.checked } } : null
+                        );
+                      }}
+                      className="w-4 h-4 rounded text-amber-600 accent-amber-500 cursor-pointer"
+                    />
+                    <span>📦 Requiere Producto</span>
+                  </label>
+
+                  <label
+                    className={`p-2.5 rounded-xl border flex items-center gap-2 cursor-pointer transition-all ${
+                      flotanteDetalles.pin.solicitaServicio
+                        ? "bg-purple-500/10 border-purple-500/40 text-purple-700 dark:text-purple-300 font-semibold"
+                        : "bg-zinc-50 dark:bg-white/[0.02] border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-400"
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={Boolean(flotanteDetalles.pin.solicitaServicio)}
+                      onChange={(e) => {
+                        handleToggleSolicitaPropuesta(flotanteDetalles.pin.id, "solicitaServicio", e.target.checked);
+                        setFlotanteDetalles((prev) =>
+                          prev ? { ...prev, pin: { ...prev.pin, solicitaServicio: e.target.checked } } : null
+                        );
+                      }}
+                      className="w-4 h-4 rounded text-purple-600 accent-purple-500 cursor-pointer"
+                    />
+                    <span>🔧 Requiere Servicio</span>
+                  </label>
+                </div>
+              </div>
+
+              {/* Botones de acción rápida */}
+              <div className="pt-2 flex items-center justify-between gap-2 flex-wrap border-t border-zinc-200 dark:border-white/10">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const p = flotanteDetalles.pin;
+                    setFlotanteDetalles(null);
+                    handleAbrirFlotanteFotos(p);
+                  }}
+                  className="h-8 px-3 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800/60 text-blue-700 dark:text-blue-300 hover:bg-blue-100 flex items-center gap-1.5 cursor-pointer"
+                >
+                  <span>📷 Ver Fotos</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const p = flotanteDetalles.pin;
+                    setFlotanteDetalles(null);
+                    handleAbrirFlotanteAudios(p);
+                  }}
+                  className="h-8 px-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 text-amber-700 dark:text-amber-300 hover:bg-amber-100 flex items-center gap-1.5 cursor-pointer"
+                >
+                  <span>🎙️ Audios</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const p = flotanteDetalles.pin;
+                    setFlotanteDetalles(null);
+                    abrirModalProveedor("INDIVIDUAL", undefined, p);
+                  }}
+                  className="h-8 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white flex items-center gap-1.5 cursor-pointer shadow-xs ml-auto"
+                >
+                  <span>🚚 Pedir a Proveedor</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL FLOTANTE DE MANUAL TÉCNICO Y ASIGNACIÓN MANUAL */}
+      {flotanteManual && (
+        <div
+          onClick={() => setFlotanteManual(null)}
+          className="fixed inset-0 z-50 bg-black/70 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 animate-fade-in"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white dark:bg-[#121216] border border-zinc-200 dark:border-white/10 rounded-3xl max-w-lg w-full p-5 space-y-4 shadow-2xl animate-scale-up text-zinc-900 dark:text-white max-h-[85vh] flex flex-col"
+          >
+            {/* Header del modal */}
+            <div className="flex items-center justify-between gap-3 shrink-0">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-9 h-9 rounded-2xl bg-purple-500/10 border border-purple-500/25 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0">
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                  </svg>
+                </div>
+                <div className="min-w-0">
+                  <h3 className="text-sm font-bold text-zinc-900 dark:text-white truncate">
+                    Manual Técnico y Asignación Manual
+                  </h3>
+                  <p className="text-[11px] text-zinc-500 dark:text-zinc-400 truncate">
+                    Evidencia #{flotanteManual.pin.numeroEvidencia || flotanteManual.pin.pinNumber || 1} · {formatoPrimeraMayuscula(flotanteManual.pin.tipo)}
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setFlotanteManual(null)}
+                className="w-8 h-8 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white flex items-center justify-center cursor-pointer transition-colors shrink-0"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Contenido scrolleable */}
+            <div className="space-y-4 overflow-y-auto flex-1 pr-1 text-xs">
+              {/* Tarjeta 1: Ficha técnica y búsqueda de manual */}
+              <div className="p-4 rounded-2xl bg-purple-50/70 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-800/50 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-purple-900 dark:text-purple-200 flex items-center gap-1.5">
+                    <span>📖</span>
+                    <span>Guía de Taller / Ficha Técnica</span>
+                  </span>
+                  <span className="text-[11px] font-mono text-purple-700 dark:text-purple-300">
+                    {orden.plate || "S/P"}
+                  </span>
+                </div>
+                <div className="space-y-1 text-zinc-700 dark:text-zinc-300">
+                  <p><strong>Vehículo:</strong> {orden.vehicle || "Vehículo no especificado"}</p>
+                  <p><strong>Componente:</strong> {formatoPrimeraMayuscula(flotanteManual.pin.tipo)} ({flotanteManual.sec?.nombre || "Taller"})</p>
+                  {flotanteManual.pin.descripcion && (
+                    <p className="italic text-zinc-500 dark:text-zinc-400">
+                      &quot;{flotanteManual.pin.descripcion}&quot;
+                    </p>
+                  )}
+                </div>
+
+                <a
+                  href={`https://www.google.com/search?q=${encodeURIComponent(
+                    `manual de taller servicio ${orden.vehicle || ""} ${flotanteManual.pin.tipo || ""} procedimiento torque pdf`
+                  )}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="w-full h-9 rounded-xl bg-white dark:bg-zinc-900 border border-purple-300 dark:border-purple-700/60 hover:bg-purple-50 dark:hover:bg-purple-900/30 text-purple-700 dark:text-purple-300 font-medium flex items-center justify-center gap-2 transition-all shadow-2xs cursor-pointer text-xs"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                  </svg>
+                  <span>Abrir Manual Técnico / Diagrama en Línea (PDF)</span>
+                </a>
+              </div>
+
+              {/* Tarjeta 2: Ingreso Manual de Repuesto / Servicio */}
+              <div className="p-4 rounded-2xl bg-zinc-50 dark:bg-white/[0.02] border border-zinc-200 dark:border-white/10 space-y-3">
+                <span className="font-semibold text-zinc-800 dark:text-zinc-200 block">
+                  Ingreso Manual para esta Evidencia:
+                </span>
+                <p className="text-zinc-500 dark:text-zinc-400">
+                  Asigna directamente productos, insumos o mano de obra manual vinculados al #{flotanteManual.pin.numeroEvidencia || 1}:
+                </p>
+                <div className="grid grid-cols-2 gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const p = flotanteManual.pin;
+                      setFlotanteManual(null);
+                      setHallazgoActivoParaAsignar(p);
+                      setNuevoNombre(p.descripcion ? `Repuesto para ${p.tipo}: ${p.descripcion}` : `Repuesto para ${p.tipo}`);
+                      setNuevoEnStock(true);
+                      setNuevoProveedor("Bodega Taller");
+                      setNuevoOrigen("TALLER");
+                      setModalNuevoRepuesto(true);
+                    }}
+                    className="h-9 px-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-medium flex items-center justify-center gap-1.5 cursor-pointer shadow-xs active:scale-95"
+                  >
+                    <span>+ Repuesto Manual</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const p = flotanteManual.pin;
+                      setFlotanteManual(null);
+                      setHallazgoActivoParaAsignar(p);
+                      setNuevoServicioNombre(p.descripcion ? `Servicio de ${p.tipo}: ${p.descripcion}` : `Servicio de ${p.tipo}`);
+                      setNuevoServicioOrigen("TALLER");
+                      setModalNuevoServicio(true);
+                    }}
+                    className="h-9 px-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-medium flex items-center justify-center gap-1.5 cursor-pointer shadow-xs active:scale-95"
+                  >
+                    <span>+ Servicio Manual</span>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
