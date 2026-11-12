@@ -655,6 +655,7 @@ export default function ModalNuevaOrdenTrabajo({
     const video = camaraFotoVideoRef.current;
     if (!video) return;
 
+    let previewUrl: string | null = null;
     try {
       setSubiendoFoto(true);
       setProgresoSubida({ percent: 20, status: "Capturando fotograma de alta nitidez..." });
@@ -672,6 +673,9 @@ export default function ModalNuevaOrdenTrabajo({
       );
 
       if (!blob) throw new Error("Fallo al procesar captura fotográfica.");
+      const localPreviewUrl = URL.createObjectURL(blob);
+      previewUrl = localPreviewUrl;
+      setFotosIniciales((prev) => [...prev, localPreviewUrl].slice(0, MULTIMEDIA_CONFIG.MAX_PHOTOS));
 
       setProgresoSubida({ percent: 45, status: "Optimizando compresión de imagen..." });
       const { file: optimizada } = await comprimirImagenEnNavegador(blob);
@@ -687,7 +691,7 @@ export default function ModalNuevaOrdenTrabajo({
         onProgress: (p) => setProgresoSubida(p),
       });
 
-      setFotosIniciales((prev) => [...prev, res.url].slice(0, MULTIMEDIA_CONFIG.MAX_PHOTOS));
+      setFotosIniciales((prev) => prev.map((url) => (url === localPreviewUrl ? res.url : url)));
       setEvidenciasMetadata((prev) => [
         ...prev,
         {
@@ -700,9 +704,14 @@ export default function ModalNuevaOrdenTrabajo({
           clientTempId: res.clientTempId,
         },
       ]);
+      URL.revokeObjectURL(localPreviewUrl);
       mostrarToast("Fotografía guardada y respaldada en Cloudflare R2", "ok");
       detenerCamaraFoto();
     } catch (err: any) {
+      if (previewUrl) {
+        setFotosIniciales((prev) => prev.filter((url) => url !== previewUrl));
+        URL.revokeObjectURL(previewUrl);
+      }
       mostrarToast(err?.message || "Error al capturar fotografía", "err");
     } finally {
       setSubiendoFoto(false);
@@ -722,49 +731,68 @@ export default function ModalNuevaOrdenTrabajo({
 
     const archivos = Array.from(files);
     if (fileInputFotosRef.current) fileInputFotosRef.current.value = "";
+    const espacio = MULTIMEDIA_CONFIG.MAX_PHOTOS - fotosIniciales.length;
+    const aSubir = archivos.slice(0, espacio);
+    const previews = aSubir.map((file) => URL.createObjectURL(file));
+    setFotosIniciales((prev) => [...prev, ...previews].slice(0, MULTIMEDIA_CONFIG.MAX_PHOTOS));
 
     try {
       setSubiendoFoto(true);
-      const espacio = MULTIMEDIA_CONFIG.MAX_PHOTOS - fotosIniciales.length;
-      const aSubir = archivos.slice(0, espacio);
+      const errores: string[] = [];
 
-      for (let i = 0; i < aSubir.length; i++) {
-        const f = aSubir[i];
-        setProgresoSubida({
-          percent: Math.round(((i + 1) / aSubir.length) * 20),
-          status: `Comprimiendo imagen ${i + 1} de ${aSubir.length}...`,
-        });
+      await Promise.all(aSubir.map(async (f, i) => {
+        const previewUrl = previews[i];
+        try {
+          setProgresoSubida({
+            percent: Math.round(((i + 1) / aSubir.length) * 20),
+            status: `Comprimiendo imagen ${i + 1} de ${aSubir.length}...`,
+          });
 
-        // Compresión en navegador conservando nitidez de daños
-        const { file: optimizada } = await comprimirImagenEnNavegador(f);
+          // Compresión en navegador conservando nitidez de daños
+          const { file: optimizada } = await comprimirImagenEnNavegador(f);
 
-        const res = await subirEvidenciaSegura({
-          archivo: optimizada,
-          tipo: "foto",
-          carpeta: "taller_recepcion",
-          nombreArchivo: f.name,
-          plate: vehiculoPlaca.trim().toUpperCase() || undefined,
-          uploadedBy: ingresadoPor.trim() || empleadoLogueado.nombre,
-          branch: getClientActiveBranch("/taller") === "SUCURSAL" ? "SUCURSAL" : "PRINCIPAL",
-          onProgress: (p) => setProgresoSubida(p),
-        });
-
-        setFotosIniciales((prev) => [...prev, res.url].slice(0, MULTIMEDIA_CONFIG.MAX_PHOTOS));
-        setEvidenciasMetadata((prev) => [
-          ...prev,
-          {
-            url: res.url,
-            key: res.key,
-            evidenceId: res.evidenceId,
+          const res = await subirEvidenciaSegura({
+            archivo: optimizada,
             tipo: "foto",
-            fileSizeBytes: res.fileSizeBytes,
-            mimeType: res.mimeType,
-            clientTempId: res.clientTempId,
-          },
-        ]);
-      }
+            carpeta: "taller_recepcion",
+            nombreArchivo: f.name,
+            plate: vehiculoPlaca.trim().toUpperCase() || undefined,
+            uploadedBy: ingresadoPor.trim() || empleadoLogueado.nombre,
+            branch: getClientActiveBranch("/taller") === "SUCURSAL" ? "SUCURSAL" : "PRINCIPAL",
+            onProgress: (p) => setProgresoSubida(p),
+          });
 
-      mostrarToast("Fotografías guardadas en Cloudflare R2", "ok");
+          setFotosIniciales((prev) => prev.map((url) => (url === previewUrl ? res.url : url)));
+          setEvidenciasMetadata((prev) => [
+            ...prev,
+            {
+              url: res.url,
+              key: res.key,
+              evidenceId: res.evidenceId,
+              tipo: "foto",
+              fileSizeBytes: res.fileSizeBytes,
+              mimeType: res.mimeType,
+              clientTempId: res.clientTempId,
+            },
+          ]);
+          URL.revokeObjectURL(previewUrl);
+        } catch (err: any) {
+          errores.push(err?.message || `Error al subir ${f.name}`);
+          setFotosIniciales((prev) => prev.filter((url) => url !== previewUrl));
+          URL.revokeObjectURL(previewUrl);
+        }
+      }));
+
+      if (errores.length > 0) {
+        mostrarToast(
+          errores.length === aSubir.length
+            ? errores[0]
+            : `Algunas fotos no pudieron subirse: ${errores[0]}`,
+          "err"
+        );
+      } else {
+        mostrarToast("Fotografías guardadas en Cloudflare R2", "ok");
+      }
     } catch (err: any) {
       mostrarToast(err?.message || "Error al procesar fotografías", "err");
     } finally {
@@ -4981,7 +5009,8 @@ export default function ModalNuevaOrdenTrabajo({
                               <button
                                 type="button"
                                 onClick={iniciarCamaraFoto}
-                                className="p-3 rounded-xl bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/30 text-sky-700 dark:text-sky-200 text-xs font-semibold transition-all flex flex-col items-center justify-center gap-1.5 cursor-pointer active:scale-95 group"
+                                disabled={subiendoFoto}
+                                className="p-3 rounded-xl bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/30 text-sky-700 dark:text-sky-200 text-xs font-semibold transition-all flex flex-col items-center justify-center gap-1.5 cursor-pointer active:scale-95 group disabled:opacity-50 disabled:cursor-not-allowed"
                               >
                                 <svg
                                   className="w-5 h-5 text-sky-600 dark:text-sky-400 group-hover:scale-110 transition-transform"
@@ -5003,7 +5032,8 @@ export default function ModalNuevaOrdenTrabajo({
                               <button
                                 type="button"
                                 onClick={() => fileInputFotosRef.current?.click()}
-                                className="p-3 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 border border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white text-xs font-semibold transition-all flex flex-col items-center justify-center gap-1.5 cursor-pointer active:scale-95 group"
+                                disabled={subiendoFoto}
+                                className="p-3 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 border border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white text-xs font-semibold transition-all flex flex-col items-center justify-center gap-1.5 cursor-pointer active:scale-95 group disabled:opacity-50 disabled:cursor-not-allowed"
                               >
                                 <svg
                                   className="w-5 h-5 text-zinc-500 dark:text-zinc-400 group-hover:scale-110 transition-transform"
@@ -5034,6 +5064,42 @@ export default function ModalNuevaOrdenTrabajo({
                               onChange={handleSubirFotosIniciales}
                               className="hidden"
                             />
+
+                            {fotosIniciales.length > 0 && (
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                                {fotosIniciales.map((url, i) => (
+                                  <div
+                                    key={url}
+                                    className="relative aspect-[4/3] overflow-hidden rounded-xl border border-zinc-200 dark:border-white/10 bg-zinc-100 dark:bg-black/40 shadow-xs cursor-pointer"
+                                    onClick={() => setFotoEnZoom(url)}
+                                    title="Clic para ampliar detalle"
+                                  >
+                                    <img
+                                      src={url}
+                                      alt={`Foto ${i + 1}`}
+                                      className="w-full h-full object-cover"
+                                    />
+                                    {url.startsWith("blob:") && (
+                                      <span className="absolute bottom-2 left-2 px-2 py-1 rounded-full bg-black/70 text-white text-[10px]">
+                                        Subiendo...
+                                      </span>
+                                    )}
+                                    <button
+                                      type="button"
+                                      onClick={(event) => {
+                                        event.stopPropagation();
+                                        handleEliminarFoto(i);
+                                      }}
+                                      disabled={subiendoFoto}
+                                      title="Eliminar foto"
+                                      className="absolute top-2 right-2 w-6 h-6 rounded-full bg-black/80 hover:bg-rose-600 text-white flex items-center justify-center text-xs font-bold border border-white/20 transition-all cursor-pointer disabled:opacity-50"
+                                    >
+                                      ✕
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
                           </div>
                         ) : (
                           <div className="p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-xs flex items-center justify-between">
@@ -5445,45 +5511,6 @@ export default function ModalNuevaOrdenTrabajo({
                       null
                     ) : (
                       <div className="space-y-2">
-                        {/* Miniaturas de Fotos con visualizador ampliado */}
-                        {fotosIniciales.length > 0 && (
-                          <div className="grid grid-cols-5 gap-1.5">
-                            {fotosIniciales.map((url, i) => (
-                              <div
-                                key={i}
-                                className="relative group rounded-lg overflow-hidden border border-zinc-200 dark:border-white/10 aspect-video bg-zinc-100 dark:bg-black/40 shadow-xs cursor-pointer"
-                                onClick={() => setFotoEnZoom(url)}
-                                title="Clic para ampliar detalle"
-                              >
-                                <img
-                                  src={url}
-                                  alt={`Foto ${i + 1}`}
-                                  className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                                />
-                                <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white pointer-events-none">
-                                  <svg className="w-4 h-4 drop-shadow" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607ZM10.5 7.5v6m3-3h-6" />
-                                  </svg>
-                                </div>
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleEliminarFoto(i);
-                                  }}
-                                  title="Eliminar foto"
-                                  className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-black/80 hover:bg-rose-600 text-white flex items-center justify-center text-[8px] font-bold border border-white/20 transition-all cursor-pointer shadow-md z-10"
-                                >
-                                  ✕
-                                </button>
-                                <span className="absolute bottom-0.5 left-0.5 px-1 rounded bg-black/70 text-[8px] font-mono text-zinc-300">
-                                  #{i + 1}
-                                </span>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-
                         {/* Chips de Videos y Notas de Voz */}
                         <div className="space-y-1.5">
                           {videosIniciales.map((vid, idx) => (
