@@ -853,11 +853,11 @@ export default function PanelPresupuestosPage() {
                   ¿Eliminar propuesta #{limpiarNumeroOrden(ordenAEliminar.orderNumber)}?
                 </h3>
                 <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
-                  Esta acción eliminará de forma permanente la propuesta de{" "}
+                  Se eliminará definitivamente:{" "}
                   <strong className="text-zinc-800 dark:text-zinc-200 font-medium">
                     {ordenAEliminar.client || "Cliente"}
                   </strong>{" "}
-                  ({ordenAEliminar.vehicle || "Vehículo"}). No se podrá recuperar.
+                  ({ordenAEliminar.vehicle || "Vehículo"}).
                 </p>
               </div>
             </div>

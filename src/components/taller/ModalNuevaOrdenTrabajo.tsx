@@ -676,6 +676,7 @@ export default function ModalNuevaOrdenTrabajo({
       const localPreviewUrl = URL.createObjectURL(blob);
       previewUrl = localPreviewUrl;
       setFotosIniciales((prev) => [...prev, localPreviewUrl].slice(0, MULTIMEDIA_CONFIG.MAX_PHOTOS));
+      detenerCamaraFoto();
 
       setProgresoSubida({ percent: 45, status: "Optimizando compresión de imagen..." });
       const { file: optimizada } = await comprimirImagenEnNavegador(blob);
@@ -706,7 +707,6 @@ export default function ModalNuevaOrdenTrabajo({
       ]);
       URL.revokeObjectURL(localPreviewUrl);
       mostrarToast("Fotografía guardada y respaldada en Cloudflare R2", "ok");
-      detenerCamaraFoto();
     } catch (err: any) {
       if (previewUrl) {
         setFotosIniciales((prev) => prev.filter((url) => url !== previewUrl));
@@ -5003,8 +5003,10 @@ export default function ModalNuevaOrdenTrabajo({
                               </button>
                             </div>
                           </div>
-                        ) : fotosIniciales.length < MULTIMEDIA_CONFIG.MAX_PHOTOS ? (
+                        ) : (
                           <div className="space-y-2">
+                            {fotosIniciales.length < MULTIMEDIA_CONFIG.MAX_PHOTOS ? (
+                              <>
                             <div className="grid grid-cols-2 gap-2">
                               <button
                                 type="button"
@@ -5064,6 +5066,13 @@ export default function ModalNuevaOrdenTrabajo({
                               onChange={handleSubirFotosIniciales}
                               className="hidden"
                             />
+                              </>
+                            ) : (
+                              <div className="p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-xs flex items-center justify-between">
+                                <span>Límite de {MULTIMEDIA_CONFIG.MAX_PHOTOS} fotos alcanzado</span>
+                                <span className="font-mono font-bold">5/5</span>
+                              </div>
+                            )}
 
                             {fotosIniciales.length > 0 && (
                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
@@ -5100,11 +5109,6 @@ export default function ModalNuevaOrdenTrabajo({
                                 ))}
                               </div>
                             )}
-                          </div>
-                        ) : (
-                          <div className="p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-xs flex items-center justify-between">
-                            <span>Límite de {MULTIMEDIA_CONFIG.MAX_PHOTOS} fotos alcanzado</span>
-                            <span className="font-mono font-bold">5/5</span>
                           </div>
                         )}
                       </div>
