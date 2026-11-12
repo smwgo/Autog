@@ -51,7 +51,7 @@
           "vin": null,
           "fuelType": "Gasolina",
           "createdAt": "2026-11-12T07:13:01.336Z",
-          "updatedAt": "2026-11-12T07:13:01.336Z"
+          "updatedAt": "2026-11-12T07:55:23.877Z"
         }
       ]
     },
@@ -123,7 +123,7 @@
       "mileage": null,
       "imageUrl": null,
       "createdAt": "2026-11-12T07:13:01.336Z",
-      "updatedAt": "2026-11-12T07:13:01.336Z",
+      "updatedAt": "2026-11-12T07:55:23.877Z",
       "color": null,
       "nextOilChangeMileage": null,
       "vin": null
@@ -150,8 +150,8 @@
   "workshopOrder": [
     {
       "mechanic": "Carlos Rodríguez",
-      "status": "Pausada",
-      "progress": 40,
+      "status": "En Proceso",
+      "progress": 10,
       "fuelLevel": "1/2",
       "generalCondition": "Bueno",
       "receptionInventoryJson": "[]",
@@ -181,7 +181,7 @@
       "stockDeducted": false,
       "branch": "PRINCIPAL",
       "createdAt": "2026-11-12T07:13:02.142Z",
-      "updatedAt": "2026-11-12T07:33:23.809Z",
+      "updatedAt": "2026-11-12T07:55:23.560Z",
       "id": "ord_5wsjjqkmwcnnrpg",
       "orderNumber": "OT #00002",
       "customerId": "cmwcnnrnx2q82nixd",
@@ -193,12 +193,12 @@
       "clientIdDoc": "09655564555",
       "mileage": null,
       "nextOilChangeKm": null,
-      "servicesJson": "[\"20W-50\",\"Filtro Aceite\",\"AMALIE ELIXIR 5W30\"]",
+      "servicesJson": "[\"20W-50\",\"Filtro Aceite\",\"2x AMALIE ELIXIR 5W30\"]",
       "notes": "xxxxxxxxxxxx • Inspección 5 Vistas (1 hallazgos): #1 [Frontal] : Frontal",
-      "totalCost": "26.45",
+      "totalCost": "23",
       "receptionSignatureUrl": null,
       "inspectionTemplateId": null,
-      "startedAt": null,
+      "startedAt": "2026-11-12T07:55:23.560Z",
       "completedAt": null,
       "quoteNumber": "PRE-2026-4822",
       "quoteToken": "PRE-2026-4822-RHN4R",
