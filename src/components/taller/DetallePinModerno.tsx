@@ -69,6 +69,7 @@ export interface DetallePinModernoProps {
   productosCatalogo?: CatalogoItemFuente[];
   onAgregarItemPin?: (item: any, targetPinId?: string, deltaQty?: number) => void;
   onEliminarItemPin?: (itemId: string, targetPinId?: string) => void;
+  onToggleSolicitaRepuesto?: (targetPinId: string, tipo: "repuesto" | "servicio", checked: boolean) => void;
 }
 
 export function DetallePinModerno({
@@ -106,6 +107,7 @@ export function DetallePinModerno({
   productosCatalogo = [],
   onAgregarItemPin,
   onEliminarItemPin,
+  onToggleSolicitaRepuesto,
 }: DetallePinModernoProps) {
   const mismoNumero = pin.pinNumber || 1;
   const listaMismoPin = hallazgosDelMismoPin.filter(
@@ -996,9 +998,55 @@ export function DetallePinModerno({
                 )}
 
                 <div
-                  className="pt-2 border-t border-zinc-200/70 dark:border-white/10"
+                  className="pt-2 border-t border-zinc-200/70 dark:border-white/10 space-y-2.5"
                   onClick={(e) => e.stopPropagation()}
                 >
+                  {/* Selector a la izquierda sin filos (sin bordes duros) */}
+                  <div className="space-y-1">
+                    <span className="text-[11px] font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider block">
+                      Solicitar
+                    </span>
+                    <div className="flex items-center justify-start gap-2 flex-wrap">
+                      <label
+                        className={`inline-flex items-center gap-1.5 py-1.5 px-3.5 rounded-full text-xs font-semibold cursor-pointer transition-all select-none ${
+                          bloque.solicitaRepuesto
+                            ? "bg-amber-100 dark:bg-amber-500/20 text-amber-900 dark:text-amber-200"
+                            : "bg-zinc-100 hover:bg-zinc-200/80 dark:bg-white/[0.06] dark:hover:bg-white/10 text-zinc-600 dark:text-zinc-400"
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={!!bloque.solicitaRepuesto}
+                          onChange={(e) => onToggleSolicitaRepuesto?.(bloque.id, "repuesto", e.target.checked)}
+                          className="w-4 h-4 rounded accent-amber-500 cursor-pointer"
+                        />
+                        <span className="flex items-center gap-1.5">
+                          <span>📦</span>
+                          <span>Producto</span>
+                        </span>
+                      </label>
+
+                      <label
+                        className={`inline-flex items-center gap-1.5 py-1.5 px-3.5 rounded-full text-xs font-semibold cursor-pointer transition-all select-none ${
+                          bloque.solicitaServicio
+                            ? "bg-purple-100 dark:bg-purple-500/20 text-purple-900 dark:text-purple-200"
+                            : "bg-zinc-100 hover:bg-zinc-200/80 dark:bg-white/[0.06] dark:hover:bg-white/10 text-zinc-600 dark:text-zinc-400"
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={!!bloque.solicitaServicio}
+                          onChange={(e) => onToggleSolicitaRepuesto?.(bloque.id, "servicio", e.target.checked)}
+                          className="w-4 h-4 rounded accent-purple-600 cursor-pointer"
+                        />
+                        <span className="flex items-center gap-1.5">
+                          <span>🔧</span>
+                          <span>Servicio</span>
+                        </span>
+                      </label>
+                    </div>
+                  </div>
+
                   <CatalogoProductosServiciosTaller
                     itemsSeleccionados={bloque.linkedItems || []}
                     onAgregarItem={(item, delta) => onAgregarItemPin?.(item, bloque.id, delta)}
@@ -1210,3 +1258,6 @@ export function DetallePinModerno({
     </div>
   );
 }
+
+export default DetallePinModerno;
+

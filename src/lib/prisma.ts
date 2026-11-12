@@ -3,6 +3,14 @@ import { PrismaClient } from "@prisma/client";
 import fs from "fs";
 import path from "path";
 
+// Asegurar conexión a la base de datos real Neon en toda la aplicación
+if (!process.env.DATABASE_URL) {
+  process.env.DATABASE_URL = "postgresql://neondb_owner:npg_ltX2Thvi3OCa@ep-autumn-math-bd8lw08r-pooler.c-8.us-east-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require";
+}
+if (!process.env.DIRECT_URL) {
+  process.env.DIRECT_URL = "postgresql://neondb_owner:npg_ltX2Thvi3OCa@ep-autumn-math-bd8lw08r.c-8.us-east-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require";
+}
+
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
   neonCircuitOpenUntil?: number;

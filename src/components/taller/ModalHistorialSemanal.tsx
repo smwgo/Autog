@@ -256,10 +256,10 @@ export default function ModalHistorialSemanal({
                     {/* FILA SUPERIOR: Placa, Vehículo, Cliente y Estado Pagado */}
                     <div className="flex flex-wrap items-center justify-between gap-2.5">
                       <div className="flex items-center gap-3">
-                        {/* PLACA ESTILO VEHICULAR */}
-                        <div className="px-3 py-1 rounded-md bg-zinc-900 dark:bg-black text-white border-2 border-zinc-700 dark:border-zinc-600 font-mono font-black text-sm tracking-wider shadow-xs shrink-0 flex items-center gap-1.5">
-                          <span className="text-[10px] text-zinc-400 font-sans font-bold">EC</span>
-                          <span>{v.plate || "S/P"}</span>
+                        {/* PLACA */}
+                        <div className="px-2.5 py-1 rounded-lg bg-blue-500/10 dark:bg-blue-500/15 border border-blue-500/25 text-blue-700 dark:text-blue-300 font-mono font-normal text-xs sm:text-sm tracking-wider shrink-0 flex items-center gap-1.5">
+                          <span className="text-[10px] text-blue-500/70 font-sans font-normal">EC</span>
+                          <span className="font-normal">{v.plate || "S/P"}</span>
                         </div>
 
                         <div>

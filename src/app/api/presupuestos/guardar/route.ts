@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { orderId, items = [], services = [], notes, quoteStatus } = body;
+    const { orderId, items = [], services = [], notes, quoteStatus, inspectionFindings } = body;
 
     if (!orderId) {
       return NextResponse.json(
@@ -41,6 +41,16 @@ export async function POST(request: Request) {
         notes !== undefined ? notes : null,
         quoteStatus || "Cotizando"
       );
+
+      if (inspectionFindings !== undefined) {
+        await prisma.$executeRawUnsafe(
+          `UPDATE "WorkshopOrder"
+           SET "inspectionFindingsJson" = $2
+           WHERE "id" = $1 OR "orderNumber" = $1`,
+          orderId,
+          JSON.stringify(inspectionFindings)
+        );
+      }
 
       return NextResponse.json({
         success: true,

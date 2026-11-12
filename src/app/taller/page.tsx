@@ -32,6 +32,8 @@ export interface OrderItem {
   status: "Pendiente" | "En Proceso" | "Listo";
   completed?: boolean;
   productId?: string;
+  findingId?: string;
+  notes?: string;
   imageUrl?: string | null;
   empleado_id?: string;
   empleado_nombre?: string;
@@ -179,6 +181,8 @@ export interface FindingItemLink {
   code?: string;
   category?: string;
   productId?: string;
+  findingId?: string;
+  notes?: string;
   imageUrl?: string | null;
 }
 
@@ -199,6 +203,8 @@ export interface InspectionFinding {
   capturedAt?: string;
   severidad?: "LEVE" | "MODERADO" | "GRAVE" | string;
   linkedItems?: FindingItemLink[];
+  solicitaRepuesto?: boolean;
+  solicitaServicio?: boolean;
 }
 
 export interface InventoryProduct {

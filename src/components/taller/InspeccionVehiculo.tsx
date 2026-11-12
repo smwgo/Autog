@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect, useCallback, useMemo, useSyncExternalStore } from "react";
 import type { UnifiedOrder, InspectionFinding, OrderItem, FindingItemLink } from "@/app/taller/page";
-import { DetallePinModerno } from "./DetallePinModerno";
+import DetallePinModerno, { DetallePinModerno as DetallePinModernoNamed } from "./DetallePinModerno";
 import { comprimirImagenEnNavegador } from "@/lib/storage-client";
 import { getBestSupportedAudioMimeType } from "@/lib/transcription";
 
@@ -1345,6 +1345,8 @@ export default function InspeccionVehiculo({
           type: itemPinActualizado.type,
           name: itemPinActualizado.name,
           category: `Inspección - Pin #${pin.pinNumber || 1} (${pin.vistaLabel || pin.vista})`,
+          findingId: pin.id,
+          notes: `[Evidencia #${pin.pinNumber || 1}] ${pin.tipo || ""}`.trim(),
           qty: itemPinActualizado.qty,
           price: Number(itemPinActualizado.price) || 0,
           productId: itemPinActualizado.productId,
@@ -2866,6 +2868,23 @@ export default function InspeccionVehiculo({
     handleGuardarDetallePin(nuevoTipo, observacionTexto !== "" ? observacionTexto : pin.descripcion);
   };
 
+  // CASILLERO: SOLICITAR REPUESTO O SERVICIO PARA PROPUESTA SI NO HAY EN TALLER
+  const handleToggleSolicitaRepuestoPin = (targetPinId: string, tipo: "repuesto" | "servicio", valor: boolean) => {
+    const campo = tipo === "repuesto" ? "solicitaRepuesto" : "solicitaServicio";
+    const nuevosHallazgos = hallazgos.map((h) => {
+      if (h.id === targetPinId) {
+        return {
+          ...h,
+          [campo]: valor,
+        };
+      }
+      return h;
+    });
+    setHallazgos(nuevosHallazgos);
+    sincronizarHallazgosNeon(nuevosHallazgos);
+    mostrarToast(valor ? `✓ Marcado: solicita ${tipo === "repuesto" ? "repuesto/producto" : "servicio"} para esta evidencia.` : `✓ Solicitud de ${tipo} cancelada.`);
+  };
+
   // GENERAR OTRO HALLAZGO EN EL MISMO PIN (MISMO NÚMERO, NO INCREMENTA)
   const handleDuplicarPin = (pinOriginal: InspectionFinding) => {
     const mismoPinNumero = pinOriginal.pinNumber || 1;
@@ -3430,6 +3449,7 @@ ${urlSeguimiento}`;
             serviciosCatalogo={serviciosCatalogo}
             onAgregarItemPin={(item, targetId) => handleAgregarItemPin(targetId || pinActual.id, item)}
             onEliminarItemPin={(itemId, targetId) => handleEliminarItemPin(targetId || pinActual.id, itemId)}
+            onToggleSolicitaRepuesto={handleToggleSolicitaRepuestoPin}
             onDuplicarPin={() => handleDuplicarPin(pinActual)}
             onEliminarPin={() => handleEliminarPin(pinActual.id)}
             onReubicarPin={() => {
@@ -3887,6 +3907,7 @@ ${urlSeguimiento}`;
                 serviciosCatalogo={serviciosCatalogo}
                 onAgregarItemPin={(item, targetId) => handleAgregarItemPin(targetId || pinActual.id, item)}
                 onEliminarItemPin={(itemId, targetId) => handleEliminarItemPin(targetId || pinActual.id, itemId)}
+                onToggleSolicitaRepuesto={handleToggleSolicitaRepuestoPin}
                 onDuplicarPin={() => handleDuplicarPin(pinActual)}
                 onEliminarPin={() => handleEliminarPin(pinActual.id)}
                 onReubicarPin={() => {

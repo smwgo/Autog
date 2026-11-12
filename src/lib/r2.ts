@@ -158,7 +158,9 @@ export async function uploadToR2({
   );
 
   const publicDomain = process.env.R2_PUBLIC_DOMAIN;
-  const publicUrl = publicDomain ? `https://${publicDomain}/${key}` : undefined;
+  const publicUrl = publicDomain
+    ? `https://${publicDomain}/${key}`
+    : `/api/storage/download?key=${encodeURIComponent(key)}`;
 
   return { key, publicUrl };
 }
@@ -225,7 +227,9 @@ export async function getSignedUploadUrl({
 
   const uploadUrl = await getSignedUrl(client, command, { expiresIn: expiresInSeconds });
   const publicDomain = process.env.R2_PUBLIC_DOMAIN;
-  const publicUrl = publicDomain ? `https://${publicDomain}/${key}` : uploadUrl.split("?")[0];
+  const publicUrl = publicDomain
+    ? `https://${publicDomain}/${key}`
+    : `/api/storage/download?key=${encodeURIComponent(key)}`;
 
   return { uploadUrl, key, publicUrl };
 }

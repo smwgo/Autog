@@ -529,7 +529,7 @@ function DetalleOrdenContent() {
                         </td>
                         <td className="py-3.5 px-5">
                           <span className="text-xs font-medium px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
-                            Repuesto / Insumo
+                            Repuesto
                           </span>
                         </td>
                         <td className="py-3.5 px-5 text-center font-mono">{qty}</td>
