@@ -466,14 +466,13 @@ export default function InspeccionVehiculo({
   const [pinReubicandoId, setPinReubicandoId] = useState<string | null>(null);
 
   // Estados para popover y detalle multimedia del pin activo
-  const [popoverAbierto, setPopoverAbierto] = useState(false);
+  const [popoverAbierto, setPopoverAbierto] = useState(true);
   const [menuVistasAbierto, setMenuVistasAbierto] = useState<boolean>(false);
   const menuVistasRef = useRef<HTMLDivElement | null>(null);
 
   const cambiarVista = useCallback((nuevaVista: VistaVehiculoId) => {
     setVistaActiva(nuevaVista);
     setPinSeleccionadoId(null);
-    setPopoverAbierto(false);
     setMenuVistasAbierto(false);
   }, []);
 
@@ -1104,7 +1103,11 @@ export default function InspeccionVehiculo({
     mostrarToast(`✓ Pin #${nuevoPinNumero} ubicado en ${vistaLabel}.`);
   };
 
-  const pinActual = hallazgos.find((h) => h.id === pinSeleccionadoId) || null;
+  const pinActual =
+    hallazgos.find((h) => h.id === pinSeleccionadoId) ||
+    hallazgos.find((h) => h.vista === vistaActiva) ||
+    hallazgos[0] ||
+    null;
   const debounceSyncPinRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleGuardarDetallePin = (tipo: string, obs?: string, explicitPinId?: string) => {
@@ -2895,6 +2898,18 @@ export default function InspeccionVehiculo({
     mostrarToast(valor ? `✓ Marcado: solicita ${tipo === "repuesto" ? "repuesto/producto" : "servicio"} para esta evidencia.` : `✓ Solicitud de ${tipo} cancelada.`);
   };
 
+  // SEMÁFORO DE ÁREA / MÓDULO (Taller -> Lubricentro -> Car Wash -> Tecnicentro)
+  const handleCambiarModuloPin = (
+    targetPinId: string,
+    nuevoModulo: "Taller" | "Lubricentro" | "Car Wash" | "Tecnicentro"
+  ) => {
+    const nuevosHallazgos = hallazgos.map((h) =>
+      h.id === targetPinId ? { ...h, modulo: nuevoModulo } : h
+    );
+    setHallazgos(nuevosHallazgos);
+    sincronizarHallazgosNeon(nuevosHallazgos);
+  };
+
   // GENERAR OTRO HALLAZGO EN EL MISMO PIN (MISMO NÚMERO, NO INCREMENTA)
   const handleDuplicarPin = (pinOriginal: InspectionFinding) => {
     const mismoPinNumero = pinOriginal.pinNumber || 1;
@@ -3041,477 +3056,14 @@ ${urlSeguimiento}`;
 
   return (
     <div className="space-y-4">
-      <div>
-        <div className="flex items-center justify-between gap-2 w-full">
-          {pasoInspeccion === "sistema" ? (
-            <>
-              <button
-                type="button"
-                onClick={() => moverCandidatoSistema(-1)}
-                aria-label="Sistema anterior"
-                className="h-10 w-10 shrink-0 rounded-xl border border-zinc-200 dark:border-white/10 bg-white dark:bg-white/[0.04] text-zinc-700 dark:text-zinc-300 text-xl font-bold"
-              >
-                ‹
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  cambiarSeccionActiva(sistemaCandidato.id);
-                  setModoColocandoPin(false);
-                  setPasoInspeccion("subcategoria");
-                }}
-                className="min-w-0 flex-1 h-12 px-3 rounded-xl border border-blue-400 dark:border-blue-500/50 bg-blue-50 dark:bg-blue-500/15 text-blue-800 dark:text-blue-200 flex items-center justify-center gap-2 font-bold transition-all active:scale-[0.98]"
-              >
-                <span className="text-lg">{sistemaCandidato.icon}</span>
-                <span className="truncate">{sistemaCandidato.shortName}</span>
-                {contarHallazgosSistema(sistemaCandidato.id) > 0 && (
-                  <span className="px-1.5 py-0.5 rounded-full bg-rose-500 text-white text-[10px]">
-                    {contarHallazgosSistema(sistemaCandidato.id)}
-                  </span>
-                )}
-              </button>
-              <button
-                type="button"
-                onClick={() => moverCandidatoSistema(1)}
-                aria-label="Sistema siguiente"
-                className="h-10 w-10 shrink-0 rounded-xl border border-zinc-200 dark:border-white/10 bg-white dark:bg-white/[0.04] text-zinc-700 dark:text-zinc-300 text-xl font-bold"
-              >
-                ›
-              </button>
-            </>
-          ) : (
-            <button
-              type="button"
-              onClick={() => {
-                setDesplazamientoSistemaCandidato(0);
-                setPasoInspeccion("sistema");
-                setModoColocandoPin(false);
-              }}
-              aria-label="Volver a selección de sistema"
-              className="min-w-0 flex-1 h-11 px-3 rounded-xl border border-blue-400 dark:border-blue-500/50 bg-blue-50 dark:bg-blue-500/15 text-blue-800 dark:text-blue-200 flex items-center justify-center gap-2 font-bold transition-all active:scale-[0.98]"
-            >
-              <span className="text-lg">{SISTEMAS_INSPECCION.find((sistema) => sistema.id === seccionActiva)?.icon}</span>
-              <span className="truncate">{SISTEMAS_INSPECCION.find((sistema) => sistema.id === seccionActiva)?.shortName}</span>
-              {contarHallazgosSistema(seccionActiva) > 0 && (
-                <span className="px-1.5 py-0.5 rounded-full bg-rose-500 text-white text-[10px]">
-                  {contarHallazgosSistema(seccionActiva)}
-                </span>
-              )}
-            </button>
-          )}
-        </div>
-      </div>
-
       {/* ===================================================================
           CONTENIDO DINÁMICO SEGÚN EL SISTEMA ACTIVO
           =================================================================== */}
       {seccionActiva === "carroceria" ? (
         <div className="space-y-3 animate-fade-in">
-          {pasoInspeccion !== "sistema" && (() => {
-            const vistaActual = VISTAS_CARROCERIA.find((vista) => vista.id === vistaActiva) || VISTAS_CARROCERIA[0];
-            const indiceVista = VISTAS_CARROCERIA.findIndex((vista) => vista.id === vistaActiva);
-            const cantidadHallazgos = hallazgos.filter((hallazgo) => hallazgo.vista === vistaActual.id).length;
-            const moverVista = (direccion: 1 | -1) => {
-              const total = VISTAS_CARROCERIA.length;
-              cambiarVista(VISTAS_CARROCERIA[(indiceVista + direccion + total) % total].id);
-            };
-
-            return (
-              <div className="flex items-center justify-between gap-2 p-2 rounded-xl border border-cyan-300 dark:border-cyan-500/30 bg-cyan-50/70 dark:bg-cyan-500/[0.06]">
-                {pasoInspeccion === "subcategoria" ? (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => moverVista(-1)}
-                      aria-label="Vista anterior"
-                      className="h-9 w-9 shrink-0 rounded-lg border border-zinc-200 dark:border-white/10 bg-white dark:bg-white/[0.04] text-zinc-700 dark:text-zinc-300 text-xl font-bold"
-                    >
-                      ‹
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setPasoInspeccion("marcar")}
-                      className="min-w-0 flex-1 h-10 px-2 rounded-lg text-cyan-800 dark:text-cyan-200 flex items-center justify-center gap-2 font-bold"
-                    >
-                      {vistaActual.icon}
-                      <span className="truncate">{vistaActual.label}</span>
-                      {cantidadHallazgos > 0 && (
-                        <span className="px-1.5 py-0.5 rounded-full bg-rose-500 text-white text-[10px]">
-                          {cantidadHallazgos}
-                        </span>
-                      )}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => moverVista(1)}
-                      aria-label="Vista siguiente"
-                      className="h-9 w-9 shrink-0 rounded-lg border border-zinc-200 dark:border-white/10 bg-white dark:bg-white/[0.04] text-zinc-700 dark:text-zinc-300 text-xl font-bold"
-                    >
-                      ›
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <div className="min-w-0 flex-1 flex sm:hidden items-center justify-center gap-2 text-sm font-bold text-cyan-800 dark:text-cyan-200">
-                      {vistaActual.icon}
-                      <span className="truncate">{vistaActual.label}</span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setPasoInspeccion("subcategoria");
-                        setModoColocandoPin(false);
-                      }}
-                      aria-label="Volver a selección de vista"
-                      className="hidden sm:flex min-w-0 flex-1 items-center justify-center gap-2 text-sm font-bold text-cyan-800 dark:text-cyan-200"
-                    >
-                      {vistaActual.icon}
-                      <span className="truncate">{vistaActual.label}</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setPasoInspeccion("subcategoria");
-                        setModoColocandoPin(false);
-                      }}
-                      className="h-9 px-3 rounded-lg border border-cyan-300 dark:border-cyan-500/40 bg-white dark:bg-white/[0.04] text-xs font-bold text-cyan-800 dark:text-cyan-200 sm:hidden"
-                    >
-                      Cambiar vista
-                    </button>
-                  </>
-                )}
-              </div>
-            );
-          })()}
-
-          {/* LIENZO DEL VEHÍCULO CON PINES NUMERADOS */}
-          <div className="relative rounded-2xl bg-white dark:bg-[#09090b] border border-zinc-200 dark:border-white/10 p-1 sm:p-5 overflow-hidden select-none shadow-sm dark:shadow-none w-full">
-
-
-        <div
-          onClick={handleTocarLienzo}
-          onTouchEnd={handleTocarLienzo}
-          style={{ touchAction: "manipulation" }}
-          className={`relative w-full aspect-[16/10] sm:aspect-auto sm:h-96 min-h-[240px] rounded-xl border flex items-center justify-center overflow-hidden group transition-all ${
-            lienzoOscuro
-              ? "bg-slate-950 border-cyan-500/30 shadow-[0_0_35px_rgba(6,182,212,0.12)]"
-              : "bg-slate-50 border-slate-300/80 shadow-[inset_0_2px_12px_rgba(0,0,0,0.03)] bg-[radial-gradient(#94a3b8_1.2px,transparent_1.2px)] [background-size:22px_22px]"
-          } ${
-            modoColocandoPin || pinReubicandoId
-              ? "ring-2 ring-cyan-500/40 cursor-crosshair !border-cyan-500"
-              : "cursor-default"
-          }`}
-        >
-          {/* Selector de modo visual para el lienzo 3D (Plano CAD / Neón 3D) */}
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              setModoVisualLienzo(lienzoOscuro ? "claro" : "oscuro");
-            }}
-            onTouchStart={(e) => e.stopPropagation()}
-            onTouchEnd={(e) => e.stopPropagation()}
-            onPointerDown={(e) => e.stopPropagation()}
-            title="Alternar fondo: Plano Técnico CAD (Claro) / Neón 3D (Oscuro)"
-            className={`absolute top-2.5 right-2.5 sm:top-3 sm:right-3 z-30 h-7 sm:h-8 px-2.5 sm:px-3 rounded-full text-[11px] sm:text-xs font-bold border transition-all flex items-center gap-1 cursor-pointer backdrop-blur-md shadow-md ${
-              lienzoOscuro
-                ? "bg-slate-900/85 hover:bg-slate-800 border-cyan-500/40 text-cyan-300"
-                : "bg-white/95 hover:bg-zinc-100 border-zinc-300 text-zinc-800 shadow-sm"
-            }`}
-          >
-            <span>{lienzoOscuro ? "🌙 Neón 3D" : "☀️ Plano CAD"}</span>
-          </button>
-
-
-
-          {/* Banner de modo colocación de nuevo Pin */}
-          {modoColocandoPin && (
-            <div className="absolute top-2 inset-x-2 z-30 flex items-center justify-between px-3 py-1.5 rounded-xl bg-cyan-700/95 dark:bg-cyan-950/95 border border-cyan-400 text-white dark:text-cyan-200 text-xs shadow-xl backdrop-blur-md animate-pulse">
-              <div className="flex items-center gap-2 min-w-0">
-                <span className="w-5 h-5 rounded-full bg-rose-600 text-white font-mono font-bold flex items-center justify-center text-[10px] shrink-0">
-                  #{proximoPinNumero}
-                </span>
-                <span className="font-semibold text-xs truncate">Ubicar Pin #{proximoPinNumero}</span>
-              </div>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setModoColocandoPin(false);
-                }}
-                className="px-2 py-0.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-[11px] font-bold cursor-pointer shrink-0"
-              >
-                ✕ Cancelar
-              </button>
-            </div>
-          )}
-
-          {/* Banner de reubicación de Pin existente */}
-          {pinReubicandoId && (
-            <div className="absolute top-2 inset-x-2 z-30 flex items-center justify-between px-3 py-1.5 rounded-xl bg-amber-600/95 dark:bg-amber-950/95 border border-amber-400 text-white dark:text-amber-200 text-xs shadow-xl backdrop-blur-md animate-pulse">
-              <span className="font-semibold text-xs truncate">📍 Reubicar Pin</span>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setPinReubicandoId(null);
-                }}
-                className="px-2 py-0.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-[11px] font-bold cursor-pointer shrink-0"
-              >
-                ✕ Cancelar
-              </button>
-            </div>
-          )}
-
-          {/* Indicador de carga si la imagen está descargando en móvil */}
-          {imagenCargando && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/70 dark:bg-black/60 z-10 pointer-events-none gap-2">
-              <div className="w-8 h-8 rounded-full border-2 border-cyan-500/30 border-t-cyan-500 animate-spin" />
-              <span className="text-[11px] text-cyan-700 dark:text-cyan-300 font-mono font-semibold">Cargando vista 3D...</span>
-            </div>
-          )}
-
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none p-0 sm:p-3">
-            <img
-              ref={imagenVehiculoRef}
-              src={
-                vistaActiva === "trasera" || vistaActiva === "lateral_der"
-                  ? (lienzoOscuro ? "/images/inspeccion/auto_3d_trasera.jpg" : "/images/inspeccion/auto_3d_trasera_cad.png")
-                  : vistaActiva === "superior"
-                  ? (lienzoOscuro ? "/images/inspeccion/auto_3d_superior.jpg" : "/images/inspeccion/auto_3d_superior_cad.png")
-                  : (lienzoOscuro ? "/images/inspeccion/auto_3d_frontal.jpg" : "/images/inspeccion/auto_3d_frontal_cad.png")
-              }
-              alt={`Vehículo 3D ${vistaActiva}`}
-              loading="eager"
-              decoding="sync"
-              fetchPriority="high"
-              onLoad={() => {
-                setImagenCargando(false);
-                setImagenError(false);
-              }}
-              onError={() => {
-                setImagenCargando(false);
-                setImagenError(true);
-              }}
-              style={{
-                filter: "none",
-                mixBlendMode: "normal",
-              }}
-              className="w-full h-full object-contain select-none inspeccion-wireframe-img drop-shadow-sm"
-            />
+          {/* CONTENEDOR DE INSPECCIÓN */}
+          <div className="w-full">
           </div>
-
-          {/* Fallback de respaldo en caso de que el navegador móvil bloquee o falle al cargar la imagen */}
-          {imagenError && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 z-10 p-4 text-center space-y-2 pointer-events-auto">
-              <div className="w-12 h-12 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 text-2xl">
-                🚗
-              </div>
-              <p className="text-xs text-zinc-300 font-medium">Vista 3D: {vistaActiva}</p>
-              <p className="text-[11px] text-zinc-500 max-w-xs">Puedes marcar los daños tocando en cualquier punto de este recuadro.</p>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setImagenCargando(true);
-                  setImagenError(false);
-                }}
-                className="px-3 py-1 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 text-xs font-semibold cursor-pointer"
-              >
-                Reintentar carga
-              </button>
-            </div>
-          )}
-
-          {/* PINES CIRCULARES ROJOS NUMERADOS (AGRUPADOS POR NÚMERO PARA NO DUPLICAR PINES ENCIMADOS) */}
-          {(() => {
-            const hallazgosVista = hallazgos.filter((h) => h.vista === vistaActiva);
-            const mapaPines = new Map<number, InspectionFinding[]>();
-            hallazgosVista.forEach((h) => {
-              const num = h.pinNumber || 1;
-              if (!mapaPines.has(num)) mapaPines.set(num, []);
-              mapaPines.get(num)!.push(h);
-            });
-
-            return Array.from(mapaPines.entries()).map(([pNum, items]) => {
-              const primerItem = items[0];
-              const esActivo = items.some((it) => it.id === pinSeleccionadoId);
-              const cantDanos = items.length;
-
-              return (
-                <div
-                  key={`pin-carroceria-${pNum}`}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    const itemSeleccionar = items.find((it) => it.id === pinSeleccionadoId) || primerItem;
-                    setPinSeleccionadoId(itemSeleccionar.id);
-                    setTipoSeleccionado(itemSeleccionar.tipo || "");
-                    setObservacionTexto(itemSeleccionar.descripcion || "");
-                    setPopoverAbierto(true);
-                  }}
-                  style={{ left: `${primerItem.x}%`, top: `${primerItem.y}%` }}
-                  className={`absolute -translate-x-1/2 -translate-y-1/2 w-7 h-7 rounded-full flex items-center justify-center font-mono text-xs font-bold text-white shadow-xl border-2 transition-all cursor-pointer z-20 ${
-                    esActivo
-                      ? "bg-rose-500 border-white ring-4 ring-rose-500/50 scale-125 animate-pulse"
-                      : "bg-rose-600 hover:bg-rose-500 border-white/90 ring-2 ring-rose-500/30 hover:scale-110"
-                  }`}
-                  title={`Pin #${pNum} (${cantDanos} ${cantDanos === 1 ? "daño" : "daños"})`}
-                >
-                  <span>{pNum}</span>
-                  {cantDanos > 1 && (
-                    <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-cyan-400 text-black text-[9px] font-black flex items-center justify-center shadow-md border border-black/30">
-                      {cantDanos}
-                    </span>
-                  )}
-                </div>
-              );
-            });
-          })()}
-        </div>
-
-        {/* BARRA INFERIOR DE CONTROL DE PINES: LISTA DE PINES EN ESTA VISTA + GENERAR SIGUIENTE */}
-        <div className="mt-2.5 flex items-center justify-between gap-2 p-2 rounded-xl bg-zinc-50 dark:bg-white/[0.03] border border-zinc-200 dark:border-white/10">
-          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 min-w-0 flex-1">
-            {pinsCarroceriaVista.map((p) => {
-              const activo = p.items.some((it) => it.id === pinSeleccionadoId);
-              return (
-                <button
-                  key={`pin-pill-carroceria-${p.num}`}
-                  type="button"
-                  onClick={() => {
-                    const item = p.items.find((it) => it.id === pinSeleccionadoId) || p.items[0];
-                    setPinSeleccionadoId(item.id);
-                    setTipoSeleccionado(item.tipo || "");
-                    setObservacionTexto(item.descripcion || "");
-                    setPopoverAbierto(true);
-                    setModoColocandoPin(false);
-                    setPinReubicandoId(null);
-                  }}
-                  className={`h-8 px-3 rounded-lg border font-mono text-sm font-bold flex items-center gap-1.5 transition-all cursor-pointer shrink-0 active:scale-95 ${
-                    activo
-                      ? "bg-rose-500 text-white border-rose-400 shadow-sm ring-1 ring-white/30"
-                      : "bg-white dark:bg-white/[0.04] hover:bg-zinc-100 dark:hover:bg-white/[0.08] border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white"
-                  }`}
-                >
-                  <span>#{p.num}</span>
-                  <span className="font-sans">Daño</span>
-                  {p.items.length > 1 && (
-                    <span className="w-3.5 h-3.5 rounded-full bg-cyan-400 text-black text-[9px] font-black flex items-center justify-center">
-                      {p.items.length}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="flex items-center gap-1.5 shrink-0">
-            {popoverAbierto && pinActual && (
-              <>
-                <button
-                  type="button"
-                  onClick={() => handleIniciarReubicarPin(pinActual.id)}
-                  className="h-8 px-2.5 rounded-lg bg-zinc-100 hover:bg-zinc-200 dark:bg-white/[0.04] dark:hover:bg-white/[0.08] border border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-300 text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 active:scale-95 shadow-xs"
-                  title={`Mover Pin #${pinActual.pinNumber || 1}`}
-                >
-                  <span>📍</span>
-                  <span>Mover</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handleEliminarPinCompleto(pinActual.id)}
-                  className="h-8 px-2.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/25 text-rose-600 dark:text-rose-400 text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 active:scale-95 shadow-xs"
-                  title={`Eliminar Pin #${pinActual.pinNumber || 1}`}
-                >
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"
-                    />
-                  </svg>
-                  <span>Borrar</span>
-                </button>
-              </>
-            )}
-
-            {pasoInspeccion === "marcar" && <button
-              type="button"
-              suppressHydrationWarning
-              onClick={() => {
-                setPinReubicandoId(null);
-                setModoColocandoPin(true);
-                mostrarToast(`Toca en el vehículo para ubicar el Pin #${proximoPinNumero}`);
-              }}
-              className={`h-8 px-2.5 rounded-lg border text-xs font-bold transition-all cursor-pointer flex items-center gap-1 shrink-0 active:scale-95 ${
-                modoColocandoPin
-                  ? "bg-cyan-500 text-black border-cyan-400 animate-pulse font-black shadow-md shadow-cyan-500/30"
-                  : "bg-cyan-50 dark:bg-cyan-500/15 hover:bg-cyan-100 dark:hover:bg-cyan-500/25 border-cyan-300 dark:border-cyan-500/40 text-cyan-700 dark:text-cyan-300 shadow-sm"
-              }`}
-            >
-              <span className="text-sm font-black">+</span>
-              <span suppressHydrationWarning translate="no">{modoColocandoPin ? "Toca la imagen" : "Marcar"}</span>
-            </button>}
-          </div>
-        </div>
-
-        {/* DETALLE MODERNO DEL PIN ACTIVO (Audio voz bidireccional, fotos R2 y cotización de servicios/productos) */}
-        {popoverAbierto && pinActual && (
-          <DetallePinModerno
-            pin={pinActual}
-            chipsTipos={CHIPS_HALLAZGO}
-            tipoSeleccionado={tipoSeleccionado}
-            onToggleTipo={(tipoId) => handleToggleTipoPin(pinActual.id, tipoId)}
-            onChangeTipo={(nuevoTipo) => handleCambiarTipoPinDirecto(pinActual.id, nuevoTipo)}
-            observacionTexto={observacionTexto}
-            onChangeObservacion={(texto, targetId) => {
-              const idUso = targetId || pinActual.id;
-              if (idUso === pinActual.id) setObservacionTexto(texto);
-              const targetObj = hallazgos.find((h) => h.id === idUso) || pinActual;
-              handleGuardarDetallePin(targetObj.tipo, texto, idUso);
-            }}
-            escuchandoVoz={escuchandoVoz}
-            transcribiendoVoz={transcribiendoVoz}
-            segundosGrabandoAudio={segundosGrabandoAudio}
-            pinAccionActivaId={pinAccionActivaId}
-            onToggleVoz={(textoActualDirecto, modo, targetId) => handleToggleVozPin(targetId || pinActual.id, textoActualDirecto, modo)}
-            onSubirAudio={(e, targetId) => handleSubirArchivoAudioPinR2(e, targetId || pinActual.id)}
-            onTranscribirAudio={handleTranscribirAudioExistente}
-            onEditarNotaKanban={(noteIdx, texto, targetId) => handleEditarNotaKanbanPin(targetId || pinActual.id, noteIdx, texto)}
-            onEliminarNotaKanban={(noteIdx, targetId) => handleEliminarNotaKanbanPin(targetId || pinActual.id, noteIdx)}
-            onAgregarNotaKanban={(texto, targetId) => agregarNotaKanbanEnPin(targetId || pinActual.id, texto)}
-            reproduciendoAudio={reproduciendoAudio}
-            onReproducirAudio={handleReproducirAudioTexto}
-            onEliminarAudio={(index, targetId) => handleEliminarAudioPin(targetId || pinActual.id, index)}
-            subiendoFotos={subiendoFotoPin}
-            onSubirFotos={(e, targetId) => handleSubirFotosPinR2(e, targetId || pinActual.id)}
-            onEliminarFoto={(idx, e, targetId) => handleEliminarFotoPin(targetId || pinActual.id, idx, e)}
-            productosCatalogo={productosCatalogo}
-            serviciosCatalogo={serviciosCatalogo}
-            onAgregarItemPin={(item, targetId, delta) => handleAgregarItemPin(targetId || pinActual.id, item, delta)}
-            onEliminarItemPin={(itemId, targetId) => handleEliminarItemPin(targetId || pinActual.id, itemId)}
-            onToggleSolicitaRepuesto={handleToggleSolicitaRepuestoPin}
-            onDuplicarPin={() => handleDuplicarPin(pinActual)}
-            onEliminarPin={() => handleEliminarPin(pinActual.id)}
-            onReubicarPin={() => {
-              setPinReubicandoId(pinActual.id);
-              mostrarToast(`Toca en el vehículo para cambiar la posición del Pin #${pinActual.pinNumber || 1}`);
-            }}
-            onCerrar={() => setPopoverAbierto(false)}
-            hallazgosDelMismoPin={hallazgos}
-            onSeleccionarHallazgoPin={(hId) => {
-              const hObj = hallazgos.find((h) => h.id === hId);
-              if (hObj) {
-                setPinSeleccionadoId(hObj.id);
-                setTipoSeleccionado(hObj.tipo);
-                setObservacionTexto(hObj.descripcion || "");
-              }
-            }}
-            onEliminarHallazgoEspecifico={handleEliminarHallazgoEspecifico}
-          />
-        )}
-      </div>
     </div>
   ) : (
     /* SISTEMAS MECÁNICOS Y ELÉCTRICOS (Motor, Frenos, Suspensión, Eléctrico) */
@@ -3945,62 +3497,6 @@ ${urlSeguimiento}`;
                 </button>}
               </div>
             </div>
-
-            {/* DETALLE MODERNO PARA PINES DEL SISTEMA MECÁNICO O PERSONALIZADO */}
-            {popoverAbierto && pinActual && pinActual.vista === seccionActiva && (
-              <DetallePinModerno
-                pin={pinActual}
-                chipsTipos={seccionActiva === "personalizado" ? [...CHIPS_HALLAZGO_MECANICO, ...CHIPS_HALLAZGO] : CHIPS_HALLAZGO_MECANICO}
-                tipoSeleccionado={tipoSeleccionado}
-                onToggleTipo={(tipoId) => handleToggleTipoPin(pinActual.id, tipoId)}
-                onChangeTipo={(nuevoTipo) => handleCambiarTipoPinDirecto(pinActual.id, nuevoTipo)}
-                observacionTexto={observacionTexto}
-                onChangeObservacion={(texto, targetId) => {
-                  const idUso = targetId || pinActual.id;
-                  if (idUso === pinActual.id) setObservacionTexto(texto);
-                  const targetObj = hallazgos.find((h) => h.id === idUso) || pinActual;
-                  handleGuardarDetallePin(targetObj.tipo, texto, idUso);
-                }}
-                escuchandoVoz={escuchandoVoz}
-                transcribiendoVoz={transcribiendoVoz}
-                segundosGrabandoAudio={segundosGrabandoAudio}
-                pinAccionActivaId={pinAccionActivaId}
-                onToggleVoz={(textoActualDirecto, modo, targetId) => handleToggleVozPin(targetId || pinActual.id, textoActualDirecto, modo)}
-                onSubirAudio={(e, targetId) => handleSubirArchivoAudioPinR2(e, targetId || pinActual.id)}
-                onTranscribirAudio={handleTranscribirAudioExistente}
-                onEditarNotaKanban={(noteIdx, texto, targetId) => handleEditarNotaKanbanPin(targetId || pinActual.id, noteIdx, texto)}
-                onEliminarNotaKanban={(noteIdx, targetId) => handleEliminarNotaKanbanPin(targetId || pinActual.id, noteIdx)}
-                onAgregarNotaKanban={(texto, targetId) => agregarNotaKanbanEnPin(targetId || pinActual.id, texto)}
-                reproduciendoAudio={reproduciendoAudio}
-                onReproducirAudio={handleReproducirAudioTexto}
-                onEliminarAudio={(index, targetId) => handleEliminarAudioPin(targetId || pinActual.id, index)}
-                subiendoFotos={subiendoFotoPin}
-                onSubirFotos={(e, targetId) => handleSubirFotosPinR2(e, targetId || pinActual.id)}
-                onEliminarFoto={(idx, e, targetId) => handleEliminarFotoPin(targetId || pinActual.id, idx, e)}
-                productosCatalogo={productosCatalogo}
-                serviciosCatalogo={serviciosCatalogo}
-                onAgregarItemPin={(item, targetId, delta) => handleAgregarItemPin(targetId || pinActual.id, item, delta)}
-                onEliminarItemPin={(itemId, targetId) => handleEliminarItemPin(targetId || pinActual.id, itemId)}
-                onToggleSolicitaRepuesto={handleToggleSolicitaRepuestoPin}
-                onDuplicarPin={() => handleDuplicarPin(pinActual)}
-                onEliminarPin={() => handleEliminarPin(pinActual.id)}
-                onReubicarPin={() => {
-                  setPinReubicandoId(pinActual.id);
-                  mostrarToast(`Toca en el esquema para cambiar la posición del Pin #${pinActual.pinNumber || 1}`);
-                }}
-                onCerrar={() => setPopoverAbierto(false)}
-                hallazgosDelMismoPin={hallazgos}
-                onSeleccionarHallazgoPin={(hId) => {
-                  const hObj = hallazgos.find((h) => h.id === hId);
-                  if (hObj) {
-                    setPinSeleccionadoId(hObj.id);
-                    setTipoSeleccionado(hObj.tipo);
-                    setObservacionTexto(hObj.descripcion || "");
-                  }
-                }}
-                onEliminarHallazgoEspecifico={handleEliminarHallazgoEspecifico}
-              />
-            )}
 
 
           </>

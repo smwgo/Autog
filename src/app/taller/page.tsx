@@ -12,6 +12,7 @@ import ModalNuevaOrdenTrabajo from "@/components/taller/ModalNuevaOrdenTrabajo";
 import ModalPresupuestoPdf from "@/components/taller/ModalPresupuestoPdf";
 import ModalFormularioRapido from "@/components/taller/ModalFormularioRapido";
 import ModalHistorialSemanal from "@/components/taller/ModalHistorialSemanal";
+import RegistroFinalUnificado from "@/components/taller/RegistroFinalUnificado";
 import LubricentroExpress from "./components/LubricentroExpress";
 import ModalCategoriasTaller from "./components/ModalCategoriasTaller";
 import CatalogoProductosServiciosTaller from "@/components/taller/CatalogoProductosServiciosTaller";
@@ -202,6 +203,7 @@ export interface InspectionFinding {
   audioUrls?: string[];
   capturedAt?: string;
   severidad?: "LEVE" | "MODERADO" | "GRAVE" | string;
+  modulo?: "Taller" | "Lubricentro" | "Car Wash" | "Tecnicentro";
   linkedItems?: FindingItemLink[];
   solicitaRepuesto?: boolean;
   solicitaServicio?: boolean;
@@ -745,7 +747,7 @@ export const MODULOS_ESPECIALIDADES = [
   },
   {
     id: "carwash" as const,
-    shortName: "Carwash",
+    shortName: "Car Wash",
     name: "Car Wash & Detailing",
     desc: "Lavado premium, aspirado y estética",
     color: "teal",
@@ -1168,22 +1170,7 @@ export default function TallerPanel() {
       setFotosRecepcion(nuevaOrden.receptionPhotos);
     }
 
-    // Si la orden se creó como Lubricentro o Lavado, abrir directamente su categoría
-    if (
-      tipo === "Lubricentro" ||
-      nuevaOrden?.notes?.includes("[Lubricentro]") ||
-      (nuevaOrden as any)?.motivoIngreso?.includes("[Lubricentro]")
-    ) {
-      setModuloTaller("lubricentro");
-    } else if (
-      tipo === "Lavado" ||
-      nuevaOrden?.notes?.includes("[Lavado]") ||
-      (nuevaOrden as any)?.motivoIngreso?.includes("[Lavado]")
-    ) {
-      setModuloTaller("carwash");
-    } else {
-      setModuloTaller("taller");
-    }
+    setModuloTaller("taller");
     setEtapaActiva(2);
   };
 
@@ -5581,6 +5568,35 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                     );
                   })()}
                 </div>
+
+                {/* Kilometraje compacto + acceso directo a historial de aceites */}
+                {(() => {
+                  const rawKm = Number(ordenActiva?.mileage);
+                  const kmActual = Number.isFinite(rawKm) && rawKm > 0 ? rawKm : 85000;
+                  const rawNextKm = Number(ordenActiva?.nextOilChangeKm);
+                  const kmProximo = Number.isFinite(rawNextKm) && rawNextKm > 0 ? rawNextKm : kmActual + 5000;
+                  const hrefHistorial = `/taller/historial-aceite?placa=${encodeURIComponent(ordenActiva?.plate || "")}&cliente=${encodeURIComponent(ordenActiva?.client || "")}&vehiculo=${encodeURIComponent(ordenActiva?.vehicle || "")}`;
+
+                  return (
+                    <Link
+                      href={hrefHistorial}
+                      title="Ver historial de cambios de aceite"
+                      className="ml-auto inline-flex items-center gap-2 px-2.5 py-1 rounded-xl sm:rounded-lg bg-white/90 hover:bg-white dark:bg-black/25 dark:hover:bg-black/40 border border-zinc-200/80 dark:border-white/10 transition-all group no-underline shrink-0"
+                    >
+                      <div className="text-right leading-tight">
+                        <div className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-white whitespace-nowrap">
+                          {kmActual.toLocaleString()} km
+                        </div>
+                        <div className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
+                          Próx: {kmProximo.toLocaleString()}
+                        </div>
+                      </div>
+                      <span className="text-sm sm:text-base font-bold text-blue-600 dark:text-blue-400 group-hover:translate-x-0.5 transition-transform">
+                        ➔
+                      </span>
+                    </Link>
+                  );
+                })()}
               </div>
             </div>
           )}
@@ -5591,31 +5607,30 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
             =================================================================== */}
         <div className="flex flex-wrap items-center justify-between w-full gap-2 py-1">
           <div className="flex items-center gap-2 w-full min-w-0 sm:w-auto sm:max-w-full py-0.5">
-            <div className="flex items-center flex-1 min-w-0 sm:flex-none p-1 rounded-2xl bg-white dark:bg-[#0d0d0e] border border-zinc-200 dark:border-white/10 backdrop-blur-md shadow-sm dark:shadow-xl gap-0.5 sm:gap-1">
-              {MODULOS_ESPECIALIDADES.map((mod) => {
-                const isActivo = etapaActiva !== 4 && moduloTaller === mod.id;
+            <div className="flex items-center p-1 rounded-2xl bg-white dark:bg-[#0d0d0e] border border-zinc-200 dark:border-white/10 backdrop-blur-md shadow-sm dark:shadow-xl">
+              {(() => {
+                const idxActual = MODULOS_ESPECIALIDADES.findIndex((m) => m.id === moduloTaller);
+                const modActivo = MODULOS_ESPECIALIDADES[idxActual >= 0 ? idxActual : 0];
+                const modSiguiente =
+                  MODULOS_ESPECIALIDADES[((idxActual >= 0 ? idxActual : 0) + 1) % MODULOS_ESPECIALIDADES.length];
+
                 return (
                   <button
-                    key={mod.id}
+                    key={modActivo.id}
                     type="button"
                     onClick={() => {
-                      setModuloTaller(mod.id);
+                      setModuloTaller(modSiguiente.id);
                       setEtapaActiva(2);
                     }}
-                    className={`h-9 flex-1 min-w-0 px-1 sm:flex-none sm:px-3.5 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                      isActivo
-                        ? `${mod.bgClass} border ${mod.borderClass} ${mod.textClass} ${mod.shadowClass} backdrop-blur-sm font-bold`
-                        : "border border-transparent text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5"
-                    }`}
-                    title={mod.name}
+                    className={`h-9 px-3.5 rounded-xl text-xs sm:text-sm transition-all cursor-pointer flex items-center justify-center gap-1.5 active:scale-95 ${modActivo.bgClass} border ${modActivo.borderClass} ${modActivo.textClass} ${modActivo.shadowClass} backdrop-blur-sm font-bold`}
+                    title={`Cambiar a ${modSiguiente.shortName}`}
                   >
-                    {mod.svg("hidden sm:block w-4 h-4 shrink-0")}
-                    <span className="whitespace-nowrap">{mod.shortName}</span>
+                    {modActivo.svg("w-4 h-4 shrink-0")}
+                    <span className="whitespace-nowrap">{modActivo.shortName}</span>
                   </button>
                 );
-              })}
+              })()}
             </div>
-
           </div>
         </div>
         {/* ===================================================================
@@ -5623,66 +5638,9 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
             SALE EXACTAMENTE IGUAL PARA TALLER Y LUBRICENTRO
             =================================================================== */}
         <section className="bg-white dark:bg-[#111113]/90 rounded-2xl border border-zinc-200 dark:border-white/[0.08] p-3 sm:p-6 shadow-sm dark:shadow-2xl space-y-4 sm:space-y-5 overflow-hidden w-full max-w-full">
-          {/* VISTAS SEGÚN EL SELECTOR: TALLER, LUBRICENTRO, CAR WASH O TECNICENTRO (CUANDO NO ESTAMOS EN FIRMA) */}
-          <div
-            className={
-              (moduloTaller === "lubricentro" || moduloTaller === "carwash" || moduloTaller === "tecnicentro") && etapaActiva !== 4
-                ? "block w-full"
-                : "hidden"
-            }
-          >
-            <LubricentroExpress
-              empleadoLogueado={empleadoLogueado}
-              mecanicos={mecanicos}
-              clientesCatalogo={clientesCatalogo}
-              productosCatalogo={productosInventario}
-              serviciosCatalogo={serviciosDb}
-              mostrarToast={mostrarToast}
-              ordenActiva={ordenActiva}
-              ordenesHistorialVehiculo={ordenesHistorialVehiculo}
-              historialVehiculo={historialVehiculo}
-              modoEspecialidad={moduloTaller === "taller" ? "lubricentro" : moduloTaller}
-              triggerAbrirConfig={triggerAbrirConfig}
-              vistaAppCarwash={false}
-              navegacionActiva={false}
-              onOrdenCreada={(orden) => {
-                setAutosEnPista((prev) => [orden, ...prev.filter((o) => o.id !== orden.id)]);
-                setOrdenActiva(orden);
-              }}
-              onCambiarATaller={() => setModuloTaller("taller")}
-              onCambiarModulo={(mod) => setModuloTaller(mod)}
-            />
-          </div>
-
-          {moduloTaller !== "taller" &&
-            moduloTaller !== "lubricentro" &&
-            moduloTaller !== "carwash" &&
-            moduloTaller !== "tecnicentro" &&
-            !modoRapidoActivo &&
-            etapaActiva !== 4 && (
-            <div className="w-full space-y-4 animate-fade-in">
-              <InspeccionVehiculo
-                ordenActiva={ordenActiva}
-                productosCatalogo={productosInventario}
-                serviciosCatalogo={serviciosDb}
-                onUpdateOrden={(updated) => {
-                  setOrdenActiva(updated);
-                  setAutosEnPista((prev) =>
-                    prev.map((o) => (o.id === updated.id ? updated : o))
-                  );
-                }}
-                onGenerarPdf={handleGenerarPdfInspeccion}
-                onVolver={() => {}}
-                onContinuar={() => {
-                  setModoRapidoActivo(true);
-                }}
-                mostrarToast={mostrarToast}
-              />
-            </div>
-          )}
-
-          <div className={moduloTaller === "taller" && etapaActiva !== 4 ? "block w-full" : "hidden"}>
-            {/* ETAPA 2: INSPECCIÓN (5 VISTAS + PINES NUMERADOS + R2) */}
+          {/* VISTA PRINCIPAL: TALLER (CUANDO NO ESTAMOS EN FIRMA) */}
+          <div className={etapaActiva !== 4 ? "block w-full" : "hidden"}>
+            {/* ETAPA 2: INSPECCIÓN */}
             {etapaActiva === 2 && (
               <div className="w-full space-y-4 animate-fade-in">
                 <InspeccionVehiculo
@@ -5698,14 +5656,30 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                   onGenerarPdf={handleGenerarPdfInspeccion}
                   onVolver={() => setModoRapidoActivo(true)}
                   onContinuar={() => {
-                    setModuloTaller("lubricentro");
-                    setModoRapidoActivo(true);
+                    setEtapaActiva(4);
                   }}
                   mostrarToast={mostrarToast}
                 />
               </div>
             )}
           </div>
+
+          {etapaActiva !== 4 && (
+            <RegistroFinalUnificado
+              ordenActiva={ordenActiva}
+              moduloActivo={moduloTaller}
+              onCambiarModulo={(nuevo) => setModuloTaller(nuevo)}
+              productosCatalogo={productosInventario}
+              serviciosCatalogo={serviciosDb}
+              onUpdateOrden={(updated) => {
+                setOrdenActiva(updated);
+                setAutosEnPista((prev) =>
+                  prev.map((o) => (o.id === updated.id ? updated : o))
+                );
+              }}
+              mostrarToast={mostrarToast}
+            />
+          )}
 
           {/* ===================================================================
               ETAPA 4: AVISO Y FIRMA + RESUMEN DE PROCESOS + PDF SOLICITUD
@@ -6091,19 +6065,13 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
               type="button"
               onClick={() => {
                 if (etapaActiva === 4) {
-                  setModuloTaller("tecnicentro");
-                  setEtapaActiva(2);
-                } else if (moduloTaller === "tecnicentro") {
-                  setModuloTaller("carwash");
-                } else if (moduloTaller === "carwash") {
-                  setModuloTaller("lubricentro");
-                } else if (moduloTaller === "lubricentro") {
                   setModuloTaller("taller");
-                } else if (moduloTaller === "taller") {
-                  if (modoRapidoActivo) setModoRapidoActivo(false);
+                  setEtapaActiva(2);
+                } else if (modoRapidoActivo) {
+                  setModoRapidoActivo(false);
                 }
               }}
-              disabled={moduloTaller === "taller" && !modoRapidoActivo && etapaActiva !== 4}
+              disabled={!modoRapidoActivo && etapaActiva !== 4}
               className="h-10 sm:h-11 px-4 sm:px-5 rounded-xl border border-zinc-200 bg-zinc-100 text-zinc-700 text-xs sm:text-sm font-semibold cursor-pointer transition-all hover:bg-zinc-200 dark:border-white/10 dark:bg-white/5 dark:text-zinc-300 dark:hover:bg-white/10 active:scale-95 shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
             >
               ← Anterior
@@ -6124,15 +6092,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
               <button
                 type="button"
                 onClick={() => {
-                  if (moduloTaller === "taller") {
-                    setModuloTaller("lubricentro");
-                  } else if (moduloTaller === "lubricentro") {
-                    setModuloTaller("carwash");
-                  } else if (moduloTaller === "carwash") {
-                    setModuloTaller("tecnicentro");
-                  } else if (moduloTaller === "tecnicentro") {
-                    setEtapaActiva(4);
-                  }
+                  setEtapaActiva(4);
                 }}
                 className="h-10 sm:h-11 px-5 sm:px-6 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs sm:text-sm font-bold shadow-sm shadow-blue-500/20 active:scale-95 transition-all flex items-center gap-1.5 ml-auto shrink-0 cursor-pointer"
               >

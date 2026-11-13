@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import type { InspectionFinding } from "@/app/taller/page";
-import CatalogoProductosServiciosTaller from "./CatalogoProductosServiciosTaller";
+import CatalogoProductosServiciosTaller, { ResumenItemsSeleccionadosTaller } from "./CatalogoProductosServiciosTaller";
 
 interface CatalogoItemPropuesta {
   id: string;
@@ -70,7 +70,80 @@ export interface DetallePinModernoProps {
   onAgregarItemPin?: (item: any, targetPinId?: string, deltaQty?: number) => void;
   onEliminarItemPin?: (itemId: string, targetPinId?: string) => void;
   onToggleSolicitaRepuesto?: (targetPinId: string, tipo: "repuesto" | "servicio", checked: boolean) => void;
+  onCambiarModuloPin?: (targetPinId: string, modulo: "Taller" | "Lubricentro" | "Car Wash" | "Tecnicentro") => void;
 }
+
+const MODULOS_SEMAFORO = [
+  {
+    id: "Taller" as const,
+    label: "Taller",
+    dotClass: "bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.8)]",
+    pillClass:
+      "bg-blue-50 dark:bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-400/35 hover:bg-blue-100/80 dark:hover:bg-blue-500/25",
+  },
+  {
+    id: "Lubricentro" as const,
+    label: "Lubricentro",
+    dotClass: "bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.8)]",
+    pillClass:
+      "bg-amber-50 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-400/35 hover:bg-amber-100/80 dark:hover:bg-amber-500/25",
+  },
+  {
+    id: "Car Wash" as const,
+    label: "Car Wash",
+    dotClass: "bg-cyan-500 shadow-[0_0_8px_rgba(6,182,212,0.8)]",
+    pillClass:
+      "bg-cyan-50 dark:bg-cyan-500/15 text-cyan-700 dark:text-cyan-300 border-cyan-200 dark:border-cyan-400/35 hover:bg-cyan-100/80 dark:hover:bg-cyan-500/25",
+  },
+  {
+    id: "Tecnicentro" as const,
+    label: "Tecnicentro",
+    dotClass: "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]",
+    pillClass:
+      "bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-400/35 hover:bg-emerald-100/80 dark:hover:bg-emerald-500/25",
+  },
+];
+
+type ModuloSemaforoId = (typeof MODULOS_SEMAFORO)[number]["id"];
+
+const ACCESOS_RAPIDOS_POR_MODULO: Record<ModuloSemaforoId, string[]> = {
+  Taller: [
+    "Cambio de aceite",
+    "Cambio de amortiguadores delanteros",
+    "Cambio de amortiguadores posteriores",
+    "Cambio de ruliman delantero",
+    "Cambio de ruliman posterior",
+    "Cambio de aceite de caja",
+    "Cambio de aceite corona",
+  ],
+  Lubricentro: [
+    "Cambio de aceite",
+    "Cambio de aceite de caja",
+    "Cambio de aceite corona",
+    "Lavado completo",
+    "Lavado completo mas grafito",
+    "Lavado exterior",
+    "Aspirador interior",
+    "Limpieza tapicería más lavado",
+    "Lavado chasis",
+  ],
+  "Car Wash": [
+    "Lavado completo",
+    "Lavado completo mas grafito",
+    "Lavado exterior",
+    "Aspirador interior",
+    "Limpieza tapicería más lavado",
+    "Lavado chasis",
+  ],
+  Tecnicentro: [
+    "Alineación",
+    "Balanceo",
+    "Rotación",
+    "Corrección caída",
+    "Corrección camber",
+    "Corrección caster",
+  ],
+};
 
 export function DetallePinModerno({
   pin,
@@ -108,6 +181,7 @@ export function DetallePinModerno({
   onAgregarItemPin,
   onEliminarItemPin,
   onToggleSolicitaRepuesto,
+  onCambiarModuloPin,
 }: DetallePinModernoProps) {
   const mismoNumero = pin.pinNumber || 1;
   const listaMismoPin = hallazgosDelMismoPin.filter(
@@ -136,8 +210,10 @@ export function DetallePinModerno({
   const streamCamaraPcRef = React.useRef<MediaStream | null>(null);
   const inputCamaraFallbackRef = React.useRef<HTMLInputElement | null>(null);
 
-  // Estado para formulario de producto o servicio manual
+  // Estado para formulario de producto o servicio manual y accesos rápidos
   const [manualBloqueId, setManualBloqueId] = useState<string | null>(null);
+  const [accesoRapidoBloqueId, setAccesoRapidoBloqueId] = useState<string | null>(null);
+  const [accesoRapidoTab, setAccesoRapidoTab] = useState<ModuloSemaforoId>("Taller");
   const [manualTipo, setManualTipo] = useState<"PART" | "SERVICE">("PART");
   const [manualNombre, setManualNombre] = useState<string>("");
   const [manualCant, setManualCant] = useState<number>(1);
@@ -323,16 +399,32 @@ export function DetallePinModerno({
   };
 
   return (
-    <div className="mt-3 rounded-2xl bg-white dark:bg-[#09090b] text-zinc-900 dark:text-zinc-100 border border-zinc-200 dark:border-white/10 p-4 sm:p-5 shadow-xl space-y-4 animate-fade-in font-sans">
-      {/* Título de la tarjeta: Etiqueta Evidencia */}
+    <div className="w-full rounded-2xl bg-white dark:bg-[#09090b] text-zinc-900 dark:text-zinc-100 border border-zinc-200 dark:border-white/10 p-4 sm:p-5 shadow-sm space-y-4 animate-fade-in font-sans">
+      {/* Título de la tarjeta: Selector de Área (Taller / Lubricentro / Car Wash / Tecnicentro) */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="px-2.5 py-1 rounded-md bg-blue-600 dark:bg-blue-500/15 text-white dark:text-blue-300 border border-transparent dark:border-blue-400/30 text-xs sm:text-sm font-bold tracking-tight flex items-center gap-1.5 shadow-xs">
-            <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="m18.375 12.739-7.693 7.693a4.5 4.5 0 0 1-6.364-6.364l10.607-10.607a3 3 0 0 1 4.243 4.243L8.914 17.958a1.5 1.5 0 0 1-2.122-2.121l9.9-9.9" />
-            </svg>
-            <span>Evidencia #{mismoNumero}</span>
-          </span>
+          {(() => {
+            const bloqueActivo = bloquesEvidencia[0] || pin;
+            const moduloActual = (bloqueActivo as any).modulo || "Taller";
+            const idxModulo = MODULOS_SEMAFORO.findIndex((m) => m.id === moduloActual);
+            const infoModulo = MODULOS_SEMAFORO[idxModulo >= 0 ? idxModulo : 0];
+            const siguienteModulo =
+              MODULOS_SEMAFORO[((idxModulo >= 0 ? idxModulo : 0) + 1) % MODULOS_SEMAFORO.length];
+
+            return (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onCambiarModuloPin?.(bloqueActivo.id, siguienteModulo.id);
+                }}
+                className={`px-2.5 py-1 rounded-md border text-xs sm:text-sm font-bold tracking-tight flex items-center gap-1.5 shadow-xs transition-all cursor-pointer active:scale-95 ${infoModulo.pillClass}`}
+                title={`Cambiar área (actual: ${infoModulo.label} → siguiente: ${siguienteModulo.label})`}
+              >
+                <span>{infoModulo.label}</span>
+              </button>
+            );
+          })()}
         </div>
 
         <div className="flex items-center gap-1.5 shrink-0">
@@ -345,43 +437,6 @@ export function DetallePinModerno({
             ✕
           </button>
         </div>
-      </div>
-
-      {/* 1. ZONA / SUBCATEGORÍA */}
-      <div className="flex items-center justify-between gap-2 rounded-xl bg-zinc-50 dark:bg-white/[0.03] border border-zinc-200 dark:border-white/10 px-3.5 py-2.5">
-        <div className="flex items-center gap-2.5 min-w-0 flex-1">
-          <div className="w-8 h-8 rounded-lg bg-blue-500/10 dark:bg-blue-400/10 border border-blue-500/20 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M8.25 18.75a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 0 1-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h1.125c.621 0 1.125-.504 1.125-1.125V14.25m-17.25 0h17.25m-17.25 0 2.25-6.75h12.75l2.25 6.75"
-              />
-            </svg>
-          </div>
-          <div className="flex min-w-0 items-center gap-1.5 text-xs sm:text-sm font-bold">
-            <span className="truncate rounded-full bg-blue-500/10 dark:bg-blue-400/10 border border-blue-500/25 px-2.5 py-1 text-blue-700 dark:text-blue-300">
-              {zonaPrincipal}
-            </span>
-            {subcategoria && (
-              <span className="truncate rounded-full bg-amber-500/10 dark:bg-amber-400/10 border border-amber-500/25 px-2.5 py-1 text-amber-700 dark:text-amber-300">
-                {subcategoria}
-              </span>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* 2. SECCIÓN DAÑO (ENTRADA MANUAL PURA) */}
-      <div className="space-y-1.5">
-        <label className="block text-xs sm:text-sm font-normal text-zinc-900 dark:text-zinc-100 tracking-tight">Daño</label>
-        <input
-          type="text"
-          value={tipoTexto}
-          onChange={(e) => handleCambiarTipo(e.target.value)}
-          placeholder="Ej. Rayón, Golpe, Desgaste..."
-          className="w-full rounded-xl bg-zinc-50 dark:bg-white/[0.03] border border-zinc-200 dark:border-white/10 px-3.5 py-2.5 text-xs sm:text-sm text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:border-blue-500/50 transition-colors"
-        />
       </div>
 
       {/* 3. BLOQUES DE EVIDENCIA ASOCIADOS (CADA BLOQUE VINCULA SU PROPIA DESCRIPCIÓN + FOTOS + AUDIO) */}
@@ -469,44 +524,11 @@ export function DetallePinModerno({
                   onSeleccionarHallazgoPin(bloque.id);
                 }
               }}
-              className={`rounded-2xl border p-3.5 sm:p-4 space-y-3 transition-all ${
-                bloquesEvidencia.length > 1
-                  ? esPinPrincipal
-                    ? "bg-blue-50/20 dark:bg-blue-500/[0.04] border-blue-300 dark:border-blue-500/30 shadow-xs"
-                    : "bg-zinc-50/60 dark:bg-white/[0.02] border-zinc-200 dark:border-white/10"
-                  : "bg-zinc-50/40 dark:bg-white/[0.02] border-zinc-200/80 dark:border-white/10"
-              }`}
+              className="space-y-3 w-full"
             >
-              {/* Cabecera del Bloque Asociado (identifica a qué foto/grupo pertenece el texto y audio) */}
-              <div className="flex items-center justify-between gap-2 border-b border-zinc-200/70 dark:border-white/10 pb-2">
-                <div className="flex items-center gap-2 flex-wrap">
-                  {bloquesEvidencia.length > 1 && (
-                    <span className="px-2.5 py-1 rounded-md bg-blue-600 dark:bg-blue-500/15 text-white dark:text-blue-300 border border-transparent dark:border-blue-400/30 text-xs sm:text-sm font-bold tracking-tight flex items-center gap-1.5 shadow-xs">
-                      <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="m18.375 12.739-7.693 7.693a4.5 4.5 0 0 1-6.364-6.364l10.607-10.607a3 3 0 0 1 4.243 4.243L8.914 17.958a1.5 1.5 0 0 1-2.122-2.121l9.9-9.9" />
-                      </svg>
-                      <span>Evidencia #{numBloque}</span>
-                    </span>
-                  )}
-
-                  {soloFotosBloque.length > 0 && (
-                    <span className="px-2.5 py-1 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 text-xs sm:text-sm font-semibold">
-                      📷 {soloFotosBloque.length} {soloFotosBloque.length === 1 ? "foto" : "fotos"}
-                    </span>
-                  )}
-                  {soloAudiosBloque.length > 0 && (
-                    <span className="px-2.5 py-1 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 text-xs sm:text-sm font-semibold">
-                      🎙️ {soloAudiosBloque.length} {soloAudiosBloque.length === 1 ? "audio" : "audios"}
-                    </span>
-                  )}
-                  {textoBloque.trim().length > 0 && (
-                    <span className="px-2.5 py-1 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-xs sm:text-sm font-semibold">
-                      📝 Texto asociado
-                    </span>
-                  )}
-                </div>
-
-                {bloquesEvidencia.length > 1 && onEliminarHallazgoEspecifico && (
+              {/* Cabecera del Bloque Asociado (solo visible si hay múltiples bloques con acción de quitar) */}
+              {bloquesEvidencia.length > 1 && onEliminarHallazgoEspecifico && (
+                <div className="flex items-center justify-end gap-2 border-b border-zinc-200/70 dark:border-white/10 pb-2">
                   <button
                     type="button"
                     onClick={(e) => {
@@ -519,8 +541,8 @@ export function DetallePinModerno({
                     <span>✕</span>
                     <span>Quitar #{numBloque}</span>
                   </button>
-                )}
-              </div>
+                </div>
+              )}
 
               {/* Campo Descripción asociado a las fotos de este bloque */}
               <div className="space-y-1.5">
@@ -543,20 +565,53 @@ export function DetallePinModerno({
                   )}
                 </div>
 
-                <div className="grid w-full">
-                  <div
-                    aria-hidden="true"
-                    className="invisible [grid-area:1/1/2/2] w-full rounded-xl border border-transparent pl-3.5 pr-3 py-2.5 sm:py-3 text-sm sm:text-base leading-relaxed whitespace-pre-wrap break-words min-h-[2.75rem]"
-                  >
-                    {(textoBloque || "Escribe una descripción...") + "\n"}
+                <div className="flex items-stretch gap-2">
+                  <div className="grid flex-1 min-w-0">
+                    <div
+                      aria-hidden="true"
+                      className="invisible [grid-area:1/1/2/2] w-full rounded-xl border border-transparent pl-3.5 pr-3 py-2.5 sm:py-3 text-sm sm:text-base leading-relaxed whitespace-pre-wrap break-words min-h-[2.75rem]"
+                    >
+                      {(textoBloque || "Escribe una descripción...") + "\n"}
+                    </div>
+                    <textarea
+                      rows={1}
+                      value={textoBloque}
+                      onChange={(e) => onChangeObservacion(e.target.value, bloque.id)}
+                      placeholder="Escribe una descripción..."
+                      className="[grid-area:1/1/2/2] w-full h-full overflow-hidden resize-none rounded-xl bg-white dark:bg-white/[0.03] border border-zinc-200 dark:border-white/10 focus:border-blue-500/50 pl-3.5 pr-3 py-2.5 sm:py-3 text-zinc-900 dark:text-white text-sm sm:text-base placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none transition-all leading-relaxed whitespace-pre-wrap break-words"
+                    />
                   </div>
-                  <textarea
-                    rows={1}
-                    value={textoBloque}
-                    onChange={(e) => onChangeObservacion(e.target.value, bloque.id)}
-                    placeholder="Escribe una descripción..."
-                    className="[grid-area:1/1/2/2] w-full h-full overflow-hidden resize-none rounded-xl bg-white dark:bg-white/[0.03] border border-zinc-200 dark:border-white/10 focus:border-blue-500/50 pl-3.5 pr-3 py-2.5 sm:py-3 text-zinc-900 dark:text-white text-sm sm:text-base placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none transition-all leading-relaxed whitespace-pre-wrap break-words"
-                  />
+                  {(onAgregarNotaKanban || onAgregarItemPin) && (
+                    <button
+                      type="button"
+                      disabled={!textoBloque.trim()}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const limpio = textoBloque.trim();
+                        if (!limpio) return;
+                        const moduloArea = (bloque as any).modulo || "Taller";
+                        onAgregarNotaKanban?.(limpio, bloque.id);
+                        onAgregarItemPin?.(
+                          {
+                            id: `desc-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+                            name: limpio,
+                            code: `SRV-${Date.now().toString(36).slice(-4).toUpperCase()}`,
+                            category: moduloArea,
+                            type: "SERVICE",
+                            price: 0,
+                            qty: 1,
+                          },
+                          bloque.id,
+                          1
+                        );
+                        onChangeObservacion("", bloque.id);
+                      }}
+                      className="px-4 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:bg-zinc-200 dark:disabled:bg-white/10 disabled:text-zinc-400 dark:disabled:text-zinc-500 text-white text-xs sm:text-sm font-semibold shrink-0 transition-all cursor-pointer disabled:cursor-not-allowed active:scale-95 shadow-xs"
+                      title="Añadir descripción a servicios"
+                    >
+                      Añadir
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -582,13 +637,13 @@ export function DetallePinModerno({
                       if (maxFotosBloque || subiendoEsteBloque) return;
                       abrirCamaraPcOMovil(bloque.id);
                     }}
-                    className={`relative h-12 w-12 sm:h-14 sm:w-14 rounded-xl border flex items-center justify-center shrink-0 transition-all cursor-pointer overflow-hidden ${
+                    className={`relative h-10 w-10 sm:h-11 sm:w-11 rounded-xl border flex items-center justify-center shrink-0 transition-all cursor-pointer overflow-hidden ${
                       maxFotosBloque || subiendoEsteBloque
                         ? "bg-zinc-100 dark:bg-white/[0.02] border-zinc-200 dark:border-white/5 text-zinc-400 dark:text-zinc-600 cursor-not-allowed"
                         : "bg-blue-50/80 hover:bg-blue-100 dark:bg-blue-500/10 dark:hover:bg-blue-500/20 border-blue-200 dark:border-blue-500/30 text-blue-600 dark:text-blue-400 active:scale-95 shadow-sm"
                     }`}
                   >
-                    <svg className="w-5 h-5 sm:w-6 sm:h-6 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                    <svg className="w-4 h-4 sm:w-5 sm:h-5 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
                       <path
                         strokeLinecap="round"
                         strokeLinejoin="round"
@@ -602,13 +657,13 @@ export function DetallePinModerno({
                   <label
                     title={`Seleccionar foto de galería para Evidencia #${numBloque}`}
                     onClick={(e) => e.stopPropagation()}
-                    className={`relative h-12 w-12 sm:h-14 sm:w-14 rounded-xl border flex items-center justify-center shrink-0 transition-all cursor-pointer overflow-hidden ${
+                    className={`relative h-10 w-10 sm:h-11 sm:w-11 rounded-xl border flex items-center justify-center shrink-0 transition-all cursor-pointer overflow-hidden ${
                       maxFotosBloque || subiendoEsteBloque
                         ? "bg-zinc-100 dark:bg-white/[0.02] border-zinc-200 dark:border-white/5 text-zinc-400 dark:text-zinc-600 cursor-not-allowed"
                         : "bg-indigo-50/80 hover:bg-indigo-100 dark:bg-indigo-500/10 dark:hover:bg-indigo-500/20 border-indigo-200 dark:border-indigo-500/30 text-indigo-600 dark:text-indigo-400 active:scale-95 shadow-sm"
                     }`}
                   >
-                    <svg className="w-5 h-5 sm:w-6 sm:h-6 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                    <svg className="w-4 h-4 sm:w-5 sm:h-5 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
                       <path
                         strokeLinecap="round"
                         strokeLinejoin="round"
@@ -637,7 +692,7 @@ export function DetallePinModerno({
                         ? "Detener y guardar grabación de audio"
                         : `Grabar nota de audio en PC/Móvil para Evidencia #${numBloque}`
                     }
-                    className={`relative h-12 w-12 sm:h-14 sm:w-14 rounded-xl border flex flex-col items-center justify-center shrink-0 transition-all cursor-pointer overflow-hidden active:scale-95 shadow-sm touch-manipulation select-none ${
+                    className={`relative h-10 w-10 sm:h-11 sm:w-11 rounded-xl border flex flex-col items-center justify-center shrink-0 transition-all cursor-pointer overflow-hidden active:scale-95 shadow-sm touch-manipulation select-none ${
                       escuchandoEsteBloque
                         ? "bg-rose-600 text-white border-rose-700 animate-pulse ring-2 ring-rose-400/50"
                         : "bg-amber-50/80 hover:bg-amber-100 dark:bg-amber-500/10 dark:hover:bg-amber-500/20 border-amber-200 dark:border-amber-500/30 text-amber-600 dark:text-amber-400"
@@ -651,7 +706,7 @@ export function DetallePinModerno({
                         </span>
                       </div>
                     ) : (
-                      <svg className="w-5 h-5 sm:w-6 sm:h-6 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                      <svg className="w-4 h-4 sm:w-5 sm:h-5 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
                         <path
                           strokeLinecap="round"
                           strokeLinejoin="round"
@@ -661,134 +716,209 @@ export function DetallePinModerno({
                     )}
                   </button>
 
-                  {/* Botón Agregar Producto o Servicio Manual */}
+                  {/* Botón Carrito de Compras: Escoger Productos y Servicios (Modal Flotante) */}
                   <button
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
                       setManualBloqueId((prev) => (prev === bloque.id ? null : bloque.id));
                     }}
-                    title={`Agregar producto o servicio manual para Evidencia #${numBloque}`}
-                    className={`relative h-12 w-12 sm:h-14 sm:w-14 rounded-xl border flex flex-col items-center justify-center shrink-0 transition-all cursor-pointer overflow-hidden active:scale-95 shadow-sm touch-manipulation select-none ${
+                    title={`Escoger productos y servicios para Evidencia #${numBloque}`}
+                    className={`relative h-10 w-10 sm:h-11 sm:w-11 rounded-xl border flex flex-col items-center justify-center shrink-0 transition-all cursor-pointer overflow-hidden active:scale-95 shadow-sm touch-manipulation select-none ${
                       manualBloqueId === bloque.id
                         ? "bg-emerald-600 text-white border-emerald-700 ring-2 ring-emerald-400/50 shadow-md"
                         : "bg-emerald-50/80 hover:bg-emerald-100 dark:bg-emerald-500/10 dark:hover:bg-emerald-500/20 border-emerald-200 dark:border-emerald-500/30 text-emerald-600 dark:text-emerald-400"
                     }`}
                   >
-                    <svg className="w-5 h-5 sm:w-6 sm:h-6 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                    <svg className="w-4 h-4 sm:w-5 sm:h-5 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
                       <path
                         strokeLinecap="round"
                         strokeLinejoin="round"
-                        d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10"
+                        d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 0 0-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 0 0-16.536-1.84M7.5 14.25 5.106 5.272M6 20.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Zm12.75 0a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Z"
+                      />
+                    </svg>
+                  </button>
+
+                  {/* Botón Acceso Rápido: Escoger servicios frecuentes según Taller / Lubricentro / Car Wash / Tecnicentro */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const moduloBloque = ((bloque as any).modulo || "Taller") as ModuloSemaforoId;
+                      setAccesoRapidoTab(moduloBloque);
+                      setAccesoRapidoBloqueId((prev) => (prev === bloque.id ? null : bloque.id));
+                    }}
+                    title="Accesos rápidos"
+                    className={`relative h-10 w-10 sm:h-11 sm:w-11 rounded-xl border flex flex-col items-center justify-center shrink-0 transition-all cursor-pointer overflow-hidden active:scale-95 shadow-sm touch-manipulation select-none ${
+                      accesoRapidoBloqueId === bloque.id
+                        ? "bg-violet-600 text-white border-violet-700 ring-2 ring-violet-400/50 shadow-md"
+                        : "bg-violet-50/80 hover:bg-violet-100 dark:bg-violet-500/10 dark:hover:bg-violet-500/20 border-violet-200 dark:border-violet-500/30 text-violet-600 dark:text-violet-400"
+                    }`}
+                  >
+                    <svg className="w-4 h-4 sm:w-5 sm:h-5 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="m3.75 13.5 10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75Z"
                       />
                     </svg>
                   </button>
                 </div>
 
-                {/* Formulario para agregar Producto o Servicio Manualmente (Diseño Moderno y Minimalista) */}
+                {/* Modal Flotante de Accesos Rápidos */}
+                {accesoRapidoBloqueId === bloque.id && (() => {
+                  const infoTab =
+                    MODULOS_SEMAFORO.find((m) => m.id === accesoRapidoTab) || MODULOS_SEMAFORO[0];
+                  const itemsRapidos = ACCESOS_RAPIDOS_POR_MODULO[infoTab.id] || [];
+                  const itemsEnBloque = Array.isArray(bloque.linkedItems) ? bloque.linkedItems : [];
+
+                  return (
+                    <div
+                      className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-3 animate-fade-in"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setAccesoRapidoBloqueId(null);
+                      }}
+                    >
+                      <div
+                        onClick={(e) => e.stopPropagation()}
+                        className="relative w-full max-w-xl max-h-[85dvh] overflow-y-auto rounded-2xl bg-white dark:bg-[#111113] border border-zinc-200 dark:border-white/10 p-4 shadow-2xl space-y-3"
+                      >
+                        <div className="flex items-center justify-between border-b border-zinc-200 dark:border-white/10 pb-2.5">
+                          <div className="flex items-center gap-2">
+                            <span className={`w-2.5 h-2.5 rounded-full ${infoTab.dotClass}`} />
+                            <h3 className="text-sm font-bold text-zinc-900 dark:text-white">
+                              Accesos Rápidos — {infoTab.label}
+                            </h3>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setAccesoRapidoBloqueId(null)}
+                            className="w-7 h-7 rounded-lg bg-zinc-100 dark:bg-white/10 hover:bg-zinc-200 dark:hover:bg-white/20 text-zinc-600 dark:text-zinc-300 text-xs font-bold flex items-center justify-center cursor-pointer"
+                          >
+                            ✕
+                          </button>
+                        </div>
+
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {MODULOS_SEMAFORO.map((mod) => {
+                            const activo = mod.id === infoTab.id;
+                            return (
+                              <button
+                                key={mod.id}
+                                type="button"
+                                onClick={() => setAccesoRapidoTab(mod.id)}
+                                className={`px-3 py-1.5 rounded-full border text-xs font-bold transition-all cursor-pointer ${
+                                  activo
+                                    ? mod.pillClass
+                                    : "bg-zinc-50 dark:bg-white/[0.03] border-zinc-200 dark:border-white/10 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-white/10"
+                                }`}
+                              >
+                                {mod.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                          {itemsRapidos.map((nombre) => {
+                            const quickId = `quick-${infoTab.id
+                              .toLowerCase()
+                              .replace(/\s+/g, "-")}-${nombre
+                              .toLowerCase()
+                              .normalize("NFD")
+                              .replace(/[\u0300-\u036f]/g, "")
+                              .replace(/[^a-z0-9]+/g, "-")
+                              .replace(/(^-|-$)/g, "")}`;
+                            const existente = itemsEnBloque.find(
+                              (it) => it.id === quickId || it.name.toLowerCase() === nombre.toLowerCase()
+                            );
+
+                            return (
+                              <button
+                                key={quickId}
+                                type="button"
+                                onClick={() => {
+                                  onAgregarItemPin?.(
+                                    {
+                                      id: quickId,
+                                      name: nombre,
+                                      code: "RAPIDO",
+                                      category: infoTab.label,
+                                      type: "SERVICE",
+                                      price: 0,
+                                      qty: 1,
+                                    },
+                                    bloque.id,
+                                    1
+                                  );
+                                }}
+                                className={`text-left px-3.5 py-2.5 rounded-xl border transition-all cursor-pointer active:scale-[0.98] flex items-center justify-between gap-2 ${
+                                  existente
+                                    ? "bg-violet-50 dark:bg-violet-500/15 border-violet-300 dark:border-violet-400/40 text-violet-900 dark:text-violet-100 shadow-xs"
+                                    : "bg-zinc-50/70 dark:bg-white/[0.02] hover:bg-zinc-100 dark:hover:bg-white/[0.06] border-zinc-200 dark:border-white/10 text-zinc-800 dark:text-zinc-200"
+                                }`}
+                              >
+                                <span className="text-xs sm:text-sm font-medium leading-snug">
+                                  {nombre}
+                                </span>
+                                {existente ? (
+                                  <span className="px-2 py-0.5 rounded-full bg-violet-600 text-white text-[10px] font-bold shrink-0">
+                                    ✓ {existente.qty}
+                                  </span>
+                                ) : (
+                                  <span className="text-xs font-bold text-zinc-400 shrink-0">+</span>
+                                )}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* Modal Flotante para escoger Productos y Servicios con filtros P / S */}
                 {manualBloqueId === bloque.id && (
                   <div
-                    onClick={(e) => e.stopPropagation()}
-                    className="p-3 rounded-lg border border-zinc-200 dark:border-white/10 bg-zinc-50/70 dark:bg-white/[0.02] backdrop-blur-xs space-y-2.5 animate-fade-in shadow-2xs"
+                    className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-3 animate-fade-in"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setManualBloqueId(null);
+                    }}
                   >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1.5">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                        <span className="text-[11px] font-medium text-zinc-600 dark:text-zinc-400">
-                          Agregar manual
-                        </span>
+                    <div
+                      onClick={(e) => e.stopPropagation()}
+                      className="relative w-full max-w-2xl max-h-[85dvh] overflow-y-auto rounded-2xl bg-white dark:bg-[#111113] border border-zinc-200 dark:border-white/10 p-4 shadow-2xl space-y-3"
+                    >
+                      <div className="flex items-center justify-between border-b border-zinc-200 dark:border-white/10 pb-2.5">
+                        <div className="flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                          <span className="text-sm font-bold text-zinc-900 dark:text-white">
+                            Productos y Servicios
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setManualBloqueId(null)}
+                          className="w-7 h-7 rounded-lg flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-xs font-bold transition-colors cursor-pointer"
+                          title="Cerrar"
+                        >
+                          ✕
+                        </button>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => setManualBloqueId(null)}
-                        className="w-5 h-5 rounded flex items-center justify-center text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-200/50 dark:hover:bg-white/10 text-xs transition-colors cursor-pointer"
-                        title="Cerrar"
-                      >
-                        ✕
-                      </button>
-                    </div>
 
-                    {/* Segmented Control Minimalista: Producto / Servicio con filos no tan redondos */}
-                    <div className="inline-flex p-0.5 rounded-md bg-zinc-200/60 dark:bg-white/5 border border-zinc-200/50 dark:border-white/5 w-full">
-                      <button
-                        type="button"
-                        onClick={() => setManualTipo("PART")}
-                        className={`flex-1 py-1.5 px-3 rounded text-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                          manualTipo === "PART"
-                            ? "bg-white dark:bg-white/15 text-zinc-900 dark:text-white shadow-2xs font-semibold"
-                            : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white font-normal"
-                        }`}
-                      >
-                        <span className="text-[11px]">📦</span>
-                        <span>Producto</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setManualTipo("SERVICE")}
-                        className={`flex-1 py-1.5 px-3 rounded text-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                          manualTipo === "SERVICE"
-                            ? "bg-white dark:bg-white/15 text-zinc-900 dark:text-white shadow-2xs font-semibold"
-                            : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white font-normal"
-                        }`}
-                      >
-                        <span className="text-[11px]">🔧</span>
-                        <span>Servicio</span>
-                      </button>
-                    </div>
-
-                    {/* Input, Stepper y Botón con bordes suaves no tan redondos */}
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="text"
-                        value={manualNombre}
-                        onChange={(e) => setManualNombre(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") {
-                            e.preventDefault();
-                            handleAgregarManual(bloque.id);
-                          }
-                        }}
-                        placeholder={
-                          manualTipo === "PART"
-                            ? "Nombre del producto..."
-                            : "Descripción del servicio..."
-                        }
-                        className="flex-1 h-9 rounded-md bg-white dark:bg-white/[0.04] border border-zinc-200 dark:border-white/10 px-3 text-xs text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:border-zinc-400 dark:focus:border-white/30 shadow-2xs transition-colors"
-                        autoFocus
+                      <CatalogoProductosServiciosTaller
+                        itemsSeleccionados={bloque.linkedItems || []}
+                        onAgregarItem={(item, delta) => onAgregarItemPin?.(item, bloque.id, delta)}
+                        onEliminarItem={(itemId) => onEliminarItemPin?.(itemId, bloque.id)}
+                        serviciosCatalogo={serviciosCatalogo}
+                        productosCatalogo={productosCatalogo}
+                        titulo="Catálogo"
+                        siempreAbierto={true}
+                        mostrarChipsSeleccionados={false}
+                        ocultarCabeceraYCategoria={true}
                       />
-
-                      {/* Contador de Cantidad */}
-                      <div className="h-9 px-1 inline-flex items-center border border-zinc-200 dark:border-white/10 rounded-md bg-white dark:bg-white/[0.04] shadow-2xs shrink-0">
-                        <button
-                          type="button"
-                          onClick={() => setManualCant((prev) => Math.max(1, prev - 1))}
-                          className="w-6 h-7 flex items-center justify-center text-zinc-400 hover:text-zinc-900 dark:hover:text-white text-xs font-bold cursor-pointer transition-colors"
-                          title="Restar 1"
-                        >
-                          −
-                        </button>
-                        <span className="w-5 text-center text-xs font-semibold text-zinc-800 dark:text-zinc-200 select-none">
-                          {manualCant}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => setManualCant((prev) => prev + 1)}
-                          className="w-6 h-7 flex items-center justify-center text-zinc-400 hover:text-zinc-900 dark:hover:text-white text-xs font-bold cursor-pointer transition-colors"
-                          title="Sumar 1"
-                        >
-                          +
-                        </button>
-                      </div>
-
-                      {/* Botón Agregar */}
-                      <button
-                        type="button"
-                        onClick={() => handleAgregarManual(bloque.id)}
-                        disabled={!manualNombre.trim()}
-                        className="h-9 px-3.5 rounded-md bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-100 text-white dark:text-zinc-900 disabled:opacity-30 disabled:cursor-not-allowed text-xs font-medium flex items-center justify-center cursor-pointer transition-all shadow-2xs shrink-0 active:scale-95"
-                      >
-                        Agregar
-                      </button>
                     </div>
                   </div>
                 )}
@@ -855,315 +985,36 @@ export function DetallePinModerno({
                   </div>
                 )}
 
-                {/* TARJETA DE CONTENIDO ASOCIADO DE ESTE BLOQUE (FOTOS + DESCRIPCIÓN + AUDIOS JUNTOS) */}
-                {(totalEvidenciasBloque > 0 || subiendoEsteBloque) && (
-                  <div className="mt-2 pt-2.5 border-t border-zinc-200 dark:border-white/10 space-y-2.5">
-                    <div className="flex items-center justify-between flex-wrap gap-2 px-0.5">
-                      <span className="text-xs sm:text-sm font-normal text-zinc-900 dark:text-zinc-100 tracking-tight flex items-center gap-1.5">
-                        <span>🔗 Asociado a Evidencia #{numBloque}:</span>
-                      </span>
-                    </div>
-
-                    {/* Resumen de texto asociado a estas fotos/audios */}
-                    {textoBloque.trim().length > 0 && (
-                      <div className="px-3 py-2 rounded-xl bg-blue-50/70 dark:bg-blue-500/10 border border-blue-200/80 dark:border-blue-500/25 text-xs text-zinc-800 dark:text-zinc-200 flex items-start gap-2">
-                        <span className="text-blue-600 dark:text-blue-400 font-bold shrink-0">📝 Nota:</span>
-                        <span className="font-medium break-words">{textoBloque}</span>
-                      </div>
-                    )}
-
-                    {/* Fotos asociadas a este bloque */}
-                    {(soloFotosBloque.length > 0 || subiendoEsteBloque) && (
-                      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
-                        {soloFotosBloque.map((item, fIdx) => (
-                          <div
-                            key={item.originalIdx}
-                            className="relative aspect-square rounded-xl overflow-hidden border border-zinc-200 dark:border-white/10 bg-black/10 dark:bg-black shadow-sm group"
-                          >
-                            <div
-                              className="w-full h-full relative cursor-pointer"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setFotoModalData({
-                                  url: item.url,
-                                  bloqueNum: numBloque,
-                                  fotoNum: fIdx + 1,
-                                  descripcion: textoBloque,
-                                });
-                              }}
-                              title="Ampliar foto asociada"
-                            >
-                              <img
-                                src={item.url}
-                                alt={`Evidencia #${numBloque} - Foto #${fIdx + 1}`}
-                                className="w-full h-full object-cover"
-                              />
-                              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                                <span className="text-xs text-white">🔍</span>
-                              </div>
-                              <div className="absolute top-1 left-1 z-10 pointer-events-none">
-                                <span className="px-1.5 py-0.5 rounded bg-blue-600/90 text-white text-[8px] font-black tracking-tight shadow-sm">
-                                  Evid. #{numBloque}
-                                </span>
-                              </div>
-                              <div className="absolute bottom-1 inset-x-1 flex justify-center z-10 pointer-events-none">
-                                <span className="px-1.5 py-0.2 rounded bg-black/75 text-blue-200 text-[8px] font-bold tracking-tight truncate max-w-full">
-                                  Foto #{fIdx + 1}
-                                </span>
-                              </div>
-                            </div>
-
-                            <button
-                              type="button"
-                              onClick={(e) => onEliminarFoto(item.originalIdx, e, bloque.id)}
-                              className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/80 hover:bg-rose-600 text-white text-[10px] font-bold flex items-center justify-center cursor-pointer shadow border border-white/20 z-20"
-                              title="Eliminar foto"
-                            >
-                              ✕
-                            </button>
-                          </div>
-                        ))}
-
-                        {subiendoEsteBloque && (
-                          <div className="aspect-square rounded-xl border-2 border-dashed border-blue-400/60 bg-blue-50/50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 flex flex-col items-center justify-center p-2 text-center animate-pulse">
-                            <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent dark:border-blue-400 dark:border-t-transparent rounded-full animate-spin shrink-0 mb-1" />
-                            <span className="text-[10px] font-bold leading-tight">Guardando...</span>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Videos asociados a este bloque (si existen) */}
-                    {soloVideosBloque.length > 0 && (
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-                        {soloVideosBloque.map((item, vIdx) => (
-                          <div
-                            key={item.originalIdx}
-                            className="relative aspect-video rounded-xl overflow-hidden border border-zinc-200 dark:border-white/10 bg-black shadow-sm group"
-                          >
-                            <div
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setVideoModalUrl(item.url);
-                              }}
-                              className="w-full h-full relative flex items-center justify-center bg-zinc-900 cursor-pointer"
-                            >
-                              <video
-                                src={item.url}
-                                className="w-full h-full object-cover opacity-80"
-                                preload="metadata"
-                              />
-                              <div className="absolute inset-0 flex items-center justify-center bg-black/30 group-hover:bg-black/50 transition-colors">
-                                <span className="w-8 h-8 rounded-full bg-white/95 text-zinc-900 flex items-center justify-center text-xs font-bold shadow pl-0.5">
-                                  ▶
-                                </span>
-                              </div>
-                              <div className="absolute bottom-1 inset-x-1 flex justify-center z-10 pointer-events-none">
-                                <span className="px-2 py-0.5 rounded bg-black/75 text-rose-300 text-[9px] font-bold">
-                                  Evid. #{numBloque} • Video #{vIdx + 1}
-                                </span>
-                              </div>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={(e) => onEliminarFoto(item.originalIdx, e, bloque.id)}
-                              className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/80 hover:bg-rose-600 text-white text-[10px] font-bold flex items-center justify-center cursor-pointer shadow border border-white/20 z-20"
-                            >
-                              ✕
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    {/* Audios asociados a este bloque (Rediseño moderno + minimalista) */}
-                    {soloAudiosBloque.length > 0 && (
-                      <div className="space-y-2">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                          {soloAudiosBloque.map((audioUrl, aIdx) => {
-                            const notaAsociadaAudio =
-                              notasKanbanBloque.find((n) => n.audioIndex === aIdx)?.text ||
-                              notasAudioBloque[aIdx] ||
-                              "";
-                            const reproduciendoEste = audioClipReproduciendoUrl === audioUrl;
-
-                            return (
-                              <div
-                                key={aIdx}
-                                className="relative flex items-center justify-between gap-3 px-3.5 py-2.5 rounded-xl border border-zinc-200/80 dark:border-white/10 bg-white/70 dark:bg-zinc-900/60 hover:border-amber-400/50 dark:hover:border-amber-500/30 text-zinc-900 dark:text-zinc-100 shadow-xs transition-all backdrop-blur-xs"
-                              >
-                                <div className="flex items-center gap-3 min-w-0 flex-1">
-                                  <button
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleTogglePlayAudioClip(audioUrl);
-                                    }}
-                                    className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 text-xs font-bold cursor-pointer transition-all active:scale-95 shadow-xs ${
-                                      reproduciendoEste
-                                        ? "bg-amber-500 text-white shadow-amber-500/20 animate-pulse"
-                                        : "bg-zinc-100 dark:bg-white/10 hover:bg-amber-500 hover:text-white text-zinc-700 dark:text-zinc-300"
-                                    }`}
-                                    title={reproduciendoEste ? "Pausar" : "Escuchar"}
-                                  >
-                                    {reproduciendoEste ? "⏸" : "▶"}
-                                  </button>
-
-                                  <div className="min-w-0 flex-1 flex items-center gap-2">
-                                    <span className="text-xs font-bold text-zinc-900 dark:text-white truncate">
-                                      Audio #{aIdx + 1}
-                                    </span>
-                                    <div className="flex items-center gap-0.5 h-2.5">
-                                      {[0.4, 0.8, 0.5, 0.9, 0.6, 0.45, 0.7].map((bar, bIdx) => (
-                                        <span
-                                          key={bIdx}
-                                          style={{ height: `${Math.round(bar * 100)}%` }}
-                                          className={`w-0.5 rounded-full transition-all ${
-                                            reproduciendoEste
-                                              ? "bg-amber-500 animate-pulse"
-                                              : "bg-zinc-300 dark:bg-zinc-600"
-                                          }`}
-                                        />
-                                      ))}
-                                    </div>
-                                  </div>
-                                </div>
-
-                                <div className="flex items-center gap-1.5 shrink-0">
-                                  {onTranscribirAudio && (
-                                    <button
-                                      type="button"
-                                      disabled={transcribiendoEsteBloque}
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        onTranscribirAudio(audioUrl, bloque.id);
-                                      }}
-                                      className={`h-6 px-2 rounded-md text-[10px] font-semibold cursor-pointer transition-colors ${
-                                        notaAsociadaAudio
-                                          ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
-                                          : "bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300"
-                                      }`}
-                                      title={notaAsociadaAudio ? "Nota guardada" : "Crear nota"}
-                                    >
-                                      {transcribiendoEsteBloque
-                                        ? "..."
-                                        : notaAsociadaAudio
-                                          ? "✓ Guardada"
-                                          : "+ Nota"}
-                                    </button>
-                                  )}
-                                  {onEliminarAudio && (
-                                    <button
-                                      type="button"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        onEliminarAudio(aIdx, bloque.id);
-                                      }}
-                                      className="w-6 h-6 rounded-md hover:bg-rose-500/15 text-zinc-400 hover:text-rose-600 flex items-center justify-center text-xs font-bold cursor-pointer transition-colors"
-                                      title={`Eliminar`}
-                                    >
-                                      ✕
-                                    </button>
-                                  )}
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* TABLERO DE NOTAS TIPO KANBAN (TEXTO TRANSFORMADO DEL AUDIO - GUARDADO AUTOMÁTICO) */}
-                    {notasKanbanBloque.length > 0 && (
-                      <div className="space-y-2 pt-1">
-                        <div className="flex items-center justify-between px-0.5">
-                          <span className="text-xs sm:text-sm font-normal text-zinc-900 dark:text-zinc-100 tracking-tight flex items-center gap-2">
-                            <span>Notas</span>
-                          </span>
-                        </div>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 items-start">
-                          {notasKanbanBloque.map((notaItem, nIdx) => (
-                            <div
-                              key={notaItem.id || nIdx}
-                              onClick={(e) => e.stopPropagation()}
-                              className="group relative rounded-2xl border-l-4 border-l-amber-500 border border-amber-300/70 dark:border-amber-500/30 bg-amber-50/70 dark:bg-zinc-900/90 p-3 shadow-sm hover:shadow-md transition-all flex flex-col gap-2 h-auto"
-                            >
-                              <div className="flex items-center justify-between gap-2">
-                                <span className="text-xs sm:text-sm font-normal text-zinc-700 dark:text-zinc-300">
-                                  Nota #{nIdx + 1}
-                                </span>
-                                {onEliminarNotaKanban && (
-                                  <button
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      onEliminarNotaKanban(nIdx, bloque.id);
-                                    }}
-                                    className="w-6 h-6 rounded-lg bg-black/5 dark:bg-white/5 hover:bg-rose-500/20 text-zinc-400 hover:text-rose-600 dark:hover:text-rose-400 flex items-center justify-center text-[10px] font-bold cursor-pointer transition-colors"
-                                    title="Eliminar tarjeta de nota"
-                                  >
-                                    ✕
-                                  </button>
-                                )}
-                              </div>
-
-                              <div className="grid w-full">
-                                <div
-                                  aria-hidden="true"
-                                  className="invisible [grid-area:1/1/2/2] w-full rounded-xl border border-transparent px-2.5 py-2 text-xs font-normal leading-relaxed whitespace-pre-wrap break-words min-h-[2.5rem]"
-                                >
-                                  {((notaItem.text || "").replace(/\s*\(escribe o edita aquí el detalle\)/gi, "") || "Escribe una nota...") + "\n"}
-                                </div>
-                                <textarea
-                                  rows={1}
-                                  value={(notaItem.text || "").replace(/\s*\(escribe o edita aquí el detalle\)/gi, "")}
-                                  onChange={(e) =>
-                                    onEditarNotaKanban?.(nIdx, e.target.value, bloque.id)
-                                  }
-                                  placeholder="Escribe una nota..."
-                                  className="[grid-area:1/1/2/2] w-full h-full overflow-hidden rounded-xl bg-white/80 dark:bg-black/40 border border-amber-200/80 dark:border-white/10 px-2.5 py-2 text-xs font-normal text-zinc-800 dark:text-zinc-100 focus:outline-none focus:border-amber-500 resize-none leading-relaxed whitespace-pre-wrap break-words"
-                                />
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
+                {(bloque.linkedItems || []).length > 0 && (
+                  <div onClick={(e) => e.stopPropagation()}>
+                    <ResumenItemsSeleccionadosTaller
+                      itemsSeleccionados={bloque.linkedItems || []}
+                      onAgregarItem={(item, delta) => onAgregarItemPin?.(item, bloque.id, delta)}
+                      onEliminarItem={(itemId) => onEliminarItemPin?.(itemId, bloque.id)}
+                      fotos={soloFotosBloque}
+                      audios={soloAudiosBloque}
+                      notas={notasKanbanBloque}
+                      descripcion={textoBloque}
+                      onAbrirFoto={(url, idx) =>
+                        setFotoModalData({
+                          url,
+                          bloqueNum: numBloque,
+                          fotoNum: idx + 1,
+                          descripcion: textoBloque,
+                        })
+                      }
+                      onToggleAudio={handleTogglePlayAudioClip}
+                      onEliminarNota={(nIdx) => onEliminarNotaKanban?.(nIdx, bloque.id)}
+                      onEliminarFoto={(origIdx) => onEliminarFoto(origIdx, undefined, bloque.id)}
+                      onEliminarAudio={onEliminarAudio ? (aIdx) => onEliminarAudio(aIdx, bloque.id) : undefined}
+                      audioReproduciendoUrl={audioClipReproduciendoUrl}
+                    />
                   </div>
                 )}
-
-                <div
-                  className="pt-2 border-t border-zinc-200/70 dark:border-white/10 space-y-2.5"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <CatalogoProductosServiciosTaller
-                    itemsSeleccionados={bloque.linkedItems || []}
-                    onAgregarItem={(item, delta) => onAgregarItemPin?.(item, bloque.id, delta)}
-                    onEliminarItem={(itemId) => onEliminarItemPin?.(itemId, bloque.id)}
-                    serviciosCatalogo={serviciosCatalogo}
-                    productosCatalogo={productosCatalogo}
-                    titulo="Catálogo"
-                    siempreAbierto={true}
-                    mostrarChipsSeleccionados={true}
-                  />
-                </div>
               </div>
             </div>
           );
         })}
-
-        {/* Botón para crear otro bloque separado si se desea subir otra foto con su propio texto o audio */}
-        <button
-          type="button"
-          onClick={onDuplicarPin}
-          className="w-full py-3 px-4 rounded-xl border-2 border-dashed border-sky-400/40 dark:border-sky-500/30 bg-sky-50/50 hover:bg-sky-100/60 dark:bg-sky-500/[0.08] dark:hover:bg-sky-500/[0.16] text-sky-700 dark:text-sky-300 text-sm font-bold flex items-center justify-center gap-2.5 transition-all cursor-pointer active:scale-[0.99] shadow-xs"
-        >
-          <span className="flex items-center justify-center w-6 h-6 rounded-md bg-sky-200/60 dark:bg-sky-400/20 text-sky-600 dark:text-sky-300 text-base font-black">＋</span>
-          <span>
-            Evidencia #{bloquesEvidencia.length + 1}
-          </span>
-        </button>
       </div>
 
       {/* Input oculto para cámara nativa en móvil o fallback en PC */}

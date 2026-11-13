@@ -24,6 +24,7 @@ export interface LubricentroExpressProps {
   triggerAbrirConfig?: number;
   vistaAppCarwash?: boolean;
   navegacionActiva?: boolean;
+  ocultarResumenInferior?: boolean;
 }
 
 export interface ServicioExpressItem {
@@ -247,6 +248,7 @@ export default function LubricentroExpress({
   triggerAbrirConfig,
   vistaAppCarwash = false,
   navegacionActiva = false,
+  ocultarResumenInferior = false,
 }: LubricentroExpressProps) {
   // =========================================================================
   // CONTROL DE ETAPAS (2: Servicios Express, 4: Firma)
@@ -1047,6 +1049,7 @@ export default function LubricentroExpress({
               }}
               onIrAAvisoYFirma={() => setEtapaActiva(4)}
               navegacionActiva={navegacionActiva && modoEspecialidad === "lubricentro"}
+              ocultarResumenInferior={ocultarResumenInferior}
             />
           </div>
 
@@ -1068,6 +1071,7 @@ export default function LubricentroExpress({
               }}
               onIrAAvisoYFirma={() => setEtapaActiva(4)}
               navegacionActiva={navegacionActiva && modoEspecialidad === "carwash"}
+              ocultarResumenInferior={ocultarResumenInferior}
             />
           </div>
 
@@ -1084,6 +1088,7 @@ export default function LubricentroExpress({
               }}
               onIrAAvisoYFirma={() => setEtapaActiva(4)}
               navegacionActiva={navegacionActiva && modoEspecialidad === "tecnicentro"}
+              ocultarResumenInferior={ocultarResumenInferior}
             />
           </div>
         </>

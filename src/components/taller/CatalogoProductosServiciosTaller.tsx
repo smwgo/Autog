@@ -208,6 +208,7 @@ export interface CatalogoProductosServiciosTallerProps {
   className?: string;
   siempreAbierto?: boolean;
   mostrarPrecios?: boolean;
+  ocultarCabeceraYCategoria?: boolean;
 }
 
 export function extraerDetalleCaracteristica(item: ItemCatalogoTaller): {
@@ -296,12 +297,13 @@ export default function CatalogoProductosServiciosTaller({
   className = "",
   siempreAbierto = false,
   mostrarPrecios = false,
+  ocultarCabeceraYCategoria = false,
 }: CatalogoProductosServiciosTallerProps) {
   const [expandido, setExpandido] = useState<boolean>(siempreAbierto || inicialmenteExpandido);
 
   // Estados de los 3 Dropdowns superiores
   const [filtroTipo, setFiltroTipo] = useState<"todos" | "PART" | "SERVICE">("todos");
-  const [categoriaActivaId, setCategoriaActivaId] = useState<string>("aceite");
+  const [categoriaActivaId, setCategoriaActivaId] = useState<string>(ocultarCabeceraYCategoria ? "todos" : "aceite");
   const [subcategoriaActivaId, setSubcategoriaActivaId] = useState<string>("motor");
   const [presentacionActiva, setPresentacionActiva] = useState<string>("Galón");
 
@@ -666,7 +668,7 @@ export default function CatalogoProductosServiciosTaller({
       {/* =====================================================================
           BOTÓN / BARRA DE CABECERA: SE EXPANDE O SE RECOJE AL MARCARLO
           ===================================================================== */}
-      {!siempreAbierto ? (
+      {!ocultarCabeceraYCategoria && (!siempreAbierto ? (
         <div
           onClick={() => setExpandido((prev) => !prev)}
           className="px-4 py-2 sm:py-2.5 flex items-center justify-between gap-3 cursor-pointer select-none rounded-t-2xl bg-zinc-50/60 hover:bg-zinc-100/60 dark:bg-white/[0.02] dark:hover:bg-white/[0.04] transition-colors"
@@ -700,16 +702,17 @@ export default function CatalogoProductosServiciosTaller({
           </span>
           {renderBadgeTotales()}
         </div>
-      )}
+      ))}
 
       {/* =====================================================================
           CONTENIDO DEL CATÁLOGO
           ===================================================================== */}
       {(siempreAbierto || expandido) && (
-        <div className={`p-3 sm:p-4 rounded-b-2xl space-y-3.5 animate-fade-in bg-zinc-50/40 dark:bg-black/20 ${!siempreAbierto ? "border-t border-zinc-200/80 dark:border-white/10" : ""}`}>
+        <div className={`p-3 sm:p-4 ${ocultarCabeceraYCategoria ? "rounded-2xl" : "rounded-b-2xl"} space-y-3.5 animate-fade-in bg-zinc-50/40 dark:bg-black/20 ${!siempreAbierto && !ocultarCabeceraYCategoria ? "border-t border-zinc-200/80 dark:border-white/10" : ""}`}>
           {/* ===================================================================
               MÁS ARRIBA: ICONO DE CATEGORÍA DESPLEGABLE (SOLO CATEGORÍAS)
               =================================================================== */}
+          {!ocultarCabeceraYCategoria && (
           <div className="relative">
             <button
               type="button"
@@ -778,6 +781,7 @@ export default function CatalogoProductosServiciosTaller({
               </div>
             )}
           </div>
+          )}
 
           {/* ===================================================================
               AQUÍ: BARRA DE BÚSQUEDA + DOS ICONOS P S (FILTROS PRODUCTOS Y SERVICIOS)
@@ -948,247 +952,330 @@ export default function CatalogoProductosServiciosTaller({
           {/* ===================================================================
               RESUMEN DE ÍTEMS SELECCIONADOS EN 2 SECCIONES ESTILO FACTURA: PRODUCTOS Y SERVICIOS
               =================================================================== */}
-          {mostrarChipsSeleccionados && itemsSeleccionados.length > 0 && (() => {
-            const esServicioItem = (it: ItemSeleccionadoRef) =>
-              it.type === "SERVICE" ||
-              (it.category && it.category.toLowerCase().includes("servicio")) ||
-              (it.code && it.code.toUpperCase().startsWith("SRV"));
+          {mostrarChipsSeleccionados && itemsSeleccionados.length > 0 && (
+            <ResumenItemsSeleccionadosTaller
+              itemsSeleccionados={itemsSeleccionados}
+              onAgregarItem={onAgregarItem}
+              onEliminarItem={onEliminarItem}
+              mostrarPrecios={mostrarPrecios}
+            />
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
-            const esManual = (it: ItemSeleccionadoRef) =>
-              it.category === "Manual" ||
-              it.code?.startsWith("MANUAL-") ||
-              it.id?.startsWith("manual-") ||
-              Boolean((it as any).isManual);
+export function ResumenItemsSeleccionadosTaller({
+  itemsSeleccionados = [],
+  onAgregarItem,
+  onEliminarItem,
+  mostrarPrecios = false,
+  fotos,
+  audios,
+  notas,
+  descripcion,
+  onAbrirFoto,
+  onToggleAudio,
+  onEliminarNota,
+  onEliminarFoto,
+  onEliminarAudio,
+  audioReproduciendoUrl,
+}: {
+  itemsSeleccionados?: ItemSeleccionadoRef[];
+  onAgregarItem?: (item: ItemCatalogoTaller, delta?: number) => void;
+  onEliminarItem?: (codigoOId: string) => void;
+  mostrarPrecios?: boolean;
+  fotos?: { url: string; originalIdx?: number }[];
+  audios?: string[];
+  notas?: { id?: string; text: string }[];
+  descripcion?: string;
+  onAbrirFoto?: (url: string, index: number) => void;
+  onToggleAudio?: (audioUrl: string) => void;
+  onEliminarNota?: (noteIndex: number) => void;
+  onEliminarFoto?: (originalIdx: number) => void;
+  onEliminarAudio?: (audioIndex: number) => void;
+  audioReproduciendoUrl?: string | null;
+}) {
+  const [modalFotosAbierto, setModalFotosAbierto] = useState(false);
+  const [modalAudiosAbierto, setModalAudiosAbierto] = useState(false);
 
-            const productosSeleccionados = itemsSeleccionados
-              .filter((it) => !esServicioItem(it))
-              .sort((a, b) => (esManual(a) ? 1 : 0) - (esManual(b) ? 1 : 0));
+  if (!itemsSeleccionados || itemsSeleccionados.length === 0) return null;
 
-            const serviciosSeleccionados = itemsSeleccionados
-              .filter((it) => esServicioItem(it))
-              .sort((a, b) => (esManual(a) ? 1 : 0) - (esManual(b) ? 1 : 0));
+  const esServicioItem = (it: ItemSeleccionadoRef) =>
+    it.type === "SERVICE" ||
+    (it.category && it.category.toLowerCase().includes("servicio")) ||
+    (it.code && it.code.toUpperCase().startsWith("SRV"));
 
-            const totalProductos = productosSeleccionados.reduce((acc, it) => acc + (Number(it.qty) || 1), 0);
-            const totalServicios = serviciosSeleccionados.reduce((acc, it) => acc + (Number(it.qty) || 1), 0);
+  const esManual = (it: ItemSeleccionadoRef) =>
+    it.category === "Manual" ||
+    it.code?.startsWith("MANUAL-") ||
+    it.id?.startsWith("manual-") ||
+    Boolean((it as any).isManual);
 
-            return (
-              <div className="pt-2.5 border-t border-zinc-200/60 dark:border-white/10 space-y-3.5">
-                {/* 1. SECCIÓN PRODUCTOS */}
-                {productosSeleccionados.length > 0 && (
-                  <div className="space-y-1.5">
-                    <span className="text-xs font-semibold text-blue-700 dark:text-blue-300 flex items-center gap-1.5">
-                      <span>📦</span>
-                      <span>Productos ({totalProductos}):</span>
+  const productosSeleccionados = itemsSeleccionados
+    .filter((it) => !esServicioItem(it))
+    .sort((a, b) => (esManual(a) ? 1 : 0) - (esManual(b) ? 1 : 0));
+
+  const serviciosSeleccionados = itemsSeleccionados
+    .filter((it) => esServicioItem(it))
+    .sort((a, b) => (esManual(a) ? 1 : 0) - (esManual(b) ? 1 : 0));
+
+  const totalProductos = productosSeleccionados.reduce((acc, it) => acc + (Number(it.qty) || 1), 0);
+  const totalServicios = serviciosSeleccionados.reduce((acc, it) => acc + (Number(it.qty) || 1), 0);
+
+  const renderTablaSeccion = (
+    items: ItemSeleccionadoRef[],
+    esServicio: boolean,
+    tituloSeccion: string,
+    iconoSeccion: string,
+    totalCount: number
+  ) => {
+    if (items.length === 0) return null;
+
+    return (
+      <div className="space-y-1.5">
+        <span
+          className={`text-xs font-semibold flex items-center gap-1.5 ${
+            esServicio ? "text-purple-700 dark:text-purple-300" : "text-blue-700 dark:text-blue-300"
+          }`}
+        >
+          <span>{iconoSeccion}</span>
+          <span>
+            {tituloSeccion} ({totalCount}):
+          </span>
+        </span>
+
+        <div className="overflow-x-auto rounded-xl border border-zinc-200/80 dark:border-white/10 bg-white dark:bg-black/20 shadow-2xs">
+          <table className="w-full text-left text-xs border-collapse">
+            <thead>
+              <tr className="border-b border-zinc-200/80 dark:border-white/10 bg-zinc-50/80 dark:bg-white/[0.03] text-zinc-500 dark:text-zinc-400 text-[11px] font-semibold">
+                <th className="py-2 px-3 w-24 text-center">Cant.</th>
+                <th className="py-2 px-3">Descripción</th>
+                <th className="py-2 px-2.5 w-28">Detalle</th>
+                {mostrarPrecios && (
+                  <>
+                    <th className="py-2 px-2.5 w-20 text-right">PVP</th>
+                    <th className="py-2 px-2.5 w-24 text-right">Subtotal</th>
+                  </>
+                )}
+                <th className="py-2 px-2 w-12 text-center"></th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-zinc-200/60 dark:divide-white/5">
+              {items.map((it, idx) => {
+                const { nombrePrincipal, caracteristica } = extraerDetalleCaracteristica(it as any);
+                const cant = Number(it.qty) || 1;
+
+                return (
+                  <tr
+                    key={it.id || it.code || `${esServicio ? "srv" : "prod"}-${idx}`}
+                    className="hover:bg-zinc-50/60 dark:hover:bg-white/[0.02] transition-colors"
+                  >
+                    <td className="py-2 px-3 text-center">
+                      <div className="inline-flex items-center border border-zinc-200 dark:border-white/10 rounded-lg overflow-hidden bg-zinc-50 dark:bg-white/[0.04]">
+                        {onAgregarItem && (
+                          <button
+                            type="button"
+                            onClick={() => onAgregarItem(it as any, -1)}
+                            className="w-5 h-5 flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-200/60 text-xs font-bold cursor-pointer transition-colors"
+                            title="Restar 1"
+                          >
+                            −
+                          </button>
+                        )}
+                        <span className="w-6 text-center text-xs font-bold text-zinc-800 dark:text-zinc-200">
+                          {cant}
+                        </span>
+                        {onAgregarItem && (
+                          <button
+                            type="button"
+                            onClick={() => onAgregarItem(it as any, 1)}
+                            className="w-5 h-5 flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-200/60 text-xs font-bold cursor-pointer transition-colors"
+                            title="Sumar 1"
+                          >
+                            +
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                    <td className="py-2 px-3 font-medium text-zinc-800 dark:text-zinc-200">
+                      {formatearPrimeraMayuscula(nombrePrincipal)}
+                    </td>
+                    <td className="py-2 px-2.5">
+                      {caracteristica ? (
+                        <span
+                          className={`inline-block px-2 py-0.5 rounded-md text-[10px] font-semibold border ${
+                            caracteristica === "Manual"
+                              ? "bg-amber-50 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-300/80 dark:border-amber-500/30"
+                              : esServicio
+                              ? "bg-purple-50 dark:bg-purple-500/15 text-purple-700 dark:text-purple-300 border-purple-200/70 dark:border-purple-500/30"
+                              : "bg-blue-50 dark:bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-200/70 dark:border-blue-500/30"
+                          }`}
+                        >
+                          {formatearPrimeraMayuscula(caracteristica)}
+                        </span>
+                      ) : esServicio ? (
+                        <span className="inline-block px-2 py-0.5 rounded-md bg-purple-50 dark:bg-purple-500/15 text-purple-700 dark:text-purple-300 text-[10px] font-semibold border border-purple-200/70 dark:border-purple-500/30">
+                          Servicio
+                        </span>
+                      ) : (
+                        <span className="text-zinc-400 text-[10px]">-</span>
+                      )}
+                    </td>
+                    {mostrarPrecios && (
+                      <>
+                        <td className="py-2 px-2.5 text-right font-mono text-zinc-600 dark:text-zinc-400">
+                          ${Number(it.price || 0).toFixed(2)}
+                        </td>
+                        <td className="py-2 px-2.5 text-right font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                          ${(Number(it.price || 0) * cant).toFixed(2)}
+                        </td>
+                      </>
+                    )}
+                    <td className="py-2 px-2 text-center">
+                      {onEliminarItem && (
+                        <button
+                          type="button"
+                          onClick={() => onEliminarItem(it.id || it.code || it.name)}
+                          className="w-6 h-6 inline-flex items-center justify-center rounded-lg text-zinc-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10 text-sm font-bold cursor-pointer transition-colors"
+                          title={esServicio ? "Eliminar servicio" : "Eliminar producto"}
+                        >
+                          ×
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="pt-2.5 border-t border-zinc-200/60 dark:border-white/10 space-y-3.5">
+      {renderTablaSeccion(productosSeleccionados, false, "Productos", "📦", totalProductos)}
+      {renderTablaSeccion(serviciosSeleccionados, true, "Servicios", "🔧", totalServicios)}
+
+      {/* Modal flotante para ver múltiples fotos asociadas */}
+      {modalFotosAbierto && fotos && fotos.length > 0 && (
+        <div
+          className="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-3 animate-fade-in"
+          onClick={() => setModalFotosAbierto(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-2xl max-h-[85dvh] overflow-y-auto rounded-2xl bg-white dark:bg-[#111113] border border-zinc-200 dark:border-white/10 p-4 shadow-2xl space-y-3"
+          >
+            <div className="flex items-center justify-between border-b border-zinc-200 dark:border-white/10 pb-2">
+              <span className="text-sm font-bold text-zinc-900 dark:text-white">
+                📷 Fotos ({fotos.length})
+              </span>
+              <button
+                type="button"
+                onClick={() => setModalFotosAbierto(false)}
+                className="w-7 h-7 rounded-lg bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white text-xs font-bold flex items-center justify-center cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+              {fotos.map((f, fIdx) => (
+                <div
+                  key={f.originalIdx ?? fIdx}
+                  onClick={() => {
+                    if (onAbrirFoto) {
+                      setModalFotosAbierto(false);
+                      onAbrirFoto(f.url, fIdx);
+                    }
+                  }}
+                  className="relative aspect-square rounded-xl overflow-hidden border border-zinc-200 dark:border-white/10 bg-black/10 cursor-pointer hover:opacity-90 transition-opacity"
+                >
+                  <img src={f.url} alt={`Foto #${fIdx + 1}`} className="w-full h-full object-cover" />
+                  {onEliminarFoto && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onEliminarFoto(f.originalIdx ?? fIdx);
+                      }}
+                      className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-black/80 hover:bg-rose-600 text-white text-xs font-bold flex items-center justify-center cursor-pointer shadow border border-white/20"
+                      title="Eliminar foto"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal flotante para reproducir múltiples audios asociados */}
+      {modalAudiosAbierto && audios && audios.length > 0 && (
+        <div
+          className="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-3 animate-fade-in"
+          onClick={() => setModalAudiosAbierto(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-md rounded-2xl bg-white dark:bg-[#111113] border border-zinc-200 dark:border-white/10 p-4 shadow-2xl space-y-3"
+          >
+            <div className="flex items-center justify-between border-b border-zinc-200 dark:border-white/10 pb-2">
+              <span className="text-sm font-bold text-zinc-900 dark:text-white">
+                🎙️ Audios ({audios.length})
+              </span>
+              <button
+                type="button"
+                onClick={() => setModalAudiosAbierto(false)}
+                className="w-7 h-7 rounded-lg bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white text-xs font-bold flex items-center justify-center cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="space-y-2">
+              {audios.map((url, aIdx) => {
+                const tocando = audioReproduciendoUrl === url;
+                return (
+                  <div
+                    key={aIdx}
+                    className="flex items-center justify-between gap-3 px-3 py-2 rounded-xl border border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-white/[0.03]"
+                  >
+                    <span className="text-xs font-semibold text-zinc-800 dark:text-zinc-200">
+                      Audio #{aIdx + 1}
                     </span>
-
-                    <div className="overflow-x-auto rounded-xl border border-zinc-200/80 dark:border-white/10 bg-white dark:bg-black/20 shadow-2xs">
-                      <table className="w-full text-left text-xs border-collapse">
-                        <thead>
-                          <tr className="border-b border-zinc-200/80 dark:border-white/10 bg-zinc-50/80 dark:bg-white/[0.03] text-zinc-500 dark:text-zinc-400 text-[11px] font-semibold">
-                            <th className="py-2 px-3 w-24 text-center">Cant.</th>
-                            <th className="py-2 px-3">Descripción</th>
-                            <th className="py-2 px-2.5 w-28">Detalle</th>
-                            {mostrarPrecios && (
-                              <>
-                                <th className="py-2 px-2.5 w-20 text-right">PVP</th>
-                                <th className="py-2 px-2.5 w-24 text-right">Subtotal</th>
-                              </>
-                            )}
-                            <th className="py-2 px-2 w-12 text-center"></th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-zinc-200/60 dark:divide-white/5">
-                          {productosSeleccionados.map((it, idx) => {
-                            const { nombrePrincipal, caracteristica } = extraerDetalleCaracteristica(it as any);
-                            const cant = Number(it.qty) || 1;
-                            return (
-                              <tr key={it.id || it.code || `prod-${idx}`} className="hover:bg-zinc-50/60 dark:hover:bg-white/[0.02] transition-colors">
-                                <td className="py-2 px-3 text-center">
-                                  <div className="inline-flex items-center border border-zinc-200 dark:border-white/10 rounded-lg overflow-hidden bg-zinc-50 dark:bg-white/[0.04]">
-                                    {onAgregarItem && (
-                                      <button
-                                        type="button"
-                                        onClick={() => onAgregarItem(it as any, -1)}
-                                        className="w-5 h-5 flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-200/60 text-xs font-bold cursor-pointer transition-colors"
-                                        title="Restar 1"
-                                      >
-                                        −
-                                      </button>
-                                    )}
-                                    <span className="w-6 text-center text-xs font-bold text-zinc-800 dark:text-zinc-200">
-                                      {cant}
-                                    </span>
-                                    {onAgregarItem && (
-                                      <button
-                                        type="button"
-                                        onClick={() => onAgregarItem(it as any, 1)}
-                                        className="w-5 h-5 flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-200/60 text-xs font-bold cursor-pointer transition-colors"
-                                        title="Sumar 1"
-                                      >
-                                        +
-                                      </button>
-                                    )}
-                                  </div>
-                                </td>
-                                <td className="py-2 px-3 font-medium text-zinc-800 dark:text-zinc-200">
-                                  <span>{formatearPrimeraMayuscula(nombrePrincipal)}</span>
-                                </td>
-                                <td className="py-2 px-2.5">
-                                  {caracteristica ? (
-                                    <span
-                                      className={`inline-block px-2 py-0.5 rounded-md text-[10px] font-semibold border ${
-                                        caracteristica === "Manual"
-                                          ? "bg-amber-50 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-300/80 dark:border-amber-500/30"
-                                          : "bg-blue-50 dark:bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-200/70 dark:border-blue-500/30"
-                                      }`}
-                                    >
-                                      {formatearPrimeraMayuscula(caracteristica)}
-                                    </span>
-                                  ) : (
-                                    <span className="text-zinc-400 text-[10px]">-</span>
-                                  )}
-                                </td>
-                                {mostrarPrecios && (
-                                  <>
-                                    <td className="py-2 px-2.5 text-right font-mono text-zinc-600 dark:text-zinc-400">
-                                      ${Number(it.price || 0).toFixed(2)}
-                                    </td>
-                                    <td className="py-2 px-2.5 text-right font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                                      ${(Number(it.price || 0) * cant).toFixed(2)}
-                                    </td>
-                                  </>
-                                )}
-                                <td className="py-2 px-2 text-center">
-                                  {onEliminarItem && (
-                                    <button
-                                      type="button"
-                                      onClick={() => onEliminarItem(it.id || it.code || it.name)}
-                                      className="w-6 h-6 inline-flex items-center justify-center rounded-lg text-zinc-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10 text-sm font-bold cursor-pointer transition-colors"
-                                      title="Eliminar producto"
-                                    >
-                                      ×
-                                    </button>
-                                  )}
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => onToggleAudio?.(url)}
+                        className={`px-3 py-1 rounded-lg text-xs font-bold cursor-pointer transition-all ${
+                          tocando
+                            ? "bg-amber-500 text-white animate-pulse"
+                            : "bg-zinc-200 hover:bg-amber-500 hover:text-white dark:bg-white/10 text-zinc-800 dark:text-zinc-200"
+                        }`}
+                      >
+                        {tocando ? "⏸ Pausar" : "▶ Escuchar"}
+                      </button>
+                      {onEliminarAudio && (
+                        <button
+                          type="button"
+                          onClick={() => onEliminarAudio(aIdx)}
+                          className="w-7 h-7 rounded-lg hover:bg-rose-500/15 text-zinc-400 hover:text-rose-600 flex items-center justify-center text-xs font-bold cursor-pointer transition-colors"
+                          title="Eliminar audio"
+                        >
+                          ✕
+                        </button>
+                      )}
                     </div>
                   </div>
-                )}
-
-                {/* 2. SECCIÓN SERVICIOS */}
-                {serviciosSeleccionados.length > 0 && (
-                  <div className="space-y-1.5">
-                    <span className="text-xs font-semibold text-purple-700 dark:text-purple-300 flex items-center gap-1.5">
-                      <span>🔧</span>
-                      <span>Servicios ({totalServicios}):</span>
-                    </span>
-
-                    <div className="overflow-x-auto rounded-xl border border-zinc-200/80 dark:border-white/10 bg-white dark:bg-black/20 shadow-2xs">
-                      <table className="w-full text-left text-xs border-collapse">
-                        <thead>
-                          <tr className="border-b border-zinc-200/80 dark:border-white/10 bg-zinc-50/80 dark:bg-white/[0.03] text-zinc-500 dark:text-zinc-400 text-[11px] font-semibold">
-                            <th className="py-2 px-3 w-24 text-center">Cant.</th>
-                            <th className="py-2 px-3">Descripción</th>
-                            <th className="py-2 px-2.5 w-28">Detalle</th>
-                            {mostrarPrecios && (
-                              <>
-                                <th className="py-2 px-2.5 w-20 text-right">PVP</th>
-                                <th className="py-2 px-2.5 w-24 text-right">Subtotal</th>
-                              </>
-                            )}
-                            <th className="py-2 px-2 w-12 text-center"></th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-zinc-200/60 dark:divide-white/5">
-                          {serviciosSeleccionados.map((it, idx) => {
-                            const { nombrePrincipal, caracteristica } = extraerDetalleCaracteristica(it as any);
-                            const cant = Number(it.qty) || 1;
-                            return (
-                              <tr key={it.id || it.code || `srv-${idx}`} className="hover:bg-zinc-50/60 dark:hover:bg-white/[0.02] transition-colors">
-                                <td className="py-2 px-3 text-center">
-                                  <div className="inline-flex items-center border border-zinc-200 dark:border-white/10 rounded-lg overflow-hidden bg-zinc-50 dark:bg-white/[0.04]">
-                                    {onAgregarItem && (
-                                      <button
-                                        type="button"
-                                        onClick={() => onAgregarItem(it as any, -1)}
-                                        className="w-5 h-5 flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-200/60 text-xs font-bold cursor-pointer transition-colors"
-                                        title="Restar 1"
-                                      >
-                                        −
-                                      </button>
-                                    )}
-                                    <span className="w-6 text-center text-xs font-bold text-zinc-800 dark:text-zinc-200">
-                                      {cant}
-                                    </span>
-                                    {onAgregarItem && (
-                                      <button
-                                        type="button"
-                                        onClick={() => onAgregarItem(it as any, 1)}
-                                        className="w-5 h-5 flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-200/60 text-xs font-bold cursor-pointer transition-colors"
-                                        title="Sumar 1"
-                                      >
-                                        +
-                                      </button>
-                                    )}
-                                  </div>
-                                </td>
-                                <td className="py-2 px-3 font-medium text-zinc-800 dark:text-zinc-200">
-                                  <span>{formatearPrimeraMayuscula(nombrePrincipal)}</span>
-                                </td>
-                                <td className="py-2 px-2.5">
-                                  {caracteristica ? (
-                                    <span
-                                      className={`inline-block px-2 py-0.5 rounded-md text-[10px] font-semibold border ${
-                                        caracteristica === "Manual"
-                                          ? "bg-amber-50 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-300/80 dark:border-amber-500/30"
-                                          : "bg-purple-50 dark:bg-purple-500/15 text-purple-700 dark:text-purple-300 border-purple-200/70 dark:border-purple-500/30"
-                                      }`}
-                                    >
-                                      {formatearPrimeraMayuscula(caracteristica)}
-                                    </span>
-                                  ) : (
-                                    <span className="inline-block px-2 py-0.5 rounded-md bg-purple-50 dark:bg-purple-500/15 text-purple-700 dark:text-purple-300 text-[10px] font-semibold border border-purple-200/70 dark:border-purple-500/30">
-                                      Servicio
-                                    </span>
-                                  )}
-                                </td>
-                                {mostrarPrecios && (
-                                  <>
-                                    <td className="py-2 px-2.5 text-right font-mono text-zinc-600 dark:text-zinc-400">
-                                      ${Number(it.price || 0).toFixed(2)}
-                                    </td>
-                                    <td className="py-2 px-2.5 text-right font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                                      ${(Number(it.price || 0) * cant).toFixed(2)}
-                                    </td>
-                                  </>
-                                )}
-                                <td className="py-2 px-2 text-center">
-                                  {onEliminarItem && (
-                                    <button
-                                      type="button"
-                                      onClick={() => onEliminarItem(it.id || it.code || it.name)}
-                                      className="w-6 h-6 inline-flex items-center justify-center rounded-lg text-zinc-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10 text-sm font-bold cursor-pointer transition-colors"
-                                      title="Eliminar servicio"
-                                    >
-                                      ×
-                                    </button>
-                                  )}
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                )}
-              </div>
-            );
-          })()}
+                );
+              })}
+            </div>
+          </div>
         </div>
       )}
     </div>

@@ -25,6 +25,7 @@ export interface ModuloTecnicentroCatalogoProps {
   onIrAAvisoYFirma: () => void;
   onIrAAnterior?: () => void;
   navegacionActiva?: boolean;
+  ocultarResumenInferior?: boolean;
 }
 
 // ============================================================================
@@ -394,6 +395,7 @@ export default function ModuloTecnicentroCatalogo({
   onIrAAvisoYFirma,
   onIrAAnterior,
   navegacionActiva = false,
+  ocultarResumenInferior = false,
 }: ModuloTecnicentroCatalogoProps) {
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -2436,6 +2438,7 @@ export default function ModuloTecnicentroCatalogo({
           .filter((it: any) => esServicioItem(it))
           .sort((a: any, b: any) => (esManual(a) ? 1 : 0) - (esManual(b) ? 1 : 0));
 
+        if (ocultarResumenInferior) return null;
         const totalProductos = productosSeleccionados.reduce((acc: number, it: any) => acc + (Number(it.qty) || 1), 0);
         const totalServicios = serviciosSeleccionados.reduce((acc: number, it: any) => acc + (Number(it.qty) || 1), 0);
 

@@ -33,6 +33,7 @@ export interface ModuloLubricentroCatalogoProps {
   onIrAAnterior?: () => void;
   onIrASiguiente?: () => void;
   navegacionActiva?: boolean;
+  ocultarResumenInferior?: boolean;
   productosCatalogo?: any[];
   serviciosCatalogo?: any[];
   onGuardarDatosLubricentro?: (
@@ -605,6 +606,7 @@ export default function ModuloLubricentroCatalogo({
   onIrAAnterior,
   onIrASiguiente,
   navegacionActiva = false,
+  ocultarResumenInferior = false,
   productosCatalogo = [],
   serviciosCatalogo = [],
 }: ModuloLubricentroCatalogoProps) {
@@ -4288,24 +4290,6 @@ export default function ModuloLubricentroCatalogo({
             =================================================================== */}
         <div className="lg:col-span-5 rounded-2xl bg-white dark:bg-white/[0.03] border border-zinc-200/90 dark:border-white/10 p-3.5 sm:p-4 shadow-2xs flex flex-col justify-between">
           <div className="space-y-2.5">
-            {/* Kilometraje normal y legible */}
-            <div className="p-3 rounded-xl bg-zinc-50 dark:bg-black/20 border border-zinc-200/70 dark:border-white/5">
-              <div className="flex items-baseline justify-between gap-2">
-                <span className="text-xl sm:text-2xl font-bold font-sans tracking-normal text-zinc-900 dark:text-white">
-                  {kmActual.toLocaleString()} km
-                </span>
-                <span className="text-lg text-blue-600 dark:text-blue-400 font-bold">➔</span>
-              </div>
-              <div className="mt-1 flex items-center justify-between text-xs sm:text-sm text-zinc-600 dark:text-zinc-300 font-sans">
-                <span className="font-semibold font-sans text-emerald-600 dark:text-emerald-400">
-                  Próx: {kmProximo.toLocaleString()} km
-                </span>
-                <span className="text-[11px] font-medium font-sans text-zinc-500 dark:text-zinc-400">
-                  (+5.000 km)
-                </span>
-              </div>
-            </div>
-
             {/* Acceso directo al historial de cambios de aceite */}
             <Link
               href={`/taller/historial-aceite?placa=${encodeURIComponent(ordenActiva?.plate || "")}&cliente=${encodeURIComponent(ordenActiva?.clientName || ordenActiva?.customerName || ordenActiva?.client || "")}&vehiculo=${encodeURIComponent(ordenActiva?.vehicle || [ordenActiva?.vehicleBrand, ordenActiva?.vehicleModel].filter(Boolean).join(" ") || "")}`}
@@ -4861,6 +4845,7 @@ export default function ModuloLubricentroCatalogo({
       .filter((it: any) => esServicioItem(it))
       .sort((a: any, b: any) => (esManual(a) ? 1 : 0) - (esManual(b) ? 1 : 0));
 
+    if (ocultarResumenInferior) return null;
     const totalProductos = productosSeleccionados.reduce((acc: number, it: any) => acc + (Number(it.qty) || 1), 0);
     const totalServicios = serviciosSeleccionados.reduce((acc: number, it: any) => acc + (Number(it.qty) || 1), 0);
 
