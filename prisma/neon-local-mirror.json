@@ -158,8 +158,8 @@
       "receptionSignatureUrl": null,
       "inspectionChecklistJson": "{\"registroEvidencias\":[]}",
       "inspectionTemplateId": null,
-      "servicesJson": "[\"xxxx\",\"Cambio de amortiguadores posteriores\",\"AMALIE ELIXIR 5W30\",\"QQQQ\",\"wwww\",\"xzzz\"]",
-      "itemsJson": "[{\"id\":\"reg-1794578641438-phzt\",\"code\":\"SRV-SDUM\",\"name\":\"xxxx\",\"category\":\"Taller\",\"type\":\"SERVICE\",\"price\":0,\"qty\":1,\"status\":\"Pendiente\",\"isManual\":true},{\"id\":\"srv-1794578655236-g95x\",\"code\":\"RAP-3\",\"name\":\"Cambio de amortiguadores posteriores\",\"category\":\"Taller\",\"type\":\"SERVICE\",\"price\":0,\"qty\":1,\"status\":\"Pendiente\"},{\"id\":\"cmw046d7x6qfvyt5t\",\"code\":\"AM-75766-56\",\"name\":\"AMALIE ELIXIR 5W30\",\"fullName\":\"AMALIE ELIXIR 5W30\",\"brand\":\"AMALIE\",\"price\":1,\"category\":\"Taller\",\"subCategory\":\"General\",\"lubCategoryId\":\"otros_prod\",\"lubSubcategoryId\":\"todos\",\"presentation\":\"Unidad\",\"unitOfMeasure\":\"Unidad\",\"type\":\"PART\",\"imageUrl\":\"/api/storage/download?key=productos%2Fbad77eca-dc59-44f4-966e-770bf9630306.png\",\"stock\":1,\"productId\":\"cmw046d7x6qfvyt5t\",\"qty\":2,\"status\":\"Pendiente\"},{\"id\":\"reg-1794579109265-bduq\",\"code\":\"SRV-2ETT\",\"name\":\"QQQQ\",\"category\":\"Taller\",\"type\":\"SERVICE\",\"price\":0,\"qty\":1,\"status\":\"Pendiente\",\"isManual\":true,\"fotos\":[\"/api/storage/download?key=taller-evidencias%2Fe9e71cda-106f-4d87-8718-2e2f6747b96e.png\"]},{\"id\":\"reg-1794579590414-t94g\",\"code\":\"SRV-CQ32\",\"name\":\"wwww\",\"category\":\"Taller\",\"type\":\"SERVICE\",\"price\":0,\"qty\":1,\"status\":\"Pendiente\",\"isManual\":true,\"fotos\":[\"/api/storage/download?key=taller-evidencias%2F78607c72-4172-4518-9fa8-b86f36bd230d.png\",\"/api/storage/download?key=taller-evidencias%2F72dea2df-cee2-4867-8764-0a7cc207daa9.png\",\"/api/storage/download?key=taller-evidencias%2Fedc03dba-3746-4d69-aab0-0b34fdfc623a.png\"]},{\"id\":\"reg-1794582277539-vkda\",\"code\":\"SRV-YBHF\",\"name\":\"xzzz\",\"category\":\"Taller\",\"type\":\"SERVICE\",\"price\":0,\"qty\":1,\"status\":\"Pendiente\",\"isManual\":true,\"audios\":[\"/api/storage/download?key=taller-evidencias%2F8b1748e3-e5a6-4762-9a6a-5860ed15514d.wav\"]}]",
+      "servicesJson": "[\"xxxx\",\"Cambio de amortiguadores posteriores\",\"QQQQ\",\"wwww\",\"AMALIE PRO 20W50\",\"Cambio de aceite\",\"Lavado exterior\"]",
+      "itemsJson": "[{\"id\":\"reg-1794578641438-phzt\",\"code\":\"SRV-SDUM\",\"name\":\"xxxx\",\"category\":\"Taller\",\"type\":\"SERVICE\",\"price\":0,\"qty\":1,\"status\":\"Pendiente\",\"isManual\":true},{\"id\":\"srv-1794578655236-g95x\",\"code\":\"RAP-3\",\"name\":\"Cambio de amortiguadores posteriores\",\"category\":\"Taller\",\"type\":\"SERVICE\",\"price\":0,\"qty\":1,\"status\":\"Pendiente\"},{\"id\":\"reg-1794579109265-bduq\",\"code\":\"SRV-2ETT\",\"name\":\"QQQQ\",\"category\":\"Taller\",\"type\":\"SERVICE\",\"price\":0,\"qty\":1,\"status\":\"Pendiente\",\"isManual\":true,\"fotos\":[\"/api/storage/download?key=taller-evidencias%2Fe9e71cda-106f-4d87-8718-2e2f6747b96e.png\"]},{\"id\":\"reg-1794579590414-t94g\",\"code\":\"SRV-CQ32\",\"name\":\"wwww\",\"category\":\"Taller\",\"type\":\"SERVICE\",\"price\":0,\"qty\":1,\"status\":\"Pendiente\",\"isManual\":true,\"fotos\":[\"/api/storage/download?key=taller-evidencias%2F78607c72-4172-4518-9fa8-b86f36bd230d.png\",\"/api/storage/download?key=taller-evidencias%2F72dea2df-cee2-4867-8764-0a7cc207daa9.png\",\"/api/storage/download?key=taller-evidencias%2Fedc03dba-3746-4d69-aab0-0b34fdfc623a.png\"]},{\"id\":\"cmw022c5n14xwluzg\",\"code\":\"AM-75697-36\",\"name\":\"AMALIE PRO 20W50\",\"fullName\":\"AMALIE PRO 20W50\",\"brand\":\"Genérico\",\"price\":1,\"viscosity\":\"AMALIE PRO 20W50\",\"category\":\"Taller\",\"subCategory\":\"General\",\"lubCategoryId\":\"aceite\",\"lubSubcategoryId\":\"motor\",\"presentation\":\"Unidad\",\"unitOfMeasure\":\"Unidad\",\"type\":\"PART\",\"color\":\"#eab308\",\"imageUrl\":\"/api/storage/download?key=productos%2F9396d027-07ba-41c3-aa23-f33bee776f66.png\",\"stock\":1,\"productId\":\"cmw022c5n14xwluzg\",\"qty\":1,\"status\":\"Pendiente\"},{\"id\":\"srv-1794583211326-h00x\",\"code\":\"RAP-1\",\"name\":\"Cambio de aceite\",\"category\":\"Taller\",\"type\":\"SERVICE\",\"price\":0,\"qty\":1,\"status\":\"Pendiente\"},{\"id\":\"srv-1794583223758-tcjy\",\"code\":\"RAP-6\",\"name\":\"Lavado exterior\",\"category\":\"Lubricentro\",\"type\":\"SERVICE\",\"price\":0,\"qty\":1,\"status\":\"Pendiente\"}]",
       "receptionPhotosJson": "[]",
       "evidencePhotosJson": "[]",
       "voiceNotesJson": "[]",
@@ -169,7 +169,7 @@
       "completedAt": null,
       "durationMinutes": 0,
       "estimatedOut": "Hoy",
-      "totalCost": "2.3",
+      "totalCost": "1.15",
       "quoteNumber": "PRE-2026-5122",
       "quoteStatus": "Pendiente de Aprobación",
       "quoteToken": "PRE-2026-5122-WRUHU",
@@ -204,7 +204,7 @@
       "branch": "PRINCIPAL",
       "transferredFrom": null,
       "createdAt": "2026-11-12T19:40:04.604Z",
-      "updatedAt": "2026-11-13T15:04:39.212Z"
+      "updatedAt": "2026-11-13T15:20:25.084Z"
     },
     {
       "id": "ord_wdm6k2bmwdzmmtv",
