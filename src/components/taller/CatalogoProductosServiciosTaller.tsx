@@ -209,6 +209,7 @@ export interface CatalogoProductosServiciosTallerProps {
   siempreAbierto?: boolean;
   mostrarPrecios?: boolean;
   ocultarCabeceraYCategoria?: boolean;
+  limitarDosFilasInicial?: boolean;
 }
 
 export function extraerDetalleCaracteristica(item: ItemCatalogoTaller): {
@@ -298,8 +299,10 @@ export default function CatalogoProductosServiciosTaller({
   siempreAbierto = false,
   mostrarPrecios = false,
   ocultarCabeceraYCategoria = false,
+  limitarDosFilasInicial = false,
 }: CatalogoProductosServiciosTallerProps) {
   const [expandido, setExpandido] = useState<boolean>(siempreAbierto || inicialmenteExpandido);
+  const [mostrarTodosSinFiltro, setMostrarTodosSinFiltro] = useState(false);
 
   // Estados de los 3 Dropdowns superiores
   const [filtroTipo, setFiltroTipo] = useState<"todos" | "PART" | "SERVICE">("todos");
@@ -663,7 +666,11 @@ export default function CatalogoProductosServiciosTaller({
   return (
     <div
       ref={containerRef}
-      className={`w-full rounded-2xl border border-zinc-200/90 dark:border-white/10 bg-white dark:bg-white/[0.02] shadow-2xs transition-all overflow-visible ${className}`}
+      className={`w-full ${
+        ocultarCabeceraYCategoria
+          ? "border-0 shadow-none bg-transparent"
+          : "rounded-2xl border border-zinc-200/90 dark:border-white/10 bg-white dark:bg-white/[0.02] shadow-2xs"
+      } transition-all overflow-visible ${className}`}
     >
       {/* =====================================================================
           BOTÓN / BARRA DE CABECERA: SE EXPANDE O SE RECOJE AL MARCARLO
@@ -708,7 +715,11 @@ export default function CatalogoProductosServiciosTaller({
           CONTENIDO DEL CATÁLOGO
           ===================================================================== */}
       {(siempreAbierto || expandido) && (
-        <div className={`p-3 sm:p-4 ${ocultarCabeceraYCategoria ? "rounded-2xl" : "rounded-b-2xl"} space-y-3.5 animate-fade-in bg-zinc-50/40 dark:bg-black/20 ${!siempreAbierto && !ocultarCabeceraYCategoria ? "border-t border-zinc-200/80 dark:border-white/10" : ""}`}>
+        <div className={`space-y-3.5 animate-fade-in ${
+          ocultarCabeceraYCategoria
+            ? "p-0 bg-transparent"
+            : `p-3 sm:p-4 rounded-b-2xl bg-zinc-50/40 dark:bg-black/20 ${!siempreAbierto ? "border-t border-zinc-200/80 dark:border-white/10" : ""}`
+        }`}>
           {/* ===================================================================
               MÁS ARRIBA: ICONO DE CATEGORÍA DESPLEGABLE (SOLO CATEGORÍAS)
               =================================================================== */}
@@ -849,105 +860,136 @@ export default function CatalogoProductosServiciosTaller({
           {/* ===================================================================
               CUADRÍCULA DE TARJETAS (ESTILO IDÉNTICO A LA CAPTURA)
               =================================================================== */}
-          <div className="p-3 sm:p-4 rounded-2xl bg-white dark:bg-white/[0.03] border border-zinc-200/90 dark:border-white/10 shadow-2xs">
-            {itemsFiltrados.length === 0 ? (
-              <div className="py-10 text-center text-zinc-400 space-y-1.5">
-                <span className="text-3xl block">🔍</span>
-                <p className="text-xs sm:text-sm font-semibold">
-                  No hay resultados para esta búsqueda.
-                </p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-3.5">
-                {itemsFiltrados.map((item) => {
-                  const cantEnOrden = obtenerCantidadItem(item);
-                  const enOrden = cantEnOrden > 0;
-                  const stockVal =
-                    item.stock !== undefined && item.stock !== null ? Number(item.stock) : 25;
-                  const estaAgotado = stockVal <= 0;
-                  const { nombrePrincipal, caracteristica } = extraerDetalleCaracteristica(item);
+          {(() => {
+            const LIMITE_DOS_FILAS = 8;
+            const itemsAMostrar =
+              limitarDosFilasInicial && !busqueda.trim() && !mostrarTodosSinFiltro
+                ? itemsFiltrados.slice(0, LIMITE_DOS_FILAS)
+                : itemsFiltrados;
 
-                  return (
-                    <div
-                      key={item.id}
-                      onClick={() => {
-                        if (estaAgotado) return;
-                        onAgregarItem?.(item, 1);
-                      }}
-                      className={`group relative flex flex-col items-center justify-between p-3.5 rounded-2xl border transition-all cursor-pointer select-none active:scale-[0.98] min-h-[175px] shadow-2xs ${
-                        enOrden
-                          ? "bg-blue-50/70 dark:bg-blue-500/10 border-blue-400 dark:border-blue-400/50 ring-2 ring-blue-300/60 dark:ring-blue-400/30 shadow-xs"
-                          : estaAgotado
-                          ? "bg-rose-500/[0.03] dark:bg-rose-500/[0.04] border-rose-300/80 dark:border-rose-500/30 opacity-80"
-                          : "bg-white hover:bg-zinc-50 dark:bg-white/[0.03] dark:hover:bg-white/[0.06] border-zinc-200 dark:border-white/10 hover:border-blue-300 dark:hover:border-blue-500/40"
-                      }`}
-                    >
-                      {/* Indicador de Tipo/Stock */}
-                      <div className="absolute top-2 left-2 flex items-center gap-1.5 z-10">
-                        <span
-                          className={`px-2 py-0.5 rounded-full text-[10px] font-bold border select-none transition-colors ${
-                            item.type === "SERVICE"
-                              ? "bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-500/20 dark:text-purple-300 dark:border-purple-500/30"
-                              : estaAgotado
-                              ? "bg-rose-500 text-white border-rose-600 shadow-xs"
-                              : "bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-500/20 dark:text-emerald-400 dark:border-emerald-500/30"
-                          }`}
-                          title={item.type === "SERVICE" ? "Servicio de taller" : estaAgotado ? "Agotado (Sin stock)" : `Stock disponible (${stockVal})`}
-                        >
-                          {item.type === "SERVICE" ? "Servicio" : estaAgotado ? "Agotado" : "Stock"}
-                        </span>
-                      </div>
+            return (
+              <div className={`${
+                ocultarCabeceraYCategoria
+                  ? "p-0 border-0 shadow-none bg-transparent"
+                  : "p-3 sm:p-4 rounded-2xl bg-white dark:bg-white/[0.03] border border-zinc-200/90 dark:border-white/10 shadow-2xs"
+              }`}>
+                {itemsFiltrados.length === 0 ? (
+                  <div className="py-10 text-center text-zinc-400 space-y-1.5">
+                    <span className="text-3xl block">🔍</span>
+                    <p className="text-xs sm:text-sm font-semibold">
+                      No hay resultados para esta búsqueda.
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-3.5">
+                      {itemsAMostrar.map((item) => {
+                        const cantEnOrden = obtenerCantidadItem(item);
+                        const enOrden = cantEnOrden > 0;
+                        const stockVal =
+                          item.stock !== undefined && item.stock !== null ? Number(item.stock) : 25;
+                        const estaAgotado = stockVal <= 0;
+                        const { nombrePrincipal, caracteristica } = extraerDetalleCaracteristica(item);
 
-                      {/* Badge contador verde arriba a la derecha (+2) */}
-                      {enOrden && (
-                        <span className="absolute top-2 right-2 px-2 py-0.5 rounded-full text-xs font-bold bg-emerald-500 text-white shadow-xs z-10">
-                          +{cantEnOrden}
-                        </span>
-                      )}
+                        return (
+                          <div
+                            key={item.id}
+                            onClick={() => {
+                              if (estaAgotado) return;
+                              onAgregarItem?.(item, 1);
+                            }}
+                            className={`group relative flex flex-col items-center justify-between p-3.5 rounded-2xl border transition-all cursor-pointer select-none active:scale-[0.98] min-h-[175px] shadow-2xs ${
+                              enOrden
+                                ? "bg-blue-50/70 dark:bg-blue-500/10 border-blue-400 dark:border-blue-400/50 ring-2 ring-blue-300/60 dark:ring-blue-400/30 shadow-xs"
+                                : estaAgotado
+                                ? "bg-rose-500/[0.03] dark:bg-rose-500/[0.04] border-rose-300/80 dark:border-rose-500/30 opacity-80"
+                                : "bg-white hover:bg-zinc-50 dark:bg-white/[0.03] dark:hover:bg-white/[0.06] border-zinc-200 dark:border-white/10 hover:border-blue-300 dark:hover:border-blue-500/40"
+                            }`}
+                          >
+                            {/* Indicador de Tipo/Stock */}
+                            <div className="absolute top-2 left-2 flex items-center gap-1.5 z-10">
+                              <span
+                                className={`px-2 py-0.5 rounded-full text-[10px] font-bold border select-none transition-colors ${
+                                  item.type === "SERVICE"
+                                    ? "bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-500/20 dark:text-purple-300 dark:border-purple-500/30"
+                                    : estaAgotado
+                                    ? "bg-rose-500 text-white border-rose-600 shadow-xs"
+                                    : "bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-500/20 dark:text-emerald-400 dark:border-emerald-500/30"
+                                }`}
+                                title={item.type === "SERVICE" ? "Servicio de taller" : estaAgotado ? "Agotado (Sin stock)" : `Stock disponible (${stockVal})`}
+                              >
+                                {item.type === "SERVICE" ? "Servicio" : estaAgotado ? "Agotado" : "Stock"}
+                              </span>
+                            </div>
 
-                      {/* Gráfico de botella o imagen del producto */}
-                      <div className="w-20 h-24 sm:w-24 sm:h-28 flex items-center justify-center shrink-0 mt-1">
-                        {item.imageUrl ? (
-                          <img
-                            src={item.imageUrl}
-                            alt={item.name}
-                            className="w-full h-full object-contain"
-                          />
-                        ) : item.viscosity || item.lubCategoryId === "aceite" ? (
-                          <BotellaAceiteGrafico
-                            viscosidad={caracteristica || item.viscosity || item.name}
-                            color={item.color || "#eab308"}
-                          />
-                        ) : (
-                          <IconoRepuestoGenerico
-                            categoria={item.category || item.lubCategoryId}
-                            tipo={item.type}
-                          />
-                        )}
-                      </div>
+                            {/* Badge contador verde arriba a la derecha (+2) */}
+                            {enOrden && (
+                              <span className="absolute top-2 right-2 px-2 py-0.5 rounded-full text-xs font-bold bg-emerald-500 text-white shadow-xs z-10">
+                                +{cantEnOrden}
+                              </span>
+                            )}
 
-                      {/* Texto de nombre y características (litros/viscosidad en una sola palabra) */}
-                      <div className="w-full text-center mt-2 px-1 flex flex-col items-center">
-                        <span className="text-xs sm:text-sm font-semibold tracking-tight text-zinc-900 dark:text-white block truncate max-w-full">
-                          {formatearPrimeraMayuscula(nombrePrincipal)}
-                        </span>
-                        {caracteristica && (
-                          <span className="mt-1 inline-block px-2 py-0.5 rounded-md bg-zinc-100 dark:bg-white/10 text-zinc-700 dark:text-zinc-300 text-[10px] sm:text-[11px] font-semibold tracking-wide border border-zinc-200/60 dark:border-white/10 select-none truncate max-w-full">
-                            {formatearPrimeraMayuscula(caracteristica)}
-                          </span>
-                        )}
-                        {mostrarPrecios && (
-                          <span className="text-xs sm:text-sm font-normal font-mono text-zinc-700 dark:text-zinc-300 mt-0.5 block">
-                            ${Number(item.price || 0).toFixed(2)}
-                          </span>
-                        )}
-                      </div>
+                            {/* Gráfico de botella o imagen del producto */}
+                            <div className="w-20 h-24 sm:w-24 sm:h-28 flex items-center justify-center shrink-0 mt-1">
+                              {item.imageUrl ? (
+                                <img
+                                  src={item.imageUrl}
+                                  alt={item.name}
+                                  className="w-full h-full object-contain"
+                                />
+                              ) : item.viscosity || item.lubCategoryId === "aceite" ? (
+                                <BotellaAceiteGrafico
+                                  viscosidad={caracteristica || item.viscosity || item.name}
+                                  color={item.color || "#eab308"}
+                                />
+                              ) : (
+                                <IconoRepuestoGenerico
+                                  categoria={item.category || item.lubCategoryId}
+                                  tipo={item.type}
+                                />
+                              )}
+                            </div>
+
+                            {/* Texto de nombre y características (litros/viscosidad en una sola palabra) */}
+                            <div className="w-full text-center mt-2 px-1 flex flex-col items-center">
+                              <span className="text-xs sm:text-sm font-semibold tracking-tight text-zinc-900 dark:text-white block truncate max-w-full">
+                                {formatearPrimeraMayuscula(nombrePrincipal)}
+                              </span>
+                              {caracteristica && (
+                                <span className="mt-1 inline-block px-2 py-0.5 rounded-md bg-zinc-100 dark:bg-white/10 text-zinc-700 dark:text-zinc-300 text-[10px] sm:text-[11px] font-semibold tracking-wide border border-zinc-200/60 dark:border-white/10 select-none truncate max-w-full">
+                                {formatearPrimeraMayuscula(caracteristica)}
+                              </span>
+                            )}
+                            {mostrarPrecios && (
+                              <span className="text-xs sm:text-sm font-normal font-mono text-zinc-700 dark:text-zinc-300 mt-0.5 block">
+                                ${Number(item.price || 0).toFixed(2)}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {limitarDosFilasInicial && !busqueda.trim() && !mostrarTodosSinFiltro && itemsFiltrados.length > LIMITE_DOS_FILAS && (
+                    <div className="pt-2.5 pb-0.5 flex items-center justify-between gap-2 text-xs text-zinc-500 dark:text-zinc-400 border-t border-zinc-200/60 dark:border-white/10 mt-2.5">
+                      <span className="text-[11px] text-zinc-400 dark:text-zinc-500">
+                        {itemsAMostrar.length} de {itemsFiltrados.length}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setMostrarTodosSinFiltro(true)}
+                        className="text-[11px] font-medium text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
+                      >
+                        Ver todos ({itemsFiltrados.length})
+                      </button>
                     </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
+                  )}
+                </>
+              )}
+            </div>
+          );
+        })()}
 
           {/* ===================================================================
               RESUMEN DE ÍTEMS SELECCIONADOS EN 2 SECCIONES ESTILO FACTURA: PRODUCTOS Y SERVICIOS

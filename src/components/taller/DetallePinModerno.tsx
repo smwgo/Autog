@@ -145,6 +145,219 @@ const ACCESOS_RAPIDOS_POR_MODULO: Record<ModuloSemaforoId, string[]> = {
   ],
 };
 
+function getServicioRapidoMeta(nombre: string, fallbackModulo?: string): {
+  tag: string;
+  badgeClass: string;
+  iconBoxClass: string;
+  icon: React.ReactNode;
+} {
+  const n = (nombre || "").toLowerCase();
+
+  // 1. Aceite de caja / transmisión
+  if (n.includes("caja") || n.includes("transmision") || n.includes("transmisión")) {
+    return {
+      tag: "Transmisión",
+      badgeClass: "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-300 dark:border-emerald-500/30",
+      iconBoxClass: "bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/25",
+      icon: (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 0 0-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 0 0-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 0 0-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 0 0-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 0 0 1.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065Z" />
+          <circle cx="12" cy="12" r="3" />
+        </svg>
+      ),
+    };
+  }
+
+  // 2. Corona / diferencial
+  if (n.includes("corona") || n.includes("diferencial")) {
+    return {
+      tag: "Diferencial",
+      badgeClass: "bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-500/15 dark:text-orange-300 dark:border-orange-500/30",
+      iconBoxClass: "bg-orange-50 text-orange-600 border-orange-200 dark:bg-orange-500/10 dark:text-orange-400 dark:border-orange-500/25",
+      icon: (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+          <circle cx="12" cy="12" r="5" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M3 12h4m10 0h4M12 3v4m0 10v4" />
+        </svg>
+      ),
+    };
+  }
+
+  // 3. Aceite de motor / lubricación
+  if (n.includes("aceite") || n.includes("lubricante") || n.includes("filtro de aceite")) {
+    return {
+      tag: "Motor",
+      badgeClass: "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/30",
+      iconBoxClass: "bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/25",
+      icon: (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 2.25c-3.75 5.25-6 8.25-6 11.25a6 6 0 0 0 12 0c0-3-2.25-6-6-11.25Z" />
+        </svg>
+      ),
+    };
+  }
+
+  // 4. Amortiguadores / suspensión
+  if (n.includes("amortiguador") || n.includes("suspension") || n.includes("suspensión") || n.includes("espiral")) {
+    return {
+      tag: "Suspensión",
+      badgeClass: "bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-500/15 dark:text-sky-300 dark:border-sky-500/30",
+      iconBoxClass: "bg-sky-50 text-sky-600 border-sky-200 dark:bg-sky-500/10 dark:text-sky-400 dark:border-sky-500/25",
+      icon: (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 2v3m0 14v3M8 5h8M7 8.5h10l-9 3.5h9l-9 3.5h10M8 19h8" />
+        </svg>
+      ),
+    };
+  }
+
+  // 5. Rulimán / rodamiento
+  if (n.includes("ruliman") || n.includes("rulimán") || n.includes("rodamiento")) {
+    return {
+      tag: "Rodamiento",
+      badgeClass: "bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-500/15 dark:text-purple-300 dark:border-purple-500/30",
+      iconBoxClass: "bg-purple-50 text-purple-600 border-purple-200 dark:bg-purple-500/10 dark:text-purple-400 dark:border-purple-500/25",
+      icon: (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+          <circle cx="12" cy="12" r="8.5" />
+          <circle cx="12" cy="12" r="3.5" />
+          <circle cx="12" cy="6" r="1" fill="currentColor" />
+          <circle cx="12" cy="18" r="1" fill="currentColor" />
+          <circle cx="6" cy="12" r="1" fill="currentColor" />
+          <circle cx="18" cy="12" r="1" fill="currentColor" />
+        </svg>
+      ),
+    };
+  }
+
+  // 6. Lavado / grafito / chasis
+  if (n.includes("grafito")) {
+    return {
+      tag: "Grafito",
+      badgeClass: "bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-500/15 dark:text-indigo-300 dark:border-indigo-500/30",
+      iconBoxClass: "bg-indigo-50 text-indigo-600 border-indigo-200 dark:bg-indigo-500/10 dark:text-indigo-400 dark:border-indigo-500/25",
+      icon: (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z" />
+        </svg>
+      ),
+    };
+  }
+
+  if (n.includes("chasis")) {
+    return {
+      tag: "Chasis",
+      badgeClass: "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/30",
+      iconBoxClass: "bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/25",
+      icon: (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 18.75a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 0 1-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 0 0-3.213-9.193 2.056 2.056 0 0 0-1.58-.86H14.25M16.5 18.75h-2.25m0-11.25H9.75M9.75 7.5l-3 4.5h7.5" />
+        </svg>
+      ),
+    };
+  }
+
+  if (n.includes("lavado")) {
+    return {
+      tag: "Lavado",
+      badgeClass: "bg-cyan-50 text-cyan-700 border-cyan-200 dark:bg-cyan-500/15 dark:text-cyan-300 dark:border-cyan-500/30",
+      iconBoxClass: "bg-cyan-50 text-cyan-600 border-cyan-200 dark:bg-cyan-500/10 dark:text-cyan-400 dark:border-cyan-500/25",
+      icon: (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456Z" />
+        </svg>
+      ),
+    };
+  }
+
+  // 7. Interior / tapicería / aspirador
+  if (n.includes("aspirad") || n.includes("interior") || n.includes("tapicer")) {
+    return {
+      tag: "Interior",
+      badgeClass: "bg-teal-50 text-teal-700 border-teal-200 dark:bg-teal-500/15 dark:text-teal-300 dark:border-teal-500/30",
+      iconBoxClass: "bg-teal-50 text-teal-600 border-teal-200 dark:bg-teal-500/10 dark:text-teal-400 dark:border-teal-500/25",
+      icon: (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09Z" />
+        </svg>
+      ),
+    };
+  }
+
+  // 8. Alineación / Dirección
+  if (n.includes("alineaci")) {
+    return {
+      tag: "Dirección",
+      badgeClass: "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-300 dark:border-emerald-500/30",
+      iconBoxClass: "bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/25",
+      icon: (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+          <circle cx="12" cy="12" r="9" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v18M3 12h18" />
+        </svg>
+      ),
+    };
+  }
+
+  // 9. Balanceo / Rotación / Llantas
+  if (n.includes("balanceo") || n.includes("rotaci")) {
+    return {
+      tag: "Llantas",
+      badgeClass: "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-500/15 dark:text-blue-300 dark:border-blue-500/30",
+      iconBoxClass: "bg-blue-50 text-blue-600 border-blue-200 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/25",
+      icon: (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+          <circle cx="12" cy="12" r="9" />
+          <circle cx="12" cy="12" r="4" />
+        </svg>
+      ),
+    };
+  }
+
+  // 10. Geometría (caída, camber, caster)
+  if (n.includes("caída") || n.includes("caida") || n.includes("camber") || n.includes("caster")) {
+    return {
+      tag: "Geometría",
+      badgeClass: "bg-violet-50 text-violet-700 border-violet-200 dark:bg-violet-500/15 dark:text-violet-300 dark:border-violet-500/30",
+      iconBoxClass: "bg-violet-50 text-violet-600 border-violet-200 dark:bg-violet-500/10 dark:text-violet-400 dark:border-violet-500/25",
+      icon: (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6h12v12" />
+        </svg>
+      ),
+    };
+  }
+
+  // 11. Frenos
+  if (n.includes("freno") || n.includes("pastilla") || n.includes("disco")) {
+    return {
+      tag: "Frenos",
+      badgeClass: "bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-500/15 dark:text-rose-300 dark:border-rose-500/30",
+      iconBoxClass: "bg-rose-50 text-rose-600 border-rose-200 dark:bg-rose-500/10 dark:text-rose-400 dark:border-rose-500/25",
+      icon: (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+          <circle cx="12" cy="12" r="9" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5" />
+          <circle cx="12" cy="12" r="2" />
+        </svg>
+      ),
+    };
+  }
+
+  // Fallback genérico
+  const fallback = fallbackModulo || "Servicio";
+  return {
+    tag: fallback,
+    badgeClass: "bg-zinc-100 text-zinc-700 border-zinc-200 dark:bg-white/10 dark:text-zinc-300 dark:border-white/15",
+    iconBoxClass: "bg-zinc-100 text-zinc-600 border-zinc-200 dark:bg-white/5 dark:text-zinc-400 dark:border-white/10",
+    icon: (
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75a4.5 4.5 0 0 1-4.884 4.484c-1.076-.091-2.264.398-3.078 1.212l-6.83 6.83a2.25 2.25 0 0 1-3.182-3.182l6.83-6.83c.814-.814 1.303-2.002 1.212-3.078A4.5 4.5 0 0 1 16.5 2.25a.75.75 0 0 1 .53 1.28l-2.06 2.06a.75.75 0 0 0 1.06 1.06l2.06-2.06a.75.75 0 0 1 1.28.53Z" />
+      </svg>
+    ),
+  };
+}
+
 export function DetallePinModerno({
   pin,
   chipsTipos: _chipsTipos,
@@ -834,6 +1047,8 @@ export function DetallePinModerno({
                               (it) => it.id === quickId || it.name.toLowerCase() === nombre.toLowerCase()
                             );
 
+                            const meta = getServicioRapidoMeta(nombre, infoTab.label);
+
                             return (
                               <button
                                 key={quickId}
@@ -853,21 +1068,30 @@ export function DetallePinModerno({
                                     1
                                   );
                                 }}
-                                className={`text-left px-3.5 py-2.5 rounded-xl border transition-all cursor-pointer active:scale-[0.98] flex items-center justify-between gap-2 ${
+                                className={`group text-left p-2.5 rounded-xl border transition-all cursor-pointer active:scale-[0.98] flex items-center justify-between gap-2.5 ${
                                   existente
-                                    ? "bg-violet-50 dark:bg-violet-500/15 border-violet-300 dark:border-violet-400/40 text-violet-900 dark:text-violet-100 shadow-xs"
-                                    : "bg-zinc-50/70 dark:bg-white/[0.02] hover:bg-zinc-100 dark:hover:bg-white/[0.06] border-zinc-200 dark:border-white/10 text-zinc-800 dark:text-zinc-200"
+                                    ? "bg-violet-50/90 dark:bg-violet-500/15 border-violet-300 dark:border-violet-400/40 text-violet-900 dark:text-violet-100 shadow-xs"
+                                    : "bg-zinc-50/70 dark:bg-white/[0.02] hover:bg-zinc-100/90 dark:hover:bg-white/[0.06] border-zinc-200 dark:border-white/10 text-zinc-800 dark:text-zinc-200"
                                 }`}
                               >
-                                <span className="text-xs sm:text-sm font-medium leading-snug">
-                                  {nombre}
-                                </span>
+                                <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                                  <div
+                                    className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border ${meta.iconBoxClass}`}
+                                  >
+                                    {meta.icon}
+                                  </div>
+                                  <span className="font-medium text-zinc-900 dark:text-zinc-100 text-xs sm:text-[13px] leading-snug break-words group-hover:text-violet-600 dark:group-hover:text-violet-400 transition-colors flex-1 min-w-0">
+                                    {nombre}
+                                  </span>
+                                </div>
                                 {existente ? (
                                   <span className="px-2 py-0.5 rounded-full bg-violet-600 text-white text-[10px] font-bold shrink-0">
                                     ✓ {existente.qty}
                                   </span>
                                 ) : (
-                                  <span className="text-xs font-bold text-zinc-400 shrink-0">+</span>
+                                  <span className="w-6 h-6 rounded-lg bg-zinc-200/60 dark:bg-white/10 group-hover:bg-violet-600 group-hover:text-white dark:group-hover:bg-violet-500 text-violet-600 dark:text-violet-400 flex items-center justify-center text-xs font-bold shrink-0 transition-colors">
+                                    +
+                                  </span>
                                 )}
                               </button>
                             );

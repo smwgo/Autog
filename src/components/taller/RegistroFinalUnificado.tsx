@@ -112,6 +112,219 @@ function getBadgeClasePorModulo(textoModulo?: string) {
   return MODULO_META.taller.badgeClass;
 }
 
+function getServicioRapidoMeta(nombre: string, fallbackModulo?: string): {
+  tag: string;
+  badgeClass: string;
+  iconBoxClass: string;
+  icon: React.ReactNode;
+} {
+  const n = (nombre || "").toLowerCase();
+
+  // 1. Aceite de caja / transmisión
+  if (n.includes("caja") || n.includes("transmision") || n.includes("transmisión")) {
+    return {
+      tag: "Transmisión",
+      badgeClass: "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-300 dark:border-emerald-500/30",
+      iconBoxClass: "bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/25",
+      icon: (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 0 0-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 0 0-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 0 0-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 0 0-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 0 0 1.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065Z" />
+          <circle cx="12" cy="12" r="3" />
+        </svg>
+      ),
+    };
+  }
+
+  // 2. Corona / diferencial
+  if (n.includes("corona") || n.includes("diferencial")) {
+    return {
+      tag: "Diferencial",
+      badgeClass: "bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-500/15 dark:text-orange-300 dark:border-orange-500/30",
+      iconBoxClass: "bg-orange-50 text-orange-600 border-orange-200 dark:bg-orange-500/10 dark:text-orange-400 dark:border-orange-500/25",
+      icon: (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+          <circle cx="12" cy="12" r="5" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M3 12h4m10 0h4M12 3v4m0 10v4" />
+        </svg>
+      ),
+    };
+  }
+
+  // 3. Aceite de motor / lubricación
+  if (n.includes("aceite") || n.includes("lubricante") || n.includes("filtro de aceite")) {
+    return {
+      tag: "Motor",
+      badgeClass: "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/30",
+      iconBoxClass: "bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/25",
+      icon: (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 2.25c-3.75 5.25-6 8.25-6 11.25a6 6 0 0 0 12 0c0-3-2.25-6-6-11.25Z" />
+        </svg>
+      ),
+    };
+  }
+
+  // 4. Amortiguadores / suspensión
+  if (n.includes("amortiguador") || n.includes("suspension") || n.includes("suspensión") || n.includes("espiral")) {
+    return {
+      tag: "Suspensión",
+      badgeClass: "bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-500/15 dark:text-sky-300 dark:border-sky-500/30",
+      iconBoxClass: "bg-sky-50 text-sky-600 border-sky-200 dark:bg-sky-500/10 dark:text-sky-400 dark:border-sky-500/25",
+      icon: (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 2v3m0 14v3M8 5h8M7 8.5h10l-9 3.5h9l-9 3.5h10M8 19h8" />
+        </svg>
+      ),
+    };
+  }
+
+  // 5. Rulimán / rodamiento
+  if (n.includes("ruliman") || n.includes("rulimán") || n.includes("rodamiento")) {
+    return {
+      tag: "Rodamiento",
+      badgeClass: "bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-500/15 dark:text-purple-300 dark:border-purple-500/30",
+      iconBoxClass: "bg-purple-50 text-purple-600 border-purple-200 dark:bg-purple-500/10 dark:text-purple-400 dark:border-purple-500/25",
+      icon: (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+          <circle cx="12" cy="12" r="8.5" />
+          <circle cx="12" cy="12" r="3.5" />
+          <circle cx="12" cy="6" r="1" fill="currentColor" />
+          <circle cx="12" cy="18" r="1" fill="currentColor" />
+          <circle cx="6" cy="12" r="1" fill="currentColor" />
+          <circle cx="18" cy="12" r="1" fill="currentColor" />
+        </svg>
+      ),
+    };
+  }
+
+  // 6. Lavado / grafito / chasis
+  if (n.includes("grafito")) {
+    return {
+      tag: "Grafito",
+      badgeClass: "bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-500/15 dark:text-indigo-300 dark:border-indigo-500/30",
+      iconBoxClass: "bg-indigo-50 text-indigo-600 border-indigo-200 dark:bg-indigo-500/10 dark:text-indigo-400 dark:border-indigo-500/25",
+      icon: (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z" />
+        </svg>
+      ),
+    };
+  }
+
+  if (n.includes("chasis")) {
+    return {
+      tag: "Chasis",
+      badgeClass: "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/30",
+      iconBoxClass: "bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/25",
+      icon: (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 18.75a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 0 1-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 0 0-3.213-9.193 2.056 2.056 0 0 0-1.58-.86H14.25M16.5 18.75h-2.25m0-11.25H9.75M9.75 7.5l-3 4.5h7.5" />
+        </svg>
+      ),
+    };
+  }
+
+  if (n.includes("lavado")) {
+    return {
+      tag: "Lavado",
+      badgeClass: "bg-cyan-50 text-cyan-700 border-cyan-200 dark:bg-cyan-500/15 dark:text-cyan-300 dark:border-cyan-500/30",
+      iconBoxClass: "bg-cyan-50 text-cyan-600 border-cyan-200 dark:bg-cyan-500/10 dark:text-cyan-400 dark:border-cyan-500/25",
+      icon: (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456Z" />
+        </svg>
+      ),
+    };
+  }
+
+  // 7. Interior / tapicería / aspirador
+  if (n.includes("aspirad") || n.includes("interior") || n.includes("tapicer")) {
+    return {
+      tag: "Interior",
+      badgeClass: "bg-teal-50 text-teal-700 border-teal-200 dark:bg-teal-500/15 dark:text-teal-300 dark:border-teal-500/30",
+      iconBoxClass: "bg-teal-50 text-teal-600 border-teal-200 dark:bg-teal-500/10 dark:text-teal-400 dark:border-teal-500/25",
+      icon: (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09Z" />
+        </svg>
+      ),
+    };
+  }
+
+  // 8. Alineación / Dirección
+  if (n.includes("alineaci")) {
+    return {
+      tag: "Dirección",
+      badgeClass: "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-300 dark:border-emerald-500/30",
+      iconBoxClass: "bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/25",
+      icon: (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+          <circle cx="12" cy="12" r="9" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v18M3 12h18" />
+        </svg>
+      ),
+    };
+  }
+
+  // 9. Balanceo / Rotación / Llantas
+  if (n.includes("balanceo") || n.includes("rotaci")) {
+    return {
+      tag: "Llantas",
+      badgeClass: "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-500/15 dark:text-blue-300 dark:border-blue-500/30",
+      iconBoxClass: "bg-blue-50 text-blue-600 border-blue-200 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/25",
+      icon: (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+          <circle cx="12" cy="12" r="9" />
+          <circle cx="12" cy="12" r="4" />
+        </svg>
+      ),
+    };
+  }
+
+  // 10. Geometría (caída, camber, caster)
+  if (n.includes("caída") || n.includes("caida") || n.includes("camber") || n.includes("caster")) {
+    return {
+      tag: "Geometría",
+      badgeClass: "bg-violet-50 text-violet-700 border-violet-200 dark:bg-violet-500/15 dark:text-violet-300 dark:border-violet-500/30",
+      iconBoxClass: "bg-violet-50 text-violet-600 border-violet-200 dark:bg-violet-500/10 dark:text-violet-400 dark:border-violet-500/25",
+      icon: (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6h12v12" />
+        </svg>
+      ),
+    };
+  }
+
+  // 11. Frenos
+  if (n.includes("freno") || n.includes("pastilla") || n.includes("disco")) {
+    return {
+      tag: "Frenos",
+      badgeClass: "bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-500/15 dark:text-rose-300 dark:border-rose-500/30",
+      iconBoxClass: "bg-rose-50 text-rose-600 border-rose-200 dark:bg-rose-500/10 dark:text-rose-400 dark:border-rose-500/25",
+      icon: (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+          <circle cx="12" cy="12" r="9" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5" />
+          <circle cx="12" cy="12" r="2" />
+        </svg>
+      ),
+    };
+  }
+
+  // Fallback genérico
+  const fallback = fallbackModulo || "Servicio";
+  return {
+    tag: fallback,
+    badgeClass: "bg-zinc-100 text-zinc-700 border-zinc-200 dark:bg-white/10 dark:text-zinc-300 dark:border-white/15",
+    iconBoxClass: "bg-zinc-100 text-zinc-600 border-zinc-200 dark:bg-white/5 dark:text-zinc-400 dark:border-white/10",
+    icon: (
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75a4.5 4.5 0 0 1-4.884 4.484c-1.076-.091-2.264.398-3.078 1.212l-6.83 6.83a2.25 2.25 0 0 1-3.182-3.182l6.83-6.83c.814-.814 1.303-2.002 1.212-3.078A4.5 4.5 0 0 1 16.5 2.25a.75.75 0 0 1 .53 1.28l-2.06 2.06a.75.75 0 0 0 1.06 1.06l2.06-2.06a.75.75 0 0 1 1.28.53Z" />
+      </svg>
+    ),
+  };
+}
+
 function formatearTiempoAudio(seg: number) {
   if (!Number.isFinite(seg) || seg < 0) return "0:00";
   const total = Math.floor(seg);
@@ -140,7 +353,7 @@ function MiniAudioPlayer({
     if (reproduciendo) {
       el.pause();
     } else {
-      void el.play().catch(() => {});
+      void el.play().catch(() => { });
     }
   };
 
@@ -151,9 +364,8 @@ function MiniAudioPlayer({
 
   return (
     <div
-      className={`flex items-center gap-2.5 rounded-xl border border-zinc-200/80 dark:border-white/10 bg-zinc-50/90 dark:bg-white/[0.04] ${
-        compact ? "px-2.5 py-1.5 min-w-[200px]" : "px-3 py-2 w-full"
-      }`}
+      className={`flex items-center gap-2.5 rounded-xl border border-zinc-200/80 dark:border-white/10 bg-zinc-50/90 dark:bg-white/[0.04] ${compact ? "px-2.5 py-1.5 min-w-[200px]" : "px-3 py-2 w-full"
+        }`}
     >
       <audio
         ref={audioRef}
@@ -430,7 +642,7 @@ export default function RegistroFinalUnificado({
         rec.onstop = () => {
           try {
             rec.stream.getTracks().forEach((t) => t.stop());
-          } catch {}
+          } catch { }
           const b = new Blob(audioChunksRef.current, { type: mime });
           resolve(b.size > 0 ? { blob: b, mime } : null);
         };
@@ -448,13 +660,13 @@ export default function RegistroFinalUnificado({
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ action: "stop", sessionId: activePcSessionId, skipTranscribe: true }),
-        }).catch(() => {});
+        }).catch(() => { });
       }
       const ext = browserBlob.mime.includes("mp4")
         ? "m4a"
         : browserBlob.mime.includes("ogg")
-        ? "ogg"
-        : "webm";
+          ? "ogg"
+          : "webm";
       const file = new File([browserBlob.blob], `audio_${Date.now()}.${ext}`, {
         type: browserBlob.mime,
       });
@@ -496,8 +708,8 @@ export default function RegistroFinalUnificado({
       const ext = browserBlob.mime.includes("mp4")
         ? "m4a"
         : browserBlob.mime.includes("ogg")
-        ? "ogg"
-        : "webm";
+          ? "ogg"
+          : "webm";
       const file = new File([browserBlob.blob], `audio_${Date.now()}.${ext}`, {
         type: browserBlob.mime,
       });
@@ -604,7 +816,7 @@ export default function RegistroFinalUnificado({
       setTimeout(() => {
         if (videoCamaraPcRef.current) {
           videoCamaraPcRef.current.srcObject = stream;
-          videoCamaraPcRef.current.play().catch(() => {});
+          videoCamaraPcRef.current.play().catch(() => { });
         }
       }, 50);
     } catch {
@@ -747,10 +959,16 @@ export default function RegistroFinalUnificado({
     () => itemsOrden.filter((it) => it.type === "PART"),
     [itemsOrden]
   );
-  const serviciosSeleccionados = useMemo(
-    () => itemsOrden.filter((it) => it.type !== "PART"),
-    [itemsOrden]
-  );
+  const serviciosSeleccionados = useMemo(() => {
+    const list = itemsOrden.filter((it) => it.type !== "PART");
+    return [...list].sort((a, b) => {
+      const aEsManual = Boolean(a.isManual || String(a.id || "").startsWith("reg-"));
+      const bEsManual = Boolean(b.isManual || String(b.id || "").startsWith("reg-"));
+      if (aEsManual && !bEsManual) return -1;
+      if (!aEsManual && bEsManual) return 1;
+      return 0;
+    });
+  }, [itemsOrden]);
 
   const totalProductos = productosSeleccionados.reduce((acc, it) => acc + (Number(it.qty) || 1), 0);
   const totalServicios = serviciosSeleccionados.reduce((acc, it) => acc + (Number(it.qty) || 1), 0);
@@ -853,50 +1071,49 @@ export default function RegistroFinalUnificado({
             audiosBorrador.length > 0 ||
             grabandoAudio ||
             subiendoArchivo) && (
-            <>
-              <button
-                type="button"
-                disabled={subiendoArchivo}
-                onClick={() => void abrirCamaraPcOMovil()}
-                title="Tomar foto"
-                className="h-10 w-10 sm:h-11 sm:w-11 rounded-xl border bg-blue-50/80 hover:bg-blue-100 dark:bg-blue-500/10 dark:hover:bg-blue-500/20 border-blue-200 dark:border-blue-500/30 text-blue-600 dark:text-blue-400 flex items-center justify-center cursor-pointer active:scale-95 transition-all animate-fade-in"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0Z" />
-                </svg>
-              </button>
+              <>
+                <button
+                  type="button"
+                  disabled={subiendoArchivo}
+                  onClick={() => void abrirCamaraPcOMovil()}
+                  title="Tomar foto"
+                  className="h-10 w-10 sm:h-11 sm:w-11 rounded-xl border bg-blue-50/80 hover:bg-blue-100 dark:bg-blue-500/10 dark:hover:bg-blue-500/20 border-blue-200 dark:border-blue-500/30 text-blue-600 dark:text-blue-400 flex items-center justify-center cursor-pointer active:scale-95 transition-all animate-fade-in"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0Z" />
+                  </svg>
+                </button>
 
-              <button
-                type="button"
-                disabled={subiendoArchivo}
-                onClick={() => inputGaleriaRef.current?.click()}
-                title="Subir foto"
-                className="h-10 w-10 sm:h-11 sm:w-11 rounded-xl border bg-indigo-50/80 hover:bg-indigo-100 dark:bg-indigo-500/10 dark:hover:bg-indigo-500/20 border-indigo-200 dark:border-indigo-500/30 text-indigo-600 dark:text-indigo-400 flex items-center justify-center cursor-pointer active:scale-95 transition-all animate-fade-in"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
-                </svg>
-              </button>
+                <button
+                  type="button"
+                  disabled={subiendoArchivo}
+                  onClick={() => inputGaleriaRef.current?.click()}
+                  title="Subir foto"
+                  className="h-10 w-10 sm:h-11 sm:w-11 rounded-xl border bg-indigo-50/80 hover:bg-indigo-100 dark:bg-indigo-500/10 dark:hover:bg-indigo-500/20 border-indigo-200 dark:border-indigo-500/30 text-indigo-600 dark:text-indigo-400 flex items-center justify-center cursor-pointer active:scale-95 transition-all animate-fade-in"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
+                  </svg>
+                </button>
 
-              <button
-                type="button"
-                disabled={subiendoArchivo}
-                onClick={() => void handleToggleAudio()}
-                title={grabandoAudio ? "Detener y guardar audio" : "Grabar nota de audio"}
-                className={`h-10 sm:h-11 px-3 rounded-xl border flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 transition-all animate-fade-in touch-manipulation ${
-                  grabandoAudio
+                <button
+                  type="button"
+                  disabled={subiendoArchivo}
+                  onClick={() => void handleToggleAudio()}
+                  title={grabandoAudio ? "Detener y guardar audio" : "Grabar nota de audio"}
+                  className={`h-10 sm:h-11 px-3 rounded-xl border flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 transition-all animate-fade-in touch-manipulation ${grabandoAudio
                     ? "bg-rose-500 text-white border-rose-600 animate-pulse"
                     : "bg-amber-50/80 hover:bg-amber-100 dark:bg-amber-500/10 dark:hover:bg-amber-500/20 border-amber-200 dark:border-amber-500/30 text-amber-600 dark:text-amber-400"
-                }`}
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 0 0 6-6v-1.5m-6 7.5a6 6 0 0 1-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 0 1-3-3V4.5a3 3 0 1 1 6 0v8.25a3 3 0 0 1-3 3Z" />
-                </svg>
-                {grabandoAudio && <span className="text-xs font-bold">{segundosAudio}s</span>}
-              </button>
-            </>
-          )}
+                    }`}
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 0 0 6-6v-1.5m-6 7.5a6 6 0 0 1-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 0 1-3-3V4.5a3 3 0 1 1 6 0v8.25a3 3 0 0 1-3 3Z" />
+                  </svg>
+                  {grabandoAudio && <span className="text-xs font-bold">{segundosAudio}s</span>}
+                </button>
+              </>
+            )}
 
           <button
             type="button"
@@ -905,11 +1122,10 @@ export default function RegistroFinalUnificado({
               setModalRapidoAbierto(false);
             }}
             title="Productos y Servicios"
-            className={`h-10 w-10 sm:h-11 sm:w-11 rounded-xl border flex items-center justify-center cursor-pointer active:scale-95 transition-all ${
-              modalCarritoAbierto
-                ? "bg-emerald-600 text-white border-emerald-600"
-                : "bg-emerald-50/80 hover:bg-emerald-100 dark:bg-emerald-500/10 dark:hover:bg-emerald-500/20 border-emerald-200 dark:border-emerald-500/30 text-emerald-600 dark:text-emerald-400"
-            }`}
+            className={`h-10 w-10 sm:h-11 sm:w-11 rounded-xl border flex items-center justify-center cursor-pointer active:scale-95 transition-all ${modalCarritoAbierto
+              ? "bg-emerald-600 text-white border-emerald-600"
+              : "bg-emerald-50/80 hover:bg-emerald-100 dark:bg-emerald-500/10 dark:hover:bg-emerald-500/20 border-emerald-200 dark:border-emerald-500/30 text-emerald-600 dark:text-emerald-400"
+              }`}
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 0 0-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 0 0-16.536-1.84M7.5 14.25 5.106 5.272M6 20.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Zm12.75 0a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Z" />
@@ -924,11 +1140,10 @@ export default function RegistroFinalUnificado({
               setBusquedaRapido("");
             }}
             title="Servicio rápido"
-            className={`h-10 w-10 sm:h-11 sm:w-11 rounded-xl border flex items-center justify-center cursor-pointer active:scale-95 transition-all ${
-              modalRapidoAbierto
-                ? "bg-purple-600 text-white border-purple-600"
-                : "bg-purple-50/80 hover:bg-purple-100 dark:bg-purple-500/10 dark:hover:bg-purple-500/20 border-purple-200 dark:border-purple-500/30 text-purple-600 dark:text-purple-400"
-            }`}
+            className={`h-10 w-10 sm:h-11 sm:w-11 rounded-xl border flex items-center justify-center cursor-pointer active:scale-95 transition-all ${modalRapidoAbierto
+              ? "bg-purple-600 text-white border-purple-600"
+              : "bg-purple-50/80 hover:bg-purple-100 dark:bg-purple-500/10 dark:hover:bg-purple-500/20 border-purple-200 dark:border-purple-500/30 text-purple-600 dark:text-purple-400"
+              }`}
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
               <path strokeLinecap="round" strokeLinejoin="round" d="m3.75 13.5 10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75Z" />
@@ -1002,11 +1217,11 @@ export default function RegistroFinalUnificado({
               onClick={(e) => e.stopPropagation()}
               className="relative w-full max-w-2xl max-h-[85dvh] overflow-y-auto rounded-2xl bg-white dark:bg-[#111113] border border-zinc-200 dark:border-white/10 p-4 shadow-2xl space-y-3"
             >
-              <div className="flex items-center justify-between border-b border-zinc-200 dark:border-white/10 pb-2.5">
+              <div className="flex items-center justify-between pb-1">
                 <div className="flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-emerald-500" />
                   <span className="text-sm font-bold text-zinc-900 dark:text-white">
-                    Productos y Servicios ({metaModulo.label})
+                    Todos los Productos y Servicios
                   </span>
                 </div>
                 <button
@@ -1026,8 +1241,7 @@ export default function RegistroFinalUnificado({
                     (x: any) =>
                       (item.id && (x.id === item.id || x.productId === item.id)) ||
                       (item.code && x.code === item.code) ||
-                      (x.name?.toLowerCase() === item.name?.toLowerCase() &&
-                        (x.category || metaModulo.label) === metaModulo.label)
+                      x.name?.toLowerCase() === item.name?.toLowerCase()
                   );
                   let nuevosItems: any[];
                   if (idxExistente >= 0) {
@@ -1040,13 +1254,19 @@ export default function RegistroFinalUnificado({
                       );
                     }
                   } else if (delta > 0) {
+                    const catAsignada =
+                      item.category && item.category !== "General"
+                        ? item.category
+                        : item.type === "PART"
+                        ? "Taller"
+                        : metaModulo.label;
                     nuevosItems = [
                       ...itemsOrden,
                       {
                         ...item,
                         id: item.id || `cat-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
                         productId: item.type === "PART" ? item.id : undefined,
-                        category: metaModulo.label,
+                        category: catAsignada,
                         qty: delta,
                         status: "Pendiente",
                       },
@@ -1068,6 +1288,7 @@ export default function RegistroFinalUnificado({
                 siempreAbierto={true}
                 mostrarChipsSeleccionados={false}
                 ocultarCabeceraYCategoria={true}
+                limitarDosFilasInicial={true}
               />
             </div>
           </div>
@@ -1081,7 +1302,7 @@ export default function RegistroFinalUnificado({
           >
             <div
               onClick={(e) => e.stopPropagation()}
-              className="relative w-full max-w-lg max-h-[80dvh] overflow-y-auto rounded-2xl bg-white dark:bg-[#111113] border border-zinc-200 dark:border-white/10 p-4 shadow-2xl space-y-3"
+              className="relative w-full max-w-xl sm:max-w-2xl max-h-[85dvh] overflow-y-auto rounded-2xl bg-white dark:bg-[#111113] border border-zinc-200 dark:border-white/10 p-4 shadow-2xl space-y-3"
             >
               <div className="flex items-center justify-between border-b border-zinc-200 dark:border-white/10 pb-2.5">
                 <div className="flex items-center gap-2">
@@ -1110,327 +1331,341 @@ export default function RegistroFinalUnificado({
               />
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-72 overflow-y-auto">
-                {serviciosRapidosFiltrados.map((it: any, idx: number) => (
-                  <button
-                    key={it.id || `${it.name}-${idx}`}
-                    type="button"
-                    onClick={() => {
-                      void handleAgregarDesdeSelector(
-                        {
-                          id: it.id,
-                          code: it.code,
-                          name: it.name,
-                          price: it.price,
-                        },
-                        "SERVICE"
-                      );
-                    }}
-                    className="p-2.5 rounded-xl border border-zinc-200 dark:border-white/10 bg-zinc-50 hover:bg-violet-50 dark:bg-white/[0.03] dark:hover:bg-violet-500/15 text-left text-xs font-medium text-zinc-800 dark:text-zinc-200 flex items-center justify-between gap-2 transition-colors cursor-pointer"
-                  >
-                    <span className="truncate">{it.name}</span>
-                    <span className="text-violet-600 dark:text-violet-400 font-bold shrink-0">+</span>
-                  </button>
-                ))}
+                {serviciosRapidosFiltrados.map((it: any, idx: number) => {
+                  const meta = getServicioRapidoMeta(it.name, metaModulo.label);
+                  return (
+                    <button
+                      key={it.id || `${it.name}-${idx}`}
+                      type="button"
+                      onClick={() => {
+                        void handleAgregarDesdeSelector(
+                          {
+                            id: it.id,
+                            code: it.code,
+                            name: it.name,
+                            price: it.price,
+                          },
+                          "SERVICE"
+                        );
+                      }}
+                      className="group p-2.5 rounded-xl border border-zinc-200/90 dark:border-white/10 bg-zinc-50/70 hover:bg-zinc-100/90 dark:bg-white/[0.03] dark:hover:bg-white/[0.08] text-left text-xs transition-all cursor-pointer flex items-center justify-between gap-2.5 active:scale-[0.98] shadow-2xs hover:shadow-xs hover:border-zinc-300 dark:hover:border-white/20"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                        <div
+                          className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border ${meta.iconBoxClass}`}
+                        >
+                          {meta.icon}
+                        </div>
+                        <span className="font-medium text-zinc-900 dark:text-zinc-100 text-xs sm:text-[13px] leading-snug break-words group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors flex-1 min-w-0">
+                          {it.name}
+                        </span>
+                      </div>
+                      <span className="w-6 h-6 rounded-lg bg-zinc-200/60 dark:bg-white/10 group-hover:bg-violet-600 group-hover:text-white dark:group-hover:bg-violet-500 text-violet-600 dark:text-violet-400 flex items-center justify-center text-xs font-bold shrink-0 transition-colors">
+                        +
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
           </div>
         )}
       </div>
 
-      {/* 2. RESUMEN UNIFICADO AL FINAL (PRODUCTOS, SERVICIOS Y EVIDENCIAS) */}
+      {/* 2. RESUMEN UNIFICADO AL FINAL (SERVICIOS PRIMERO [MANUALES PRIMERO], LUEGO PRODUCTOS Y EVIDENCIAS) */}
       {(productosSeleccionados.length > 0 ||
         serviciosSeleccionados.length > 0 ||
         evidenciasRegistradas.length > 0) && (
-        <div className="p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-white/[0.03] border border-zinc-200/90 dark:border-white/10 shadow-2xs space-y-3.5 animate-fade-in">
-          {/* PRODUCTOS */}
-          {productosSeleccionados.length > 0 && (
-            <div className="space-y-1.5">
-              <span className="text-xs font-semibold text-blue-700 dark:text-blue-300 flex items-center gap-1.5">
-                <span>📦</span>
-                <span>Productos ({totalProductos}):</span>
-              </span>
-              <div className="overflow-x-auto rounded-xl border border-zinc-200/80 dark:border-white/10 bg-white dark:bg-black/20 shadow-2xs">
-                <table className="w-full text-left text-xs border-collapse">
-                  <thead>
-                    <tr className="border-b border-zinc-200/80 dark:border-white/10 bg-zinc-50/80 dark:bg-white/[0.03] text-zinc-500 dark:text-zinc-400 text-[11px] font-semibold">
-                      <th className="py-2 px-3 w-24 text-center">Cant.</th>
-                      <th className="py-2 px-3">Descripción</th>
-                      <th className="py-2 px-2.5 w-36">Detalle</th>
-                      <th className="py-2 px-2 w-10 text-center"></th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-zinc-200/60 dark:divide-white/5">
-                    {productosSeleccionados.map((it: any, idx: number) => {
-                      const cant = Number(it.qty) || 1;
-                      const origen = it.category || "Taller";
-                      const extra = it.presentation || it.viscosity || "";
-                      return (
-                        <tr key={it.id || it.code || `prod-${idx}`} className="hover:bg-zinc-50/60 dark:hover:bg-white/[0.02]">
-                          <td className="py-2 px-3 text-center">
-                            <div className="inline-flex items-center border border-zinc-200 dark:border-white/10 rounded-lg overflow-hidden bg-zinc-50 dark:bg-white/[0.04]">
-                              <button
-                                type="button"
-                                onClick={() => void handleAjustarCantidad(it, -1)}
-                                className="w-5 h-5 flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-white text-xs font-bold cursor-pointer"
-                              >
-                                −
-                              </button>
-                              <span className="w-6 text-center text-xs font-bold text-zinc-800 dark:text-zinc-200">
-                                {cant}
-                              </span>
-                              <button
-                                type="button"
-                                onClick={() => void handleAjustarCantidad(it, 1)}
-                                className="w-5 h-5 flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-white text-xs font-bold cursor-pointer"
-                              >
-                                +
-                              </button>
-                            </div>
-                          </td>
-                          <td className="py-2 px-3 font-medium text-zinc-800 dark:text-zinc-200">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <span>{formatearPrimeraMayuscula(it.name || it.fullName)}</span>
-                              {(it.isManual || String(it.id || "").startsWith("reg-")) && (
-                                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-zinc-100 dark:bg-white/10 text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-white/15 shrink-0">
-                                  Manual
+          <div className="p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-white/[0.03] border border-zinc-200/90 dark:border-white/10 shadow-2xs space-y-3.5 animate-fade-in">
+            {/* SERVICIOS (PRIMERO) */}
+            {serviciosSeleccionados.length > 0 && (
+              <div className="space-y-1.5">
+                <span className="text-xs font-normal text-zinc-500 dark:text-zinc-400 flex items-center gap-1.5">
+                  <span>🔧</span>
+                  <span>Servicios ({totalServicios}):</span>
+                </span>
+                <div className="overflow-x-auto rounded-xl border border-zinc-200/80 dark:border-white/10 bg-white dark:bg-black/20 shadow-2xs">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr className="border-b border-zinc-200/80 dark:border-white/10 bg-zinc-50/80 dark:bg-white/[0.03] text-zinc-500 dark:text-zinc-400 text-[11px] font-semibold">
+                        <th className="py-2 px-3 w-24 text-center">Cant.</th>
+                        <th className="py-2 px-3">Descripción</th>
+                        <th className="py-2 px-2.5 w-36">Detalle</th>
+                        <th className="py-2 px-2 w-10 text-center"></th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-zinc-200/60 dark:divide-white/5">
+                      {serviciosSeleccionados.map((it: any, idx: number) => {
+                        const cant = Number(it.qty) || 1;
+                        const origen = it.category || "Taller";
+                        return (
+                          <tr key={it.id || it.code || `srv-${idx}`} className="hover:bg-zinc-50/60 dark:hover:bg-white/[0.02]">
+                            <td className="py-2 px-3 text-center">
+                              <div className="inline-flex items-center border border-zinc-200 dark:border-white/10 rounded-lg overflow-hidden bg-zinc-50 dark:bg-white/[0.04]">
+                                <button
+                                  type="button"
+                                  onClick={() => void handleAjustarCantidad(it, -1)}
+                                  className="w-5 h-5 flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-white text-xs font-bold cursor-pointer"
+                                >
+                                  −
+                                </button>
+                                <span className="w-6 text-center text-xs font-bold text-zinc-800 dark:text-zinc-200">
+                                  {cant}
                                 </span>
-                              )}
-                              {Array.isArray(it.fotos) && it.fotos.length > 0 && (
                                 <button
                                   type="button"
-                                  onClick={() =>
-                                    setModalFotosAbierto({
-                                      titulo: formatearPrimeraMayuscula(it.name || it.fullName),
-                                      fotos: it.fotos,
-                                    })
-                                  }
-                                  className="h-7 px-2 rounded-lg border bg-indigo-50/80 hover:bg-indigo-100 dark:bg-indigo-500/15 dark:hover:bg-indigo-500/25 border-indigo-200 dark:border-indigo-500/30 text-indigo-600 dark:text-indigo-300 inline-flex items-center gap-1 text-[11px] font-medium cursor-pointer active:scale-95 transition-all shrink-0"
-                                  title={`Ver ${it.fotos.length} foto(s)`}
+                                  onClick={() => void handleAjustarCantidad(it, 1)}
+                                  className="w-5 h-5 flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-white text-xs font-bold cursor-pointer"
                                 >
-                                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
-                                  </svg>
-                                  {it.fotos.length > 1 && <span>{it.fotos.length}</span>}
+                                  +
                                 </button>
-                              )}
-                              {Array.isArray(it.audios) && it.audios.length > 0 && (
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    setModalAudiosAbierto({
-                                      titulo: formatearPrimeraMayuscula(it.name || it.fullName),
-                                      audios: it.audios,
-                                    })
-                                  }
-                                  className="h-7 px-2 rounded-lg border bg-amber-50/80 hover:bg-amber-100 dark:bg-amber-500/15 dark:hover:bg-amber-500/25 border-amber-200 dark:border-amber-500/30 text-amber-600 dark:text-amber-300 inline-flex items-center gap-1 text-[11px] font-medium cursor-pointer active:scale-95 transition-all shrink-0"
-                                  title={`Escuchar ${it.audios.length} audio(s)`}
-                                >
-                                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 0 0 6-6v-1.5m-6 7.5a6 6 0 0 1-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 0 1-3-3V4.5a3 3 0 1 1 6 0v8.25a3 3 0 0 1-3 3Z" />
-                                  </svg>
-                                  {it.audios.length > 1 && <span>{it.audios.length}</span>}
-                                </button>
-                              )}
-                            </div>
-                          </td>
-                          <td className="py-2 px-2.5">
-                            <div className="flex flex-wrap items-center gap-1">
+                              </div>
+                            </td>
+                            <td className="py-2 px-3 font-medium text-zinc-800 dark:text-zinc-200">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span>{formatearPrimeraMayuscula(it.name || it.fullName)}</span>
+                                {(it.isManual || String(it.id || "").startsWith("reg-")) && (
+                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-zinc-100 dark:bg-white/10 text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-white/15 shrink-0">
+                                    Manual
+                                  </span>
+                                )}
+                                {Array.isArray(it.fotos) && it.fotos.length > 0 && (
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      setModalFotosAbierto({
+                                        titulo: formatearPrimeraMayuscula(it.name || it.fullName),
+                                        fotos: it.fotos,
+                                      })
+                                    }
+                                    className="h-7 px-2 rounded-lg border bg-indigo-50/80 hover:bg-indigo-100 dark:bg-indigo-500/15 dark:hover:bg-indigo-500/25 border-indigo-200 dark:border-indigo-500/30 text-indigo-600 dark:text-indigo-300 inline-flex items-center gap-1 text-[11px] font-medium cursor-pointer active:scale-95 transition-all shrink-0"
+                                    title={`Ver ${it.fotos.length} foto(s)`}
+                                  >
+                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                                      <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
+                                    </svg>
+                                    {it.fotos.length > 1 && <span>{it.fotos.length}</span>}
+                                  </button>
+                                )}
+                                {Array.isArray(it.audios) && it.audios.length > 0 && (
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      setModalAudiosAbierto({
+                                        titulo: formatearPrimeraMayuscula(it.name || it.fullName),
+                                        audios: it.audios,
+                                      })
+                                    }
+                                    className="h-7 px-2 rounded-lg border bg-amber-50/80 hover:bg-amber-100 dark:bg-amber-500/15 dark:hover:bg-amber-500/25 border-amber-200 dark:border-amber-500/30 text-amber-600 dark:text-amber-300 inline-flex items-center gap-1 text-[11px] font-medium cursor-pointer active:scale-95 transition-all shrink-0"
+                                    title={`Escuchar ${it.audios.length} audio(s)`}
+                                  >
+                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 0 0 6-6v-1.5m-6 7.5a6 6 0 0 1-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 0 1-3-3V4.5a3 3 0 1 1 6 0v8.25a3 3 0 0 1-3 3Z" />
+                                    </svg>
+                                    {it.audios.length > 1 && <span>{it.audios.length}</span>}
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                            <td className="py-2 px-2.5">
                               <span
                                 className={`inline-block px-2 py-0.5 rounded-md text-[10px] font-semibold border ${getBadgeClasePorModulo(origen)}`}
                               >
                                 {formatearPrimeraMayuscula(origen)}
                               </span>
-                              {extra && (
-                                <span className="inline-block px-2 py-0.5 rounded-md text-[10px] font-medium bg-zinc-100 dark:bg-white/10 text-zinc-600 dark:text-zinc-300">
-                                  {formatearPrimeraMayuscula(extra)}
-                                </span>
-                              )}
-                            </div>
-                          </td>
-                          <td className="py-2 px-2 text-center">
-                            <button
-                              type="button"
-                              onClick={() => void handleEliminarItem(it)}
-                              className="w-6 h-6 inline-flex items-center justify-center rounded-lg text-zinc-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10 text-sm font-bold cursor-pointer"
-                              title="Eliminar"
-                            >
-                              ×
-                            </button>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-
-          {/* SERVICIOS */}
-          {serviciosSeleccionados.length > 0 && (
-            <div className="space-y-1.5">
-              <span className="text-xs font-semibold text-purple-700 dark:text-purple-300 flex items-center gap-1.5">
-                <span>🔧</span>
-                <span>Servicios ({totalServicios}):</span>
-              </span>
-              <div className="overflow-x-auto rounded-xl border border-zinc-200/80 dark:border-white/10 bg-white dark:bg-black/20 shadow-2xs">
-                <table className="w-full text-left text-xs border-collapse">
-                  <thead>
-                    <tr className="border-b border-zinc-200/80 dark:border-white/10 bg-zinc-50/80 dark:bg-white/[0.03] text-zinc-500 dark:text-zinc-400 text-[11px] font-semibold">
-                      <th className="py-2 px-3 w-24 text-center">Cant.</th>
-                      <th className="py-2 px-3">Descripción</th>
-                      <th className="py-2 px-2.5 w-36">Detalle</th>
-                      <th className="py-2 px-2 w-10 text-center"></th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-zinc-200/60 dark:divide-white/5">
-                    {serviciosSeleccionados.map((it: any, idx: number) => {
-                      const cant = Number(it.qty) || 1;
-                      const origen = it.category || "Taller";
-                      return (
-                        <tr key={it.id || it.code || `srv-${idx}`} className="hover:bg-zinc-50/60 dark:hover:bg-white/[0.02]">
-                          <td className="py-2 px-3 text-center">
-                            <div className="inline-flex items-center border border-zinc-200 dark:border-white/10 rounded-lg overflow-hidden bg-zinc-50 dark:bg-white/[0.04]">
+                            </td>
+                            <td className="py-2 px-2 text-center">
                               <button
                                 type="button"
-                                onClick={() => void handleAjustarCantidad(it, -1)}
-                                className="w-5 h-5 flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-white text-xs font-bold cursor-pointer"
+                                onClick={() => void handleEliminarItem(it)}
+                                className="w-6 h-6 inline-flex items-center justify-center rounded-lg text-zinc-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10 text-sm font-bold cursor-pointer"
+                                title="Eliminar"
                               >
-                                −
+                                ×
                               </button>
-                              <span className="w-6 text-center text-xs font-bold text-zinc-800 dark:text-zinc-200">
-                                {cant}
-                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* PRODUCTOS (DESPUÉS DE SERVICIOS) */}
+            {productosSeleccionados.length > 0 && (
+              <div className="space-y-1.5">
+                <span className="text-xs font-normal text-zinc-500 dark:text-zinc-400 flex items-center gap-1.5">
+                  <span>📦</span>
+                  <span>Productos ({totalProductos}):</span>
+                </span>
+                <div className="overflow-x-auto rounded-xl border border-zinc-200/80 dark:border-white/10 bg-white dark:bg-black/20 shadow-2xs">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr className="border-b border-zinc-200/80 dark:border-white/10 bg-zinc-50/80 dark:bg-white/[0.03] text-zinc-500 dark:text-zinc-400 text-[11px] font-semibold">
+                        <th className="py-2 px-3 w-24 text-center">Cant.</th>
+                        <th className="py-2 px-3">Descripción</th>
+                        <th className="py-2 px-2.5 w-36">Detalle</th>
+                        <th className="py-2 px-2 w-10 text-center"></th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-zinc-200/60 dark:divide-white/5">
+                      {productosSeleccionados.map((it: any, idx: number) => {
+                        const cant = Number(it.qty) || 1;
+                        const origen = it.category || "Taller";
+                        const extra = it.presentation || it.viscosity || "";
+                        return (
+                          <tr key={it.id || it.code || `prod-${idx}`} className="hover:bg-zinc-50/60 dark:hover:bg-white/[0.02]">
+                            <td className="py-2 px-3 text-center">
+                              <div className="inline-flex items-center border border-zinc-200 dark:border-white/10 rounded-lg overflow-hidden bg-zinc-50 dark:bg-white/[0.04]">
+                                <button
+                                  type="button"
+                                  onClick={() => void handleAjustarCantidad(it, -1)}
+                                  className="w-5 h-5 flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-white text-xs font-bold cursor-pointer"
+                                >
+                                  −
+                                </button>
+                                <span className="w-6 text-center text-xs font-bold text-zinc-800 dark:text-zinc-200">
+                                  {cant}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => void handleAjustarCantidad(it, 1)}
+                                  className="w-5 h-5 flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-white text-xs font-bold cursor-pointer"
+                                >
+                                  +
+                                </button>
+                              </div>
+                            </td>
+                            <td className="py-2 px-3 font-medium text-zinc-800 dark:text-zinc-200">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span>{formatearPrimeraMayuscula(it.name || it.fullName)}</span>
+                                {(it.isManual || String(it.id || "").startsWith("reg-")) && (
+                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-zinc-100 dark:bg-white/10 text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-white/15 shrink-0">
+                                    Manual
+                                  </span>
+                                )}
+                                {Array.isArray(it.fotos) && it.fotos.length > 0 && (
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      setModalFotosAbierto({
+                                        titulo: formatearPrimeraMayuscula(it.name || it.fullName),
+                                        fotos: it.fotos,
+                                      })
+                                    }
+                                    className="h-7 px-2 rounded-lg border bg-indigo-50/80 hover:bg-indigo-100 dark:bg-indigo-500/15 dark:hover:bg-indigo-500/25 border-indigo-200 dark:border-indigo-500/30 text-indigo-600 dark:text-indigo-300 inline-flex items-center gap-1 text-[11px] font-medium cursor-pointer active:scale-95 transition-all shrink-0"
+                                    title={`Ver ${it.fotos.length} foto(s)`}
+                                  >
+                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                                      <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
+                                    </svg>
+                                    {it.fotos.length > 1 && <span>{it.fotos.length}</span>}
+                                  </button>
+                                )}
+                                {Array.isArray(it.audios) && it.audios.length > 0 && (
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      setModalAudiosAbierto({
+                                        titulo: formatearPrimeraMayuscula(it.name || it.fullName),
+                                        audios: it.audios,
+                                      })
+                                    }
+                                    className="h-7 px-2 rounded-lg border bg-amber-50/80 hover:bg-amber-100 dark:bg-amber-500/15 dark:hover:bg-amber-500/25 border-amber-200 dark:border-amber-500/30 text-amber-600 dark:text-amber-300 inline-flex items-center gap-1 text-[11px] font-medium cursor-pointer active:scale-95 transition-all shrink-0"
+                                    title={`Escuchar ${it.audios.length} audio(s)`}
+                                  >
+                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 0 0 6-6v-1.5m-6 7.5a6 6 0 0 1-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 0 1-3-3V4.5a3 3 0 1 1 6 0v8.25a3 3 0 0 1-3 3Z" />
+                                    </svg>
+                                    {it.audios.length > 1 && <span>{it.audios.length}</span>}
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                            <td className="py-2 px-2.5">
+                              <div className="flex flex-wrap items-center gap-1">
+                                <span
+                                  className={`inline-block px-2 py-0.5 rounded-md text-[10px] font-semibold border ${getBadgeClasePorModulo(origen)}`}
+                                >
+                                  {formatearPrimeraMayuscula(origen)}
+                                </span>
+                                {extra && (
+                                  <span className="inline-block px-2 py-0.5 rounded-md text-[10px] font-medium bg-zinc-100 dark:bg-white/10 text-zinc-600 dark:text-zinc-300">
+                                    {formatearPrimeraMayuscula(extra)}
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="py-2 px-2 text-center">
                               <button
                                 type="button"
-                                onClick={() => void handleAjustarCantidad(it, 1)}
-                                className="w-5 h-5 flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-white text-xs font-bold cursor-pointer"
+                                onClick={() => void handleEliminarItem(it)}
+                                className="w-6 h-6 inline-flex items-center justify-center rounded-lg text-zinc-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10 text-sm font-bold cursor-pointer"
+                                title="Eliminar"
                               >
-                                +
+                                ×
                               </button>
-                            </div>
-                          </td>
-                          <td className="py-2 px-3 font-medium text-zinc-800 dark:text-zinc-200">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <span>{formatearPrimeraMayuscula(it.name || it.fullName)}</span>
-                              {(it.isManual || String(it.id || "").startsWith("reg-")) && (
-                                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-zinc-100 dark:bg-white/10 text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-white/15 shrink-0">
-                                  Manual
-                                </span>
-                              )}
-                              {Array.isArray(it.fotos) && it.fotos.length > 0 && (
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    setModalFotosAbierto({
-                                      titulo: formatearPrimeraMayuscula(it.name || it.fullName),
-                                      fotos: it.fotos,
-                                    })
-                                  }
-                                  className="h-7 px-2 rounded-lg border bg-indigo-50/80 hover:bg-indigo-100 dark:bg-indigo-500/15 dark:hover:bg-indigo-500/25 border-indigo-200 dark:border-indigo-500/30 text-indigo-600 dark:text-indigo-300 inline-flex items-center gap-1 text-[11px] font-medium cursor-pointer active:scale-95 transition-all shrink-0"
-                                  title={`Ver ${it.fotos.length} foto(s)`}
-                                >
-                                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
-                                  </svg>
-                                  {it.fotos.length > 1 && <span>{it.fotos.length}</span>}
-                                </button>
-                              )}
-                              {Array.isArray(it.audios) && it.audios.length > 0 && (
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    setModalAudiosAbierto({
-                                      titulo: formatearPrimeraMayuscula(it.name || it.fullName),
-                                      audios: it.audios,
-                                    })
-                                  }
-                                  className="h-7 px-2 rounded-lg border bg-amber-50/80 hover:bg-amber-100 dark:bg-amber-500/15 dark:hover:bg-amber-500/25 border-amber-200 dark:border-amber-500/30 text-amber-600 dark:text-amber-300 inline-flex items-center gap-1 text-[11px] font-medium cursor-pointer active:scale-95 transition-all shrink-0"
-                                  title={`Escuchar ${it.audios.length} audio(s)`}
-                                >
-                                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 0 0 6-6v-1.5m-6 7.5a6 6 0 0 1-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 0 1-3-3V4.5a3 3 0 1 1 6 0v8.25a3 3 0 0 1-3 3Z" />
-                                  </svg>
-                                  {it.audios.length > 1 && <span>{it.audios.length}</span>}
-                                </button>
-                              )}
-                            </div>
-                          </td>
-                          <td className="py-2 px-2.5">
-                            <span
-                              className={`inline-block px-2 py-0.5 rounded-md text-[10px] font-semibold border ${getBadgeClasePorModulo(origen)}`}
-                            >
-                              {formatearPrimeraMayuscula(origen)}
-                            </span>
-                          </td>
-                          <td className="py-2 px-2 text-center">
-                            <button
-                              type="button"
-                              onClick={() => void handleEliminarItem(it)}
-                              className="w-6 h-6 inline-flex items-center justify-center rounded-lg text-zinc-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10 text-sm font-bold cursor-pointer"
-                              title="Eliminar"
-                            >
-                              ×
-                            </button>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* EVIDENCIAS (FOTOS Y AUDIOS) */}
-          {evidenciasRegistradas.length > 0 && (
-            <div className="space-y-1.5">
-              <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 flex items-center gap-1.5">
-                <span>📎</span>
-                <span>Evidencias ({evidenciasRegistradas.length}):</span>
-              </span>
-              <div className="flex flex-wrap gap-2">
-                {evidenciasRegistradas.map((ev) => (
-                  <div
-                    key={ev.id}
-                    className="flex items-center gap-2 p-2 rounded-xl border border-zinc-200/80 dark:border-white/10 bg-zinc-50 dark:bg-black/20"
-                  >
-                    {ev.type === "foto" ? (
+            {/* EVIDENCIAS (FOTOS Y AUDIOS) */}
+            {evidenciasRegistradas.length > 0 && (
+              <div className="space-y-1.5">
+                <span className="text-xs font-normal text-zinc-500 dark:text-zinc-400 flex items-center gap-1.5">
+                  <span>📎</span>
+                  <span>Evidencias ({evidenciasRegistradas.length}):</span>
+                </span>
+                <div className="flex flex-wrap gap-2">
+                  {evidenciasRegistradas.map((ev) => (
+                    <div
+                      key={ev.id}
+                      className="flex items-center gap-2 p-2 rounded-xl border border-zinc-200/80 dark:border-white/10 bg-zinc-50 dark:bg-black/20"
+                    >
+                      {ev.type === "foto" ? (
+                        <button
+                          type="button"
+                          onClick={() => setFotoPreviewUrl(ev.url)}
+                          className="w-12 h-12 rounded-lg overflow-hidden border border-zinc-200 dark:border-white/10 cursor-zoom-in shrink-0"
+                        >
+                          <img src={ev.url} alt="Evidencia" className="w-full h-full object-cover" />
+                        </button>
+                      ) : (
+                        <audio controls src={ev.url} className="h-8 max-w-[200px]" />
+                      )}
+                      <div className="flex flex-col items-start gap-0.5">
+                        <span
+                          className={`inline-block px-2 py-0.5 rounded-md text-[10px] font-semibold border ${getBadgeClasePorModulo(ev.modulo)}`}
+                        >
+                          {ev.modulo}
+                        </span>
+                        <span className="text-[10px] text-zinc-400">{ev.createdAt}</span>
+                      </div>
                       <button
                         type="button"
-                        onClick={() => setFotoPreviewUrl(ev.url)}
-                        className="w-12 h-12 rounded-lg overflow-hidden border border-zinc-200 dark:border-white/10 cursor-zoom-in shrink-0"
+                        onClick={() =>
+                          void persistirEvidencias(evidenciasRegistradas.filter((x) => x.id !== ev.id))
+                        }
+                        className="w-6 h-6 inline-flex items-center justify-center rounded-lg text-zinc-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10 text-sm font-bold cursor-pointer"
+                        title="Eliminar evidencia"
                       >
-                        <img src={ev.url} alt="Evidencia" className="w-full h-full object-cover" />
+                        ×
                       </button>
-                    ) : (
-                      <audio controls src={ev.url} className="h-8 max-w-[200px]" />
-                    )}
-                    <div className="flex flex-col items-start gap-0.5">
-                      <span
-                        className={`inline-block px-2 py-0.5 rounded-md text-[10px] font-semibold border ${getBadgeClasePorModulo(ev.modulo)}`}
-                      >
-                        {ev.modulo}
-                      </span>
-                      <span className="text-[10px] text-zinc-400">{ev.createdAt}</span>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        void persistirEvidencias(evidenciasRegistradas.filter((x) => x.id !== ev.id))
-                      }
-                      className="w-6 h-6 inline-flex items-center justify-center rounded-lg text-zinc-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10 text-sm font-bold cursor-pointer"
-                      title="Eliminar evidencia"
-                    >
-                      ×
-                    </button>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
-        </div>
-      )}
+            )}
+          </div>
+        )}
 
       {/* Modal flotante minimalista para ver fotos de un ítem */}
       {modalFotosAbierto && (
@@ -1455,9 +1690,8 @@ export default function RegistroFinalUnificado({
               </button>
             </div>
             <div
-              className={`grid gap-2 ${
-                modalFotosAbierto.fotos.length === 1 ? "grid-cols-1" : "grid-cols-2"
-              }`}
+              className={`grid gap-2 ${modalFotosAbierto.fotos.length === 1 ? "grid-cols-1" : "grid-cols-2"
+                }`}
             >
               {modalFotosAbierto.fotos.map((fUrl, i) => (
                 <button

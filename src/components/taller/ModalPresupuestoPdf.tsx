@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import type { UnifiedOrder, InspectionFinding, OrderItem } from "@/app/taller/page";
+import type { UnifiedOrder, OrderItem } from "@/app/taller/page";
 
 interface ModalPresupuestoPdfProps {
   abierto: boolean;
@@ -70,165 +70,44 @@ export default function ModalPresupuestoPdf({
         : [];
 
   const items = rawItems;
-  const hallazgos = orden.inspectionFindings || [];
-  const nombreFinalTaller = "Auto / G";
+  const nombreFinalTaller = tallerNombre || "Auto / G";
 
-  // Clasificador de cada ítem en: Taller, Lubricentro, Car Wash, Tecnicentro y su subcategoría
-  const clasificarItem = (it: any): {
-    modulo: "Taller" | "Lubricentro" | "Car Wash" | "Tecnicentro";
-    moduloIcon: string;
-    subcategoria: string;
-  } => {
-    const cat = String(it.category || "").toLowerCase();
-    const sub = String(it.subCategory || it.subcategory || "").toLowerCase();
-    const name = String(it.name || "").toLowerCase();
-    const id = String(it.id || "").toLowerCase();
-
-    // 1. Tecnicentro
-    if (
-      cat.includes("tecnicentro") ||
-      sub.includes("tecnicentro") ||
-      id.startsWith("tc_") ||
-      name.match(/llanta|alineaci[oó]n|balanceo|camber|enllanta|vulcaniz|parche|aro |rin |pit[oó]n|v[aá]lvula|pastilla|disco.*freno|zapata|rectific|suspensi[oó]n|amortiguador|terminal.*direcci[oó]n|r[oó]tula|buje|bater[ií]a|borne/i)
-    ) {
-      let subCat = "Servicios";
-      if (name.match(/llanta|aro |rin /i) || cat.includes("llanta")) subCat = "Llantas";
-      else if (name.match(/alineaci[oó]n|balanceo|camber|rotaci[oó]n/i) || cat.includes("alineacion")) subCat = "Alineación y Balanceo";
-      else if (name.match(/enllanta|parche|vulcaniz|nitr[oó]geno|v[aá]lvula/i) || cat.includes("enllantaje")) subCat = "Enllantaje";
-      else if (name.match(/freno|pastilla|disco|zapata/i) || cat.includes("frenos")) subCat = "Frenos";
-      else if (name.match(/suspensi|amortiguador|terminal|r[oó]tula|buje|mesa/i) || cat.includes("suspension")) subCat = "Suspensión y Dirección";
-      else if (name.match(/bater[ií]a|borne/i) || cat.includes("bateria")) subCat = "Baterías";
-      else if (it.subCategory) subCat = String(it.subCategory);
-      else if (it.category && !cat.includes("tecnicentro")) subCat = String(it.category);
-
-      return { modulo: "Tecnicentro", moduloIcon: "⚡", subcategoria: subCat };
+  const productosSeleccionados = items.filter((it: any) => it.type === "PART");
+  const serviciosSeleccionados = [...items.filter((it: any) => it.type !== "PART")].sort(
+    (a: any, b: any) => {
+      const aEsManual = Boolean(a.isManual || String(a.id || "").startsWith("reg-"));
+      const bEsManual = Boolean(b.isManual || String(b.id || "").startsWith("reg-"));
+      if (aEsManual && !bEsManual) return -1;
+      if (!aEsManual && bEsManual) return 1;
+      return 0;
     }
+  );
 
-    // 2. Car Wash
-    if (
-      cat.includes("car wash") ||
-      cat.includes("carwash") ||
-      cat.includes("lavado") ||
-      sub.includes("car wash") ||
-      sub.includes("carwash") ||
-      id.startsWith("cw_") ||
-      name.match(/lavado|aspirado|tapicer[ií]a|grafitado|chasis|cera|encerado|pulido|detailing|ozono|desengrase|shampoo|ambientador/i)
-    ) {
-      let subCat = "Lavado";
-      if (name.match(/chasis|grafitado|desengrase/i) || cat.includes("chasis")) subCat = "Chasis y Motor";
-      else if (name.match(/aspirado|tapicer[ií]a|cuero|techo|ozono|interior/i) || cat.includes("interior")) subCat = "Interior y Tapicería";
-      else if (name.match(/cera|encerado|pulido|faro|gotaseca|detailing/i) || cat.includes("detailing")) subCat = "Detailing y Pulido";
-      else if (name.match(/aroma|silicona|shampoo|toalla|insumo|producto/i) || cat.includes("extra")) subCat = "Insumos y Extras";
-      else if (it.subCategory && it.subCategory !== "Car Wash") subCat = String(it.subCategory);
-      else if (it.category && !cat.includes("car")) subCat = String(it.category);
+  const totalProductos = productosSeleccionados.reduce(
+    (acc, it: any) => acc + (Number(it.qty) || 1),
+    0
+  );
+  const totalServicios = serviciosSeleccionados.reduce(
+    (acc, it: any) => acc + (Number(it.qty) || 1),
+    0
+  );
 
-      return { modulo: "Car Wash", moduloIcon: "🧼", subcategoria: subCat };
+  const getBadgeClasePorModulo = (textoModulo?: string) => {
+    const m = (textoModulo || "").toLowerCase();
+    if (m.includes("lubricentro")) {
+      return "bg-amber-50 text-amber-700 border-amber-200";
     }
-
-    // 3. Lubricentro
-    if (
-      cat.includes("lubricentro") ||
-      id.startsWith("lub_") ||
-      name.match(/aceite|filtro|valvulina|refrigerante|l[ií]quido.*freno|flush|aditivo|10w|20w|5w|0w|sint[eé]tico|mineral/i)
-    ) {
-      let subCat = "Mantenimiento";
-      if (name.match(/aceite|lubricante|10w|20w|5w|0w|motor/i) || cat.includes("aceite")) subCat = "Aceites";
-      else if (name.match(/filtro/i) || cat.includes("filtro")) subCat = "Filtros";
-      else if (name.match(/refrigerante|freno|hidr[aá]ulico|fluido/i) || cat.includes("fluido")) subCat = "Fluidos y Refrigerantes";
-      else if (name.match(/transmisi[oó]n|atf|cvt|caja|diferencial/i) || cat.includes("transmision")) subCat = "Transmisión";
-      else if (name.match(/aditivo|flush|limpiador/i)) subCat = "Aditivos";
-      else if (it.category && it.category.includes("-")) subCat = it.category.split("-")[1].trim();
-      else if (it.subCategory) subCat = String(it.subCategory);
-
-      return { modulo: "Lubricentro", moduloIcon: "🛢️", subcategoria: subCat };
+    if (m.includes("car wash") || m.includes("carwash")) {
+      return "bg-cyan-50 text-cyan-700 border-cyan-200";
     }
-
-    // 4. Taller
-    let subCat = "Mecánica General";
-    if (cat.includes("repuesto") || it.type === "PART") subCat = "Repuestos y Partes";
-    else if (it.subCategory) subCat = String(it.subCategory);
-    else if (it.category && !cat.includes("taller")) subCat = String(it.category);
-
-    return { modulo: "Taller", moduloIcon: "🔧", subcategoria: subCat };
+    if (m.includes("tecnicentro")) {
+      return "bg-purple-50 text-purple-700 border-purple-200";
+    }
+    if (m.includes("inspección") || m.includes("pin")) {
+      return "bg-purple-50 text-purple-700 border-purple-200";
+    }
+    return "bg-blue-50 text-blue-700 border-blue-200";
   };
-
-  // Agrupación de trabajos por módulo y subcategoría
-  const gruposModulos = (() => {
-    const ordenModulos: Array<{ id: "Taller" | "Lubricentro" | "Car Wash" | "Tecnicentro"; icon: string }> = [
-      { id: "Taller", icon: "🔧" },
-      { id: "Lubricentro", icon: "🛢️" },
-      { id: "Car Wash", icon: "🧼" },
-      { id: "Tecnicentro", icon: "⚡" },
-    ];
-
-    const mapa: Record<string, Record<string, OrderItem[]>> = {};
-
-    items.forEach((it) => {
-      const { modulo, subcategoria } = clasificarItem(it);
-      if (!mapa[modulo]) mapa[modulo] = {};
-      if (!mapa[modulo][subcategoria]) mapa[modulo][subcategoria] = [];
-      mapa[modulo][subcategoria].push(it);
-    });
-
-    return ordenModulos
-      .filter((m) => mapa[m.id] && Object.keys(mapa[m.id]).length > 0)
-      .map((m) => {
-        const subcategorias = Object.entries(mapa[m.id]).map(([subcat, listaItems]) => ({
-          nombre: subcat,
-          items: listaItems,
-        }));
-        const totalItemsModulo = subcategorias.reduce((sum, s) => sum + s.items.length, 0);
-        return {
-          id: m.id,
-          nombre: m.id,
-          icon: m.icon,
-          totalItems: totalItemsModulo,
-          subcategorias,
-        };
-      });
-  })();
-
-  // Agrupar hallazgos por sección
-  const secciones = [
-    {
-      id: "carroceria",
-      nombre: "Carrocería",
-      icon: "🚗",
-      items: hallazgos.filter((h) =>
-        ["frontal", "trasera", "lateral_izq", "lateral_der", "superior"].includes(h.vista)
-      ),
-    },
-    {
-      id: "motor",
-      nombre: "Motor",
-      icon: "⚙️",
-      items: hallazgos.filter((h) => h.vista === "motor"),
-    },
-    {
-      id: "frenos",
-      nombre: "Frenos",
-      icon: "🛑",
-      items: hallazgos.filter((h) => h.vista === "frenos"),
-    },
-    {
-      id: "suspension",
-      nombre: "Suspensión",
-      icon: "🔩",
-      items: hallazgos.filter((h) => h.vista === "suspension"),
-    },
-    {
-      id: "electrico",
-      nombre: "Eléctrico",
-      icon: "⚡",
-      items: hallazgos.filter((h) => h.vista === "electrico"),
-    },
-    {
-      id: "aire",
-      nombre: "Aire Acondicionado",
-      icon: "❄️",
-      items: hallazgos.filter((h) => h.vista === "aire"),
-    },
-  ].filter((s) => s.items.length > 0);
 
   // Totales
   const subtotalCalculado = items.reduce(
@@ -387,150 +266,141 @@ export default function ModalPresupuestoPdf({
         </div>
 
         {/* ===================================================================
-            SECCIÓN 1: HALLAZGOS DE INSPECCIÓN
+            SECCIÓN 2: SERVICIOS (MANUALES PRIMERO) Y PRODUCTOS (SIN VALORES)
             =================================================================== */}
-        {secciones.length > 0 && (
-          <div className="space-y-2">
-            <div className="flex items-center justify-between border-b border-zinc-200 pb-1">
-              <h2 className="text-sm font-normal text-zinc-800 flex items-center gap-1.5">
-                <span>🔍</span>
-                <span>Diagnóstico ({hallazgos.length})</span>
-              </h2>
-            </div>
-
-            <div className="space-y-3">
-              {secciones.map((sec) => (
-                <div key={sec.id} className="rounded-xl border border-zinc-200 overflow-hidden bg-white text-sm">
-                  <div className="bg-zinc-100 px-3.5 py-1.5 font-normal text-zinc-900 flex items-center gap-2 border-b border-zinc-200 text-sm">
-                    <span>{sec.icon}</span>
-                    <span>{formatoPrimeraMayuscula(sec.nombre)}</span>
-                    <span className="text-sm bg-zinc-200 px-2 py-0.5 rounded font-normal text-zinc-700 ml-auto">
-                      {sec.items.length} {sec.items.length === 1 ? "punto" : "puntos"}
-                    </span>
-                  </div>
-
-                  <div className="divide-y divide-zinc-100 p-2.5 space-y-2">
-                    {sec.items.map((pin) => {
-                      const fotosPin = pin.photoUrls || (pin.photoUrl ? [pin.photoUrl] : []);
-                      return (
-                        <div key={pin.id} className="pt-2 first:pt-0 flex items-start justify-between gap-3 text-sm">
-                          <div className="space-y-1 min-w-0 flex-1">
-                            <div className="flex items-center gap-2">
-                              <span className="w-5 h-5 rounded-full bg-rose-600 text-white font-normal text-xs flex items-center justify-center shrink-0">
-                                #{pin.pinNumber || 1}
-                              </span>
-                              <span className="font-normal text-zinc-900 text-sm">{formatoPrimeraMayuscula(pin.tipo)}</span>
-                              <span className="text-sm font-normal text-zinc-500 bg-zinc-100 px-2 py-0.5 rounded">
-                                {formatoPrimeraMayuscula(pin.vistaLabel || pin.vista)}
-                              </span>
-                            </div>
-                            {pin.descripcion && (
-                              <p className="text-sm font-normal text-zinc-700 italic pl-7">
-                                &quot;{formatoPrimeraMayuscula(pin.descripcion)}&quot;
-                              </p>
-                            )}
-                          </div>
-
-                          {/* Miniaturas de fotos tomadas en el pin */}
-                          {fotosPin.length > 0 && (
-                            <div className="flex items-center gap-1 shrink-0">
-                              {fotosPin.slice(0, 3).map((fUrl, fIdx) => (
-                                <img
-                                  key={fIdx}
-                                  src={fUrl}
-                                  alt="Evidencia"
-                                  className="w-10 h-10 rounded object-cover border border-zinc-300"
-                                />
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* ===================================================================
-            SECCIÓN 2: TRABAJOS AGRUPADOS POR MÓDULO (SIN VALORES)
-            =================================================================== */}
-        <div className="space-y-3">
-          <div className="flex items-center justify-between border-b border-zinc-200 pb-1">
-            <h2 className="text-sm font-normal text-zinc-800 flex items-center gap-1.5">
-              <span>💼</span>
-              <span>Trabajos ({items.length})</span>
-            </h2>
-          </div>
-
-          {gruposModulos.length === 0 ? (
+        <div className="space-y-4">
+          {serviciosSeleccionados.length === 0 && productosSeleccionados.length === 0 ? (
             <div className="py-6 text-center text-sm font-normal text-zinc-400 italic bg-zinc-50 rounded-xl border border-dashed border-zinc-200">
               No se han agregado trabajos a la propuesta todavía.
             </div>
           ) : (
-            <div className="space-y-3">
-              {gruposModulos.map((mod) => (
-                <div key={mod.id} className="rounded-xl border border-zinc-200 overflow-hidden bg-white text-sm">
-                  {/* Cabecera del Módulo (Taller, Lubricentro, Car Wash, Tecnicentro) */}
-                  <div className="bg-zinc-100 px-3.5 py-1.5 font-normal text-zinc-900 flex items-center gap-2 border-b border-zinc-200 text-sm">
-                    <span>{mod.icon}</span>
-                    <span>{mod.nombre}</span>
-                    <span className="text-sm bg-zinc-200 px-2 py-0.5 rounded font-normal text-zinc-700 ml-auto">
-                      {mod.totalItems} {mod.totalItems === 1 ? "trabajo" : "trabajos"}
-                    </span>
-                  </div>
-
-                  {/* Subcategorías y Lista de Trabajos (Sin Valores) */}
-                  <div className="divide-y divide-zinc-200">
-                    {mod.subcategorias.map((sub, sIdx) => (
-                      <div key={sIdx} className="bg-white">
-                        {/* Subcategoría directamente debajo del módulo */}
-                        <div className="bg-zinc-50/70 px-3.5 py-1.5 flex items-center justify-between border-b border-zinc-100">
-                          <span className="font-normal text-zinc-700 text-sm flex items-center gap-1.5">
-                            <span className="w-1.5 h-1.5 rounded-full bg-zinc-400"></span>
-                            {formatoPrimeraMayuscula(sub.nombre)}
-                          </span>
-                          <span className="text-sm font-normal text-zinc-500">
-                            {sub.items.length} {sub.items.length === 1 ? "ítem" : "ítems"}
-                          </span>
-                        </div>
-
-                        {/* Lista de trabajos (Sin Valores) */}
-                        <div className="divide-y divide-zinc-100 px-3.5 py-1">
-                          {sub.items.map((it, itIdx) => {
-                            const cant = Number(it.qty) || 1;
-                            return (
-                              <div
-                                key={it.id || itIdx}
-                                className="py-2 flex items-center justify-between gap-3 text-sm"
-                              >
-                                <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                                  <span className="w-5 h-5 rounded-full bg-zinc-100 text-zinc-600 font-normal text-xs flex items-center justify-center shrink-0 border border-zinc-200">
-                                    #{itIdx + 1}
-                                  </span>
-                                  <span className="font-normal text-zinc-900 truncate text-sm">
-                                    {formatoPrimeraMayuscula(it.name)}
-                                  </span>
+            <>
+              {/* SERVICIOS (PRIMERO) */}
+              {serviciosSeleccionados.length > 0 && (
+                <div className="space-y-1.5">
+                  <span className="text-xs font-normal text-zinc-500 flex items-center gap-1.5">
+                    <span>🔧</span>
+                    <span>Servicios ({totalServicios}):</span>
+                  </span>
+                  <div className="overflow-x-auto rounded-xl border border-zinc-200 bg-white">
+                    <table className="w-full text-left text-xs border-collapse">
+                      <thead>
+                        <tr className="border-b border-zinc-200 bg-zinc-50 text-zinc-500 text-[11px] font-semibold">
+                          <th className="py-2 px-3 w-16 text-center">Cant.</th>
+                          <th className="py-2 px-3">Descripción</th>
+                          <th className="py-2 px-3 w-36">Detalle</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-zinc-100">
+                        {serviciosSeleccionados.map((it: any, idx: number) => {
+                          const cant = Number(it.qty) || 1;
+                          const origen = it.category || "Taller";
+                          const esManual = Boolean(it.isManual || String(it.id || "").startsWith("reg-"));
+                          return (
+                            <tr key={it.id || it.code || `srv-${idx}`}>
+                              <td className="py-2 px-3 text-center font-medium text-zinc-800">
+                                {cant}
+                              </td>
+                              <td className="py-2 px-3 font-normal text-zinc-900">
+                                <div className="flex flex-wrap items-center gap-1.5">
+                                  <span>{formatoPrimeraMayuscula(it.name || it.fullName)}</span>
+                                  {esManual && (
+                                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-zinc-100 text-zinc-600 border border-zinc-200 shrink-0">
+                                      Manual
+                                    </span>
+                                  )}
                                 </div>
-                                {cant > 1 && (
-                                  <span className="text-sm font-normal text-zinc-500 bg-zinc-100 px-2 py-0.5 rounded-md shrink-0">
-                                    Cant: {cant}
-                                  </span>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    ))}
+                              </td>
+                              <td className="py-2 px-3">
+                                <span
+                                  className={`inline-block px-2 py-0.5 rounded-md text-[10px] font-semibold border ${getBadgeClasePorModulo(origen)}`}
+                                >
+                                  {formatoPrimeraMayuscula(origen)}
+                                </span>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
                   </div>
                 </div>
-              ))}
-            </div>
+              )}
+
+              {/* PRODUCTOS (DESPUÉS DE SERVICIOS) */}
+              {productosSeleccionados.length > 0 && (
+                <div className="space-y-1.5">
+                  <span className="text-xs font-normal text-zinc-500 flex items-center gap-1.5">
+                    <span>📦</span>
+                    <span>Productos ({totalProductos}):</span>
+                  </span>
+                  <div className="overflow-x-auto rounded-xl border border-zinc-200 bg-white">
+                    <table className="w-full text-left text-xs border-collapse">
+                      <thead>
+                        <tr className="border-b border-zinc-200 bg-zinc-50 text-zinc-500 text-[11px] font-semibold">
+                          <th className="py-2 px-3 w-16 text-center">Cant.</th>
+                          <th className="py-2 px-3">Descripción</th>
+                          <th className="py-2 px-3 w-36">Detalle</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-zinc-100">
+                        {productosSeleccionados.map((it: any, idx: number) => {
+                          const cant = Number(it.qty) || 1;
+                          const origen = it.category || "Taller";
+                          const extra = it.presentation || it.viscosity || "";
+                          return (
+                            <tr key={it.id || it.code || `prod-${idx}`}>
+                              <td className="py-2 px-3 text-center font-medium text-zinc-800">
+                                {cant}
+                              </td>
+                              <td className="py-2 px-3 font-normal text-zinc-900">
+                                {formatoPrimeraMayuscula(it.name || it.fullName)}
+                              </td>
+                              <td className="py-2 px-3">
+                                <div className="flex flex-wrap items-center gap-1">
+                                  <span
+                                    className={`inline-block px-2 py-0.5 rounded-md text-[10px] font-semibold border ${getBadgeClasePorModulo(origen)}`}
+                                  >
+                                    {formatoPrimeraMayuscula(origen)}
+                                  </span>
+                                  {extra && (
+                                    <span className="inline-block px-2 py-0.5 rounded-md text-[10px] font-medium bg-zinc-100 text-zinc-600">
+                                      {formatoPrimeraMayuscula(extra)}
+                                    </span>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
+
+        {/* ===================================================================
+            FIRMA DEL CLIENTE (SI EXISTE)
+            =================================================================== */}
+        {orden.quoteSignatureUrl && (
+          <div className="pt-2 flex flex-col items-end">
+            <div className="w-56 text-center space-y-1.5">
+              <div className="h-20 rounded-xl border border-zinc-200 bg-zinc-50/60 flex items-center justify-center p-2">
+                <img
+                  src={orden.quoteSignatureUrl}
+                  alt="Firma del cliente"
+                  className="max-h-full max-w-full object-contain"
+                />
+              </div>
+              <span className="text-xs text-zinc-500 block border-t border-zinc-200 pt-1">
+                Firma de conformidad del cliente
+              </span>
+            </div>
+          </div>
+        )}
 
         {/* ===================================================================
             BOTONES DE ACCIÓN (NO SE IMPRIMEN)
