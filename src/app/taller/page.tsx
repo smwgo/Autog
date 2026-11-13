@@ -5584,10 +5584,10 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                       className="ml-auto inline-flex items-center gap-2 px-2.5 py-1 rounded-xl sm:rounded-lg bg-white/90 hover:bg-white dark:bg-black/25 dark:hover:bg-black/40 border border-zinc-200/80 dark:border-white/10 transition-all group no-underline shrink-0"
                     >
                       <div className="text-right leading-tight">
-                        <div className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-white whitespace-nowrap">
+                        <div className="text-[10px] font-medium text-zinc-500 dark:text-zinc-400 whitespace-nowrap">
                           {kmActual.toLocaleString()} km
                         </div>
-                        <div className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
+                        <div className="text-xs sm:text-sm font-bold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
                           Próx: {kmProximo.toLocaleString()}
                         </div>
                       </div>

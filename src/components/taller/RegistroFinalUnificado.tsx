@@ -112,6 +112,130 @@ function getBadgeClasePorModulo(textoModulo?: string) {
   return MODULO_META.taller.badgeClass;
 }
 
+function formatearTiempoAudio(seg: number) {
+  if (!Number.isFinite(seg) || seg < 0) return "0:00";
+  const total = Math.floor(seg);
+  const m = Math.floor(total / 60);
+  const s = total % 60;
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
+
+function MiniAudioPlayer({
+  src,
+  onRemove,
+  compact = false,
+}: {
+  src: string;
+  onRemove?: () => void;
+  compact?: boolean;
+}) {
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [reproduciendo, setReproduciendo] = useState(false);
+  const [tiempoActual, setTiempoActual] = useState(0);
+  const [duracion, setDuracion] = useState(0);
+
+  const togglePlay = () => {
+    const el = audioRef.current;
+    if (!el) return;
+    if (reproduciendo) {
+      el.pause();
+    } else {
+      void el.play().catch(() => {});
+    }
+  };
+
+  const progreso =
+    duracion > 0 && Number.isFinite(duracion)
+      ? Math.min(100, (tiempoActual / duracion) * 100)
+      : 0;
+
+  return (
+    <div
+      className={`flex items-center gap-2.5 rounded-xl border border-zinc-200/80 dark:border-white/10 bg-zinc-50/90 dark:bg-white/[0.04] ${
+        compact ? "px-2.5 py-1.5 min-w-[200px]" : "px-3 py-2 w-full"
+      }`}
+    >
+      <audio
+        ref={audioRef}
+        src={src}
+        playsInline
+        preload="metadata"
+        onPlay={() => setReproduciendo(true)}
+        onPause={() => setReproduciendo(false)}
+        onEnded={() => {
+          setReproduciendo(false);
+          setTiempoActual(0);
+        }}
+        onLoadedMetadata={(e) => {
+          const d = e.currentTarget.duration;
+          if (Number.isFinite(d) && d > 0) setDuracion(d);
+        }}
+        onDurationChange={(e) => {
+          const d = e.currentTarget.duration;
+          if (Number.isFinite(d) && d > 0) setDuracion(d);
+        }}
+        onTimeUpdate={(e) => {
+          setTiempoActual(e.currentTarget.currentTime || 0);
+          const d = e.currentTarget.duration;
+          if (Number.isFinite(d) && d > 0 && d !== duracion) setDuracion(d);
+        }}
+        className="hidden"
+      />
+
+      <button
+        type="button"
+        onClick={togglePlay}
+        className="w-7 h-7 rounded-full bg-amber-500/15 hover:bg-amber-500/25 text-amber-600 dark:text-amber-400 border border-amber-500/30 flex items-center justify-center shrink-0 transition-all active:scale-95 cursor-pointer"
+        title={reproduciendo ? "Pausar" : "Reproducir"}
+      >
+        {reproduciendo ? (
+          <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+            <rect x="6" y="5" width="4" height="14" rx="1" />
+            <rect x="14" y="5" width="4" height="14" rx="1" />
+          </svg>
+        ) : (
+          <svg className="w-3 h-3 translate-x-[0.5px]" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M8 5.14v13.72a1 1 0 0 0 1.5.86l11-6.86a1 1 0 0 0 0-1.72l-11-6.86A1 1 0 0 0 8 5.14Z" />
+          </svg>
+        )}
+      </button>
+
+      <div
+        onClick={(e) => {
+          const el = audioRef.current;
+          if (!el || !duracion || !Number.isFinite(duracion)) return;
+          const rect = e.currentTarget.getBoundingClientRect();
+          const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+          el.currentTime = ratio * duracion;
+          setTiempoActual(el.currentTime);
+        }}
+        className="h-1.5 flex-1 rounded-full bg-zinc-200 dark:bg-white/10 overflow-hidden cursor-pointer"
+      >
+        <div
+          style={{ width: `${progreso}%` }}
+          className="h-full rounded-full bg-amber-500 transition-all duration-100"
+        />
+      </div>
+
+      <span className="text-[11px] font-mono text-zinc-500 dark:text-zinc-400 tabular-nums shrink-0">
+        {formatearTiempoAudio(tiempoActual)}
+        {duracion > 0 ? ` / ${formatearTiempoAudio(duracion)}` : ""}
+      </span>
+
+      {onRemove && (
+        <button
+          type="button"
+          onClick={onRemove}
+          className="w-5 h-5 rounded-full text-zinc-400 hover:text-rose-500 hover:bg-rose-500/10 text-xs flex items-center justify-center shrink-0 cursor-pointer transition-colors"
+          title="Quitar audio"
+        >
+          ×
+        </button>
+      )}
+    </div>
+  );
+}
+
 export default function RegistroFinalUnificado({
   ordenActiva,
   moduloActivo,
@@ -122,6 +246,8 @@ export default function RegistroFinalUnificado({
   mostrarToast,
 }: RegistroFinalUnificadoProps) {
   const [descripcion, setDescripcion] = useState("");
+  const [fotosBorrador, setFotosBorrador] = useState<string[]>([]);
+  const [audiosBorrador, setAudiosBorrador] = useState<string[]>([]);
   const [modalCarritoAbierto, setModalCarritoAbierto] = useState(false);
   const [modalRapidoAbierto, setModalRapidoAbierto] = useState(false);
   const [busquedaRapido, setBusquedaRapido] = useState("");
@@ -129,12 +255,19 @@ export default function RegistroFinalUnificado({
   const [grabandoAudio, setGrabandoAudio] = useState(false);
   const [segundosAudio, setSegundosAudio] = useState(0);
   const [fotoPreviewUrl, setFotoPreviewUrl] = useState<string | null>(null);
+  const [modalFotosAbierto, setModalFotosAbierto] = useState<{ titulo: string; fotos: string[] } | null>(null);
+  const [modalAudiosAbierto, setModalAudiosAbierto] = useState<{ titulo: string; audios: string[] } | null>(null);
+  const [camaraPcAbierta, setCamaraPcAbierta] = useState(false);
 
   const inputCamaraRef = useRef<HTMLInputElement | null>(null);
   const inputGaleriaRef = useRef<HTMLInputElement | null>(null);
+  const inputAudioFallbackRef = useRef<HTMLInputElement | null>(null);
+  const videoCamaraPcRef = useRef<HTMLVideoElement | null>(null);
+  const streamCamaraPcRef = useRef<MediaStream | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const audioTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pcMicSessionIdRef = useRef<string | null>(null);
 
   const metaModulo = MODULO_META[moduloActivo] || MODULO_META.taller;
   const itemsOrden: any[] = Array.isArray(ordenActiva?.items) ? ordenActiva.items : [];
@@ -206,9 +339,187 @@ export default function RegistroFinalUnificado({
     }
   };
 
+  const archivoADataUrl = (file: Blob): Promise<string | null> =>
+    new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(typeof reader.result === "string" ? reader.result : null);
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(file);
+    });
+
+  const subirArchivoEvidencia = async (
+    file: File,
+    tipo: "foto" | "audio",
+    omitirBorrador = false
+  ): Promise<string | null> => {
+    try {
+      setSubiendoArchivo(true);
+      const formData = new FormData();
+      formData.append("file", file, file.name || (tipo === "foto" ? "foto_evidencia.jpg" : "audio_evidencia.webm"));
+      formData.append("folder", "taller-evidencias");
+      formData.append("tipo", tipo);
+      if (ordenActiva?.id) formData.append("orderId", ordenActiva.id);
+      if (ordenActiva?.orderNumber) formData.append("orderNumber", ordenActiva.orderNumber);
+      if (ordenActiva?.plate) formData.append("plate", ordenActiva.plate);
+      formData.append("uploadedBy", ordenActiva?.mechanic || metaModulo.label);
+
+      let finalUrl: string | null = null;
+      try {
+        const res = await fetch("/api/storage/upload", {
+          method: "POST",
+          body: formData,
+        });
+        const data = await res.json();
+        if (data?.success && data?.url) {
+          finalUrl = data.url as string;
+        }
+      } catch {
+        // Fallback local data URL si falla la subida
+      }
+
+      if (!finalUrl) {
+        finalUrl = await archivoADataUrl(file);
+      }
+
+      if (!finalUrl) {
+        mostrarToast?.("No se pudo adjuntar el archivo.", "err");
+        return null;
+      }
+
+      if (!omitirBorrador) {
+        if (tipo === "foto") {
+          setFotosBorrador((prev) => [...prev, finalUrl!]);
+        } else {
+          setAudiosBorrador((prev) => [...prev, finalUrl!]);
+        }
+        mostrarToast?.(
+          `${tipo === "foto" ? "Foto" : "Audio"} adjuntado a la descripción`,
+          "ok"
+        );
+      }
+      return finalUrl;
+    } catch (err) {
+      console.error("Error subiendo evidencia:", err);
+      mostrarToast?.("Error al subir evidencia.", "err");
+      return null;
+    } finally {
+      setSubiendoArchivo(false);
+    }
+  };
+
+  const detenerYSubirAudioSiGrabando = async (omitirBorrador = true): Promise<string | null> => {
+    if (!grabandoAudio) return null;
+
+    if (audioTimerRef.current) {
+      clearInterval(audioTimerRef.current);
+      audioTimerRef.current = null;
+    }
+    setGrabandoAudio(false);
+    setSegundosAudio(0);
+
+    const activePcSessionId = pcMicSessionIdRef.current;
+    pcMicSessionIdRef.current = null;
+
+    let browserBlob: { blob: Blob; mime: string } | null = null;
+    const rec = mediaRecorderRef.current;
+    mediaRecorderRef.current = null;
+
+    if (rec && rec.state !== "inactive") {
+      browserBlob = await new Promise<{ blob: Blob; mime: string } | null>((resolve) => {
+        const mime = rec.mimeType || "audio/webm";
+        rec.onstop = () => {
+          try {
+            rec.stream.getTracks().forEach((t) => t.stop());
+          } catch {}
+          const b = new Blob(audioChunksRef.current, { type: mime });
+          resolve(b.size > 0 ? { blob: b, mime } : null);
+        };
+        try {
+          rec.stop();
+        } catch {
+          resolve(null);
+        }
+      });
+    }
+
+    if (browserBlob && browserBlob.blob.size > 500) {
+      if (activePcSessionId) {
+        fetch("/api/taller/pc-mic", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "stop", sessionId: activePcSessionId, skipTranscribe: true }),
+        }).catch(() => {});
+      }
+      const ext = browserBlob.mime.includes("mp4")
+        ? "m4a"
+        : browserBlob.mime.includes("ogg")
+        ? "ogg"
+        : "webm";
+      const file = new File([browserBlob.blob], `audio_${Date.now()}.${ext}`, {
+        type: browserBlob.mime,
+      });
+      return await subirArchivoEvidencia(file, "audio", omitirBorrador);
+    }
+
+    if (activePcSessionId) {
+      try {
+        setSubiendoArchivo(true);
+        const res = await fetch("/api/taller/pc-mic", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "stop",
+            sessionId: activePcSessionId,
+            skipTranscribe: true,
+          }),
+        });
+        const data = await res.json();
+        if (data?.success && data?.audioBase64) {
+          const binStr = atob(data.audioBase64);
+          const bytes = new Uint8Array(binStr.length);
+          for (let i = 0; i < binStr.length; i++) {
+            bytes[i] = binStr.charCodeAt(i);
+          }
+          const wavFile = new File([bytes], `audio_pc_${Date.now()}.wav`, {
+            type: "audio/wav",
+          });
+          return await subirArchivoEvidencia(wavFile, "audio", omitirBorrador);
+        }
+      } catch (err) {
+        console.error("Error al detener grabación de PC:", err);
+      } finally {
+        setSubiendoArchivo(false);
+      }
+    }
+
+    if (browserBlob && browserBlob.blob.size > 0) {
+      const ext = browserBlob.mime.includes("mp4")
+        ? "m4a"
+        : browserBlob.mime.includes("ogg")
+        ? "ogg"
+        : "webm";
+      const file = new File([browserBlob.blob], `audio_${Date.now()}.${ext}`, {
+        type: browserBlob.mime,
+      });
+      return await subirArchivoEvidencia(file, "audio", omitirBorrador);
+    }
+
+    return null;
+  };
+
   const handleAgregarManual = async () => {
     const limpio = descripcion.trim();
-    if (!limpio) return;
+    if (!limpio || subiendoArchivo) return;
+
+    let audioRecienGrabado: string | null = null;
+    if (grabandoAudio) {
+      audioRecienGrabado = await detenerYSubirAudioSiGrabando(true);
+    }
+
+    const audiosFinales = audioRecienGrabado
+      ? [...audiosBorrador, audioRecienGrabado]
+      : audiosBorrador;
+
     const nuevoItem = {
       id: `reg-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
       code: `SRV-${Date.now().toString(36).slice(-4).toUpperCase()}`,
@@ -219,8 +530,12 @@ export default function RegistroFinalUnificado({
       qty: 1,
       status: "Pendiente",
       isManual: true,
+      ...(fotosBorrador.length > 0 ? { fotos: fotosBorrador } : {}),
+      ...(audiosFinales.length > 0 ? { audios: audiosFinales } : {}),
     };
     setDescripcion("");
+    setFotosBorrador([]);
+    setAudiosBorrador([]);
     await persistirItems([...itemsOrden, nuevoItem]);
     mostrarToast?.(`Registrado en ${metaModulo.label}: ${limpio}`, "ok");
   };
@@ -263,89 +578,149 @@ export default function RegistroFinalUnificado({
     mostrarToast?.(`Agregado (${metaModulo.label}): ${item.name}`, "ok");
   };
 
-  const subirArchivoEvidencia = async (file: File, tipo: "foto" | "audio") => {
-    try {
-      setSubiendoArchivo(true);
-      const formData = new FormData();
-      formData.append("file", file, file.name || (tipo === "foto" ? "foto_evidencia.jpg" : "audio_evidencia.webm"));
-      formData.append("folder", "taller-evidencias");
-      formData.append("tipo", tipo);
-      if (ordenActiva?.id) formData.append("orderId", ordenActiva.id);
-      if (ordenActiva?.orderNumber) formData.append("orderNumber", ordenActiva.orderNumber);
-      if (ordenActiva?.plate) formData.append("plate", ordenActiva.plate);
-      formData.append("uploadedBy", ordenActiva?.mechanic || metaModulo.label);
-
-      const res = await fetch("/api/storage/upload", {
-        method: "POST",
-        body: formData,
-      });
-      const data = await res.json();
-      if (!data?.success || !data?.url) {
-        mostrarToast?.(data?.error || "No se pudo subir el archivo.", "err");
-        return;
-      }
-
-      const nuevaEvidencia: EvidenciaRegistro = {
-        id: `ev-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-        type: tipo,
-        url: data.url,
-        modulo: metaModulo.label,
-        createdAt: new Date().toLocaleTimeString("es-EC", { hour: "2-digit", minute: "2-digit" }),
-      };
-
-      await persistirEvidencias([...evidenciasRegistradas, nuevaEvidencia]);
-      mostrarToast?.(
-        `${tipo === "foto" ? "Foto" : "Audio"} registrado en ${metaModulo.label}`,
-        "ok"
-      );
-    } catch (err) {
-      console.error("Error subiendo evidencia:", err);
-      mostrarToast?.("Error al subir evidencia.", "err");
-    } finally {
-      setSubiendoArchivo(false);
+  const detenerCamaraPc = () => {
+    if (streamCamaraPcRef.current) {
+      streamCamaraPcRef.current.getTracks().forEach((t) => t.stop());
+      streamCamaraPcRef.current = null;
     }
+    setCamaraPcAbierta(false);
+  };
+
+  const abrirCamaraPcOMovil = async () => {
+    const esMovil =
+      typeof navigator !== "undefined" && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    if (esMovil || typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia) {
+      inputCamaraRef.current?.click();
+      return;
+    }
+    try {
+      detenerCamaraPc();
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } },
+        audio: false,
+      });
+      streamCamaraPcRef.current = stream;
+      setCamaraPcAbierta(true);
+      setTimeout(() => {
+        if (videoCamaraPcRef.current) {
+          videoCamaraPcRef.current.srcObject = stream;
+          videoCamaraPcRef.current.play().catch(() => {});
+        }
+      }, 50);
+    } catch {
+      inputCamaraRef.current?.click();
+    }
+  };
+
+  const capturarFotoDesdeCamaraPc = () => {
+    const video = videoCamaraPcRef.current;
+    if (!video) return;
+    const canvas = document.createElement("canvas");
+    canvas.width = video.videoWidth || 1280;
+    canvas.height = video.videoHeight || 720;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    canvas.toBlob(
+      (blob) => {
+        if (!blob) return;
+        const file = new File([blob], `camara_${Date.now()}.jpg`, { type: "image/jpeg" });
+        void subirArchivoEvidencia(file, "foto");
+        detenerCamaraPc();
+      },
+      "image/jpeg",
+      0.9
+    );
   };
 
   const handleToggleAudio = async () => {
     if (grabandoAudio) {
-      mediaRecorderRef.current?.stop();
-      setGrabandoAudio(false);
-      if (audioTimerRef.current) {
-        clearInterval(audioTimerRef.current);
-        audioTimerRef.current = null;
-      }
+      await detenerYSubirAudioSiGrabando(false);
       return;
     }
 
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const recorder = new MediaRecorder(stream);
-      audioChunksRef.current = [];
+    const esMovil =
+      typeof navigator !== "undefined" && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
-      recorder.ondataavailable = (ev) => {
-        if (ev.data.size > 0) audioChunksRef.current.push(ev.data);
-      };
+    let inicioBrowserOk = false;
+    let inicioPcNatOk = false;
 
-      recorder.onstop = () => {
-        stream.getTracks().forEach((t) => t.stop());
-        const blob = new Blob(audioChunksRef.current, { type: "audio/webm" });
-        if (blob.size > 0) {
-          const file = new File([blob], `audio_${Date.now()}.webm`, { type: "audio/webm" });
-          void subirArchivoEvidencia(file, "audio");
+    // 1. En PC Windows, iniciar grabador nativo del servidor como respaldo / canal directo
+    if (!esMovil) {
+      const sessionId = `rfu_${Date.now()}`;
+      try {
+        const res = await fetch("/api/taller/pc-mic", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "start", sessionId, skipTranscribe: true }),
+        });
+        const data = await res.json();
+        if (res.ok && data?.success) {
+          pcMicSessionIdRef.current = sessionId;
+          inicioPcNatOk = true;
         }
-        setSegundosAudio(0);
-      };
+      } catch {
+        // Ignorar si no es servidor Windows local
+      }
+    }
 
-      mediaRecorderRef.current = recorder;
-      recorder.start();
+    // 2. Intentar MediaRecorder del navegador (PC y Móvil)
+    if (
+      typeof navigator !== "undefined" &&
+      navigator.mediaDevices?.getUserMedia &&
+      typeof MediaRecorder !== "undefined"
+    ) {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const candidatosMime = [
+          "audio/webm;codecs=opus",
+          "audio/webm",
+          "audio/mp4",
+          "audio/ogg;codecs=opus",
+        ];
+        const mimeSoportado =
+          candidatosMime.find((m) => {
+            try {
+              return MediaRecorder.isTypeSupported(m);
+            } catch {
+              return false;
+            }
+          }) || "";
+
+        const recorder = mimeSoportado
+          ? new MediaRecorder(stream, { mimeType: mimeSoportado })
+          : new MediaRecorder(stream);
+        audioChunksRef.current = [];
+
+        recorder.ondataavailable = (ev) => {
+          if (ev.data && ev.data.size > 0) audioChunksRef.current.push(ev.data);
+        };
+
+        mediaRecorderRef.current = recorder;
+        recorder.start(250);
+        inicioBrowserOk = true;
+      } catch {
+        // Si falla getUserMedia en PC pero inicioPcNatOk es true, sigue con el micrófono nativo de PC
+      }
+    }
+
+    if (inicioBrowserOk || inicioPcNatOk) {
       setGrabandoAudio(true);
       setSegundosAudio(0);
+      if (audioTimerRef.current) clearInterval(audioTimerRef.current);
       audioTimerRef.current = setInterval(() => {
         setSegundosAudio((prev) => prev + 1);
       }, 1000);
-    } catch {
-      mostrarToast?.("No se pudo acceder al micrófono.", "err");
+      return;
     }
+
+    // 3. Si es móvil sin HTTPS (sin getUserMedia), abrir selector/grabadora nativa del teléfono
+    if (esMovil && inputAudioFallbackRef.current) {
+      inputAudioFallbackRef.current.click();
+      return;
+    }
+
+    mostrarToast?.("No se pudo acceder al micrófono.", "err");
   };
 
   const handleAjustarCantidad = async (it: any, delta: number) => {
@@ -397,29 +772,13 @@ export default function RegistroFinalUnificado({
     <div className="w-full space-y-4 pt-2 animate-fade-in">
       {/* 1. TARJETA DE REGISTRO MANUAL Y ACCIONES RÁPIDAS */}
       <div className="p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-white/[0.03] border border-zinc-200/90 dark:border-white/10 shadow-2xs space-y-3">
-        <div className="flex items-center justify-between gap-2">
-          <button
-            type="button"
-            onClick={() => {
-              if (!onCambiarModulo) return;
-              const idxActual = ORDEN_CICLO_MODULOS.indexOf(moduloActivo);
-              const siguiente =
-                ORDEN_CICLO_MODULOS[(idxActual + 1) % ORDEN_CICLO_MODULOS.length];
-              onCambiarModulo(siguiente);
-            }}
-            className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold border transition-all active:scale-95 ${
-              onCambiarModulo ? "cursor-pointer hover:opacity-90" : ""
-            } ${metaModulo.badgeClass}`}
-            title="Cambiar especialidad (Taller / Lubricentro / Car Wash / Tecnicentro)"
-          >
-            {metaModulo.label}
-          </button>
-          {subiendoArchivo && (
+        {subiendoArchivo && (
+          <div className="flex items-center justify-end">
             <span className="text-xs font-semibold text-blue-600 dark:text-blue-400 animate-pulse">
               Subiendo archivo...
             </span>
-          )}
-        </div>
+          </div>
+        )}
 
         <div className="space-y-1.5">
           <label className="block text-xs sm:text-sm font-medium text-zinc-800 dark:text-zinc-200">
@@ -441,7 +800,7 @@ export default function RegistroFinalUnificado({
             />
             <button
               type="button"
-              disabled={!descripcion.trim()}
+              disabled={!descripcion.trim() || subiendoArchivo}
               onClick={() => void handleAgregarManual()}
               className="px-4 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:bg-zinc-200 dark:disabled:bg-white/10 disabled:text-zinc-400 dark:disabled:text-zinc-500 text-white text-xs sm:text-sm font-semibold shrink-0 transition-all cursor-pointer disabled:cursor-not-allowed active:scale-95"
             >
@@ -450,7 +809,7 @@ export default function RegistroFinalUnificado({
           </div>
         </div>
 
-        {/* 5 botones rápidos: Tomar foto, Subir foto, Audio, Producto, Servicio rápido */}
+        {/* Botones rápidos: Tomar foto, Subir foto y Audio aparecen al escribir descripción */}
         <div className="flex flex-wrap items-center gap-2">
           <input
             ref={inputCamaraRef}
@@ -476,48 +835,68 @@ export default function RegistroFinalUnificado({
               e.target.value = "";
             }}
           />
+          <input
+            ref={inputAudioFallbackRef}
+            type="file"
+            accept="audio/*"
+            capture
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) void subirArchivoEvidencia(file, "audio");
+              e.target.value = "";
+            }}
+          />
 
-          <button
-            type="button"
-            disabled={subiendoArchivo}
-            onClick={() => inputCamaraRef.current?.click()}
-            title="Tomar foto"
-            className="h-10 w-10 sm:h-11 sm:w-11 rounded-xl border bg-blue-50/80 hover:bg-blue-100 dark:bg-blue-500/10 dark:hover:bg-blue-500/20 border-blue-200 dark:border-blue-500/30 text-blue-600 dark:text-blue-400 flex items-center justify-center cursor-pointer active:scale-95 transition-all"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z" />
-              <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0Z" />
-            </svg>
-          </button>
+          {(descripcion.trim().length > 0 ||
+            fotosBorrador.length > 0 ||
+            audiosBorrador.length > 0 ||
+            grabandoAudio ||
+            subiendoArchivo) && (
+            <>
+              <button
+                type="button"
+                disabled={subiendoArchivo}
+                onClick={() => void abrirCamaraPcOMovil()}
+                title="Tomar foto"
+                className="h-10 w-10 sm:h-11 sm:w-11 rounded-xl border bg-blue-50/80 hover:bg-blue-100 dark:bg-blue-500/10 dark:hover:bg-blue-500/20 border-blue-200 dark:border-blue-500/30 text-blue-600 dark:text-blue-400 flex items-center justify-center cursor-pointer active:scale-95 transition-all animate-fade-in"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0Z" />
+                </svg>
+              </button>
 
-          <button
-            type="button"
-            disabled={subiendoArchivo}
-            onClick={() => inputGaleriaRef.current?.click()}
-            title="Subir foto"
-            className="h-10 w-10 sm:h-11 sm:w-11 rounded-xl border bg-indigo-50/80 hover:bg-indigo-100 dark:bg-indigo-500/10 dark:hover:bg-indigo-500/20 border-indigo-200 dark:border-indigo-500/30 text-indigo-600 dark:text-indigo-400 flex items-center justify-center cursor-pointer active:scale-95 transition-all"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
-            </svg>
-          </button>
+              <button
+                type="button"
+                disabled={subiendoArchivo}
+                onClick={() => inputGaleriaRef.current?.click()}
+                title="Subir foto"
+                className="h-10 w-10 sm:h-11 sm:w-11 rounded-xl border bg-indigo-50/80 hover:bg-indigo-100 dark:bg-indigo-500/10 dark:hover:bg-indigo-500/20 border-indigo-200 dark:border-indigo-500/30 text-indigo-600 dark:text-indigo-400 flex items-center justify-center cursor-pointer active:scale-95 transition-all animate-fade-in"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
+                </svg>
+              </button>
 
-          <button
-            type="button"
-            disabled={subiendoArchivo}
-            onClick={() => void handleToggleAudio()}
-            title={grabandoAudio ? "Detener grabación" : "Grabar audio"}
-            className={`h-10 sm:h-11 px-3 rounded-xl border flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 transition-all ${
-              grabandoAudio
-                ? "bg-rose-500 text-white border-rose-600 animate-pulse"
-                : "bg-amber-50/80 hover:bg-amber-100 dark:bg-amber-500/10 dark:hover:bg-amber-500/20 border-amber-200 dark:border-amber-500/30 text-amber-600 dark:text-amber-400"
-            }`}
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 0 0 6-6v-1.5m-6 7.5a6 6 0 0 1-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 0 1-3-3V4.5a3 3 0 1 1 6 0v8.25a3 3 0 0 1-3 3Z" />
-            </svg>
-            {grabandoAudio && <span className="text-xs font-bold">{segundosAudio}s</span>}
-          </button>
+              <button
+                type="button"
+                disabled={subiendoArchivo}
+                onClick={() => void handleToggleAudio()}
+                title={grabandoAudio ? "Detener y guardar audio" : "Grabar nota de audio"}
+                className={`h-10 sm:h-11 px-3 rounded-xl border flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 transition-all animate-fade-in touch-manipulation ${
+                  grabandoAudio
+                    ? "bg-rose-500 text-white border-rose-600 animate-pulse"
+                    : "bg-amber-50/80 hover:bg-amber-100 dark:bg-amber-500/10 dark:hover:bg-amber-500/20 border-amber-200 dark:border-amber-500/30 text-amber-600 dark:text-amber-400"
+                }`}
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 0 0 6-6v-1.5m-6 7.5a6 6 0 0 1-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 0 1-3-3V4.5a3 3 0 1 1 6 0v8.25a3 3 0 0 1-3 3Z" />
+                </svg>
+                {grabandoAudio && <span className="text-xs font-bold">{segundosAudio}s</span>}
+              </button>
+            </>
+          )}
 
           <button
             type="button"
@@ -556,6 +935,62 @@ export default function RegistroFinalUnificado({
             </svg>
           </button>
         </div>
+
+        {/* Barra visual cuando está grabando audio en PC o móvil */}
+        {grabandoAudio && (
+          <div className="flex items-center justify-between gap-3 px-3.5 py-2.5 rounded-xl border border-rose-500/40 bg-rose-50/80 dark:bg-rose-500/10 text-rose-700 dark:text-rose-200 animate-fade-in">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <span className="w-2.5 h-2.5 rounded-full bg-rose-600 animate-ping shrink-0" />
+              <span className="text-xs font-mono font-bold bg-rose-600 text-white px-2 py-0.5 rounded-md">
+                {String(Math.floor(segundosAudio / 60)).padStart(2, "0")}:
+                {String(segundosAudio % 60).padStart(2, "0")}
+              </span>
+              <span className="text-xs font-medium truncate">
+                Grabando audio...
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => void handleToggleAudio()}
+              className="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold cursor-pointer shrink-0 active:scale-95 transition-all"
+            >
+              Detener
+            </button>
+          </div>
+        )}
+
+        {/* Vista previa de fotos y audios adjuntos antes de pulsar Añadir */}
+        {(fotosBorrador.length > 0 || audiosBorrador.length > 0) && (
+          <div className="flex flex-wrap items-center gap-2 pt-1 animate-fade-in">
+            {fotosBorrador.map((url, idx) => (
+              <div key={`dfoto-${idx}`} className="relative group">
+                <button
+                  type="button"
+                  onClick={() => setFotoPreviewUrl(url)}
+                  className="w-12 h-12 rounded-xl overflow-hidden border border-zinc-200 dark:border-white/15 cursor-zoom-in block"
+                >
+                  <img src={url} alt={`Foto ${idx + 1}`} className="w-full h-full object-cover" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFotosBorrador((prev) => prev.filter((_, i) => i !== idx))}
+                  className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-rose-600 text-white text-[10px] font-bold flex items-center justify-center shadow cursor-pointer"
+                  title="Quitar foto"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+            {audiosBorrador.map((url, idx) => (
+              <MiniAudioPlayer
+                key={`daudio-${idx}`}
+                src={url}
+                compact
+                onRemove={() => setAudiosBorrador((prev) => prev.filter((_, i) => i !== idx))}
+              />
+            ))}
+          </div>
+        )}
 
         {/* Modal Flotante del Carrito: Buscador + P / S + Productos y Servicios */}
         {modalCarritoAbierto && (
@@ -753,7 +1188,50 @@ export default function RegistroFinalUnificado({
                             </div>
                           </td>
                           <td className="py-2 px-3 font-medium text-zinc-800 dark:text-zinc-200">
-                            {formatearPrimeraMayuscula(it.name || it.fullName)}
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span>{formatearPrimeraMayuscula(it.name || it.fullName)}</span>
+                              {(it.isManual || String(it.id || "").startsWith("reg-")) && (
+                                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-zinc-100 dark:bg-white/10 text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-white/15 shrink-0">
+                                  Manual
+                                </span>
+                              )}
+                              {Array.isArray(it.fotos) && it.fotos.length > 0 && (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setModalFotosAbierto({
+                                      titulo: formatearPrimeraMayuscula(it.name || it.fullName),
+                                      fotos: it.fotos,
+                                    })
+                                  }
+                                  className="h-7 px-2 rounded-lg border bg-indigo-50/80 hover:bg-indigo-100 dark:bg-indigo-500/15 dark:hover:bg-indigo-500/25 border-indigo-200 dark:border-indigo-500/30 text-indigo-600 dark:text-indigo-300 inline-flex items-center gap-1 text-[11px] font-medium cursor-pointer active:scale-95 transition-all shrink-0"
+                                  title={`Ver ${it.fotos.length} foto(s)`}
+                                >
+                                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
+                                  </svg>
+                                  {it.fotos.length > 1 && <span>{it.fotos.length}</span>}
+                                </button>
+                              )}
+                              {Array.isArray(it.audios) && it.audios.length > 0 && (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setModalAudiosAbierto({
+                                      titulo: formatearPrimeraMayuscula(it.name || it.fullName),
+                                      audios: it.audios,
+                                    })
+                                  }
+                                  className="h-7 px-2 rounded-lg border bg-amber-50/80 hover:bg-amber-100 dark:bg-amber-500/15 dark:hover:bg-amber-500/25 border-amber-200 dark:border-amber-500/30 text-amber-600 dark:text-amber-300 inline-flex items-center gap-1 text-[11px] font-medium cursor-pointer active:scale-95 transition-all shrink-0"
+                                  title={`Escuchar ${it.audios.length} audio(s)`}
+                                >
+                                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 0 0 6-6v-1.5m-6 7.5a6 6 0 0 1-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 0 1-3-3V4.5a3 3 0 1 1 6 0v8.25a3 3 0 0 1-3 3Z" />
+                                  </svg>
+                                  {it.audios.length > 1 && <span>{it.audios.length}</span>}
+                                </button>
+                              )}
+                            </div>
                           </td>
                           <td className="py-2 px-2.5">
                             <div className="flex flex-wrap items-center gap-1">
@@ -833,7 +1311,50 @@ export default function RegistroFinalUnificado({
                             </div>
                           </td>
                           <td className="py-2 px-3 font-medium text-zinc-800 dark:text-zinc-200">
-                            {formatearPrimeraMayuscula(it.name || it.fullName)}
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span>{formatearPrimeraMayuscula(it.name || it.fullName)}</span>
+                              {(it.isManual || String(it.id || "").startsWith("reg-")) && (
+                                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-zinc-100 dark:bg-white/10 text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-white/15 shrink-0">
+                                  Manual
+                                </span>
+                              )}
+                              {Array.isArray(it.fotos) && it.fotos.length > 0 && (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setModalFotosAbierto({
+                                      titulo: formatearPrimeraMayuscula(it.name || it.fullName),
+                                      fotos: it.fotos,
+                                    })
+                                  }
+                                  className="h-7 px-2 rounded-lg border bg-indigo-50/80 hover:bg-indigo-100 dark:bg-indigo-500/15 dark:hover:bg-indigo-500/25 border-indigo-200 dark:border-indigo-500/30 text-indigo-600 dark:text-indigo-300 inline-flex items-center gap-1 text-[11px] font-medium cursor-pointer active:scale-95 transition-all shrink-0"
+                                  title={`Ver ${it.fotos.length} foto(s)`}
+                                >
+                                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
+                                  </svg>
+                                  {it.fotos.length > 1 && <span>{it.fotos.length}</span>}
+                                </button>
+                              )}
+                              {Array.isArray(it.audios) && it.audios.length > 0 && (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setModalAudiosAbierto({
+                                      titulo: formatearPrimeraMayuscula(it.name || it.fullName),
+                                      audios: it.audios,
+                                    })
+                                  }
+                                  className="h-7 px-2 rounded-lg border bg-amber-50/80 hover:bg-amber-100 dark:bg-amber-500/15 dark:hover:bg-amber-500/25 border-amber-200 dark:border-amber-500/30 text-amber-600 dark:text-amber-300 inline-flex items-center gap-1 text-[11px] font-medium cursor-pointer active:scale-95 transition-all shrink-0"
+                                  title={`Escuchar ${it.audios.length} audio(s)`}
+                                >
+                                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 0 0 6-6v-1.5m-6 7.5a6 6 0 0 1-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 0 1-3-3V4.5a3 3 0 1 1 6 0v8.25a3 3 0 0 1-3 3Z" />
+                                  </svg>
+                                  {it.audios.length > 1 && <span>{it.audios.length}</span>}
+                                </button>
+                              )}
+                            </div>
                           </td>
                           <td className="py-2 px-2.5">
                             <span
@@ -911,17 +1432,145 @@ export default function RegistroFinalUnificado({
         </div>
       )}
 
+      {/* Modal flotante minimalista para ver fotos de un ítem */}
+      {modalFotosAbierto && (
+        <div
+          onClick={() => setModalFotosAbierto(null)}
+          className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-md max-h-[82dvh] overflow-y-auto rounded-2xl bg-white dark:bg-[#141417] border border-zinc-200/80 dark:border-white/10 p-3.5 space-y-3 shadow-2xl"
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium text-zinc-700 dark:text-zinc-200 truncate">
+                {modalFotosAbierto.titulo}
+              </span>
+              <button
+                type="button"
+                onClick={() => setModalFotosAbierto(null)}
+                className="w-6 h-6 rounded-full flex items-center justify-center text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/10 text-xs cursor-pointer shrink-0 transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+            <div
+              className={`grid gap-2 ${
+                modalFotosAbierto.fotos.length === 1 ? "grid-cols-1" : "grid-cols-2"
+              }`}
+            >
+              {modalFotosAbierto.fotos.map((fUrl, i) => (
+                <button
+                  key={`mf-${i}`}
+                  type="button"
+                  onClick={() => setFotoPreviewUrl(fUrl)}
+                  className="rounded-xl overflow-hidden border border-zinc-200/70 dark:border-white/10 bg-zinc-50 dark:bg-black/40 cursor-zoom-in"
+                >
+                  <img
+                    src={fUrl}
+                    alt={`Foto ${i + 1}`}
+                    className="w-full max-h-[50vh] object-contain mx-auto"
+                  />
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal flotante minimalista para escuchar audios de un ítem */}
+      {modalAudiosAbierto && (
+        <div
+          onClick={() => setModalAudiosAbierto(null)}
+          className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-sm max-h-[80dvh] overflow-y-auto rounded-2xl bg-white dark:bg-[#141417] border border-zinc-200/80 dark:border-white/10 p-3.5 space-y-2.5 shadow-2xl"
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium text-zinc-700 dark:text-zinc-200 truncate">
+                {modalAudiosAbierto.titulo}
+              </span>
+              <button
+                type="button"
+                onClick={() => setModalAudiosAbierto(null)}
+                className="w-6 h-6 rounded-full flex items-center justify-center text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/10 text-xs cursor-pointer shrink-0 transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="space-y-2">
+              {modalAudiosAbierto.audios.map((aUrl, i) => (
+                <MiniAudioPlayer key={`ma-${i}`} src={aUrl} />
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Modal simple para ampliar foto */}
       {fotoPreviewUrl && (
         <div
           onClick={() => setFotoPreviewUrl(null)}
-          className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 cursor-zoom-out"
+          className="fixed inset-0 z-[60] bg-black/85 flex items-center justify-center p-4 cursor-zoom-out"
         >
           <img
             src={fotoPreviewUrl}
             alt="Evidencia ampliada"
             className="max-w-full max-h-[85vh] rounded-2xl shadow-2xl"
           />
+        </div>
+      )}
+
+      {/* Modal cámara en vivo para PC */}
+      {camaraPcAbierta && (
+        <div
+          onClick={() => detenerCamaraPc()}
+          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-md rounded-2xl bg-white dark:bg-[#111113] border border-zinc-200 dark:border-white/10 p-4 space-y-3 shadow-2xl"
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-semibold text-zinc-900 dark:text-white">
+                Tomar foto
+              </span>
+              <button
+                type="button"
+                onClick={() => detenerCamaraPc()}
+                className="w-7 h-7 rounded-lg flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white bg-zinc-100 dark:bg-white/10 text-xs font-bold cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="rounded-xl overflow-hidden bg-black aspect-video flex items-center justify-center">
+              <video
+                ref={videoCamaraPcRef}
+                autoPlay
+                playsInline
+                muted
+                className="w-full h-full object-cover"
+              />
+            </div>
+            <div className="flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => detenerCamaraPc()}
+                className="px-3.5 py-2 rounded-xl border border-zinc-200 dark:border-white/10 text-xs font-semibold text-zinc-700 dark:text-zinc-300 cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={() => capturarFotoDesdeCamaraPc()}
+                className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold cursor-pointer"
+              >
+                Capturar foto
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

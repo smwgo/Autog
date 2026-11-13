@@ -151,10 +151,10 @@ function HistorialAceitesContenido() {
       const baseOrders: any[] = Array.isArray(dataOrdenes?.orders)
         ? dataOrdenes.orders
         : Array.isArray(dataOrdenes?.data)
-        ? dataOrdenes.data
-        : dataOrdenes?.order
-        ? [dataOrdenes.order]
-        : [];
+          ? dataOrdenes.data
+          : dataOrdenes?.order
+            ? [dataOrdenes.order]
+            : [];
 
       const operacionOrders: any[] = Array.isArray(dataOperacion?.orders) ? dataOperacion.orders : [];
       const ordersList: any[] = [...baseOrders, ...operacionOrders];
@@ -236,11 +236,11 @@ function HistorialAceitesContenido() {
         const fechaStr =
           Number.isFinite(fechaMs) && fechaMs > 0
             ? new Date(fechaMs).toLocaleDateString("es-EC", {
-                day: "2-digit",
-                month: "short",
-                year: "numeric",
-                timeZone: "UTC",
-              })
+              day: "2-digit",
+              month: "short",
+              year: "numeric",
+              timeZone: "UTC",
+            })
             : "Sin fecha";
 
         const km = Number(ord.mileage) || 0;
@@ -248,19 +248,19 @@ function HistorialAceitesContenido() {
         const aceitesFormateados =
           itemsAceite.length > 0
             ? itemsAceite.map((it) => ({
-                nombre: it.fullName || it.name || "Aceite de Motor",
-                marca: it.brand,
-                viscosidad: extraerViscosidad(it.fullName || it.name || "") || it.viscosity,
-                presentacion: it.presentation || it.unitOfMeasure || "Galón",
-                cantidad: Number(it.qty || 1),
-                precio: Number(it.price || 0),
-              }))
+              nombre: it.fullName || it.name || "Aceite de Motor",
+              marca: it.brand,
+              viscosidad: extraerViscosidad(it.fullName || it.name || "") || it.viscosity,
+              presentacion: it.presentation || it.unitOfMeasure || "Galón",
+              cantidad: Number(it.qty || 1),
+              precio: Number(it.price || 0),
+            }))
             : [
-                {
-                  nombre: String(typeof serviceConAceite === "string" ? serviceConAceite : serviceConAceite?.name || "Cambio de aceite"),
-                  viscosidad: extraerViscosidad(String(typeof serviceConAceite === "string" ? serviceConAceite : serviceConAceite?.name || "")),
-                },
-              ];
+              {
+                nombre: String(typeof serviceConAceite === "string" ? serviceConAceite : serviceConAceite?.name || "Cambio de aceite"),
+                viscosidad: extraerViscosidad(String(typeof serviceConAceite === "string" ? serviceConAceite : serviceConAceite?.name || "")),
+              },
+            ];
 
         const filtrosFormateados = itemsFiltro.map((it) => ({
           nombre: it.fullName || it.name || "Filtro de Aceite",
@@ -441,8 +441,8 @@ function HistorialAceitesContenido() {
               {cargando
                 ? "..."
                 : cambios[0]?.kilometraje
-                ? `${cambios[0].kilometraje.toLocaleString()} km`
-                : "-"}
+                  ? `${cambios[0].kilometraje.toLocaleString()} km`
+                  : "-"}
             </p>
           </div>
         </div>
@@ -469,51 +469,51 @@ function HistorialAceitesContenido() {
               return (
                 <div
                   key={c.id || idx}
-                  className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-3 shadow-2xs"
+                  className="p-3 sm:p-4 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-2.5 shadow-2xs"
                 >
                   {/* Fila 1: Fecha, tiempo relativo, #Orden y Kilometraje (Sin placa ni auto) */}
-                  <div className="flex items-center justify-between gap-2 border-b border-zinc-100 dark:border-white/5 pb-2.5 flex-wrap">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-base sm:text-lg font-bold text-zinc-900 dark:text-white flex items-center gap-1.5">
-                        <span>📅</span>
+                  <div className="flex items-center justify-between gap-2 border-b border-zinc-100 dark:border-white/5 pb-2 flex-wrap">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="text-xs sm:text-sm font-normal text-zinc-900 dark:text-white flex items-center gap-1">
+                        <span className="text-sm">📅</span>
                         <span>{c.fecha}</span>
                       </span>
 
                       {/* Etiqueta de color para saber hace cuánto tiempo se hizo el cambio */}
-                      <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${tiempo.colorClass}`}>
+                      <span className={`px-2 py-0.5 rounded-full text-[11px] font-normal ${tiempo.colorClass}`}>
                         {tiempo.texto}
                       </span>
 
                       {idx === 0 && (
-                        <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-800 dark:bg-blue-500/25 dark:text-blue-300 border border-blue-200 dark:border-blue-500/30">
+                        <span className="px-2 py-0.5 rounded-full text-[11px] font-normal bg-blue-100 text-blue-800 dark:bg-blue-500/25 dark:text-blue-300 border border-blue-200 dark:border-blue-500/30">
                           Último
                         </span>
                       )}
                     </div>
 
                     {c.kilometraje > 0 && (
-                      <span className="text-sm sm:text-base font-bold font-sans text-emerald-600 dark:text-emerald-400 shrink-0">
+                      <span className="text-xs sm:text-sm font-normal font-sans text-emerald-600 dark:text-emerald-400 shrink-0">
                         {c.kilometraje.toLocaleString()} km
                       </span>
                     )}
                   </div>
 
                   {/* Fila 2: Aceites aplicados */}
-                  <div className="space-y-2 pt-0.5">
+                  <div className="space-y-1.5 pt-0.5">
                     {c.aceites.map((ac, acIdx) => (
-                      <div key={`ac_${acIdx}`} className="flex items-center justify-between gap-2 text-sm sm:text-base">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <span className="text-base shrink-0">🛢️</span>
-                          <strong className="text-zinc-900 dark:text-white truncate">
+                      <div key={`ac_${acIdx}`} className="flex items-center justify-between gap-2 text-xs sm:text-sm">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <span className="text-sm shrink-0">🛢️</span>
+                          <span className="font-normal text-zinc-900 dark:text-white truncate">
                             {ac.nombre}
-                          </strong>
+                          </span>
                           {ac.marca && (
-                            <span className="text-zinc-400 text-xs sm:text-sm shrink-0">
+                            <span className="text-zinc-400 text-xs shrink-0">
                               ({ac.marca})
                             </span>
                           )}
                           {ac.viscosidad && (
-                            <span className="px-2 py-0.5 rounded text-xs font-bold bg-blue-50 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-200/50 dark:border-blue-500/30 shrink-0">
+                            <span className="px-1.5 py-0.5 rounded text-[11px] font-normal bg-blue-50 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-200/50 dark:border-blue-500/30 shrink-0">
                               {ac.viscosidad}
                             </span>
                           )}
@@ -523,11 +523,11 @@ function HistorialAceitesContenido() {
 
                     {/* Filtro de Aceite */}
                     {c.filtros.map((fil, filIdx) => (
-                      <div key={`fil_${filIdx}`} className="flex items-center justify-between gap-2 text-sm text-zinc-600 dark:text-zinc-300">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <span className="text-base shrink-0">⚙️</span>
-                          <span className="text-zinc-400 text-xs">Filtro:</span>
-                          <span className="font-semibold text-zinc-800 dark:text-zinc-200 truncate">
+                      <div key={`fil_${filIdx}`} className="flex items-center justify-between gap-2 text-xs text-zinc-600 dark:text-zinc-300">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <span className="text-sm shrink-0">⚙️</span>
+                          <span className="text-zinc-400 text-[11px]">Filtro:</span>
+                          <span className="font-normal text-zinc-800 dark:text-zinc-200 truncate">
                             {fil.nombre}
                           </span>
                         </div>
@@ -536,8 +536,8 @@ function HistorialAceitesContenido() {
                   </div>
 
                   {/* Fila 3: Técnico */}
-                  <div className="flex items-center justify-between gap-2 text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 pt-2 border-t border-zinc-100 dark:border-white/5">
-                    <span>Técnico: <strong className="text-zinc-700 dark:text-zinc-300 font-medium">{c.mecanico}</strong></span>
+                  <div className="flex items-center justify-between gap-2 text-xs text-zinc-500 dark:text-zinc-400 pt-1.5 border-t border-zinc-100 dark:border-white/5">
+                    <span>Técnico: <span className="text-zinc-700 dark:text-zinc-300 font-normal">{c.mecanico}</span></span>
                   </div>
                 </div>
               );

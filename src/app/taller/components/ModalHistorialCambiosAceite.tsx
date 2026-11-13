@@ -320,9 +320,8 @@ export default function ModalHistorialCambiosAceite({
               <p className="text-xs text-zinc-500 dark:text-zinc-400 max-w-md mx-auto">
                 {filtroTexto
                   ? "Intenta con otro término de búsqueda o limpia el filtro."
-                  : `No se registran órdenes previas de cambio de aceite para la placa ${
-                      placaVehiculo || "indicada"
-                    }. Puedes seleccionar un aceite directamente desde el catálogo.`}
+                  : `No se registran órdenes previas de cambio de aceite para la placa ${placaVehiculo || "indicada"
+                  }. Puedes seleccionar un aceite directamente desde el catálogo.`}
               </p>
               <div className="pt-2 flex items-center justify-center gap-2">
                 <a
@@ -344,22 +343,21 @@ export default function ModalHistorialCambiosAceite({
               return (
                 <div
                   key={cambio.id || `cambio_${index}`}
-                  className={`p-4 rounded-2xl border transition-all ${
-                    esElMasReciente
+                  className={`p-4 rounded-2xl border transition-all ${esElMasReciente
                       ? "bg-blue-50/40 dark:bg-blue-500/[0.04] border-blue-200 dark:border-blue-500/25 shadow-xs"
                       : "bg-white dark:bg-white/[0.02] border-zinc-200 dark:border-white/10 shadow-2xs"
-                  }`}
+                    }`}
                 >
                   {/* Encabezado del registro histórico */}
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-zinc-200/70 dark:border-white/5">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-xs font-bold text-zinc-900 dark:text-white flex items-center gap-1.5">
+                      <span className="text-xs font-normal text-zinc-900 dark:text-white flex items-center gap-1.5">
                         <span>📅</span>
                         <span>{cambio.fecha}</span>
                       </span>
 
                       {esElMasReciente && (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-300 border border-blue-300 dark:border-blue-400/30">
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-normal bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-300 border border-blue-300 dark:border-blue-400/30">
                           Último
                         </span>
                       )}
@@ -368,7 +366,7 @@ export default function ModalHistorialCambiosAceite({
                     {/* Kilometraje registrado en ese cambio */}
                     <div className="flex items-center gap-2 text-xs">
                       {cambio.kilometraje > 0 && (
-                        <span className="px-2 py-0.5 rounded-lg bg-zinc-100 dark:bg-white/10 font-bold font-sans text-zinc-800 dark:text-zinc-200">
+                        <span className="px-2 py-0.5 rounded-lg bg-zinc-100 dark:bg-white/10 font-normal font-sans text-zinc-800 dark:text-zinc-200">
                           {cambio.kilometraje.toLocaleString()} km
                         </span>
                       )}
@@ -390,16 +388,16 @@ export default function ModalHistorialCambiosAceite({
                       <span className="text-xl shrink-0 mt-0.5">🛢️</span>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-baseline justify-between gap-1">
-                          <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
+                          <span className="text-[10px] font-normal uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
                             Aceite
                           </span>
                           {cambio.aceite?.viscosidad && (
-                            <span className="px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300 font-bold text-[10px]">
+                            <span className="px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300 font-normal text-[10px]">
                               {cambio.aceite.viscosidad}
                             </span>
                           )}
                         </div>
-                        <p className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-white truncate mt-0.5">
+                        <p className="text-xs sm:text-sm font-normal text-zinc-900 dark:text-white truncate mt-0.5">
                           {cambio.aceite?.nombre || "Aceite estándar"}
                         </p>
                         <div className="mt-1 flex items-center justify-between text-[11px] text-zinc-500 dark:text-zinc-400">
@@ -416,14 +414,14 @@ export default function ModalHistorialCambiosAceite({
                       <span className="text-xl shrink-0 mt-0.5">⚙️</span>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-baseline justify-between gap-1">
-                          <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
+                          <span className="text-[10px] font-normal uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
                             Filtro
                           </span>
-                          <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
+                          <span className="text-[10px] font-normal text-emerald-600 dark:text-emerald-400">
                             ✓ OK
                           </span>
                         </div>
-                        <p className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-white truncate mt-0.5">
+                        <p className="text-xs sm:text-sm font-normal text-zinc-900 dark:text-white truncate mt-0.5">
                           {cambio.filtro?.nombre || "Filtro de Aceite"}
                         </p>
                         <div className="mt-1 flex items-center justify-between text-[11px] text-zinc-500 dark:text-zinc-400">
@@ -438,33 +436,33 @@ export default function ModalHistorialCambiosAceite({
                   {/* Servicios adicionales o fluidos revisados */}
                   {((cambio.otrosFluidos && cambio.otrosFluidos.length > 0) ||
                     (cambio.serviciosTexto && cambio.serviciosTexto.length > 0)) && (
-                    <div className="pt-1 pb-2 flex items-center gap-1.5 flex-wrap text-[11px]">
-                      <span className="text-zinc-400 dark:text-zinc-500 font-medium">
-                        Otros:
-                      </span>
-                      {cambio.otrosFluidos?.map((f, i) => (
-                        <span
-                          key={`f_${i}`}
-                          className="px-2 py-0.5 rounded-lg bg-zinc-100 dark:bg-white/5 text-zinc-700 dark:text-zinc-300 font-medium"
-                        >
-                          {f.nombre}
+                      <div className="pt-1 pb-2 flex items-center gap-1.5 flex-wrap text-[11px]">
+                        <span className="text-zinc-400 dark:text-zinc-500 font-medium">
+                          Otros:
                         </span>
-                      ))}
-                      {cambio.serviciosTexto?.map((s, i) => (
-                        <span
-                          key={`s_${i}`}
-                          className="px-2 py-0.5 rounded-lg bg-zinc-100 dark:bg-white/5 text-zinc-700 dark:text-zinc-300 font-medium"
-                        >
-                          {s}
-                        </span>
-                      ))}
-                    </div>
-                  )}
+                        {cambio.otrosFluidos?.map((f, i) => (
+                          <span
+                            key={`f_${i}`}
+                            className="px-2 py-0.5 rounded-lg bg-zinc-100 dark:bg-white/5 text-zinc-700 dark:text-zinc-300 font-medium"
+                          >
+                            {f.nombre}
+                          </span>
+                        ))}
+                        {cambio.serviciosTexto?.map((s, i) => (
+                          <span
+                            key={`s_${i}`}
+                            className="px-2 py-0.5 rounded-lg bg-zinc-100 dark:bg-white/5 text-zinc-700 dark:text-zinc-300 font-medium"
+                          >
+                            {s}
+                          </span>
+                        ))}
+                      </div>
+                    )}
 
                   {/* Pie de la tarjeta con Mecánico y Botón de Repetir Cambio */}
                   <div className="pt-2.5 border-t border-zinc-200/60 dark:border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
                     <div className="flex items-center gap-2 text-[11px] text-zinc-500 dark:text-zinc-400">
-                      <span>Técnico: <strong className="text-zinc-700 dark:text-zinc-200 font-semibold">{cambio.mecanico || "Técnico"}</strong></span>
+                      <span>Técnico: <span className="text-zinc-700 dark:text-zinc-200 font-normal">{cambio.mecanico || "Técnico"}</span></span>
                     </div>
 
                     {tieneProductos && (

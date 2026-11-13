@@ -408,8 +408,10 @@ export async function POST(req: NextRequest) {
     }
 
     if (action === "start") {
-      // Pre-calentar daemon de transcripción mientras el usuario graba
-      ensureWarmTranscriberDaemon();
+      if (!body?.skipTranscribe) {
+        // Pre-calentar daemon de transcripción mientras el usuario graba
+        ensureWarmTranscriberDaemon();
+      }
 
       // Detener cualquier grabación previa huérfana
       for (const [oldId, oldRec] of activeMap.entries()) {
@@ -522,7 +524,7 @@ export async function POST(req: NextRequest) {
       }
 
       const wavBuffer = fs.readFileSync(rec.wavPath);
-      const transcribedText = await transcribeWavFast(rec.wavPath);
+      const transcribedText = body?.skipTranscribe ? "" : await transcribeWavFast(rec.wavPath);
 
       try {
         fs.unlinkSync(rec.wavPath);
