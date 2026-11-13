@@ -11,6 +11,7 @@ interface ModalPresupuestoPdfProps {
   tallerDireccion?: string;
   tallerTelefono?: string;
   tallerRuc?: string;
+  onAprobar?: () => void;
 }
 
 export default function ModalPresupuestoPdf({
@@ -21,6 +22,7 @@ export default function ModalPresupuestoPdf({
   tallerDireccion = "Av. Principal y Panamericana Norte",
   tallerTelefono = "+593 99 999 9999",
   tallerRuc = "1790000000001",
+  onAprobar,
 }: ModalPresupuestoPdfProps) {
   React.useEffect(() => {
     if (abierto) {
@@ -36,6 +38,19 @@ export default function ModalPresupuestoPdf({
   }, [abierto]);
 
   if (!abierto || !orden) return null;
+
+  const qs = String(orden.quoteStatus || "").trim().toLowerCase();
+  const st = String(orden.status || "").trim().toLowerCase();
+  const esPropuestaAprobada =
+    qs.includes("aprob") ||
+    qs.includes("acept") ||
+    qs === "pagado" ||
+    qs === "facturado" ||
+    st.includes("aprob") ||
+    st === "en_caja" ||
+    st === "pagado" ||
+    st === "facturado" ||
+    Boolean((orden as any).hasPriceAuthorized);
 
   const rawItems: OrderItem[] =
     orden.items && orden.items.length > 0
@@ -329,15 +344,13 @@ export default function ModalPresupuestoPdf({
               {fechaEmision}
             </span>
             <div className="mt-1 flex items-center justify-start sm:justify-end">
-              {orden.quoteStatus === "Aprobado" ||
-                orden.status === "Aprobado" ||
-                orden.quoteStatus === "ACEPTADO" ? (
+              {esPropuestaAprobada ? (
                 <span className="px-2.5 py-0.5 rounded-md bg-emerald-50 border border-emerald-300 text-emerald-800 text-sm font-normal">
                   Aprobado
                 </span>
               ) : (
                 <span className="px-2.5 py-0.5 rounded-md bg-amber-50 border border-amber-300 text-amber-800 text-sm font-normal">
-                  Pendiente
+                  En Espera
                 </span>
               )}
             </div>
@@ -529,14 +542,6 @@ export default function ModalPresupuestoPdf({
             className="h-10 px-5 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-sm font-normal text-zinc-700 transition-all cursor-pointer"
           >
             Cerrar
-          </button>
-
-          <button
-            type="button"
-            onClick={handleImprimir}
-            className="h-10 px-6 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-sm font-normal transition-all cursor-pointer flex items-center gap-2 shadow-md shadow-blue-600/20 active:scale-95"
-          >
-            <span>Descargar</span>
           </button>
         </div>
       </div>

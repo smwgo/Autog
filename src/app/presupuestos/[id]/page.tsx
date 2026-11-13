@@ -269,6 +269,7 @@ export default function PaginaDetallePropuesta() {
   const [fotoZoom, setFotoZoom] = useState<string | null>(null);
   const [esAprobadoLocal, setEsAprobadoLocal] = useState<boolean | null>(null);
   const [esPagadoLocal, setEsPagadoLocal] = useState<boolean | null>(null);
+  const [esPausadoLocal, setEsPausadoLocal] = useState<boolean | null>(null);
   const [cambiandoEstado, setCambiandoEstado] = useState(false);
   const [subiendoFoto, setSubiendoFoto] = useState(false);
   const [subiendoFotoCliente, setSubiendoFotoCliente] = useState(false);
@@ -1813,6 +1814,7 @@ export default function PaginaDetallePropuesta() {
   }
 
   const esPagado = esPagadoLocal !== null ? esPagadoLocal : (orden.quoteStatus === "Pagado" || orden.status === "Pagado");
+  const esPausado = esPausadoLocal !== null ? esPausadoLocal : (orden.status === "Pausada");
   const esAprobado = esAprobadoLocal !== null ? esAprobadoLocal : (orden.quoteStatus === "Aprobado" || orden.status === "EN_CAJA");
 
   const limpiarNumeroOrden = (val?: string | number | null) => {
@@ -1826,7 +1828,7 @@ export default function PaginaDetallePropuesta() {
 
   const handleToggleEstado = async () => {
     if (cambiandoEstado) return;
-    const nuevoEstado = esAprobado ? "Pendiente" : "Aprobado";
+    const nuevoEstado = esAprobado && !esPausado ? "Pendiente" : "Aprobado";
     try {
       setCambiandoEstado(true);
       const res = await fetch("/api/presupuestos/estado", {
@@ -1836,9 +1838,43 @@ export default function PaginaDetallePropuesta() {
       });
       if (res.ok) {
         setEsAprobadoLocal(nuevoEstado === "Aprobado");
-        mostrarToast(`Estado: ${nuevoEstado === "Aprobado" ? "Aprobado" : "En Espera"}`);
+        if (nuevoEstado === "Aprobado") setEsPausadoLocal(false);
+        mostrarToast(
+          nuevoEstado === "Aprobado"
+            ? "Propuesta aprobada · Ya figura Trabajando en Taller"
+            : "Estado: En Espera"
+        );
       } else {
         mostrarToast("No se pudo cambiar el estado", "err");
+      }
+    } catch {
+      mostrarToast("Error de conexión al cambiar estado", "err");
+    } finally {
+      setCambiandoEstado(false);
+    }
+  };
+
+  const handleTogglePausa = async () => {
+    if (cambiandoEstado) return;
+    const nuevoEstado = esPausado ? "Aprobado" : "Pausada";
+    try {
+      setCambiandoEstado(true);
+      const res = await fetch("/api/presupuestos/estado", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderId: orden.id, quoteStatus: nuevoEstado }),
+      });
+      if (res.ok) {
+        const pausando = nuevoEstado === "Pausada";
+        setEsPausadoLocal(pausando);
+        if (!pausando) setEsAprobadoLocal(true);
+        mostrarToast(
+          pausando
+            ? "Orden en Pausa · Ya figura Pausada en Taller"
+            : "Orden reanudada · Ya figura Trabajando en Taller"
+        );
+      } else {
+        mostrarToast("No se pudo cambiar a Pausa", "err");
       }
     } catch {
       mostrarToast("Error de conexión al cambiar estado", "err");
@@ -3588,6 +3624,36 @@ export default function PaginaDetallePropuesta() {
                 >
                   {guardando ? "Guardando..." : "Guardar"}
                 </button>
+
+                {!esPagado && (
+                  <>
+                    <button
+                      type="button"
+                      disabled={cambiandoEstado}
+                      onClick={handleToggleEstado}
+                      className={`h-10 px-4 rounded-xl border text-xs font-normal shadow-sm transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 ${
+                        esAprobado && !esPausado
+                          ? "bg-emerald-600 hover:bg-emerald-500 border-emerald-500 text-white"
+                          : "bg-emerald-500/15 hover:bg-emerald-500/25 border-emerald-500/35 text-emerald-700 dark:text-emerald-300"
+                      }`}
+                    >
+                      <span>{esAprobado && !esPausado ? "● Trabajando" : "✓ Aprobar"}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled={cambiandoEstado}
+                      onClick={handleTogglePausa}
+                      className={`h-10 px-4 rounded-xl border text-xs font-normal shadow-sm transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 ${
+                        esPausado
+                          ? "bg-amber-500 hover:bg-amber-400 border-amber-500 text-white"
+                          : "bg-amber-500/15 hover:bg-amber-500/25 border-amber-500/35 text-amber-700 dark:text-amber-300"
+                      }`}
+                    >
+                      <span>{esPausado ? "⏸ Pausada" : "⏸ Pausa"}</span>
+                    </button>
+                  </>
+                )}
 
                 <button
                   type="button"

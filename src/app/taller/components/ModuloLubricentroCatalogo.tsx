@@ -38,7 +38,8 @@ export interface ModuloLubricentroCatalogoProps {
   onGuardarDatosLubricentro?: (
     niveles: Record<string, EstadoNivelLubricentro>,
     nextOilChangeKm: number | null,
-    items: any[]
+    items: any[],
+    notes?: string
   ) => Promise<void>;
 }
 
@@ -741,6 +742,11 @@ export default function ModuloLubricentroCatalogo({
   const [mostrarModalHistorialAceite, setMostrarModalHistorialAceite] = useState(false);
   const [historialRemoto, setHistorialRemoto] = useState<{ history: any[]; orders: any[] } | null>(null);
   const [cargandoHistorialRemoto, setCargandoHistorialRemoto] = useState(false);
+  const [descripcionSolicitud, setDescripcionSolicitud] = useState<string>(() =>
+    String(ordenActiva?.notes || ordenActiva?.observations || "")
+  );
+  const [guardandoNotas, setGuardandoNotas] = useState(false);
+  const [notasGuardadasOk, setNotasGuardadasOk] = useState(false);
 
   // Selección múltiple de productos en la tienda
   const [productosSeleccionadosIds, setProductosSeleccionadosIds] = useState<string[]>([]);
@@ -885,6 +891,9 @@ export default function ModuloLubricentroCatalogo({
     setComponentesLubricentro(validComponents);
     setKilometrajeIngreso(String(ordenActiva?.mileage || ""));
     setProximoCambioKm(Number(ordenActiva?.nextOilChangeKm) || null);
+    if (ordenActiva?.notes || ordenActiva?.observations) {
+      setDescripcionSolicitud(String(ordenActiva.notes || ordenActiva.observations));
+    }
   }, [ordenActiva?.id]);
 
   useEffect(() => {
@@ -2478,7 +2487,7 @@ export default function ModuloLubricentroCatalogo({
     try {
       setGuardandoSeguimiento(true);
       if (onGuardarDatosLubricentro) {
-        await onGuardarDatosLubricentro(nivelesLubricentro, proximoCambioKm, itemsOrden);
+        await onGuardarDatosLubricentro(nivelesLubricentro, proximoCambioKm, itemsOrden, descripcionSolicitud);
       }
 
       const inspectionChecklist = {
@@ -2496,6 +2505,7 @@ export default function ModuloLubricentroCatalogo({
           mileage: kilometraje,
           nextOilChangeKm: proximoCambioKm,
           inspectionChecklist,
+          notes: descripcionSolicitud,
         }),
       });
       const data = await response.json();
@@ -3695,6 +3705,78 @@ export default function ModuloLubricentroCatalogo({
     return todosLosItemsSemaforo.slice(paginaSemaforo * itemsPorPagina, (paginaSemaforo + 1) * itemsPorPagina);
   }, [todosLosItemsSemaforo, paginaSemaforo]);
 
+  const sincronizarDescripcionConSemaforo = (
+    label: string,
+    estadoPrevio: SemaforoEstado,
+    nuevoEstado: SemaforoEstado
+  ) => {
+    setDescripcionSolicitud((prev) => {
+      const texto = prev || "";
+      const lineas = texto ? texto.split("\n") : [];
+      const labelEscapado = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const regexFila = new RegExp(`^[•\\-\\s]*(?:Cambiar|Revisar)?\\s*:?\\s*${labelEscapado}\\b`, "i");
+
+      // Filtrar la línea si existía previamente para este item
+      const lineasFiltradas = lineas.filter((l) => !regexFila.test(l.trim()));
+
+      if (nuevoEstado === "critico") {
+        lineasFiltradas.push(`• Cambiar ${label}`);
+      } else if (nuevoEstado === "atencion") {
+        lineasFiltradas.push(`• Revisar ${label}`);
+      }
+
+      return lineasFiltradas.join("\n").trim();
+    });
+  };
+
+  const handleGuardarNotas = async () => {
+    const orderId = ordenActiva?.id || ordenActiva?.orderId || ordenActiva?.orderNumber;
+    try {
+      setGuardandoNotas(true);
+      if (onGuardarDatosLubricentro) {
+        await onGuardarDatosLubricentro(
+          nivelesLubricentro,
+          proximoCambioKm,
+          itemsOrden,
+          descripcionSolicitud
+        );
+      }
+
+      if (orderId) {
+        const inspectionChecklist = {
+          ...(ordenActiva?.inspectionChecklist || {}),
+          lubricentroLevels: nivelesLubricentro,
+          lubricentroComponents: componentesLubricentro,
+          semaforoEstados,
+        };
+
+        const response = await fetch("/api/taller/operacion", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "ACTUALIZAR_ORDEN",
+            orderId,
+            notes: descripcionSolicitud,
+            inspectionChecklist,
+          }),
+        });
+        const data = await response.json();
+        if (!response.ok || !data.success) {
+          throw new Error(data.error || "No se pudo guardar la solicitud.");
+        }
+      }
+
+      setNotasGuardadasOk(true);
+      mostrarToast?.("✅ Solicitud guardada correctamente", "ok");
+      setTimeout(() => setNotasGuardadasOk(false), 2500);
+    } catch (e: any) {
+      console.error("Error al guardar solicitud de lubricentro:", e);
+      mostrarToast?.(e?.message || "Error al guardar la solicitud", "err");
+    } finally {
+      setGuardandoNotas(false);
+    }
+  };
+
   const handleAgregarItemManual = () => {
     const nombre = nuevoManualTexto.trim();
     if (!nombre) return;
@@ -3707,12 +3789,17 @@ export default function ModuloLubricentroCatalogo({
         detalle: `Inspección manual: ${nombre}`,
       },
     ]);
+    setSemaforoEstados((prev) => ({
+      ...prev,
+      [nuevoId]: "atencion",
+    }));
+    sincronizarDescripcionConSemaforo(nombre, "neutral", "atencion");
     setNuevoManualTexto('');
     // Desplazar automáticamente a la última página si el nuevo ítem queda en una página nueva
     const nuevoTotal = todosLosItemsSemaforo.length + 1;
     const nuevaPag = Math.floor((nuevoTotal - 1) / itemsPorPagina);
     setPaginaSemaforo(nuevaPag);
-    mostrarToast?.(`✅ Chequeo manual "${nombre}" agregado al semáforo`, 'ok');
+    mostrarToast?.(`✅ Chequeo manual "${nombre}" agregado al semáforo y al detalle solicitado`, 'ok');
   };
 
   const handleToggleSemaforoCirculo = (id: string, estadoForzado?: SemaforoEstado) => {
@@ -3734,6 +3821,8 @@ export default function ModuloLubricentroCatalogo({
       ...prev,
       [id]: siguiente,
     }));
+
+    sincronizarDescripcionConSemaforo(circulo.label, actual, siguiente);
 
     if (circulo.posItem) {
       if (siguiente === 'critico') {
@@ -4190,15 +4279,15 @@ export default function ModuloLubricentroCatalogo({
       )}
 
       {/* =====================================================================
-          DISEÑO BENTO GRID (PC: 3 TARJETAS INTELIGENTES / MÓVIL: VISTA LIMPIA)
+          DISEÑO BENTO GRID (PC: 2 TARJETAS INTELIGENTES / MÓVIL: VISTA LIMPIA)
           ===================================================================== */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-3.5 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-3.5 items-stretch">
 
         {/* ===================================================================
-            TARJETA 1: AUTO-SERVICIO DETECTADO (CERO BÚSQUEDA MANUAL)
+            TARJETA 1: AUTO-SERVICIO DETECTADO Y TRABAJO SOLICITADO
             =================================================================== */}
-        <div className="lg:col-span-5 rounded-2xl bg-white dark:bg-white/[0.03] border border-zinc-200/90 dark:border-white/10 p-3.5 sm:p-4 shadow-2xs flex flex-col justify-between min-h-[220px]">
-          <div>
+        <div className="lg:col-span-5 rounded-2xl bg-white dark:bg-white/[0.03] border border-zinc-200/90 dark:border-white/10 p-3.5 sm:p-4 shadow-2xs flex flex-col justify-between">
+          <div className="space-y-2.5">
             {/* Kilometraje normal y legible */}
             <div className="p-3 rounded-xl bg-zinc-50 dark:bg-black/20 border border-zinc-200/70 dark:border-white/5">
               <div className="flex items-baseline justify-between gap-2">
@@ -4220,7 +4309,7 @@ export default function ModuloLubricentroCatalogo({
             {/* Acceso directo al historial de cambios de aceite */}
             <Link
               href={`/taller/historial-aceite?placa=${encodeURIComponent(ordenActiva?.plate || "")}&cliente=${encodeURIComponent(ordenActiva?.clientName || ordenActiva?.customerName || ordenActiva?.client || "")}&vehiculo=${encodeURIComponent(ordenActiva?.vehicle || [ordenActiva?.vehicleBrand, ordenActiva?.vehicleModel].filter(Boolean).join(" ") || "")}`}
-              className="mt-2.5 p-2.5 rounded-xl bg-blue-50/70 dark:bg-blue-500/10 border border-blue-200/60 dark:border-blue-500/20 flex items-center justify-between hover:bg-blue-100/70 dark:hover:bg-blue-500/20 transition-all cursor-pointer group no-underline"
+              className="p-2.5 rounded-xl bg-blue-50/70 dark:bg-blue-500/10 border border-blue-200/60 dark:border-blue-500/20 flex items-center justify-between hover:bg-blue-100/70 dark:hover:bg-blue-500/20 transition-all cursor-pointer group no-underline"
               title="Abrir historial de aceites"
             >
               <span className="text-xs sm:text-sm font-bold text-blue-900 dark:text-blue-200 flex items-center gap-1.5">
@@ -4232,6 +4321,51 @@ export default function ModuloLubricentroCatalogo({
                 <span>→</span>
               </span>
             </Link>
+          </div>
+
+          {/* Área editable de descripción / trabajo solicitado con botón ✓ Guardar */}
+          <div className="mt-3 pt-3 border-t border-zinc-100 dark:border-white/5 flex flex-col gap-1.5 flex-1">
+            <div className="flex items-center justify-between gap-2">
+              <label className="text-xs font-bold text-zinc-800 dark:text-zinc-200 flex items-center gap-1.5">
+                <span>📝</span>
+                <span>Descripción de solicitud</span>
+              </label>
+              <div className="flex items-center gap-1.5">
+                {descripcionSolicitud.trim() && (
+                  <button
+                    type="button"
+                    onClick={() => setDescripcionSolicitud("")}
+                    className="text-[10px] font-medium text-zinc-400 hover:text-rose-500 transition-colors cursor-pointer"
+                    title="Limpiar texto"
+                  >
+                    Limpiar
+                  </button>
+                )}
+                {/* Botón ✓ Guardar */}
+                <button
+                  type="button"
+                  onClick={handleGuardarNotas}
+                  disabled={guardandoNotas}
+                  className={`h-7 px-3 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all shadow-xs active:scale-95 cursor-pointer disabled:opacity-50 border ${
+                    notasGuardadasOk
+                      ? "bg-emerald-50 dark:bg-emerald-500/15 border-emerald-300 dark:border-emerald-500/40 text-emerald-600 dark:text-emerald-300"
+                      : "bg-blue-50 hover:bg-blue-100/80 dark:bg-blue-500/15 dark:hover:bg-blue-500/25 border-blue-200 dark:border-blue-500/30 text-blue-600 dark:text-blue-400"
+                  }`}
+                  title="Guardar descripción"
+                >
+                  <span className="font-bold">✓</span>
+                  <span>{guardandoNotas ? "Guardando..." : notasGuardadasOk ? "Guardado" : "Guardar"}</span>
+                </button>
+              </div>
+            </div>
+            <textarea
+              value={descripcionSolicitud}
+              onChange={(e) => setDescripcionSolicitud(e.target.value)}
+              onBlur={handleGuardarNotas}
+              placeholder="Escribe lo que se necesita realizar en el vehículo..."
+              rows={3}
+              className="w-full rounded-xl bg-zinc-50 dark:bg-black/20 border border-zinc-200/80 dark:border-white/10 p-2.5 text-xs text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 transition-all resize-none min-h-[72px] flex-1"
+            />
           </div>
         </div>
 
@@ -4263,7 +4397,6 @@ export default function ModuloLubricentroCatalogo({
                 <span>＋</span>
                 <span>Manual</span>
               </button>
-
               {/* Flechas de paginación para ver más iconos (9 en cada página) */}
               <div className="flex items-center gap-0.5 bg-zinc-100 dark:bg-white/5 p-0.5 rounded-lg border border-zinc-200/80 dark:border-white/10 shadow-2xs">
                 <button
@@ -4343,10 +4476,8 @@ export default function ModuloLubricentroCatalogo({
               touchStartXRef.current = null;
               if (Math.abs(diffX) > 40) {
                 if (diffX > 0) {
-                  // Deslizar izquierda -> siguiente página
                   setPaginaSemaforo((prev) => Math.min(totalPaginas - 1, prev + 1));
                 } else {
-                  // Deslizar derecha -> página previa
                   setPaginaSemaforo((prev) => Math.max(0, prev - 1));
                 }
               }

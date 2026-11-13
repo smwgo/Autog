@@ -230,22 +230,22 @@ function NuevoVehiculoContent() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-zinc-950 text-white font-sans selection:bg-blue-600 selection:text-white pb-24 md:pb-0">
+    <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-white font-sans selection:bg-blue-600 selection:text-white pb-24 md:pb-0 transition-colors">
       <Header />
 
       <main className="flex-grow flex items-start sm:items-center justify-center p-3 sm:p-6 md:p-12 relative overflow-y-auto pb-12 sm:pb-8">
         {/* Glow de fondo ambiental sutil */}
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[320px] sm:w-[800px] h-[250px] sm:h-[450px] bg-blue-600/15 blur-[100px] sm:blur-[140px] pointer-events-none rounded-full" />
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[320px] sm:w-[800px] h-[250px] sm:h-[450px] bg-blue-500/10 dark:bg-blue-600/15 blur-[100px] sm:blur-[140px] pointer-events-none rounded-full" />
 
         {/* Card Contenedor Estilo Onboarding */}
-        <div className="relative w-full max-w-4xl lg:max-w-5xl bg-zinc-900/95 border border-zinc-800/80 rounded-2xl sm:rounded-3xl p-4 sm:p-8 md:p-12 shadow-2xl backdrop-blur-xl my-2 sm:my-auto">
+        <div className="relative w-full max-w-4xl lg:max-w-5xl bg-white dark:bg-zinc-900/95 border border-zinc-200 dark:border-zinc-800/80 rounded-2xl sm:rounded-3xl p-4 sm:p-8 md:p-12 shadow-xl dark:shadow-2xl backdrop-blur-xl my-2 sm:my-auto">
           {/* Header Superior */}
           <div className="flex items-center justify-between gap-3 mb-4 sm:mb-6">
             <div className="flex items-center gap-3">
               {paso === 1 ? (
                 <Link
                   href="/pos/vehiculos"
-                  className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-zinc-400 hover:text-white bg-zinc-800/50 hover:bg-zinc-800 active:scale-95 transition-all"
+                  className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800/50 dark:hover:bg-zinc-800 active:scale-95 transition-all"
                   title="Volver a Vehículos"
                   aria-label="Volver"
                 >
@@ -257,7 +257,7 @@ function NuevoVehiculoContent() {
                 <button
                   type="button"
                   onClick={() => setPaso(1)}
-                  className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-zinc-400 hover:text-white bg-zinc-800/50 hover:bg-zinc-800 active:scale-95 transition-all cursor-pointer"
+                  className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800/50 dark:hover:bg-zinc-800 active:scale-95 transition-all cursor-pointer"
                   title="Volver al paso anterior"
                   aria-label="Volver al paso anterior"
                 >
@@ -266,7 +266,7 @@ function NuevoVehiculoContent() {
                   </svg>
                 </button>
               )}
-              <h1 className="text-base sm:text-xl font-medium text-white tracking-tight">
+              <h1 className="text-base sm:text-xl font-bold text-zinc-900 dark:text-white tracking-tight">
                 {editId
                   ? paso === 1
                     ? "Editar Vehículo"
@@ -279,7 +279,7 @@ function NuevoVehiculoContent() {
 
             <Link
               href="/pos/vehiculos"
-              className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-zinc-400 hover:text-white bg-zinc-800/50 hover:bg-zinc-800 active:scale-95 transition-all"
+              className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800/50 dark:hover:bg-zinc-800 active:scale-95 transition-all"
               title="Cerrar y volver a Vehículos"
             >
               ✕
@@ -292,18 +292,18 @@ function NuevoVehiculoContent() {
               <div className="h-1.5 flex-1 rounded-full bg-blue-600 transition-all duration-300" />
               <div
                 className={`h-1.5 flex-1 rounded-full transition-all duration-300 ${
-                  paso === 2 ? "bg-blue-600" : "bg-zinc-800"
+                  paso === 2 ? "bg-blue-600" : "bg-zinc-200 dark:bg-zinc-800"
                 }`}
               />
             </div>
-            <span className="text-xs font-mono text-zinc-400 shrink-0 font-medium">
+            <span className="text-xs font-mono text-zinc-500 dark:text-zinc-400 shrink-0 font-medium">
               {paso} de 2
             </span>
           </div>
 
           {/* Mensaje de error si ocurre */}
           {errorMsg && (
-            <div className="mb-4 sm:mb-6 p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-red-950/50 border border-red-800/60 text-red-300 text-xs sm:text-sm flex items-center gap-2">
+            <div className="mb-4 sm:mb-6 p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-rose-50 dark:bg-red-950/50 border border-rose-200 dark:border-red-800/60 text-rose-700 dark:text-red-300 text-xs sm:text-sm flex items-center gap-2">
               <span>⚠️</span>
               <span>{errorMsg}</span>
             </div>
@@ -311,8 +311,8 @@ function NuevoVehiculoContent() {
 
           {cargando ? (
             <div className="py-20 text-center">
-              <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-              <p className="text-zinc-400 text-sm">Cargando datos del vehículo...</p>
+              <div className="w-8 h-8 border-2 border-blue-600 dark:border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+              <p className="text-zinc-500 dark:text-zinc-400 text-sm">Cargando datos del vehículo...</p>
             </div>
           ) : (
             <>
@@ -321,7 +321,7 @@ function NuevoVehiculoContent() {
                 <form onSubmit={handleSiguiente} className="space-y-4 sm:space-y-6 animate-in fade-in duration-300">
                   {/* Selector de Tipo de Vehículo */}
                   <div>
-                    <p className="text-xs sm:text-sm font-semibold text-zinc-200 mb-2.5 sm:mb-3">
+                    <p className="text-xs sm:text-sm font-semibold text-zinc-800 dark:text-zinc-200 mb-2.5 sm:mb-3">
                       Tipo de Vehículo
                     </p>
 
@@ -382,35 +382,35 @@ function NuevoVehiculoContent() {
                           onClick={() => setTipoVehiculo(item.id as any)}
                           className={`p-3 sm:p-4 rounded-xl sm:rounded-2xl border text-left flex items-center gap-2.5 sm:gap-3.5 transition-all duration-200 cursor-pointer active:scale-[0.98] ${
                             tipoVehiculo === item.id
-                              ? "bg-blue-500/10 border-blue-500 text-white shadow-md shadow-blue-500/10 ring-1 ring-blue-500/30"
-                              : "bg-white/[0.03] hover:bg-white/[0.06] border-white/10 hover:border-white/20 text-zinc-300"
+                              ? "bg-blue-50 dark:bg-blue-500/10 border-blue-600 dark:border-blue-500 text-blue-700 dark:text-white shadow-xs dark:shadow-md dark:shadow-blue-500/10 ring-1 ring-blue-500/30"
+                              : "bg-zinc-50 hover:bg-zinc-100/80 border-zinc-200 hover:border-zinc-300 dark:bg-white/[0.03] dark:hover:bg-white/[0.06] dark:border-white/10 dark:hover:border-white/20 text-zinc-700 dark:text-zinc-300"
                           }`}
                         >
                           <div
                             className={`w-8 h-8 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl flex items-center justify-center shrink-0 ${
                               tipoVehiculo === item.id
-                                ? "bg-blue-500/20 text-blue-400"
-                                : "bg-white/[0.05] text-zinc-400"
+                                ? "bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400"
+                                : "bg-zinc-200/70 dark:bg-white/[0.05] text-zinc-500 dark:text-zinc-400"
                             }`}
                           >
                             {item.icon}
                           </div>
-                          <span className="font-medium text-xs sm:text-sm">{item.label}</span>
+                          <span className="font-semibold text-xs sm:text-sm">{item.label}</span>
                         </button>
                       ))}
                     </div>
                   </div>
 
-                  {/* Bloque de Formulario con la estética exacta */}
-                  <div className="space-y-3.5 sm:space-y-4 p-3.5 sm:p-5 rounded-xl sm:rounded-2xl bg-zinc-950/60 border border-zinc-800/80">
+                  {/* Bloque de Formulario con la estética limpia */}
+                  <div className="space-y-3.5 sm:space-y-4 p-3.5 sm:p-5 rounded-xl sm:rounded-2xl bg-zinc-50/80 dark:bg-zinc-950/60 border border-zinc-200 dark:border-zinc-800/80">
                     {/* Foto del Vehículo */}
                     <div className="flex justify-center py-1">
                       <div className="relative group">
                         <label
-                          className={`relative w-44 sm:w-52 h-28 sm:h-32 rounded-2xl bg-zinc-950 border-2 border-dashed ${
+                          className={`relative w-44 sm:w-52 h-28 sm:h-32 rounded-2xl bg-white dark:bg-zinc-950 border-2 border-dashed ${
                             fotoVehiculo
-                              ? "border-blue-500/50"
-                              : "border-zinc-800 hover:border-blue-500"
+                              ? "border-blue-500"
+                              : "border-zinc-300 dark:border-zinc-800 hover:border-blue-500"
                           } flex flex-col items-center justify-center overflow-hidden shadow-xs cursor-pointer transition-all duration-200 active:scale-95 ${
                             subiendoFotoVehiculo ? "opacity-60 pointer-events-none" : ""
                           }`}
@@ -431,7 +431,7 @@ function NuevoVehiculoContent() {
                               <img
                                 src={fotoVehiculo}
                                 alt="Vehículo"
-                                className="w-full h-full object-cover"
+                                className="w-full h-full object-contain p-1"
                               />
                               <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white backdrop-blur-[1px]">
                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -441,8 +441,9 @@ function NuevoVehiculoContent() {
                               </div>
                             </>
                           ) : (
-                            <div className="flex flex-col items-center justify-center text-zinc-500 group-hover:text-blue-400 transition-colors">
+                            <div className="flex flex-col items-center justify-center text-zinc-400 dark:text-zinc-500 group-hover:text-blue-500 transition-colors">
                               <span className="text-3xl">🚗</span>
+                              <span className="text-[11px] font-medium text-zinc-400 dark:text-zinc-500 mt-1">Subir foto</span>
                             </div>
                           )}
                         </label>
@@ -466,7 +467,7 @@ function NuevoVehiculoContent() {
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4">
                       <div>
-                        <label className="block text-xs font-semibold text-zinc-300 mb-1.5">
+                        <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5">
                           Placa del Vehículo <span className="text-rose-500">*</span>
                         </label>
                         <input
@@ -475,13 +476,13 @@ function NuevoVehiculoContent() {
                           placeholder="ABC-1234"
                           value={placa}
                           onChange={(e) => setPlaca(e.target.value)}
-                          className="w-full h-11 sm:h-12 px-3.5 sm:px-4 rounded-xl border border-zinc-800 bg-zinc-900 text-base sm:text-sm text-white font-mono uppercase font-bold placeholder-zinc-500 outline-none focus:border-blue-500 transition-colors"
+                          className="w-full h-11 sm:h-12 px-3.5 sm:px-4 rounded-xl border border-zinc-300 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-base sm:text-sm text-zinc-900 dark:text-white font-mono uppercase font-bold placeholder-zinc-400 dark:placeholder-zinc-500 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
                           required
                         />
                       </div>
 
                       <div>
-                        <label className="block text-xs font-semibold text-zinc-300 mb-1.5">
+                        <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5">
                           Marca <span className="text-rose-500">*</span>
                         </label>
                         <input
@@ -490,7 +491,7 @@ function NuevoVehiculoContent() {
                           placeholder="Toyota, Chevrolet, Hyundai..."
                           value={marca}
                           onChange={(e) => setMarca(e.target.value)}
-                          className="w-full h-11 sm:h-12 px-3.5 sm:px-4 rounded-xl border border-zinc-800 bg-zinc-900 text-base sm:text-sm text-white placeholder-zinc-500 outline-none focus:border-blue-500 transition-colors"
+                          className="w-full h-11 sm:h-12 px-3.5 sm:px-4 rounded-xl border border-zinc-300 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-base sm:text-sm text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
                           required
                         />
                       </div>
@@ -498,7 +499,7 @@ function NuevoVehiculoContent() {
 
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 sm:gap-4">
                       <div>
-                        <label className="block text-xs font-semibold text-zinc-300 mb-1.5">
+                        <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5">
                           Modelo <span className="text-rose-500">*</span>
                         </label>
                         <input
@@ -507,14 +508,14 @@ function NuevoVehiculoContent() {
                           placeholder="Hilux, D-Max, Tucson..."
                           value={modelo}
                           onChange={(e) => setModelo(e.target.value)}
-                          className="w-full h-11 sm:h-12 px-3.5 sm:px-4 rounded-xl border border-zinc-800 bg-zinc-900 text-base sm:text-sm text-white placeholder-zinc-500 outline-none focus:border-blue-500 transition-colors"
+                          className="w-full h-11 sm:h-12 px-3.5 sm:px-4 rounded-xl border border-zinc-300 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-base sm:text-sm text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
                           required
                         />
                       </div>
 
                       <div className="grid grid-cols-2 sm:col-span-2 sm:grid-cols-2 gap-3 sm:gap-4">
                         <div>
-                          <label className="block text-xs font-semibold text-zinc-300 mb-1.5">
+                          <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5">
                             Año
                           </label>
                           <input
@@ -523,18 +524,18 @@ function NuevoVehiculoContent() {
                             placeholder="2024"
                             value={anio}
                             onChange={(e) => setAnio(e.target.value)}
-                            className="w-full h-11 sm:h-12 px-3.5 sm:px-4 rounded-xl border border-zinc-800 bg-zinc-900 text-base sm:text-sm text-white placeholder-zinc-500 outline-none focus:border-blue-500 transition-colors"
+                            className="w-full h-11 sm:h-12 px-3.5 sm:px-4 rounded-xl border border-zinc-300 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-base sm:text-sm text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
                           />
                         </div>
 
                         <div>
-                          <label className="block text-xs font-semibold text-zinc-300 mb-1.5">
+                          <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5">
                             Combustible
                           </label>
                           <select
                             value={combustible}
                             onChange={(e) => setCombustible(e.target.value)}
-                            className="w-full h-11 sm:h-12 px-2.5 sm:px-3 rounded-xl border border-zinc-800 bg-zinc-900 text-base sm:text-sm text-white outline-none focus:border-blue-500 transition-colors cursor-pointer"
+                            className="w-full h-11 sm:h-12 px-2.5 sm:px-3 rounded-xl border border-zinc-300 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-base sm:text-sm text-zinc-900 dark:text-white outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all cursor-pointer"
                           >
                             <option value="Gasolina">Gasolina</option>
                             <option value="Diésel">Diésel</option>
@@ -548,7 +549,7 @@ function NuevoVehiculoContent() {
 
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 sm:gap-4">
                       <div>
-                        <label className="block text-xs font-semibold text-zinc-300 mb-1.5">
+                        <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5">
                           Kilometraje
                         </label>
                         <input
@@ -557,12 +558,12 @@ function NuevoVehiculoContent() {
                           placeholder="Ej. 45,000 km"
                           value={kilometraje}
                           onChange={(e) => setKilometraje(e.target.value)}
-                          className="w-full h-11 sm:h-12 px-3.5 sm:px-4 rounded-xl border border-zinc-800 bg-zinc-900 text-base sm:text-sm text-white placeholder-zinc-500 outline-none focus:border-blue-500 transition-colors"
+                          className="w-full h-11 sm:h-12 px-3.5 sm:px-4 rounded-xl border border-zinc-300 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-base sm:text-sm text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
                         />
                       </div>
 
                       <div>
-                        <label className="block text-xs font-semibold text-zinc-300 mb-1.5">
+                        <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5">
                           Color
                         </label>
                         <input
@@ -570,12 +571,12 @@ function NuevoVehiculoContent() {
                           placeholder="Blanco, Negro, Plata, Gris..."
                           value={color}
                           onChange={(e) => setColor(e.target.value)}
-                          className="w-full h-11 sm:h-12 px-3.5 sm:px-4 rounded-xl border border-zinc-800 bg-zinc-900 text-base sm:text-sm text-white placeholder-zinc-500 outline-none focus:border-blue-500 transition-colors"
+                          className="w-full h-11 sm:h-12 px-3.5 sm:px-4 rounded-xl border border-zinc-300 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-base sm:text-sm text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
                         />
                       </div>
 
                       <div>
-                        <label className="block text-xs font-semibold text-zinc-300 mb-1.5">
+                        <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5">
                           VIN / Chasis
                         </label>
                         <input
@@ -583,17 +584,17 @@ function NuevoVehiculoContent() {
                           placeholder="Opcional (17 dígitos)"
                           value={vin}
                           onChange={(e) => setVin(e.target.value)}
-                          className="w-full h-11 sm:h-12 px-3.5 sm:px-4 rounded-xl border border-zinc-800 bg-zinc-900 text-base sm:text-sm text-white font-mono uppercase placeholder-zinc-500 outline-none focus:border-blue-500 transition-colors"
+                          className="w-full h-11 sm:h-12 px-3.5 sm:px-4 rounded-xl border border-zinc-300 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-base sm:text-sm text-zinc-900 dark:text-white font-mono uppercase placeholder-zinc-400 dark:placeholder-zinc-500 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
                         />
                       </div>
                     </div>
                   </div>
 
                   {/* Barra Inferior */}
-                  <div className="pt-5 sm:pt-6 border-t border-zinc-800/80 flex flex-col-reverse sm:flex-row items-center justify-between gap-2.5 sm:gap-4">
+                  <div className="pt-5 sm:pt-6 border-t border-zinc-200 dark:border-zinc-800/80 flex flex-col-reverse sm:flex-row items-center justify-between gap-2.5 sm:gap-4">
                     <Link
                       href="/pos/vehiculos"
-                      className="w-full sm:w-auto h-11 sm:h-12 px-5 rounded-xl border border-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-800/50 text-sm font-semibold transition-colors flex items-center justify-center gap-2"
+                      className="w-full sm:w-auto h-11 sm:h-12 px-5 rounded-xl border border-zinc-300 dark:border-zinc-800 text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:text-white dark:hover:bg-zinc-800/50 text-sm font-semibold transition-colors flex items-center justify-center gap-2"
                     >
                       <span>Cancelar</span>
                     </Link>
@@ -614,7 +615,7 @@ function NuevoVehiculoContent() {
                 <div className="space-y-4 sm:space-y-6 animate-in fade-in duration-300">
                   {/* Selector Toggle: Cliente o Omitir */}
                   <div>
-                    <p className="text-xs sm:text-sm font-semibold text-zinc-200 mb-2.5 sm:mb-3">
+                    <p className="text-xs sm:text-sm font-semibold text-zinc-800 dark:text-zinc-200 mb-2.5 sm:mb-3">
                       Propietario / Cliente
                     </p>
 
@@ -624,22 +625,22 @@ function NuevoVehiculoContent() {
                         onClick={() => setAsociarCliente(true)}
                         className={`p-3 sm:p-4 rounded-xl sm:rounded-2xl border text-left flex items-center gap-2.5 sm:gap-3.5 transition-all duration-200 cursor-pointer active:scale-[0.98] ${
                           asociarCliente
-                            ? "bg-blue-500/10 border-blue-500 text-white shadow-md shadow-blue-500/10 ring-1 ring-blue-500/30"
-                            : "bg-white/[0.03] hover:bg-white/[0.06] border-white/10 hover:border-white/20 text-zinc-300"
+                            ? "bg-blue-50 dark:bg-blue-500/10 border-blue-600 dark:border-blue-500 text-blue-700 dark:text-white shadow-xs dark:shadow-md dark:shadow-blue-500/10 ring-1 ring-blue-500/30"
+                            : "bg-zinc-50 hover:bg-zinc-100/80 border-zinc-200 hover:border-zinc-300 dark:bg-white/[0.03] dark:hover:bg-white/[0.06] dark:border-white/10 dark:hover:border-white/20 text-zinc-700 dark:text-zinc-300"
                         }`}
                       >
                         <div
                           className={`w-8 h-8 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl flex items-center justify-center transition-colors shrink-0 ${
                             asociarCliente
-                              ? "bg-blue-500/20 text-blue-400"
-                              : "bg-white/[0.05] text-zinc-400"
+                              ? "bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400"
+                              : "bg-zinc-200/70 dark:bg-white/[0.05] text-zinc-500 dark:text-zinc-400"
                           }`}
                         >
                           <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                           </svg>
                         </div>
-                        <span className="font-medium text-xs sm:text-sm text-white">Asignar Propietario</span>
+                        <span className="font-semibold text-xs sm:text-sm text-zinc-900 dark:text-white">Asignar Propietario</span>
                       </button>
 
                       <button
@@ -647,38 +648,38 @@ function NuevoVehiculoContent() {
                         onClick={() => setAsociarCliente(false)}
                         className={`p-3 sm:p-4 rounded-xl sm:rounded-2xl border text-left flex items-center gap-2.5 sm:gap-3.5 transition-all duration-200 cursor-pointer active:scale-[0.98] ${
                           !asociarCliente
-                            ? "bg-blue-500/10 border-blue-500 text-white shadow-md shadow-blue-500/10 ring-1 ring-blue-500/30"
-                            : "bg-white/[0.03] hover:bg-white/[0.06] border-white/10 hover:border-white/20 text-zinc-300"
+                            ? "bg-blue-50 dark:bg-blue-500/10 border-blue-600 dark:border-blue-500 text-blue-700 dark:text-white shadow-xs dark:shadow-md dark:shadow-blue-500/10 ring-1 ring-blue-500/30"
+                            : "bg-zinc-50 hover:bg-zinc-100/80 border-zinc-200 hover:border-zinc-300 dark:bg-white/[0.03] dark:hover:bg-white/[0.06] dark:border-white/10 dark:hover:border-white/20 text-zinc-700 dark:text-zinc-300"
                         }`}
                       >
                         <div
                           className={`w-8 h-8 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl flex items-center justify-center transition-colors shrink-0 ${
                             !asociarCliente
-                              ? "bg-blue-500/20 text-blue-400"
-                              : "bg-white/[0.05] text-zinc-400"
+                              ? "bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400"
+                              : "bg-zinc-200/70 dark:bg-white/[0.05] text-zinc-500 dark:text-zinc-400"
                           }`}
                         >
                           <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M13 5l7 7-7 7M5 5l7 7-7 7" />
                           </svg>
                         </div>
-                        <span className="font-medium text-xs sm:text-sm text-white">Omitir (Cliente Mostrador)</span>
+                        <span className="font-semibold text-xs sm:text-sm text-zinc-900 dark:text-white">Omitir (Cliente Mostrador)</span>
                       </button>
                     </div>
                   </div>
 
                   {asociarCliente && (
-                    <div className="space-y-3.5 sm:space-y-4 p-3.5 sm:p-5 rounded-xl sm:rounded-2xl bg-zinc-950/60 border border-zinc-800/80 animate-in fade-in duration-200">
+                    <div className="space-y-3.5 sm:space-y-4 p-3.5 sm:p-5 rounded-xl sm:rounded-2xl bg-zinc-50/80 dark:bg-zinc-950/60 border border-zinc-200 dark:border-zinc-800/80 animate-in fade-in duration-200">
                       {/* Selector de Cliente Existente */}
                       {clientesDisponibles.length > 0 && (
                         <div>
-                          <label className="block text-xs font-semibold text-zinc-300 mb-1.5">
+                          <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5">
                             Seleccionar Cliente Existente (Opcional)
                           </label>
                           <select
                             value={clienteSeleccionadoId}
                             onChange={(e) => handleSelectClienteExistente(e.target.value)}
-                            className="w-full h-11 sm:h-12 px-3.5 sm:px-4 rounded-xl border border-zinc-800 bg-zinc-900 text-base sm:text-sm text-white outline-none focus:border-blue-500 transition-colors cursor-pointer"
+                            className="w-full h-11 sm:h-12 px-3.5 sm:px-4 rounded-xl border border-zinc-300 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-base sm:text-sm text-zinc-900 dark:text-white outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all cursor-pointer"
                           >
                             <option value="">-- Escribir nuevo o elegir de la lista --</option>
                             {clientesDisponibles.map((c) => (
@@ -692,7 +693,7 @@ function NuevoVehiculoContent() {
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4">
                         <div>
-                          <label className="block text-xs font-semibold text-zinc-300 mb-1.5">
+                          <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5">
                             Nombre del Propietario / Cliente <span className="text-rose-500">*</span>
                           </label>
                           <input
@@ -700,12 +701,12 @@ function NuevoVehiculoContent() {
                             placeholder="Juan Pérez o Empresa SA"
                             value={nombreCliente}
                             onChange={(e) => setNombreCliente(e.target.value)}
-                            className="w-full h-11 sm:h-12 px-3.5 sm:px-4 rounded-xl border border-zinc-800 bg-zinc-900 text-base sm:text-sm text-white placeholder-zinc-500 outline-none focus:border-blue-500 transition-colors"
+                            className="w-full h-11 sm:h-12 px-3.5 sm:px-4 rounded-xl border border-zinc-300 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-base sm:text-sm text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
                           />
                         </div>
 
                         <div>
-                          <label className="block text-xs font-semibold text-zinc-300 mb-1.5">
+                          <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5">
                             Teléfono / WhatsApp
                           </label>
                           <input
@@ -713,13 +714,13 @@ function NuevoVehiculoContent() {
                             placeholder="099 123 4567"
                             value={telefonoCliente}
                             onChange={(e) => setTelefonoCliente(e.target.value)}
-                            className="w-full h-11 sm:h-12 px-3.5 sm:px-4 rounded-xl border border-zinc-800 bg-zinc-900 text-base sm:text-sm text-white placeholder-zinc-500 outline-none focus:border-blue-500 transition-colors"
+                            className="w-full h-11 sm:h-12 px-3.5 sm:px-4 rounded-xl border border-zinc-300 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-base sm:text-sm text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
                           />
                         </div>
                       </div>
 
                       <div>
-                        <label className="block text-xs font-semibold text-zinc-300 mb-1.5">
+                        <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5">
                           Cédula / RUC / Identificación
                         </label>
                         <input
@@ -727,37 +728,37 @@ function NuevoVehiculoContent() {
                           placeholder="1724567890"
                           value={identificacionCliente}
                           onChange={(e) => setIdentificacionCliente(e.target.value)}
-                          className="w-full h-11 sm:h-12 px-3.5 sm:px-4 rounded-xl border border-zinc-800 bg-zinc-900 text-base sm:text-sm text-white placeholder-zinc-500 outline-none focus:border-blue-500 transition-colors"
+                          className="w-full h-11 sm:h-12 px-3.5 sm:px-4 rounded-xl border border-zinc-300 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-base sm:text-sm text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
                         />
                       </div>
                     </div>
                   )}
 
                   {/* Resumen previo del Vehículo registrado */}
-                  <div className="p-3.5 sm:p-4 rounded-xl sm:rounded-2xl bg-zinc-900/60 border border-zinc-800 flex items-center justify-between text-xs text-zinc-400">
+                  <div className="p-3.5 sm:p-4 rounded-xl sm:rounded-2xl bg-zinc-100/90 dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800 flex items-center justify-between text-xs text-zinc-600 dark:text-zinc-400">
                     <div className="flex items-center gap-2">
-                      <span className="font-mono uppercase font-bold text-blue-400 bg-blue-500/10 px-2.5 py-1 rounded-md border border-blue-500/20">
+                      <span className="font-mono uppercase font-bold text-blue-700 dark:text-blue-400 bg-blue-100 dark:bg-blue-500/10 px-2.5 py-1 rounded-md border border-blue-200 dark:border-blue-500/20">
                         {placa || "SIN PLACA"}
                       </span>
-                      <span className="font-semibold text-zinc-200">
+                      <span className="font-semibold text-zinc-800 dark:text-zinc-200">
                         {marca} {modelo} {anio ? `(${anio})` : ""}
                       </span>
                     </div>
                     <button
                       type="button"
                       onClick={() => setPaso(1)}
-                      className="text-blue-400 hover:text-blue-300 font-semibold cursor-pointer"
+                      className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-semibold cursor-pointer"
                     >
                       Editar vehículo
                     </button>
                   </div>
 
                   {/* Barra Inferior */}
-                  <div className="pt-5 sm:pt-6 border-t border-zinc-800/80 flex flex-col-reverse sm:flex-row items-center justify-between gap-2.5 sm:gap-4">
+                  <div className="pt-5 sm:pt-6 border-t border-zinc-200 dark:border-zinc-800/80 flex flex-col-reverse sm:flex-row items-center justify-between gap-2.5 sm:gap-4">
                     <button
                       type="button"
                       onClick={() => setPaso(1)}
-                      className="w-full sm:w-auto h-11 sm:h-12 px-5 rounded-xl border border-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-800/50 text-sm font-semibold transition-colors flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+                      className="w-full sm:w-auto h-11 sm:h-12 px-5 rounded-xl border border-zinc-300 dark:border-zinc-800 text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:text-white dark:hover:bg-zinc-800/50 text-sm font-semibold transition-colors flex items-center justify-center gap-2 cursor-pointer active:scale-95"
                     >
                       <span>&larr;</span>
                       <span>Atrás</span>
@@ -798,7 +799,7 @@ export default function NuevoVehiculoPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen flex items-center justify-center bg-zinc-950 text-white">
+        <div className="min-h-screen flex items-center justify-center bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-white">
           <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
         </div>
       }

@@ -26,6 +26,7 @@ interface OrderItem {
   totalCost?: number;
   isBilled?: boolean;
   billingStatus?: string;
+  quoteStatus?: string;
 }
 
 function esOrdenEnHistorial(ord: OrderItem): boolean {
@@ -61,8 +62,26 @@ function getEstadoSimplificado(ord: OrderItem) {
       dot: "bg-purple-500",
     };
   }
+  if ((ord.status || "").trim().toLowerCase() === "pausada") {
+    return {
+      label: "Pausada",
+      badge: "border-amber-500/30 text-amber-600 dark:text-amber-400 bg-amber-500/10",
+      dot: "bg-amber-500",
+    };
+  }
+  if (
+    (ord.quoteStatus || "").trim().toLowerCase() === "aprobado" ||
+    (ord.quoteStatus || "").trim().toLowerCase() === "aceptado" ||
+    (ord.status || "").trim().toLowerCase() === "aprobado"
+  ) {
+    return {
+      label: "Trabajando",
+      badge: "border-emerald-500/30 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10",
+      dot: "bg-emerald-500",
+    };
+  }
   return {
-    label: "En Orden",
+    label: "En Espera",
     badge: "border-amber-500/30 text-amber-600 dark:text-amber-400 bg-amber-500/10",
     dot: "bg-amber-500",
   };
@@ -178,6 +197,44 @@ export default function PosOrdenesPage() {
       mostrarToast(`Orden actualizada a: ${nuevoEstado}`);
     } catch (err: any) {
       mostrarToast(err.message || "Error al actualizar orden", "err");
+    } finally {
+      setGuardandoId(null);
+    }
+  };
+
+  // Aprobar (Trabajando) o Pausar orden desde POS para sincronizar con Taller
+  const handleSincronizarEstadoTaller = async (ord: OrderItem, nuevoEstado: "Aprobado" | "Pausada") => {
+    const targetId = ord.dbId || ord.id || ord.orderNumber;
+    if (!targetId) return;
+    try {
+      setGuardandoId(targetId);
+      const res = await fetch("/api/presupuestos/estado", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderId: targetId, quoteStatus: nuevoEstado }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "No se pudo sincronizar estado con Taller");
+      }
+      setOrders((prev) =>
+        prev.map((o) =>
+          o.id === ord.id || o.dbId === ord.dbId
+            ? {
+                ...o,
+                status: nuevoEstado === "Pausada" ? "Pausada" : "En Proceso",
+                quoteStatus: nuevoEstado === "Aprobado" ? "Aprobado" : o.quoteStatus,
+              }
+            : o
+        )
+      );
+      mostrarToast(
+        nuevoEstado === "Aprobado"
+          ? "✓ Orden aprobada · Trabajando en Taller"
+          : "⏸ Orden en Pausa · Pausada en Taller"
+      );
+    } catch (err: any) {
+      mostrarToast(err.message || "Error al actualizar estado", "err");
     } finally {
       setGuardandoId(null);
     }
@@ -490,6 +547,7 @@ export default function PosOrdenesPage() {
             {/* Vista Móvil (Lista Compacta) */}
             <div className="md:hidden space-y-2.5">
               {ordenesFiltradas.map((ord, idx) => {
+                const estadoCfg = getEstadoSimplificado(ord);
                 return (
                   <div
                     key={ord.id || ord.dbId}
@@ -526,25 +584,44 @@ export default function PosOrdenesPage() {
                     </div>
 
                     <div className="pt-2 border-t border-zinc-100 dark:border-zinc-800/80 flex items-center justify-between gap-2">
-                      {(() => {
-                        const estadoCfg = getEstadoSimplificado(ord);
-                        return (
-                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-normal border ${estadoCfg.badge}`}>
-                            <span className={`w-1.5 h-1.5 rounded-full ${estadoCfg.dot}`} />
-                            {estadoCfg.label}
-                          </span>
-                        );
-                      })()}
+                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-normal border ${estadoCfg.badge}`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${estadoCfg.dot}`} />
+                        {estadoCfg.label}
+                      </span>
 
-                      <Link
-                        href={`/pos/ordenes/detalle?id=${encodeURIComponent(ord.orderNumber || ord.id || ord.dbId || "")}`}
-                        className="w-8 h-8 rounded-xl bg-amber-50 hover:bg-amber-100 dark:bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-500/30 flex items-center justify-center transition-all shrink-0 active:scale-95 shadow-xs cursor-pointer"
-                        title="Ver Orden Completa"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
-                        </svg>
-                      </Link>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {!ord.isBilled && estadoCfg.label !== "Trabajando" && (
+                          <button
+                            type="button"
+                            disabled={guardandoId === (ord.dbId || ord.id)}
+                            onClick={() => handleSincronizarEstadoTaller(ord, "Aprobado")}
+                            className="h-8 px-2.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-xs font-medium transition-all active:scale-95 cursor-pointer disabled:opacity-50"
+                            title="Aprobar y pasar a Trabajando en Taller"
+                          >
+                            ✓ Aprobar
+                          </button>
+                        )}
+                        {!ord.isBilled && estadoCfg.label !== "Pausada" && (
+                          <button
+                            type="button"
+                            disabled={guardandoId === (ord.dbId || ord.id)}
+                            onClick={() => handleSincronizarEstadoTaller(ord, "Pausada")}
+                            className="h-8 px-2.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-xs font-medium transition-all active:scale-95 cursor-pointer disabled:opacity-50"
+                            title="Pausar orden en Taller"
+                          >
+                            ⏸ Pausa
+                          </button>
+                        )}
+                        <Link
+                          href={`/pos/ordenes/detalle?id=${encodeURIComponent(ord.orderNumber || ord.id || ord.dbId || "")}`}
+                          className="w-8 h-8 rounded-xl bg-amber-50 hover:bg-amber-100 dark:bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-500/30 flex items-center justify-center transition-all shrink-0 active:scale-95 shadow-xs cursor-pointer"
+                          title="Ver Orden Completa"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+                          </svg>
+                        </Link>
+                      </div>
                     </div>
                   </div>
                 );
@@ -624,9 +701,31 @@ export default function PosOrdenesPage() {
                             </span>
                           </td>
 
-                          {/* Acción: ver orden completa */}
+                          {/* Acción: aprobar, pausar o ver orden completa */}
                           <td className="py-2.5 px-4 text-right whitespace-nowrap">
-                            <div className="flex items-center justify-end">
+                            <div className="flex items-center justify-end gap-1.5">
+                              {!ord.isBilled && estadoCfg.label !== "Trabajando" && (
+                                <button
+                                  type="button"
+                                  disabled={guardandoId === (ord.dbId || ord.id)}
+                                  onClick={() => handleSincronizarEstadoTaller(ord, "Aprobado")}
+                                  className="h-8 px-2.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-xs font-medium transition-all active:scale-95 cursor-pointer disabled:opacity-50"
+                                  title="Aprobar y pasar a Trabajando en Taller"
+                                >
+                                  ✓ Aprobar
+                                </button>
+                              )}
+                              {!ord.isBilled && estadoCfg.label !== "Pausada" && (
+                                <button
+                                  type="button"
+                                  disabled={guardandoId === (ord.dbId || ord.id)}
+                                  onClick={() => handleSincronizarEstadoTaller(ord, "Pausada")}
+                                  className="h-8 px-2.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-xs font-medium transition-all active:scale-95 cursor-pointer disabled:opacity-50"
+                                  title="Pausar orden en Taller"
+                                >
+                                  ⏸ Pausa
+                                </button>
+                              )}
                               <Link
                                 href={`/pos/ordenes/detalle?id=${encodeURIComponent(ord.orderNumber || ord.id || ord.dbId || "")}`}
                                 className="w-8 h-8 rounded-xl bg-amber-50 hover:bg-amber-100 dark:bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-500/30 flex items-center justify-center transition-all shrink-0 active:scale-95 shadow-xs cursor-pointer"

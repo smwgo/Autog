@@ -604,6 +604,23 @@ const SERVICE_CARDS = [
   },
 ];
 
+function esPropuestaAprobadaOrden(o?: UnifiedOrder | null): boolean {
+  if (!o) return false;
+  const qs = String(o.quoteStatus || "").trim().toLowerCase();
+  const st = String(o.status || "").trim().toLowerCase();
+  return (
+    qs.includes("aprob") ||
+    qs.includes("acept") ||
+    qs === "pagado" ||
+    qs === "facturado" ||
+    st.includes("aprob") ||
+    st === "en_caja" ||
+    st === "pagado" ||
+    st === "facturado" ||
+    Boolean((o as any).hasPriceAuthorized)
+  );
+}
+
 function formatElapsedTime(startedAt: string | null, completedAt: string | null, nowTick: number): string {
   if (!startedAt) return "00:00:00";
   const startMs = new Date(startedAt).getTime();
@@ -921,6 +938,37 @@ export default function TallerPanel() {
     }
   };
 
+  // Aprobar propuesta de una orden para habilitar el trabajo en taller
+  const handleAprobarPropuestaDirecta = async (auto?: UnifiedOrder | null, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    const target = auto || ordenActiva;
+    if (!target) return;
+    try {
+      const res = await fetch("/api/presupuestos/estado", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderId: target.id, quoteStatus: "Aprobado" }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        mostrarToast(`Propuesta aprobada para ${target.plate}. Orden lista para trabajar`, "ok");
+        const updated: UnifiedOrder = {
+          ...target,
+          quoteStatus: "Aprobado",
+          status: target.status === "Pausada" ? "Pausada" : "En Proceso",
+        };
+        setAutosEnPista((prev) => prev.map((o) => (o.id === target.id ? updated : o)));
+        if (ordenActiva?.id === target.id) {
+          setOrdenActiva(updated);
+        }
+      } else {
+        mostrarToast(data.error || "No se pudo aprobar la propuesta", "err");
+      }
+    } catch {
+      mostrarToast("Error de conexión al aprobar la propuesta", "err");
+    }
+  };
+
   // Seleccionar auto de la lista y volver a la vista
   const handleSeleccionarAutoYVolver = (auto: UnifiedOrder) => {
     // Buscar la versión más fresca del auto en autosEnPista (por si tiene hallazgos actualizados)
@@ -933,6 +981,100 @@ export default function TallerPanel() {
     } catch {}
     setMostrarModalAutosAtencion(false);
     mostrarToast(`Atendiendo a ${fresca.client} (${fresca.plate})`);
+  };
+
+  // Abrir orden seleccionada desde el Historial Semanal
+  const handleAbrirOrdenDesdeHistorial = async (auto: any) => {
+    setMostrarModalHistorialSemanal(false);
+    if (!auto) return;
+
+    // 1. Si ya está en autosEnPista, seleccionarla y abrirla inmediatamente
+    const enPista = autosEnPista.find(
+      (o) => o.id === auto.id || o.orderNumber === auto.orderNumber
+    );
+    if (enPista) {
+      handleSeleccionarAutoYVolver(enPista);
+      handleAbrirEditarOrden(enPista);
+      return;
+    }
+
+    // 2. Si no está en memoria, cargarla desde Neon y abrirla
+    try {
+      const orderId = auto.id || auto.orderNumber;
+      mostrarToast(`Abriendo orden #${limpiarNumeroOrden(auto.orderNumber || auto.id)}...`);
+      const res = await fetch(`/api/taller/operacion?q=${encodeURIComponent(auto.plate || orderId)}`);
+      const data = await res.json();
+
+      let ordenCargada: UnifiedOrder | null = null;
+      if (data.success && data.activeOrder) {
+        ordenCargada = data.activeOrder;
+      } else if (data.success && data.order) {
+        ordenCargada = data.order;
+      }
+
+      if (ordenCargada) {
+        setAutosEnPista((prev) => {
+          if (!prev.some((o) => o.id === ordenCargada!.id)) {
+            return [ordenCargada!, ...prev];
+          }
+          return prev;
+        });
+        handleSeleccionarAutoYVolver(ordenCargada);
+        handleAbrirEditarOrden(ordenCargada);
+      } else {
+        // Fallback construyendo UnifiedOrder con los datos del registro
+        const fallback: UnifiedOrder = {
+          id: auto.id,
+          orderNumber: auto.orderNumber || `OT-${Date.now().toString().slice(-4)}`,
+          branch: auto.branch || "PRINCIPAL",
+          plate: auto.plate || "S/P",
+          vehicle: auto.vehicle || `${auto.brand || ""} ${auto.model || ""}`.trim() || "Vehículo",
+          client: auto.client || "Cliente",
+          clientPhone: auto.clientPhone || "",
+          items: Array.isArray(auto.items)
+            ? auto.items
+            : Array.isArray(auto.services)
+            ? auto.services.map((s: string, idx: number) => ({
+                id: `srv_${idx}`,
+                name: s,
+                type: "SERVICE",
+                price: 0,
+                qty: 1,
+                status: "Listo",
+              }))
+            : [],
+          mechanic: auto.mechanic || "Taller",
+          mileage: Number(auto.mileage) || null,
+          nextOilChangeKm: null,
+          dateIn: auto.date || new Date().toISOString(),
+          startedAt: null,
+          completedAt: null,
+          durationMinutes: 0,
+          notes: auto.notes || "",
+          status: auto.status || "En Proceso",
+          receptionPhotos: Array.isArray(auto.photos) ? auto.photos : [],
+          evidencePhotos: [],
+          receptionInventory: [],
+          totalCost: Number(auto.totalCost || auto.cost || 0),
+          totalPaid: Number(auto.totalPaid || 0),
+          quoteStatus: auto.quoteStatus || "Borrador",
+          deliveryStatus: auto.deliveryStatus || "En Taller",
+          fuelLevel: "1/2",
+          generalCondition: "Bueno",
+          progress: 50,
+        };
+        setAutosEnPista((prev) => [fallback, ...prev]);
+        handleSeleccionarAutoYVolver(fallback);
+        handleAbrirEditarOrden(fallback);
+      }
+    } catch (e) {
+      console.error("Error al abrir orden desde historial semanal:", e);
+      if (auto?.id) {
+        router.push(`/taller/nueva-orden?editId=${encodeURIComponent(auto.id)}`);
+      } else {
+        mostrarToast("No se pudo cargar la orden", "err");
+      }
+    }
   };
 
   // Marcar trabajo como terminado totalmente y enviarlo a Historial de Órdenes en Panel Órdenes
@@ -3936,16 +4078,18 @@ Hola *${clienteNom}*, actualización de su vehículo *${vehiculoDesc}* (Placa: *
     }
   };
 
-  // Sincronización en tiempo real para reflejar cuando se apruebe el presupuesto en /presupuestos o panel cliente
+  // Sincronización en tiempo real para reflejar cuando se apruebe o pause en /presupuestos, /pos o panel cliente
   useEffect(() => {
     if (!ordenActiva?.id) return;
-    const pollTimer = setInterval(async () => {
+    const sincronizarEstado = async () => {
       try {
         const res = await fetch("/api/taller/operacion");
         if (!res.ok) return;
         const data = await res.json();
         if (data.success && Array.isArray(data.autosEnPista)) {
-          const fresh = data.autosEnPista.find((o: UnifiedOrder) => o.id === ordenActiva.id || o.orderNumber === ordenActiva.orderNumber);
+          const fresh = data.autosEnPista.find(
+            (o: UnifiedOrder) => o.id === ordenActiva.id || o.orderNumber === ordenActiva.orderNumber
+          );
           if (!fresh) {
             setAutosEnPista(data.autosEnPista);
             setOrdenActiva(data.autosEnPista[0] || null);
@@ -3962,8 +4106,20 @@ Hola *${clienteNom}*, actualización de su vehículo *${vehiculoDesc}* (Placa: *
           }
         }
       } catch {}
-    }, 4000);
-    return () => clearInterval(pollTimer);
+    };
+    const pollTimer = setInterval(sincronizarEstado, 4000);
+    const onFocusOrVisible = () => {
+      if (document.visibilityState === "visible") {
+        void sincronizarEstado();
+      }
+    };
+    window.addEventListener("focus", onFocusOrVisible);
+    document.addEventListener("visibilitychange", onFocusOrVisible);
+    return () => {
+      clearInterval(pollTimer);
+      window.removeEventListener("focus", onFocusOrVisible);
+      document.removeEventListener("visibilitychange", onFocusOrVisible);
+    };
   }, [
     ordenActiva?.id,
     ordenActiva?.quoteSignatureUrl,
@@ -5030,20 +5186,10 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                       {limpiarNumeroOrden(ordenActiva.orderNumber)}
                     </span>
                   </span>
-                  <button
-                    type="button"
-                    onClick={() => setMostrarModalAutosAtencion(true)}
-                    title={`Órdenes en cola: ${autosEnPista.length}`}
-                    aria-label={`Órdenes en cola: ${autosEnPista.length}`}
-                    className="w-10 h-10 sm:w-9 sm:h-9 rounded-full bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-500/30 text-cyan-700 dark:text-cyan-300 flex items-center justify-center shrink-0 font-bold font-mono text-sm sm:text-xs transition-transform active:scale-95 cursor-pointer shadow-xs"
-                  >
-                    {autosEnPista.length || 1}
-                  </button>
                 </div>
               </div>
             ) : cargandoInicial ? (
               <div className="flex items-center gap-2.5 animate-pulse">
-                <span className="w-10 h-10 sm:w-9 sm:h-9 rounded-full bg-zinc-200 dark:bg-white/10" />
                 <span className="space-y-1.5">
                   <span className="block h-3.5 w-32 sm:h-3 sm:w-28 rounded bg-zinc-200 dark:bg-white/10" />
                   <span className="block h-3 w-20 sm:h-2.5 sm:w-16 rounded bg-zinc-200 dark:bg-white/10" />
@@ -5158,7 +5304,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                   }, 120);
                 }}
               >
-                {(autosEnPista.length > 0 ? autosEnPista : [ordenActiva]).map((auto) => {
+                {(autosEnPista.length > 0 ? autosEnPista : [ordenActiva]).map((auto, index) => {
                   const esActivo = auto.id === ordenActiva.id;
                   const vehiculoCatalogo = clientesCatalogo
                     .flatMap((cliente) => (Array.isArray(cliente.vehicles) ? cliente.vehicles : []))
@@ -5321,16 +5467,41 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                           </span>
                         )}
                       </div>
-                      <svg
-                        className="w-5 h-5 sm:w-4 sm:h-4 shrink-0 text-zinc-400"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        strokeWidth={2}
-                        aria-hidden="true"
+                      <span
+                        role="button"
+                        tabIndex={0}
+                        title={
+                          autosEnPista.length > 1
+                            ? `Siguiente auto en atención (${index + 1} de ${autosEnPista.length})`
+                            : "Ver todos los autos en atención"
+                        }
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (autosEnPista.length > 1) {
+                            const nextIndex = (index + 1) % autosEnPista.length;
+                            handleSeleccionarAutoYVolver(autosEnPista[nextIndex]);
+                            const container = ordenesCarouselRef.current;
+                            container?.scrollTo({
+                              left: nextIndex * (container.clientWidth + 8),
+                              behavior: "smooth",
+                            });
+                          } else {
+                            setMostrarModalAutosAtencion(true);
+                          }
+                        }}
+                        className="p-2 sm:p-2.5 rounded-xl text-zinc-400 hover:text-blue-600 dark:text-zinc-500 dark:hover:text-blue-400 hover:bg-blue-50/70 dark:hover:bg-blue-500/10 active:scale-90 transition-all duration-200 cursor-pointer shrink-0 group/flecha flex items-center justify-center select-none"
                       >
-                        <path strokeLinecap="round" strokeLinejoin="round" d="m9 5 7 7-7 7" />
-                      </svg>
+                        <svg
+                          className="w-5 h-5 sm:w-6 sm:h-6 transition-transform duration-200 group-hover/flecha:translate-x-1 group-hover/flecha:scale-110"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                          strokeWidth={2}
+                          aria-hidden="true"
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                        </svg>
+                      </span>
                     </button>
                   );
                 })}
@@ -5338,91 +5509,79 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
               <div className="w-[calc(100%+1.25rem)] -mx-2.5 px-2.5 py-2 sm:w-[calc(100%+3rem)] sm:-mx-6 sm:px-6 md:w-[calc(100%+4rem)] md:-mx-8 md:px-8 bg-zinc-100 dark:bg-[#34343a] flex items-center justify-between gap-2 flex-wrap">
                 <div className="flex items-center gap-2 flex-wrap">
                   {/* Ingreso y Estado */}
-                  <div
-                    className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl sm:rounded-lg border text-xs font-medium ${
-                      ordenActiva.status === "Pausada"
-                        ? "bg-amber-500/10 border-amber-500/25 text-amber-700 dark:text-amber-400"
-                        : "bg-emerald-500/10 border-emerald-500/25 text-emerald-700 dark:text-emerald-400"
-                    }`}
-                  >
-                    <span className="text-zinc-700 dark:text-zinc-300 whitespace-nowrap">
-                      Ingreso:{" "}
-                      <span
-                        className="text-zinc-900 dark:text-white font-semibold"
-                        title={formatearFechaCompleta(ordenActiva.dateIn || ordenActiva.startedAt)}
-                      >
-                        {formatearFechaIngreso(ordenActiva.dateIn || ordenActiva.startedAt)}
-                      </span>
-                    </span>
+                  {(() => {
+                    const propuestaAprobada = esPropuestaAprobadaOrden(ordenActiva);
+                    const estaPausada = ordenActiva.status === "Pausada";
+                    const autosPista = autosEnPista.length > 0 ? autosEnPista : [ordenActiva];
+                    const countPausada = autosPista.filter((o) => o.status === "Pausada").length;
+                    const countEnEspera = autosPista.filter((o) => o.status !== "Pausada" && !esPropuestaAprobadaOrden(o)).length;
+                    const countTrabajando = autosPista.filter((o) => o.status !== "Pausada" && esPropuestaAprobadaOrden(o)).length;
 
-                    <span className={ordenActiva.status === "Pausada" ? "text-amber-500/60" : "text-emerald-500/60"}>•</span>
+                    return (
+                      <div
+                        className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl sm:rounded-lg border text-xs font-medium ${
+                          estaPausada || !propuestaAprobada
+                            ? "bg-amber-500/10 border-amber-500/25 text-amber-700 dark:text-amber-400"
+                            : "bg-emerald-500/10 border-emerald-500/25 text-emerald-700 dark:text-emerald-400"
+                        }`}
+                      >
+                        <span className="text-zinc-700 dark:text-zinc-300 whitespace-nowrap">
+                          Ingreso:{" "}
+                          <span
+                            className="text-zinc-900 dark:text-white font-semibold"
+                            title={formatearFechaCompleta(ordenActiva.dateIn || ordenActiva.startedAt)}
+                          >
+                            {formatearFechaIngreso(ordenActiva.dateIn || ordenActiva.startedAt)}
+                          </span>
+                        </span>
 
-                    {ordenActiva.status === "Pausada" ? (
-                      <button
-                        type="button"
-                        onClick={(e) => handleReanudarOrden(ordenActiva, e)}
-                        title="Semáforo: Clic para pasar a Trabajando"
-                        className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/35 text-amber-800 dark:text-amber-300 font-bold transition-all cursor-pointer active:scale-95 shrink-0"
-                      >
-                        <span className="w-2.5 h-2.5 sm:w-2 sm:h-2 rounded-full bg-amber-500 dark:bg-amber-400 shrink-0 shadow-xs" />
-                        <span>Pausada</span>
-                        <span className="px-1.5 py-0.5 rounded-md bg-amber-600/20 dark:bg-amber-400/20 text-[11px] font-black leading-none">
-                          {(autosEnPista.length > 0 ? autosEnPista : [ordenActiva]).filter((o) => o.status === "Pausada").length}
-                        </span>
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={(e) => handlePausarOrden(ordenActiva, e)}
-                        title="Semáforo: Clic para pasar a Pausa"
-                        className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/35 text-emerald-800 dark:text-emerald-300 font-bold transition-all cursor-pointer active:scale-95 shrink-0"
-                      >
-                        <span className="w-2.5 h-2.5 sm:w-2 sm:h-2 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse shrink-0 shadow-xs" />
-                        <span>Trabajando</span>
-                        <span className="px-1.5 py-0.5 rounded-md bg-emerald-600/20 dark:bg-emerald-400/20 text-[11px] font-black leading-none">
-                          {(autosEnPista.length > 0 ? autosEnPista : [ordenActiva]).filter((o) => o.status !== "Pausada").length}
-                        </span>
-                      </button>
-                    )}
-                  </div>
+                        <span className={estaPausada || !propuestaAprobada ? "text-amber-500/60" : "text-emerald-500/60"}>•</span>
+
+                        {estaPausada ? (
+                          <button
+                            type="button"
+                            onClick={(e) => handleReanudarOrden(ordenActiva, e)}
+                            title="Semáforo: Clic para pasar a Trabajando"
+                            className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/35 text-amber-800 dark:text-amber-300 font-bold transition-all cursor-pointer active:scale-95 shrink-0"
+                          >
+                            <span className="w-2.5 h-2.5 sm:w-2 sm:h-2 rounded-full bg-amber-500 dark:bg-amber-400 shrink-0 shadow-xs" />
+                            <span>Pausada</span>
+                            <span className="px-1.5 py-0.5 rounded-md bg-amber-600/20 dark:bg-amber-400/20 text-[11px] font-black leading-none">
+                              {countPausada}
+                            </span>
+                          </button>
+                        ) : !propuestaAprobada ? (
+                          <button
+                            type="button"
+                            onClick={() => setModalPresupuestoPdfAbierto(true)}
+                            title="Propuesta en espera de aprobación (clic para ver propuesta)"
+                            className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/35 text-amber-800 dark:text-amber-300 font-bold transition-all cursor-pointer active:scale-95 shrink-0"
+                          >
+                            <span className="w-2.5 h-2.5 sm:w-2 sm:h-2 rounded-full bg-amber-500 dark:bg-amber-400 animate-pulse shrink-0 shadow-xs" />
+                            <span>En espera</span>
+                            <span className="px-1.5 py-0.5 rounded-md bg-amber-600/20 dark:bg-amber-400/20 text-[11px] font-black leading-none">
+                              {countEnEspera}
+                            </span>
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={(e) => handlePausarOrden(ordenActiva, e)}
+                            title="Semáforo: Clic para pasar a Pausa"
+                            className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/35 text-emerald-800 dark:text-emerald-300 font-bold transition-all cursor-pointer active:scale-95 shrink-0"
+                          >
+                            <span className="w-2.5 h-2.5 sm:w-2 sm:h-2 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse shrink-0 shadow-xs" />
+                            <span>Trabajando</span>
+                            <span className="px-1.5 py-0.5 rounded-md bg-emerald-600/20 dark:bg-emerald-400/20 text-[11px] font-black leading-none">
+                              {countTrabajando}
+                            </span>
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
-                {ordenActiva &&
-                  (ordenActiva.quoteStatus === "Pendiente" ||
-                    ordenActiva.quoteStatus === "Aprobado" ||
-                    ordenActiva.quoteStatus === "ACEPTADO" ||
-                    ordenActiva.status === "Aprobado" ||
-                    ordenActiva.status === "EN_CAJA" ||
-                    ordenActiva.quoteSignatureUrl) &&
-                  !(
-                    ordenActiva.quoteStatus === "Aprobado" ||
-                    ordenActiva.quoteStatus === "ACEPTADO" ||
-                    ordenActiva.status === "Aprobado" ||
-                    ordenActiva.status === "EN_CAJA"
-                  ) && (
-                    <div
-                      title="Propuesta enviada - En espera de aprobación"
-                      className="h-9 px-3 sm:px-3.5 rounded-lg bg-amber-500/15 border border-amber-500/35 text-amber-600 dark:text-amber-400 text-xs font-semibold flex items-center gap-1.5 shadow-sm backdrop-blur-md shrink-0 animate-fade-in select-none"
-                    >
-                      <span className="w-2 h-2 rounded-full bg-amber-500 dark:bg-amber-400 animate-pulse" />
-                      <span>Enviado</span>
-                    </div>
-                  )}
               </div>
-
-              {/* ETIQUETA EN LA PARTE SUPERIOR: APROBADO PARA EMPEZAR A TRABAJAR */}
-              {(ordenActiva.quoteStatus === "Aprobado" ||
-                ordenActiva.status === "Aprobado" ||
-                ordenActiva.quoteStatus === "ACEPTADO") && (
-                <div className="flex items-center gap-2 shrink-0">
-                  <div
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl sm:rounded-lg bg-emerald-500/20 border border-emerald-400/50 text-emerald-700 dark:text-emerald-300 text-xs font-bold uppercase tracking-wider shadow-sm animate-fade-in shrink-0"
-                    title="Propuesta Aprobada - Listo para empezar a trabajar"
-                  >
-                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse" />
-                    <span>✓ Aprobado</span>
-                  </div>
-                </div>
-              )}
             </div>
           )}
         </div>
@@ -5458,24 +5617,6 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
             </div>
 
           </div>
-
-          {/* A LADO DERECHO: ETIQUETA DE APROBACIÓN */}
-          {ordenActiva && (
-            <div className="flex items-center gap-1.5 sm:gap-2 ml-auto shrink-0">
-              {(ordenActiva.quoteStatus === "Aprobado" ||
-                ordenActiva.quoteStatus === "ACEPTADO" ||
-                ordenActiva.status === "Aprobado" ||
-                ordenActiva.status === "EN_CAJA") && (
-                <div
-                  title="Propuesta Aprobada"
-                  className="h-9 px-3 sm:px-3.5 rounded-lg bg-emerald-500/15 border border-emerald-500/35 text-emerald-600 dark:text-emerald-300 text-xs font-bold flex items-center gap-1.5 shadow-sm backdrop-blur-md shrink-0 animate-fade-in select-none"
-                >
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse" />
-                  <span>✓ Aprobado</span>
-                </div>
-              )}
-            </div>
-          )}
         </div>
         {/* ===================================================================
             CONTENEDOR PRINCIPAL: CABECERA COMÚN (PLACA, VEHÍCULO, CLIENTE, VECES ATENDIDO Y MODO)
@@ -5604,9 +5745,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                     </button>
 
                     {ordenActiva &&
-                      (ordenActiva.quoteStatus === "Aprobado" ||
-                        ordenActiva.status === "Aprobado" ||
-                        ordenActiva.quoteStatus === "ACEPTADO") && (
+                      esPropuestaAprobadaOrden(ordenActiva) && (
                         <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/20 border border-emerald-400/50 text-emerald-700 dark:text-emerald-300 text-xs font-bold uppercase tracking-wider shadow-xs">
                           <span className="w-2 h-2 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse" />
                           ✓ Aprobado
@@ -6529,6 +6668,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
             : null
         }
         onCerrar={() => setModalPresupuestoPdfAbierto(false)}
+        onAprobar={() => void handleAprobarPropuestaDirecta(ordenActiva)}
       />
 
       {/* =====================================================================
@@ -6883,7 +7023,15 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
 
                       <div className="flex flex-col items-end gap-2 shrink-0 self-end sm:self-center pt-2 sm:pt-0 border-t sm:border-t-0 border-white/5 w-full sm:w-auto">
                         <div className="flex items-center gap-1.5 sm:gap-2 justify-end flex-wrap">
-                          {estaPausado ? (
+                          {!esPropuestaAprobadaOrden(auto) ? (
+                            <span
+                              className="h-8 px-2.5 sm:px-3 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-medium flex items-center gap-1.5 select-none"
+                              title="Propuesta pendiente de aprobación"
+                            >
+                              <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                              <span>En espera</span>
+                            </span>
+                          ) : estaPausado ? (
                             <button
                               type="button"
                               onClick={(e) => handleReanudarOrden(auto, e)}
@@ -7202,6 +7350,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
       <ModalHistorialSemanal
         isOpen={mostrarModalHistorialSemanal}
         onClose={() => setMostrarModalHistorialSemanal(false)}
+        onSeleccionarAuto={handleAbrirOrdenDesdeHistorial}
       />
 
       <TallerMobileNav />

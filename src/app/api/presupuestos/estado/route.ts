@@ -21,15 +21,22 @@ export async function POST(request: Request) {
 
     const qUpper = String(quoteStatus).trim().toUpperCase();
     const esPagado = qUpper === "PAGADO" || qUpper === "FACTURADO" || qUpper === "FACTURADA";
-    const esAprobado = qUpper === "APROBADO" || qUpper === "AUTORIZADO";
+    const esPausado = qUpper === "PAUSA" || qUpper === "PAUSADA" || qUpper === "PAUSADO";
+    const esAprobado =
+      qUpper === "APROBADO" ||
+      qUpper === "AUTORIZADO" ||
+      qUpper === "TRABAJANDO" ||
+      qUpper === "EN PROCESO";
 
     const estadoNormalizado = esPagado
       ? "Pagado"
+      : esPausado
+      ? "Pausada"
       : esAprobado
       ? "Aprobado"
       : "Pendiente";
 
-    const approvedAt = esPagado || esAprobado ? new Date().toISOString() : null;
+    const approvedAt = esPagado || esAprobado ? new Date() : null;
 
     return await withRetry(async () => {
       if (esPagado) {
@@ -39,7 +46,7 @@ export async function POST(request: Request) {
            SET "status" = 'Pagado',
                "quoteStatus" = 'Pagado',
                "deliveryStatus" = 'Facturado',
-               "quoteApprovedAt" = COALESCE("quoteApprovedAt", $2),
+               "quoteApprovedAt" = COALESCE("quoteApprovedAt", $2::timestamp),
                "updatedAt" = CURRENT_TIMESTAMP
            WHERE "id" = $1 OR "orderNumber" = $1`,
           orderId,
@@ -90,13 +97,28 @@ export async function POST(request: Request) {
             }
           }
         } catch {}
+      } else if (esPausado) {
+        // Marcar como Pausada en WorkshopOrder (manteniendo fuera de Pagado para que aparezca en Taller como Pausada)
+        await prisma.$executeRawUnsafe(
+          `UPDATE "WorkshopOrder"
+           SET "status" = 'Pausada',
+               "quoteStatus" = CASE WHEN "quoteStatus" IN ('Pagado', 'PAGADO', 'Facturado', 'FACTURADO') THEN 'Aprobado' ELSE COALESCE("quoteStatus", 'Pendiente') END,
+               "deliveryStatus" = CASE WHEN "deliveryStatus" IN ('Facturado', 'FACTURADO', 'Pagado', 'PAGADO') THEN 'Pendiente' ELSE "deliveryStatus" END,
+               "updatedAt" = CURRENT_TIMESTAMP
+           WHERE "id" = $1 OR "orderNumber" = $1`,
+          orderId
+        );
       } else {
-        // Actualizar Aprobado o Pendiente (y si venía de Pagado, volver a En Proceso)
+        // Actualizar Aprobado (pasa a En Proceso / Trabajando) o Pendiente (En espera)
         await prisma.$executeRawUnsafe(
           `UPDATE "WorkshopOrder"
            SET "quoteStatus" = $2,
-               "quoteApprovedAt" = $3,
-               "status" = CASE WHEN "status" IN ('Pagado', 'PAGADO', 'Facturado', 'FACTURADO') THEN 'En Proceso' ELSE "status" END,
+               "quoteApprovedAt" = $3::timestamp,
+               "status" = CASE
+                 WHEN $2 = 'Aprobado' THEN 'En Proceso'
+                 WHEN "status" IN ('Pagado', 'PAGADO', 'Facturado', 'FACTURADO', 'Pausada', 'PAUSADA') THEN 'En Proceso'
+                 ELSE "status"
+               END,
                "deliveryStatus" = CASE WHEN "deliveryStatus" IN ('Facturado', 'FACTURADO', 'Pagado', 'PAGADO') THEN 'Pendiente' ELSE "deliveryStatus" END,
                "updatedAt" = CURRENT_TIMESTAMP
            WHERE "id" = $1 OR "orderNumber" = $1`,
@@ -113,20 +135,22 @@ export async function POST(request: Request) {
              "updatedAt" = CURRENT_TIMESTAMP
          WHERE "id" = $1 OR "quoteNumber" = $1`,
         orderId,
-        esPagado ? "Pagada" : estadoNormalizado === "Aprobado" ? "Aprobada" : "Pendiente"
+        esPagado ? "Pagada" : esPausado ? "Pausada" : estadoNormalizado === "Aprobado" ? "Aprobada" : "Pendiente"
       ).catch(() => {});
 
       return NextResponse.json({
         success: true,
         orderId,
-        status: esPagado ? "Pagado" : undefined,
+        status: esPagado ? "Pagado" : esPausado ? "Pausada" : "En Proceso",
         quoteStatus: estadoNormalizado,
         quoteApprovedAt: approvedAt,
         message: esPagado
           ? "✓ Propuesta marcada como Pagada. Se retiró de Taller y quedó en el historial."
+          : esPausado
+          ? "⏸ Orden puesta en Pausa. Ya figura '● Pausada' en Taller."
           : estadoNormalizado === "Aprobado"
-          ? "Propuesta aprobada con éxito. Ya figura '✓ Aprobado' en Taller."
-          : "Propuesta puesta en espera. Ya figura '● Enviado' en Taller.",
+          ? "Propuesta aprobada con éxito. Ya figura '● Trabajando' en Taller."
+          : "Propuesta puesta en espera. Ya figura '● En espera' en Taller.",
       });
     });
   } catch (error: any) {

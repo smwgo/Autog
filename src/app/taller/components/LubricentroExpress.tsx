@@ -1010,7 +1010,7 @@ export default function LubricentroExpress({
               onActualizarItemsOrden={handleActualizarItemsOrdenGenerales}
               productosCatalogo={productosCatalogo}
               serviciosCatalogo={serviciosCatalogo}
-              onGuardarDatosLubricentro={async (niveles, nextOilChangeKm, items) => {
+              onGuardarDatosLubricentro={async (niveles, nextOilChangeKm, items, notes) => {
                 const inspectionChecklist = {
                   ...(ordenEfectiva?.inspectionChecklist || {}),
                   lubricentroLevels: niveles,
@@ -1022,6 +1022,7 @@ export default function LubricentroExpress({
                       items,
                       inspectionChecklist,
                       nextOilChangeKm,
+                      notes: notes !== undefined ? notes : ordenEfectiva.notes,
                     };
                     setOrdenLocalBorrador(updatedOrder);
                     onOrdenCreada?.(updatedOrder);
@@ -1033,6 +1034,7 @@ export default function LubricentroExpress({
                   items,
                   nextOilChangeKm,
                   inspectionChecklist,
+                  notes,
                 });
                 if (!updatedOrder) {
                   throw new Error("No se pudo guardar la revisión del Lubricentro.");

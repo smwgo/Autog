@@ -224,10 +224,13 @@ export default function PanelPresupuestosPage() {
     });
   };
 
-  // Cambiar estado directo de propuesta (Aprobar / Esperar) para que impacte en Taller
+  // Cambiar estado directo de propuesta (Aprobar / Pausar / Esperar) para que impacte en Taller
   const [cambiandoEstadoId, setCambiandoEstadoId] = useState<string | null>(null);
 
-  const handleCambiarEstadoPropuesta = async (orderId: string, nuevoEstado: "Aprobado" | "Pendiente" | "Pagado") => {
+  const handleCambiarEstadoPropuesta = async (
+    orderId: string,
+    nuevoEstado: "Aprobado" | "Pendiente" | "Pagado" | "Pausada"
+  ) => {
     try {
       setCambiandoEstadoId(orderId);
       const res = await fetch("/api/presupuestos/estado", {
@@ -270,9 +273,23 @@ export default function PanelPresupuestosPage() {
             o.id === orderId || o.orderNumber === orderId
               ? {
                   ...o,
-                  status: nuevoEstado === "Pagado" ? "Pagado" : o.status,
-                  quoteStatus: nuevoEstado,
-                  quoteApprovedAt: nuevoEstado === "Aprobado" ? new Date().toISOString() : null,
+                  status:
+                    nuevoEstado === "Pagado"
+                      ? "Pagado"
+                      : nuevoEstado === "Pausada"
+                      ? "Pausada"
+                      : nuevoEstado === "Aprobado"
+                      ? "En Proceso"
+                      : o.status === "Pausada"
+                      ? "En Proceso"
+                      : o.status,
+                  quoteStatus: nuevoEstado === "Pausada" ? o.quoteStatus : nuevoEstado,
+                  quoteApprovedAt:
+                    nuevoEstado === "Aprobado"
+                      ? new Date().toISOString()
+                      : nuevoEstado === "Pendiente"
+                      ? null
+                      : o.quoteApprovedAt,
                 }
               : o
           )
@@ -632,7 +649,8 @@ export default function PanelPresupuestosPage() {
                 <div className="md:hidden space-y-2.5">
                   {ordenes.map((orden, idx) => {
                     const esPagado = orden.quoteStatus === "Pagado" || orden.status === "Pagado";
-                    const esAprobado = !esPagado && (orden.quoteStatus === "Aprobado" || orden.status === "EN_CAJA");
+                    const esPausada = !esPagado && orden.status === "Pausada";
+                    const esAprobado = !esPagado && !esPausada && (orden.quoteStatus === "Aprobado" || orden.status === "EN_CAJA");
                     const estaTrabajando = ordenTrabajandoId === orden.id || ordenTrabajandoId === orden.orderNumber;
                     const { fecha, hora } = formatearFechaHora(orden.createdAt, orden.dateIn);
                     return (
@@ -680,18 +698,42 @@ export default function PanelPresupuestosPage() {
                           <span className="font-normal text-xs text-zinc-500 dark:text-zinc-400">
                             {fecha}{hora ? ` · ${hora}` : ""}
                           </span>
-                          <div className="flex items-center gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center gap-1.5 shrink-0 flex-wrap justify-end" onClick={(e) => e.stopPropagation()}>
                             <span
                               className={`px-2.5 py-0.5 rounded-lg border text-xs font-normal shrink-0 ${
                                 esPagado
                                   ? "bg-sky-500/15 border-sky-500/30 text-sky-700 dark:text-sky-300"
+                                  : esPausada
+                                  ? "bg-amber-500/15 border-amber-500/30 text-amber-700 dark:text-amber-300"
                                   : esAprobado
                                   ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-700 dark:text-emerald-300"
                                   : "bg-amber-500/15 border-amber-500/30 text-amber-700 dark:text-amber-400"
                               }`}
                             >
-                              {esPagado ? "✓ Pagado" : esAprobado ? "✓ Aprobado" : "En Espera"}
+                              {esPagado ? "✓ Pagado" : esPausada ? "⏸ Pausada" : esAprobado ? "● Trabajando" : "En Espera"}
                             </span>
+                            {!esPagado && !esAprobado && (
+                              <button
+                                type="button"
+                                disabled={cambiandoEstadoId === orden.id}
+                                onClick={() => handleCambiarEstadoPropuesta(orden.id, "Aprobado")}
+                                className="h-7 px-2 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 text-xs font-medium transition-all cursor-pointer disabled:opacity-50"
+                                title="Aprobar y pasar a Trabajando en Taller"
+                              >
+                                ✓ Aprobar
+                              </button>
+                            )}
+                            {!esPagado && !esPausada && (
+                              <button
+                                type="button"
+                                disabled={cambiandoEstadoId === orden.id}
+                                onClick={() => handleCambiarEstadoPropuesta(orden.id, "Pausada")}
+                                className="h-7 px-2 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-700 dark:text-amber-300 text-xs font-medium transition-all cursor-pointer disabled:opacity-50"
+                                title="Pausar orden en Taller"
+                              >
+                                ⏸ Pausa
+                              </button>
+                            )}
                             <button
                               type="button"
                               onClick={(e) => {
@@ -739,7 +781,8 @@ export default function PanelPresupuestosPage() {
                       <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800 text-xs font-normal">
                         {ordenes.map((orden, idx) => {
                           const esPagado = orden.quoteStatus === "Pagado" || orden.status === "Pagado";
-                          const esAprobado = !esPagado && (orden.quoteStatus === "Aprobado" || orden.status === "EN_CAJA");
+                          const esPausada = !esPagado && orden.status === "Pausada";
+                          const esAprobado = !esPagado && !esPausada && (orden.quoteStatus === "Aprobado" || orden.status === "EN_CAJA");
                           const estaTrabajando = ordenTrabajandoId === orden.id || ordenTrabajandoId === orden.orderNumber;
                           const { fecha, hora } = formatearFechaHora(orden.createdAt, orden.dateIn);
                           return (
@@ -788,16 +831,40 @@ export default function PanelPresupuestosPage() {
                                   className={`text-xs font-normal px-2.5 py-1 rounded-lg border inline-block ${
                                     esPagado
                                       ? "bg-sky-500/15 text-sky-700 dark:text-sky-300 border-sky-500/30"
+                                      : esPausada
+                                      ? "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30"
                                       : esAprobado
                                       ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30"
                                       : "bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30"
                                   }`}
                                 >
-                                  {esPagado ? "✓ Pagado" : esAprobado ? "✓ Aprobado" : "En Espera"}
+                                  {esPagado ? "✓ Pagado" : esPausada ? "⏸ Pausada" : esAprobado ? "● Trabajando" : "En Espera"}
                                 </span>
                               </td>
                               <td className="py-3 px-4 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                                 <div className="flex items-center justify-end gap-1.5">
+                                  {!esPagado && !esAprobado && (
+                                    <button
+                                      type="button"
+                                      disabled={cambiandoEstadoId === orden.id}
+                                      onClick={() => handleCambiarEstadoPropuesta(orden.id, "Aprobado")}
+                                      className="h-7 px-2.5 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 text-xs font-medium transition-all cursor-pointer disabled:opacity-50"
+                                      title="Aprobar y pasar a Trabajando en Taller"
+                                    >
+                                      ✓ Aprobar
+                                    </button>
+                                  )}
+                                  {!esPagado && !esPausada && (
+                                    <button
+                                      type="button"
+                                      disabled={cambiandoEstadoId === orden.id}
+                                      onClick={() => handleCambiarEstadoPropuesta(orden.id, "Pausada")}
+                                      className="h-7 px-2.5 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-700 dark:text-amber-300 text-xs font-medium transition-all cursor-pointer disabled:opacity-50"
+                                      title="Pausar orden en Taller"
+                                    >
+                                      ⏸ Pausa
+                                    </button>
+                                  )}
                                   <button
                                     type="button"
                                     onClick={(e) => {

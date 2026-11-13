@@ -183,6 +183,43 @@ function DetalleOrdenContent() {
     }
   };
 
+  // Aprobar (Trabajando) o Pausar (Pausada) en Taller desde POS
+  const handleCambiarEstadoTaller = async (nuevoEstado: "Aprobado" | "Pausada") => {
+    if (!order) return;
+    const targetId = order.dbId || order.id || order.orderNumber;
+    if (!targetId) return;
+    try {
+      setActualizandoFacturacion(true);
+      const res = await fetch("/api/presupuestos/estado", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderId: targetId, quoteStatus: nuevoEstado }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "No se pudo sincronizar estado con Taller");
+      }
+      setOrder((prev) =>
+        prev
+          ? {
+              ...prev,
+              status: nuevoEstado === "Pausada" ? "Pausada" : "En Proceso",
+              quoteStatus: nuevoEstado === "Aprobado" ? "Aprobado" : prev.quoteStatus,
+            }
+          : null
+      );
+      mostrarToast(
+        nuevoEstado === "Aprobado"
+          ? "✓ Orden aprobada · Trabajando en Taller"
+          : "⏸ Orden puesta en Pausa en Taller"
+      );
+    } catch (err: any) {
+      mostrarToast(err.message || "Error al actualizar estado", "err");
+    } finally {
+      setActualizandoFacturacion(false);
+    }
+  };
+
   if (cargando) {
     return (
       <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans text-zinc-900 dark:text-zinc-100">
@@ -281,6 +318,35 @@ function DetalleOrdenContent() {
           </div>
 
           <div className="flex items-center gap-2.5 flex-wrap sm:flex-nowrap">
+            {!order.isBilled && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => handleCambiarEstadoTaller("Aprobado")}
+                  disabled={actualizandoFacturacion}
+                  className={`h-10 sm:h-11 px-3.5 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-1.5 border shadow-sm cursor-pointer disabled:opacity-50 ${
+                    order.quoteStatus === "Aprobado" && order.status !== "Pausada"
+                      ? "bg-emerald-600 text-white border-emerald-500"
+                      : "bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-700 dark:text-emerald-300 border-emerald-500/30"
+                  }`}
+                >
+                  <span>{order.quoteStatus === "Aprobado" && order.status !== "Pausada" ? "● Trabajando" : "✓ Aprobar"}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleCambiarEstadoTaller("Pausada")}
+                  disabled={actualizandoFacturacion}
+                  className={`h-10 sm:h-11 px-3.5 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-1.5 border shadow-sm cursor-pointer disabled:opacity-50 ${
+                    order.status === "Pausada"
+                      ? "bg-amber-500 text-white border-amber-500"
+                      : "bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 border-amber-500/30"
+                  }`}
+                >
+                  <span>{order.status === "Pausada" ? "⏸ Pausada" : "⏸ Pausa"}</span>
+                </button>
+              </>
+            )}
+
             {/* Botón para cambiar estado */}
             <button
               type="button"
