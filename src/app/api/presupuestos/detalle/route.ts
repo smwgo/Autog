@@ -306,13 +306,33 @@ export async function GET(request: Request) {
         }
       }
 
+      // Separar ítems de itemsJson que fueron guardados como SERVICE desde RegistroFinalUnificado en Taller
+      const rawParts: any[] = [];
+      const rawExtraServices: any[] = [];
+      if (Array.isArray(items)) {
+        for (const it of items) {
+          if (it && it.type === "SERVICE") {
+            rawExtraServices.push(it);
+          } else if (it) {
+            rawParts.push(it);
+          }
+        }
+      }
+
       // Normalizar estructura de repuestos para presupuestos y compras
-      const repuestosNormalizados = items.map((it: any, index: number) => {
-        const costPrice = Number(it.costPrice || it.cost || 0);
-        const price = Number(it.price || 0);
+      const repuestosNormalizados = rawParts.map((it: any, index: number) => {
+        const costPrice = Number(it.supplierPrice || it.costPrice || it.cost || 0);
+        const rawPrice = Number(it.price || 0);
+        const price = rawPrice > 0 ? rawPrice : (costPrice > 0 && it.supplierAvailability === "SI_HAY" ? Number((costPrice * 1.3).toFixed(2)) : 0);
         const qty = Number(it.qty || 1);
         const margin = price - costPrice;
         const marginPercent = price > 0 ? Math.round((margin / price) * 100) : 0;
+        const isManual = Boolean(
+          it.isManual ||
+          String(it.id || "").startsWith("reg-") ||
+          String(it.id || "").startsWith("man-") ||
+          String(it.code || "").startsWith("MAN-")
+        );
 
         return {
           id: it.id || `rep_${index}_${Date.now()}`,
@@ -321,6 +341,7 @@ export async function GET(request: Request) {
           code: it.code || `REP-${index + 1}`,
           name: it.name || it.description || "Repuesto / Insumo",
           category: it.category || "",
+          presentation: it.presentation || it.viscosity || "",
           qty,
           costPrice,
           price,
@@ -331,33 +352,85 @@ export async function GET(request: Request) {
           supplierId: it.supplierId || null,
           supplierName: it.supplierName || "Proveedor General",
           supplierPhone: it.supplierPhone || "",
-          purchaseStatus: it.purchaseStatus || "POR_PEDIR", // POR_PEDIR, PEDIDO_WHATSAPP, COMPRADO, RECIBIDO
+          purchaseStatus: it.purchaseStatus || (it.inStock ? "STOCK_LOCAL" : "POR_PEDIR"),
           notes: it.notes || "",
-          imageUrl: it.imageUrl || it.photoUrl || it.image || (todasLasFotosOrden[index] ?? null),
-          inStock: it.inStock !== undefined ? Boolean(it.inStock) : Boolean(it.purchaseStatus === "STOCK_LOCAL"),
+          danio: it.danio || "",
+          descripcion: it.descripcion || it.description || "",
+          imageUrl:
+            it.imageUrl ||
+            it.photoUrl ||
+            it.image ||
+            (Array.isArray(it.fotos) && it.fotos.length > 0 ? it.fotos[0] : (todasLasFotosOrden[index] ?? null)),
+          fotos: Array.isArray(it.fotos) ? it.fotos : (it.imageUrl ? [it.imageUrl] : []),
+          audios: Array.isArray(it.audios) ? it.audios : [],
+          isManual,
+          inStock: it.inStock !== undefined ? Boolean(it.inStock) : (!isManual && Boolean(it.purchaseStatus === "STOCK_LOCAL")),
           origin: it.origin || null,
+          supplierAvailability: it.supplierAvailability || (it.purchaseStatus === "COTIZADO" ? "SI_HAY" : it.purchaseStatus === "SIN_STOCK_PROVEEDOR" ? "NO_HAY" : "PENDIENTE"),
+          supplierPrice: Number(it.supplierPrice ?? costPrice ?? 0),
+          deliveryTime: it.deliveryTime || "",
+          shippingMethod: it.shippingMethod || "",
+          supplierNotes: it.supplierNotes || "",
+          supplierRespondedAt: it.supplierRespondedAt || null,
         };
       });
 
+      // Combinar servicesJson con servicios que venían en itemsJson (sin duplicar por id)
+      const seenSrvIds = new Set<string>();
+      const combinedServices: any[] = [];
+      for (const sv of [...(Array.isArray(services) ? services : []), ...rawExtraServices]) {
+        const key = typeof sv === "string" ? sv : (sv?.id || `${sv?.name}-${sv?.category}`);
+        if (key && seenSrvIds.has(String(key))) continue;
+        if (key) seenSrvIds.add(String(key));
+        combinedServices.push(sv);
+      }
+
       // Normalizar estructura de servicios / mano de obra
-      const serviciosNormalizados = services.map((sv: any, index: number) => {
+      const serviciosNormalizados = combinedServices.map((sv: any, index: number) => {
         const isString = typeof sv === "string";
         const name = isString ? sv : (sv.name || sv.description || "Servicio Técnico");
-        const price = isString ? 0 : Number(sv.price || 0);
+        const costPrice = isString ? 0 : Number(sv.supplierPrice || sv.costPrice || 0);
+        const rawPrice = isString ? 0 : Number(sv.price || 0);
+        const price = rawPrice > 0 ? rawPrice : (costPrice > 0 && sv.supplierAvailability === "SI_HAY" ? Number((costPrice * 1.3).toFixed(2)) : 0);
         const code = isString ? `SRV-${index + 1}` : (sv.code || `SRV-${index + 1}`);
         const category = isString ? "Mano de Obra" : (sv.category || "Mano de Obra");
+        const qty = isString ? 1 : Number(sv.qty || 1);
+        const isManual = !isString && Boolean(
+          sv.isManual ||
+          String(sv.id || "").startsWith("reg-") ||
+          String(sv.id || "").startsWith("man-") ||
+          String(sv.code || "").startsWith("MAN-")
+        );
         return {
-          id: sv.id || `srv_${index}_${Date.now()}`,
-          findingId: sv.findingId || null,
+          id: isString ? `srv_${index}_${Date.now()}` : (sv.id || `srv_${index}_${Date.now()}`),
+          findingId: isString ? null : (sv.findingId || null),
           code,
           name,
           category,
+          qty,
+          costPrice,
           price,
-          estimatedMinutes: Number(sv.estimatedMinutes || 30),
-          mechanic: sv.mechanic || order.mechanic || "Taller",
-          imageUrl: sv.imageUrl || sv.photoUrl || null,
-          origin: sv.origin || null,
-          notes: sv.notes || "",
+          estimatedMinutes: isString ? 30 : Number(sv.estimatedMinutes || 30),
+          mechanic: isString ? (order.mechanic || "Taller") : (sv.mechanic || order.mechanic || "Taller"),
+          imageUrl: isString ? null : (sv.imageUrl || sv.photoUrl || (Array.isArray(sv.fotos) && sv.fotos.length > 0 ? sv.fotos[0] : null)),
+          fotos: !isString && Array.isArray(sv.fotos) ? sv.fotos : [],
+          audios: !isString && Array.isArray(sv.audios) ? sv.audios : [],
+          isManual,
+          inStock: !isString && sv.inStock !== undefined ? Boolean(sv.inStock) : !isManual,
+          supplierId: isString ? null : (sv.supplierId || null),
+          supplierName: isString ? "Proveedor General" : (sv.supplierName || "Proveedor General"),
+          supplierPhone: isString ? "" : (sv.supplierPhone || ""),
+          purchaseStatus: isString ? "INTERNO" : (sv.purchaseStatus || (isManual ? "POR_PEDIR" : "INTERNO")),
+          supplierAvailability: isString ? "PENDIENTE" : (sv.supplierAvailability || "PENDIENTE"),
+          supplierPrice: isString ? 0 : Number(sv.supplierPrice ?? costPrice ?? 0),
+          deliveryTime: isString ? "" : (sv.deliveryTime || ""),
+          shippingMethod: isString ? "" : (sv.shippingMethod || ""),
+          supplierNotes: isString ? "" : (sv.supplierNotes || ""),
+          supplierRespondedAt: isString ? null : (sv.supplierRespondedAt || null),
+          origin: isString ? null : (sv.origin || null),
+          notes: isString ? "" : (sv.notes || ""),
+          danio: isString ? "" : (sv.danio || ""),
+          descripcion: isString ? "" : (sv.descripcion || sv.description || ""),
         };
       });
 

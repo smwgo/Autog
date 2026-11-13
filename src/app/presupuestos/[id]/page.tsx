@@ -1,23 +1,84 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { Header } from "@/components/Header";
+import CatalogoProductosServiciosTaller from "@/components/taller/CatalogoProductosServiciosTaller";
 
 // ============================================================================
-// INTERFACES
+// INTERFACES & CONSTANTES
 // ============================================================================
 
 export type EspecialidadTipo = "TALLER" | "LUBRICENTRO" | "CARWASH" | "TECNICENTRO";
 
+export const OPCIONES_TIEMPO_RAPIDO = [
+  { id: "Inmediato", label: "Inmediato" },
+  { id: "15m", label: "15m" },
+  { id: "30m", label: "30m" },
+  { id: "45m", label: "45m" },
+  { id: "1h", label: "1h" },
+  { id: "2h", label: "2h" },
+  { id: "Hoy", label: "Hoy" },
+  { id: "Mañana", label: "Mañana" },
+  { id: "24h", label: "24h" },
+  { id: "48h", label: "48h" },
+];
+
+export const OPCIONES_ENVIO_RAPIDO = [
+  { id: "Motorizado", label: "Motorizado", icon: "🛵" },
+  { id: "Transporte", label: "Transporte", icon: "🚚" },
+  { id: "Encomienda", label: "Encomienda", icon: "📦" },
+  { id: "Courier", label: "Courier", icon: "✈️" },
+  { id: "Retiro", label: "Retiro", icon: "🏪" },
+];
+
+export const SERVICIOS_RAPIDOS_POR_ESPECIALIDAD: Record<
+  EspecialidadTipo,
+  Array<{ nombre: string; precio: number }>
+> = {
+  TALLER: [
+    { nombre: "Cambio de aceite", precio: 10 },
+    { nombre: "Cambio de amortiguadores delanteros", precio: 25 },
+    { nombre: "Cambio de amortiguadores posteriores", precio: 20 },
+    { nombre: "Cambio de ruliman delantero", precio: 20 },
+    { nombre: "Cambio de ruliman posterior", precio: 20 },
+    { nombre: "Cambio de aceite de caja", precio: 10 },
+    { nombre: "Cambio de aceite corona", precio: 10 },
+  ],
+  LUBRICENTRO: [
+    { nombre: "Cambio de aceite", precio: 10 },
+    { nombre: "Cambio de aceite de caja", precio: 10 },
+    { nombre: "Cambio de aceite corona", precio: 10 },
+    { nombre: "Lavado completo", precio: 12 },
+    { nombre: "Lavado completo mas grafito", precio: 15 },
+  ],
+  CARWASH: [
+    { nombre: "Lavado completo", precio: 12 },
+    { nombre: "Lavado completo mas grafito", precio: 15 },
+    { nombre: "Lavado exterior", precio: 6 },
+    { nombre: "Aspirador interior", precio: 5 },
+    { nombre: "Limpieza tapicería más lavado", precio: 45 },
+    { nombre: "Lavado chasis", precio: 10 },
+  ],
+  TECNICENTRO: [
+    { nombre: "Alineación", precio: 15 },
+    { nombre: "Balanceo", precio: 12 },
+    { nombre: "Rotación", precio: 8 },
+    { nombre: "Corrección caída", precio: 20 },
+    { nombre: "Corrección camber", precio: 20 },
+    { nombre: "Corrección caster", precio: 20 },
+  ],
+};
+
 interface ItemPropuesta {
   id: string;
-  findingId?: string;
+  findingId?: string | null;
   productId?: string | null;
   code?: string;
   name: string;
   category?: string;
+  presentation?: string;
   qty: number;
   costPrice: number;
   price: number;
@@ -30,22 +91,52 @@ interface ItemPropuesta {
   supplierPhone?: string;
   purchaseStatus?: string;
   notes?: string;
+  danio?: string;
+  descripcion?: string;
   inStock?: boolean; // true = sí hay en bodega taller, false = pedir a proveedor externo
+  isManual?: boolean;
   origin?: EspecialidadTipo;
   imageUrl?: string | null;
+  fotos?: string[];
+  audios?: any[];
+  supplierAvailability?: "PENDIENTE" | "SI_HAY" | "NO_HAY" | null;
+  supplierPrice?: number | null;
+  deliveryTime?: string | null;
+  shippingMethod?: string | null;
+  supplierNotes?: string | null;
+  supplierRespondedAt?: string | null;
 }
 
 interface ServicioPropuesta {
   id: string;
-  findingId?: string;
+  findingId?: string | null;
   code?: string;
   name: string;
   category?: string;
+  qty?: number;
+  costPrice?: number;
   price: number;
   estimatedMinutes?: number;
   mechanic?: string;
   origin?: EspecialidadTipo;
   notes?: string;
+  danio?: string;
+  descripcion?: string;
+  isManual?: boolean;
+  inStock?: boolean;
+  imageUrl?: string | null;
+  fotos?: string[];
+  audios?: any[];
+  supplierId?: string | null;
+  supplierName?: string;
+  supplierPhone?: string;
+  purchaseStatus?: string;
+  supplierAvailability?: "PENDIENTE" | "SI_HAY" | "NO_HAY" | null;
+  supplierPrice?: number | null;
+  deliveryTime?: string | null;
+  shippingMethod?: string | null;
+  supplierNotes?: string | null;
+  supplierRespondedAt?: string | null;
 }
 
 interface EvidenciaItem {
@@ -331,10 +422,16 @@ export default function PaginaDetallePropuesta() {
 
   const handleAbrirFlotanteFotos = (pin: any) => {
     const list: string[] = [];
+    if (Array.isArray(pin.fotos) && pin.fotos.length > 0) {
+      list.push(...pin.fotos);
+    }
     if (Array.isArray(pin.photoUrls) && pin.photoUrls.length > 0) {
       list.push(...pin.photoUrls);
     } else if (pin.photoUrl) {
       list.push(pin.photoUrl);
+    }
+    if (pin.imageUrl) {
+      list.push(pin.imageUrl);
     }
     if (list.length === 0 && orden?.evidencias) {
       const imgEvs = orden.evidencias.filter((e) => e.type === "image").map((e) => e.url);
@@ -359,6 +456,15 @@ export default function PaginaDetallePropuesta() {
 
   const handleAbrirFlotanteAudios = (pin: any) => {
     const list: any[] = [];
+    if (Array.isArray(pin.audios) && pin.audios.length > 0) {
+      pin.audios.forEach((aud: any, idx: number) => {
+        if (typeof aud === "string") {
+          list.push({ id: `item-aud-${idx}`, url: aud, transcriptionText: pin.transcriptionText || null });
+        } else if (aud && aud.url) {
+          list.push(aud);
+        }
+      });
+    }
     if (pin.audioUrl) {
       list.push({
         id: `pin-aud-${pin.id}`,
@@ -389,6 +495,29 @@ export default function PaginaDetallePropuesta() {
   const [verificadosIds, setVerificadosIds] = useState<Record<string, boolean>>({});
   const [areasVerificadas, setAreasVerificadas] = useState<Record<string, boolean>>({});
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
+
+  // Barra de ingreso rápido moderno (igual que en Taller) + Catálogo + Accesos Rápidos + Tiempo/Envío
+  const [descripcionRapida, setDescripcionRapida] = useState("");
+  const [tipoRapido, setTipoRapido] = useState<"SERVICE" | "PART">("PART");
+  const [enStockRapido, setEnStockRapido] = useState<boolean>(false);
+  const [tiempoRapido, setTiempoRapido] = useState<string>("");
+  const [fotosBorradorRapido, setFotosBorradorRapido] = useState<string[]>([]);
+  const [audiosBorradorRapido, setAudiosBorradorRapido] = useState<string[]>([]);
+  const [subiendoMediaRapido, setSubiendoMediaRapido] = useState(false);
+  const [modalCatalogoTallerAbierto, setModalCatalogoTallerAbierto] = useState<{
+    abierto: boolean;
+    origen: EspecialidadTipo;
+    pin?: any;
+  }>({ abierto: false, origen: "TALLER" });
+  const [modalAccesosRapidosAbierto, setModalAccesosRapidosAbierto] = useState<{
+    abierto: boolean;
+    origen: EspecialidadTipo;
+  }>({ abierto: false, origen: "TALLER" });
+  const [busquedaAccesoRapido, setBusquedaAccesoRapido] = useState("");
+  const [itemTiempoEnvioModal, setItemTiempoEnvioModal] = useState<{
+    id: string;
+    isService: boolean;
+  } | null>(null);
 
   const toggleVerificadoItem = (itemId: string) => {
     setVerificadosIds((prev) => ({ ...prev, [itemId]: !prev[itemId] }));
@@ -575,18 +704,38 @@ export default function PaginaDetallePropuesta() {
           setPorcentajeIva(Number(ord.quoteTaxRate ?? 15));
           setPorcentajeDescuento(Number(ord.quoteDiscount ?? 0));
 
-          // Inicializar servicios
+          // Inicializar servicios preservando campos manuales y de proveedor
           const srvInit: ServicioPropuesta[] = (ord.services || []).map((sv: any) => ({
             ...sv,
             origin: sv.origin || deducirEspecialidad(sv.name, sv.category),
+            inStock: sv.inStock !== undefined ? Boolean(sv.inStock) : !Boolean(sv.isManual && sv.purchaseStatus === "POR_PEDIR"),
+            purchaseStatus: sv.purchaseStatus || (sv.inStock === false ? "POR_PEDIR" : "STOCK_LOCAL"),
+            isManual: Boolean(sv.isManual),
+            fotos: Array.isArray(sv.fotos) ? sv.fotos : [],
+            audios: Array.isArray(sv.audios) ? sv.audios : [],
+            supplierAvailability: sv.supplierAvailability || null,
+            supplierPrice: sv.supplierPrice !== undefined ? Number(sv.supplierPrice) : null,
+            deliveryTime: sv.deliveryTime || null,
+            shippingMethod: sv.shippingMethod || null,
+            supplierNotes: sv.supplierNotes || null,
+            supplierRespondedAt: sv.supplierRespondedAt || null,
           }));
 
           // Inicializar repuestos con origen deducido y flag de inStock
           const itemsInit: ItemPropuesta[] = (ord.items || []).map((it: any) => ({
             ...it,
             origin: it.origin || deducirEspecialidad(it.name, it.category),
-            inStock: it.inStock !== undefined ? Boolean(it.inStock) : true,
-            purchaseStatus: it.purchaseStatus || "STOCK_LOCAL",
+            inStock: it.inStock !== undefined ? Boolean(it.inStock) : !Boolean(it.isManual),
+            purchaseStatus: it.purchaseStatus || (it.inStock === false || it.isManual ? "POR_PEDIR" : "STOCK_LOCAL"),
+            isManual: Boolean(it.isManual),
+            fotos: Array.isArray(it.fotos) ? it.fotos : [],
+            audios: Array.isArray(it.audios) ? it.audios : [],
+            supplierAvailability: it.supplierAvailability || null,
+            supplierPrice: it.supplierPrice !== undefined ? Number(it.supplierPrice) : null,
+            deliveryTime: it.deliveryTime || null,
+            shippingMethod: it.shippingMethod || null,
+            supplierNotes: it.supplierNotes || null,
+            supplierRespondedAt: it.supplierRespondedAt || null,
           }));
 
           // Consolidar ítems vinculados directamente en las evidencias/hallazgos si no estaban en ord.items
@@ -609,6 +758,9 @@ export default function PaginaDetallePropuesta() {
                   const srvExistente = srvInit.find((s) => s.id === li.id || (s.name && li.name && s.name.toLowerCase() === li.name.toLowerCase()));
                   if (srvExistente) {
                     if (!srvExistente.findingId) srvExistente.findingId = h.id;
+                    if (!srvExistente.supplierAvailability && li.supplierAvailability) srvExistente.supplierAvailability = li.supplierAvailability;
+                    if (!srvExistente.deliveryTime && li.deliveryTime) srvExistente.deliveryTime = li.deliveryTime;
+                    if (!srvExistente.shippingMethod && li.shippingMethod) srvExistente.shippingMethod = li.shippingMethod;
                   } else {
                     srvInit.push({
                       id: li.id || `srv_find_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
@@ -616,7 +768,16 @@ export default function PaginaDetallePropuesta() {
                       name: li.name,
                       category: "Mano de Obra",
                       price: Number(li.price || 0),
+                      costPrice: Number(li.costPrice || 0),
                       origin: "TALLER",
+                      inStock: li.inStock !== undefined ? Boolean(li.inStock) : !Boolean(li.isManual),
+                      isManual: Boolean(li.isManual),
+                      fotos: Array.isArray(li.fotos) ? li.fotos : [],
+                      audios: Array.isArray(li.audios) ? li.audios : [],
+                      supplierAvailability: li.supplierAvailability || null,
+                      supplierPrice: li.supplierPrice !== undefined ? Number(li.supplierPrice) : null,
+                      deliveryTime: li.deliveryTime || null,
+                      shippingMethod: li.shippingMethod || null,
                       notes: `[Evidencia #${numEv}] ${h.tipo || ""}`.trim(),
                     });
                   }
@@ -624,7 +785,11 @@ export default function PaginaDetallePropuesta() {
                   const repExistente = itemsInit.find((it) => it.id === li.id || (it.name && li.name && it.name.toLowerCase() === li.name.toLowerCase()));
                   if (repExistente) {
                     if (!repExistente.findingId) repExistente.findingId = h.id;
+                    if (!repExistente.supplierAvailability && li.supplierAvailability) repExistente.supplierAvailability = li.supplierAvailability;
+                    if (!repExistente.deliveryTime && li.deliveryTime) repExistente.deliveryTime = li.deliveryTime;
+                    if (!repExistente.shippingMethod && li.shippingMethod) repExistente.shippingMethod = li.shippingMethod;
                   } else {
+                    const enBodegaLi = li.inStock !== undefined ? Boolean(li.inStock) : !Boolean(li.isManual);
                     itemsInit.push({
                       id: li.id || `rep_find_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
                       findingId: h.id,
@@ -635,11 +800,18 @@ export default function PaginaDetallePropuesta() {
                       price: Number(li.price || 0),
                       subtotalVenta: Number(li.price || 0) * Number(li.qty || 1),
                       subtotalCosto: Number(li.costPrice || 0) * Number(li.qty || 1),
-                      margin: Number(li.price || 0) * Number(li.qty || 1),
-                      marginPercent: 100,
-                      supplierName: "Bodega Taller",
-                      purchaseStatus: "STOCK_LOCAL",
-                      inStock: true,
+                      margin: (Number(li.price || 0) - Number(li.costPrice || 0)) * Number(li.qty || 1),
+                      marginPercent: Number(li.price || 0) > 0 ? Math.round(((Number(li.price || 0) - Number(li.costPrice || 0)) / Number(li.price || 0)) * 100) : 100,
+                      supplierName: enBodegaLi ? "Bodega Taller" : "Proveedor General",
+                      purchaseStatus: enBodegaLi ? "STOCK_LOCAL" : "POR_PEDIR",
+                      inStock: enBodegaLi,
+                      isManual: Boolean(li.isManual),
+                      fotos: Array.isArray(li.fotos) ? li.fotos : [],
+                      audios: Array.isArray(li.audios) ? li.audios : [],
+                      supplierAvailability: li.supplierAvailability || null,
+                      supplierPrice: li.supplierPrice !== undefined ? Number(li.supplierPrice) : null,
+                      deliveryTime: li.deliveryTime || null,
+                      shippingMethod: li.shippingMethod || null,
                       origin: "TALLER",
                       notes: `[Evidencia #${numEv}] ${h.tipo || ""}`.trim(),
                     });
@@ -674,6 +846,91 @@ export default function PaginaDetallePropuesta() {
     }
     cargarDetalle();
   }, [id]);
+
+  // Sincronización automática en tiempo real de respuestas del proveedor (Sí hay / No hay, Costo, Tiempo, Envío)
+  useEffect(() => {
+    if (!id || !orden) return;
+    const syncRespuestasProveedor = async () => {
+      if (guardando || estadoSync === "guardando") return;
+      try {
+        const res = await fetch(`/api/presupuestos/detalle?id=${encodeURIComponent(id)}`, { cache: "no-store" });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!data?.success || !data?.order) return;
+        const ordServer = data.order;
+
+        setRepuestos((prev) =>
+          prev.map((it) => {
+            const match = (ordServer.items || []).find(
+              (srvIt: any) => srvIt.id === it.id || (srvIt.name && it.name && srvIt.name.toLowerCase() === it.name.toLowerCase())
+            );
+            if (!match) return it;
+            if (
+              match.supplierAvailability !== it.supplierAvailability ||
+              match.deliveryTime !== it.deliveryTime ||
+              match.shippingMethod !== it.shippingMethod ||
+              (match.supplierPrice && Number(match.supplierPrice) !== Number(it.costPrice))
+            ) {
+              const newCost = match.supplierPrice ? Number(match.supplierPrice) : Number(match.costPrice ?? it.costPrice);
+              const newPrice = Number(match.price ?? it.price);
+              const qty = Number(it.qty || 1);
+              return {
+                ...it,
+                costPrice: newCost,
+                price: newPrice,
+                subtotalCosto: Number((newCost * qty).toFixed(2)),
+                subtotalVenta: Number((newPrice * qty).toFixed(2)),
+                margin: Number(((newPrice - newCost) * qty).toFixed(2)),
+                supplierAvailability: match.supplierAvailability ?? it.supplierAvailability,
+                supplierPrice: match.supplierPrice ?? it.supplierPrice,
+                deliveryTime: match.deliveryTime ?? it.deliveryTime,
+                shippingMethod: match.shippingMethod ?? it.shippingMethod,
+                supplierRespondedAt: match.supplierRespondedAt ?? it.supplierRespondedAt,
+              };
+            }
+            return it;
+          })
+        );
+
+        setServicios((prev) =>
+          prev.map((sv) => {
+            const match = (ordServer.services || []).find(
+              (srvIt: any) => srvIt.id === sv.id || (srvIt.name && sv.name && srvIt.name.toLowerCase() === sv.name.toLowerCase())
+            );
+            if (!match) return sv;
+            if (
+              match.supplierAvailability !== sv.supplierAvailability ||
+              match.deliveryTime !== sv.deliveryTime ||
+              match.shippingMethod !== sv.shippingMethod ||
+              (match.supplierPrice && Number(match.supplierPrice) !== Number(sv.costPrice || 0))
+            ) {
+              return {
+                ...sv,
+                costPrice: match.supplierPrice ? Number(match.supplierPrice) : Number(match.costPrice ?? sv.costPrice ?? 0),
+                price: Number(match.price ?? sv.price),
+                supplierAvailability: match.supplierAvailability ?? sv.supplierAvailability,
+                supplierPrice: match.supplierPrice ?? sv.supplierPrice,
+                deliveryTime: match.deliveryTime ?? sv.deliveryTime,
+                shippingMethod: match.shippingMethod ?? sv.shippingMethod,
+                supplierRespondedAt: match.supplierRespondedAt ?? sv.supplierRespondedAt,
+              };
+            }
+            return sv;
+          })
+        );
+      } catch {
+        // Silencioso en background
+      }
+    };
+
+    const interval = setInterval(syncRespuestasProveedor, 8000);
+    const onFocus = () => syncRespuestasProveedor();
+    window.addEventListener("focus", onFocus);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("focus", onFocus);
+    };
+  }, [id, orden?.id, guardando, estadoSync]);
 
   // Sincronizar propuesta con Neon PostgreSQL en tiempo real
   const sincronizarConNeon = async (
@@ -825,6 +1082,25 @@ export default function PaginaDetallePropuesta() {
 
   // Modificar Casillero: Sí hay en Bodega (Taller) vs Pedir a Proveedor Externo (CRUD Update)
   const handleToggleStock = async (itemId: string) => {
+    const esSrv = servicios.some((s) => s.id === itemId);
+    if (esSrv) {
+      const nuevosServicios = servicios.map((sv) => {
+        if (sv.id === itemId) {
+          const nextStock = sv.inStock === false ? true : false;
+          return {
+            ...sv,
+            inStock: nextStock,
+            purchaseStatus: nextStock ? "STOCK_LOCAL" : "POR_PEDIR",
+            supplierName: nextStock ? "Bodega Taller" : (sv.supplierName === "Bodega Taller" ? "Proveedor General" : (sv.supplierName || "Proveedor General")),
+          };
+        }
+        return sv;
+      });
+      setServicios(nuevosServicios);
+      await sincronizarConNeon(repuestos, nuevosServicios);
+      return;
+    }
+
     const nuevosRepuestos = repuestos.map((it) => {
       if (it.id === itemId) {
         const nextStock = !it.inStock;
@@ -843,9 +1119,247 @@ export default function PaginaDetallePropuesta() {
 
   // Modificar proveedor asignado (CRUD Update)
   const handleUpdateSupplier = async (itemId: string, supplierName: string) => {
+    const esSrv = servicios.some((s) => s.id === itemId);
+    if (esSrv) {
+      const nuevosServicios = servicios.map((sv) => (sv.id === itemId ? { ...sv, supplierName } : sv));
+      setServicios(nuevosServicios);
+      await sincronizarConNeon(repuestos, nuevosServicios);
+      return;
+    }
     const nuevosRepuestos = repuestos.map((it) => (it.id === itemId ? { ...it, supplierName } : it));
     setRepuestos(nuevosRepuestos);
     await sincronizarConNeon(nuevosRepuestos, servicios);
+  };
+
+  // Actualizar campos rápidos de ítem o servicio (Tiempo, Envío, Disponibilidad Proveedor, Costo)
+  const handleUpdateItemFields = (itemId: string, isService: boolean, changes: Record<string, any>) => {
+    if (isService) {
+      const nuevosServicios = servicios.map((sv) => (sv.id === itemId ? { ...sv, ...changes } : sv));
+      setServicios(nuevosServicios);
+      const findingsActualizados = (orden?.inspectionFindings || hallazgos).map((h: any) => {
+        if (Array.isArray(h.linkedItems)) {
+          return {
+            ...h,
+            linkedItems: h.linkedItems.map((li: any) => (li.id === itemId ? { ...li, ...changes } : li)),
+          };
+        }
+        return h;
+      });
+      setOrden((prev: any) => (prev ? { ...prev, inspectionFindings: findingsActualizados } : prev));
+      dispararGuardadoDebounced(repuestos, nuevosServicios, findingsActualizados);
+    } else {
+      const nuevosRepuestos = repuestos.map((it) => (it.id === itemId ? { ...it, ...changes } : it));
+      setRepuestos(nuevosRepuestos);
+      const findingsActualizados = (orden?.inspectionFindings || hallazgos).map((h: any) => {
+        if (Array.isArray(h.linkedItems)) {
+          return {
+            ...h,
+            linkedItems: h.linkedItems.map((li: any) => (li.id === itemId ? { ...li, ...changes } : li)),
+          };
+        }
+        return h;
+      });
+      setOrden((prev: any) => (prev ? { ...prev, inspectionFindings: findingsActualizados } : prev));
+      dispararGuardadoDebounced(nuevosRepuestos, servicios, findingsActualizados);
+    }
+  };
+
+  // Subir foto o audio para nuevo ítem manual desde la barra rápida de Propuesta
+  const handleSubirMediaBorrador = async (e: React.ChangeEvent<HTMLInputElement>, tipo: "foto" | "audio") => {
+    const file = e.target.files?.[0];
+    if (!file || !orden) return;
+    setSubiendoMediaRapido(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("orderId", orden.id);
+      formData.append("orderNumber", orden.orderNumber);
+      formData.append("plate", orden.plate);
+      formData.append("folder", "taller_evidencia");
+      formData.append("tipo", tipo === "foto" ? "image" : "audio");
+      const res = await fetch("/api/storage/upload", { method: "POST", body: formData });
+      const data = await res.json().catch(() => null);
+      if (data?.success && data?.url) {
+        if (tipo === "foto") setFotosBorradorRapido((p) => [...p, data.url]);
+        else setAudiosBorradorRapido((p) => [...p, data.url]);
+        mostrarToast(tipo === "foto" ? "📷 Foto adjuntada" : "🎙️ Audio adjuntado");
+      } else {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const url = String(reader.result || "");
+          if (!url) return;
+          if (tipo === "foto") setFotosBorradorRapido((p) => [...p, url]);
+          else setAudiosBorradorRapido((p) => [...p, url]);
+        };
+        reader.readAsDataURL(file);
+      }
+    } catch {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const url = String(reader.result || "");
+        if (!url) return;
+        if (tipo === "foto") setFotosBorradorRapido((p) => [...p, url]);
+        else setAudiosBorradorRapido((p) => [...p, url]);
+      };
+      reader.readAsDataURL(file);
+    } finally {
+      setSubiendoMediaRapido(false);
+      e.target.value = "";
+    }
+  };
+
+  // Añadir servicio o producto rápido desde la barra superior (con foto, audio, tiempo y estado Bodega/Pedir)
+  const handleAgregarRapidoEnPropuesta = async (origen: EspecialidadTipo) => {
+    const nombre = descripcionRapida.trim();
+    if (!nombre) {
+      mostrarToast("Escribe el nombre del servicio o producto", "err");
+      return;
+    }
+
+    if (tipoRapido === "SERVICE") {
+      const nuevoSrv: ServicioPropuesta = {
+        id: `reg-srv-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        code: `SRV-${Date.now().toString().slice(-4)}`,
+        name: nombre,
+        category: "Mano de Obra",
+        price: 0,
+        costPrice: 0,
+        mechanic: orden?.mechanic || "Taller",
+        origin: origen,
+        inStock: enStockRapido,
+        purchaseStatus: enStockRapido ? "STOCK_LOCAL" : "POR_PEDIR",
+        supplierName: enStockRapido ? "Bodega Taller" : "Proveedor General",
+        isManual: true,
+        fotos: [...fotosBorradorRapido],
+        audios: [...audiosBorradorRapido],
+        deliveryTime: tiempoRapido || null,
+      };
+      const nuevosServicios = [...servicios, nuevoSrv];
+      setServicios(nuevosServicios);
+      setDescripcionRapida("");
+      setFotosBorradorRapido([]);
+      setAudiosBorradorRapido([]);
+      setTiempoRapido("");
+      await sincronizarConNeon(repuestos, nuevosServicios);
+      mostrarToast("✓ Servicio añadido a la propuesta");
+    } else {
+      const nuevoItem: ItemPropuesta = {
+        id: `reg-part-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        code: `REP-${Date.now().toString().slice(-4)}`,
+        name: nombre,
+        category: origen === "LUBRICENTRO" ? "Lubricentro" : origen === "CARWASH" ? "Car Wash" : origen === "TECNICENTRO" ? "Tecnicentro" : "Repuestos",
+        qty: 1,
+        costPrice: 0,
+        price: 0,
+        subtotalVenta: 0,
+        subtotalCosto: 0,
+        margin: 0,
+        marginPercent: 0,
+        supplierName: enStockRapido ? "Bodega Taller" : "Proveedor General",
+        purchaseStatus: enStockRapido ? "STOCK_LOCAL" : "POR_PEDIR",
+        inStock: enStockRapido,
+        origin: origen,
+        isManual: true,
+        fotos: [...fotosBorradorRapido],
+        audios: [...audiosBorradorRapido],
+        deliveryTime: tiempoRapido || null,
+      };
+      const nuevosRepuestos = [...repuestos, nuevoItem];
+      setRepuestos(nuevosRepuestos);
+      setDescripcionRapida("");
+      setFotosBorradorRapido([]);
+      setAudiosBorradorRapido([]);
+      setTiempoRapido("");
+      await sincronizarConNeon(nuevosRepuestos, servicios);
+      mostrarToast("✓ Producto añadido a la propuesta");
+    }
+  };
+
+  // Añadir múltiples productos/servicios desde el Catálogo interactivo (CatalogoProductosServiciosTaller)
+  const handleAgregarDesdeCatalogoTaller = async (itemsSeleccionados: any[]) => {
+    if (!Array.isArray(itemsSeleccionados) || itemsSeleccionados.length === 0) return;
+    const orig = modalCatalogoTallerAbierto.origen || "TALLER";
+    const pinTarget = modalCatalogoTallerAbierto.pin || null;
+    const numEv = pinTarget ? (pinTarget.numeroEvidencia || pinTarget.pinNumber || 1) : null;
+
+    let nuevosRep = [...repuestos];
+    let nuevosSrv = [...servicios];
+    let findingsActualizados = [...(orden?.inspectionFindings || hallazgos)];
+
+    for (const sel of itemsSeleccionados) {
+      const esSrv = sel.type === "SERVICE";
+      const qty = Math.max(1, Number(sel.qty || 1));
+      const pvp = Number(sel.price || 0);
+      const cost = Number(sel.costPrice || 0);
+      const enBodega = sel.inStock !== undefined ? Boolean(sel.inStock) : true;
+
+      if (esSrv) {
+        const srvNuevo: ServicioPropuesta = {
+          id: sel.id || `cat-srv-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+          findingId: pinTarget?.id || null,
+          code: sel.code || `SRV-${Date.now().toString().slice(-4)}`,
+          name: sel.name,
+          category: sel.category || "Mano de Obra",
+          price: pvp * qty,
+          costPrice: cost,
+          mechanic: orden?.mechanic || "Taller",
+          origin: orig,
+          inStock: true,
+          purchaseStatus: "STOCK_LOCAL",
+          notes: pinTarget ? `[Evidencia #${numEv}] ${pinTarget.tipo || ""}`.trim() : undefined,
+        };
+        nuevosSrv.push(srvNuevo);
+      } else {
+        const repNuevo: ItemPropuesta = {
+          id: sel.id || `cat-part-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+          productId: sel.productId || null,
+          findingId: pinTarget?.id || null,
+          code: sel.code || `REP-${Date.now().toString().slice(-4)}`,
+          name: sel.name,
+          category: sel.category || "Repuestos",
+          qty,
+          costPrice: cost,
+          price: pvp,
+          subtotalVenta: Number((pvp * qty).toFixed(2)),
+          subtotalCosto: Number((cost * qty).toFixed(2)),
+          margin: Number(((pvp - cost) * qty).toFixed(2)),
+          marginPercent: pvp > 0 ? Math.round(((pvp - cost) / pvp) * 100) : 0,
+          supplierName: enBodega ? "Bodega Taller" : "Proveedor General",
+          purchaseStatus: enBodega ? "STOCK_LOCAL" : "POR_PEDIR",
+          inStock: enBodega,
+          origin: orig,
+          imageUrl: sel.imageUrl || null,
+          fotos: sel.imageUrl ? [sel.imageUrl] : [],
+          notes: pinTarget ? `[Evidencia #${numEv}] ${pinTarget.tipo || ""}`.trim() : undefined,
+        };
+        nuevosRep.push(repNuevo);
+      }
+    }
+
+    setRepuestos(nuevosRep);
+    setServicios(nuevosSrv);
+    setModalCatalogoTallerAbierto({ abierto: false, origen: "TALLER" });
+    await sincronizarConNeon(nuevosRep, nuevosSrv, findingsActualizados);
+    mostrarToast(`✓ ${itemsSeleccionados.length} ítem(s) agregados desde el catálogo`);
+  };
+
+  // Añadir servicio desde Accesos Rápidos
+  const handleAgregarAccesoRapido = async (nombre: string, precio: number, origen: EspecialidadTipo) => {
+    const nuevoSrv: ServicioPropuesta = {
+      id: `rap-srv-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      code: `SRV-${Date.now().toString().slice(-4)}`,
+      name: nombre,
+      category: "Mano de Obra",
+      price: Number(precio || 0),
+      mechanic: orden?.mechanic || "Taller",
+      origin: origen,
+      inStock: true,
+      purchaseStatus: "STOCK_LOCAL",
+    };
+    const nuevosServicios = [...servicios, nuevoSrv];
+    setServicios(nuevosServicios);
+    await sincronizarConNeon(repuestos, nuevosServicios);
+    mostrarToast(`✓ ${nombre} añadido`);
   };
 
   // Eliminar repuesto de la propuesta y de Neon (CRUD Delete)
@@ -1014,12 +1528,31 @@ export default function PaginaDetallePropuesta() {
     const iva = Number((subtotalNeto * (porcentajeIva / 100)).toFixed(2));
     const totalFacturaCliente = Number((subtotalNeto + iva).toFixed(2));
 
-    // Solo se pagan a proveedores los repuestos que NO están en bodega
-    const itemsPorComprar = repuestos.filter((r) => !r.inStock);
+    // Ítems y servicios que no están en stock o fueron ingresados manualmente para pedir a proveedor
+    const repuestosPorComprar = repuestos
+      .filter((r) => !r.inStock || (r.isManual && r.purchaseStatus === "POR_PEDIR"))
+      .map((r) => ({ ...r, isService: false }));
+    const serviciosPorComprar = servicios
+      .filter((s) => s.inStock === false || (s.isManual && s.purchaseStatus === "POR_PEDIR"))
+      .map((s) => ({
+        ...s,
+        qty: 1,
+        costPrice: Number(s.costPrice || 0),
+        subtotalVenta: Number(s.price || 0),
+        subtotalCosto: Number(s.costPrice || 0),
+        margin: Number((s.price || 0) - Number(s.costPrice || 0)),
+        marginPercent: s.price > 0 ? Math.round(((s.price - Number(s.costPrice || 0)) / s.price) * 100) : 100,
+        supplierName: s.supplierName || "Proveedor General",
+        purchaseStatus: s.purchaseStatus || "POR_PEDIR",
+        inStock: false,
+        isService: true,
+      }));
+
+    const itemsPorComprar = [...repuestosPorComprar, ...serviciosPorComprar];
     const itemsEnBodega = repuestos.filter((r) => r.inStock);
 
     const totalCostoComprasExternas = Number(
-      itemsPorComprar.reduce((acc, it) => acc + (it.costPrice * it.qty), 0).toFixed(2)
+      itemsPorComprar.reduce((acc, it) => acc + (Number(it.costPrice || 0) * Number(it.qty || 1)), 0).toFixed(2)
     );
 
     // Margen para el taller = PVP Neto - Costos de Compras Externas
@@ -1332,6 +1865,35 @@ export default function PaginaDetallePropuesta() {
     [repuestos, servicios]
   );
 
+  // Ítems y servicios de Taller ingresados manualmente o generales que no pertenecen a un pin específico
+  const adicionalesTaller = useMemo(() => {
+    const idsEnPines = new Set<string>();
+    hallazgos.forEach((pin: any) => {
+      obtenerItemsDePin(pin).forEach((it: any) => {
+        if (it.id) idsEnPines.add(String(it.id));
+      });
+    });
+
+    const prodsTaller = repuestos
+      .filter((r) => (r.origin || "TALLER") === "TALLER" && !idsEnPines.has(String(r.id)))
+      .map((r) => ({
+        ...r,
+        isService: false,
+        subtotal: r.subtotalVenta || Number((Number(r.price || 0) * Number(r.qty || 1)).toFixed(2)),
+      }));
+
+    const srvsTaller = servicios
+      .filter((s) => (s.origin || "TALLER") === "TALLER" && !idsEnPines.has(String(s.id)))
+      .map((s) => ({
+        ...s,
+        qty: 1,
+        isService: true,
+        subtotal: Number(s.price || 0),
+      }));
+
+    return [...prodsTaller, ...srvsTaller];
+  }, [repuestos, servicios, hallazgos, obtenerItemsDePin]);
+
   // Manejo de envíos a proveedores (individual y masivo)
   const abrirModalProveedor = (modo: "MASIVO" | "INDIVIDUAL", item?: any, pin?: any) => {
     setModalProveedor({ abierto: true, modo, item, pin });
@@ -1368,20 +1930,30 @@ export default function PaginaDetallePropuesta() {
         modalProveedor.pin?.descripcion ||
         modalProveedor.pin?.tipo ||
         "Repuesto";
+      const itId = modalProveedor.item?.id || "";
+      const pinId = modalProveedor.pin?.id || modalProveedor.item?.findingId || "";
       const evNum =
-        modalProveedor.pin?.numeroEvidencia || modalProveedor.pin?.pinNumber || 1;
+        modalProveedor.pin?.numeroEvidencia || modalProveedor.pin?.pinNumber || null;
       const desc = modalProveedor.pin?.descripcion
-        ? `\n• Daño reportado: "${modalProveedor.pin.descripcion}"`
+        ? `\n• Detalle: "${modalProveedor.pin.descripcion}"`
+        : modalProveedor.item?.descripcion
+        ? `\n• Detalle: "${modalProveedor.item.descripcion}"`
         : "";
-      return `Hola, solicito cotización para el vehículo ${vehicleInfo}:\n• Repuesto: ${itName} (Evidencia #${evNum})${desc}\n\nPuedes revisar fotos y especificaciones aquí:\n${orderLink}?item=${encodeURIComponent(itName)}`;
+      const queryParams = new URLSearchParams();
+      if (itId) queryParams.set("itemId", String(itId));
+      if (itName) queryParams.set("item", String(itName));
+      if (pinId) queryParams.set("pinId", String(pinId));
+      const fullLink = `${orderLink}?${queryParams.toString()}`;
+
+      return `Hola, solicito cotización para el vehículo ${vehicleInfo}:\n• Ítem: ${itName}${evNum ? ` (Evidencia #${evNum})` : ""}${desc}\n\nMarca disponibilidad (Sí hay / No hay), valor, tiempo y envío aquí (incluye foto y audio):\n${fullLink}`;
     } else {
-      // Masivo: todo el pedido consolidado de taller
-      const itemsList = repuestos
-        .filter((r) => (r.origin || "TALLER") === "TALLER")
-        .map((r) => `• ${r.qty || 1}x ${r.name}`)
+      // Masivo: todos los productos y servicios por pedir o de la orden
+      const lista = calculos.itemsPorComprar.length > 0 ? calculos.itemsPorComprar : repuestos;
+      const itemsList = lista
+        .map((r: any) => `• ${r.qty || 1}x ${r.name}`)
         .join("\n");
 
-      return `Hola, te comparto el pedido de repuestos para el vehículo ${vehicleInfo}:\n${itemsList || "• Repuestos requeridos en inspección"}\n\nPuedes revisar la lista completa y fotos de las evidencias aquí:\n${orderLink}`;
+      return `Hola, te comparto el pedido para el vehículo ${vehicleInfo}:\n${itemsList || "• Repuestos requeridos en inspección"}\n\nRevisa fotos, audios y responde disponibilidad, precios, tiempos y envío aquí:\n${orderLink}`;
     }
   };
 
@@ -1914,6 +2486,571 @@ export default function PaginaDetallePropuesta() {
     }
   };
 
+  // Barra moderna minimalista deslizable para añadir servicios y productos adicionales con foto, audio y tiempo
+  const renderBarraAgregarAdicional = (origen: EspecialidadTipo) => (
+    <div className="print:hidden p-3 sm:p-3.5 rounded-2xl bg-zinc-50/90 dark:bg-[#131318] border border-zinc-200 dark:border-white/10 space-y-2.5 shadow-2xs">
+      <div className="flex flex-wrap items-center gap-2">
+        {/* Selector Servicio / Producto (1 palabra + icono) */}
+        <div className="inline-flex rounded-xl bg-zinc-200/70 dark:bg-black/60 p-0.5 border border-zinc-300/60 dark:border-white/10 shrink-0">
+          <button
+            type="button"
+            onClick={() => setTipoRapido("PART")}
+            className={`h-8 px-2.5 rounded-lg text-xs font-medium flex items-center gap-1 transition-all cursor-pointer ${
+              tipoRapido === "PART"
+                ? "bg-blue-600 text-white shadow-xs"
+                : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
+            }`}
+          >
+            <span>📦</span>
+            <span>Producto</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setTipoRapido("SERVICE")}
+            className={`h-8 px-2.5 rounded-lg text-xs font-medium flex items-center gap-1 transition-all cursor-pointer ${
+              tipoRapido === "SERVICE"
+                ? "bg-purple-600 text-white shadow-xs"
+                : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
+            }`}
+          >
+            <span>🔧</span>
+            <span>Servicio</span>
+          </button>
+        </div>
+
+        {/* Toggle Bodega vs Pedir (1 palabra + icono) */}
+        <button
+          type="button"
+          onClick={() => setEnStockRapido((p) => !p)}
+          className={`h-9 px-2.5 rounded-xl border text-xs font-medium flex items-center gap-1.5 transition-all cursor-pointer shrink-0 ${
+            enStockRapido
+              ? "bg-emerald-500/15 border-emerald-500/35 text-emerald-700 dark:text-emerald-300"
+              : "bg-amber-500/15 border-amber-500/35 text-amber-700 dark:text-amber-300"
+          }`}
+          title={enStockRapido ? "En Bodega" : "Para pedir a Proveedor"}
+        >
+          <span>{enStockRapido ? "🏢" : "🚚"}</span>
+          <span>{enStockRapido ? "Bodega" : "Pedir"}</span>
+        </button>
+
+        {/* Input Descripción */}
+        <input
+          type="text"
+          value={descripcionRapida}
+          onChange={(e) => setDescripcionRapida(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              handleAgregarRapidoEnPropuesta(origen);
+            }
+          }}
+          placeholder={tipoRapido === "SERVICE" ? "Añadir servicio manual o adicional..." : "Añadir producto / repuesto manual (sin stock)..."}
+          className="flex-1 min-w-[180px] h-9 px-3 rounded-xl bg-white dark:bg-black/70 border border-zinc-200 dark:border-white/10 text-xs text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:border-blue-500"
+        />
+
+        {/* Iconos de Cámara, Galería y Audio para ingreso manual */}
+        <div className="flex items-center gap-1 shrink-0">
+          <label
+            className="w-9 h-9 rounded-xl bg-white dark:bg-white/5 hover:bg-blue-50 dark:hover:bg-blue-500/15 border border-zinc-200 dark:border-white/10 flex items-center justify-center text-blue-600 dark:text-blue-400 cursor-pointer transition-all active:scale-95 relative"
+            title="Tomar Foto"
+          >
+            <span>📷</span>
+            {fotosBorradorRapido.length > 0 && (
+              <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-blue-600 text-white text-[9px] font-bold flex items-center justify-center">
+                {fotosBorradorRapido.length}
+              </span>
+            )}
+            <input
+              type="file"
+              accept="image/*"
+              capture="environment"
+              disabled={subiendoMediaRapido}
+              onChange={(e) => handleSubirMediaBorrador(e, "foto")}
+              className="hidden"
+            />
+          </label>
+
+          <label
+            className="w-9 h-9 rounded-xl bg-white dark:bg-white/5 hover:bg-indigo-50 dark:hover:bg-indigo-500/15 border border-zinc-200 dark:border-white/10 flex items-center justify-center text-indigo-600 dark:text-indigo-400 cursor-pointer transition-all active:scale-95"
+            title="Subir Imagen"
+          >
+            <span>🖼️</span>
+            <input
+              type="file"
+              accept="image/*"
+              disabled={subiendoMediaRapido}
+              onChange={(e) => handleSubirMediaBorrador(e, "foto")}
+              className="hidden"
+            />
+          </label>
+
+          <label
+            className="w-9 h-9 rounded-xl bg-white dark:bg-white/5 hover:bg-amber-50 dark:hover:bg-amber-500/15 border border-zinc-200 dark:border-white/10 flex items-center justify-center text-amber-600 dark:text-amber-400 cursor-pointer transition-all active:scale-95 relative"
+            title="Adjuntar Audio"
+          >
+            <span>🎙️</span>
+            {audiosBorradorRapido.length > 0 && (
+              <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-amber-500 text-black text-[9px] font-bold flex items-center justify-center">
+                {audiosBorradorRapido.length}
+              </span>
+            )}
+            <input
+              type="file"
+              accept="audio/*"
+              disabled={subiendoMediaRapido}
+              onChange={(e) => handleSubirMediaBorrador(e, "audio")}
+              className="hidden"
+            />
+          </label>
+        </div>
+
+        {/* Botón + Añadir (1 palabra + icono) */}
+        <button
+          type="button"
+          onClick={() => handleAgregarRapidoEnPropuesta(origen)}
+          className="h-9 px-3.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold flex items-center gap-1 transition-all active:scale-95 cursor-pointer shadow-xs shrink-0"
+          title="Añadir a la propuesta"
+        >
+          <span>+</span>
+          <span>Añadir</span>
+        </button>
+
+        {/* Botón Catálogo Taller (1 palabra + icono) */}
+        <button
+          type="button"
+          onClick={() => setModalCatalogoTallerAbierto({ abierto: true, origen })}
+          className="h-9 px-3 rounded-xl bg-indigo-500/15 hover:bg-indigo-500/25 border border-indigo-500/30 text-indigo-700 dark:text-indigo-300 text-xs font-medium flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer shrink-0"
+          title="Abrir Catálogo con Carrito"
+        >
+          <span>🛒</span>
+          <span>Catálogo</span>
+        </button>
+
+        {/* Botón Rápidos (1 palabra + icono) */}
+        <button
+          type="button"
+          onClick={() => {
+            setBusquedaAccesoRapido("");
+            setModalAccesosRapidosAbierto({ abierto: true, origen });
+          }}
+          className="h-9 px-3 rounded-xl bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/30 text-purple-700 dark:text-purple-300 text-xs font-medium flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer shrink-0"
+          title="Servicios Rápidos"
+        >
+          <span>⚡</span>
+          <span>Rápidos</span>
+        </button>
+      </div>
+
+      {/* Chips deslizables de Tiempo (1 palabra) + Previsualización de adjuntos */}
+      <div className="flex items-center justify-between gap-2 pt-0.5 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+        <div className="flex items-center gap-1.5 shrink-0">
+          <span className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400 flex items-center gap-1 pr-1">
+            <span>⏱️</span>
+            <span>Tiempo:</span>
+          </span>
+          {OPCIONES_TIEMPO_RAPIDO.map((op) => {
+            const activo = tiempoRapido === op.id;
+            return (
+              <button
+                key={op.id}
+                type="button"
+                onClick={() => setTiempoRapido(activo ? "" : op.id)}
+                className={`h-6 px-2 rounded-lg text-[11px] font-medium transition-all cursor-pointer shrink-0 border ${
+                  activo
+                    ? "bg-blue-600 text-white border-blue-500 shadow-2xs"
+                    : "bg-white dark:bg-white/5 border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-400 hover:border-zinc-300"
+                }`}
+              >
+                {op.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {(fotosBorradorRapido.length > 0 || audiosBorradorRapido.length > 0) && (
+          <div className="flex items-center gap-1.5 shrink-0">
+            {fotosBorradorRapido.map((f, i) => (
+              <img key={i} src={f} alt="Adjunto" className="w-6 h-6 rounded object-cover border border-blue-500/40" />
+            ))}
+            {audiosBorradorRapido.length > 0 && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-600 dark:text-amber-300 border border-amber-500/30">
+                🎙️ {audiosBorradorRapido.length}
+              </span>
+            )}
+            <button
+              type="button"
+              onClick={() => {
+                setFotosBorradorRapido([]);
+                setAudiosBorradorRapido([]);
+              }}
+              className="text-[10px] text-rose-500 hover:underline cursor-pointer"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  // Fila deslizable moderna y minimalista (con títulos de 1 sola palabra + iconos, Tiempo, Envío, Sí hay / No hay y WhatsApp)
+  const renderFilaItemPropuesta = (
+    item: any,
+    itemIdx: number,
+    pin?: any,
+    sec?: any,
+    etiquetaOrigen?: string
+  ) => {
+    const esServicio = Boolean(item.isService);
+    const numEvidencia = pin ? (pin.numeroEvidencia || pin.pinNumber || 1) : null;
+    const textoDanio = pin
+      ? item.danio || (pin.tipo ? formatoPrimeraMayuscula(pin.tipo) : `${formatoPrimeraMayuscula(sec?.nombre || "Taller")} (#${numEvidencia})`)
+      : item.danio || (item.isManual ? "Manual" : etiquetaOrigen || "Adicional");
+    const textoDescripcion =
+      (pin?.descripcion && pin.descripcion.trim()) ||
+      (item.descripcion && item.descripcion.trim()) ||
+      (item.notes && !item.notes.startsWith("[Evidencia") ? item.notes.trim() : "") ||
+      "";
+    const modoLinea = modosLineas[item.id] || "DETALLES";
+    const dispProv = item.supplierAvailability; // "SI_HAY" | "NO_HAY" | null
+    const metodoEnvioObj = OPCIONES_ENVIO_RAPIDO.find((e) => e.id === item.shippingMethod);
+
+    return (
+      <tr key={item.id ? `${item.id}-${itemIdx}` : `row-item-${itemIdx}`} className="hover:bg-white/80 dark:hover:bg-white/[0.02] transition-colors">
+        <td className="py-2 px-2.5 text-center">
+          <input
+            type="checkbox"
+            checked={!!verificadosIds[item.id]}
+            onChange={() => toggleVerificadoItem(item.id)}
+            className="w-3.5 h-3.5 rounded accent-emerald-500 cursor-pointer"
+          />
+        </td>
+
+        {/* 1. ORIGEN / DAÑO */}
+        <td className="py-2 px-2.5">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className={`font-semibold text-xs ${pin ? "text-rose-600 dark:text-rose-400" : "text-indigo-600 dark:text-indigo-400"}`}>
+              {textoDanio}
+            </span>
+            {item.isManual && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 font-medium">
+                Manual
+              </span>
+            )}
+          </div>
+        </td>
+
+        {/* 2. ÍTEM + ICONOS FOTO / AUDIO + BADGES PROVEEDOR */}
+        <td className="py-2 px-2.5">
+          <div className="flex items-center justify-between gap-2">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-zinc-900 dark:text-white font-medium text-xs">
+                  {item.name}
+                </span>
+                {/* Respuesta automática del proveedor */}
+                {dispProv === "SI_HAY" && (
+                  <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-emerald-500/15 border border-emerald-500/35 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold">
+                    ✓ Sí hay
+                  </span>
+                )}
+                {dispProv === "NO_HAY" && (
+                  <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-rose-500/15 border border-rose-500/35 text-rose-700 dark:text-rose-300 text-[10px] font-bold">
+                    ✕ No hay
+                  </span>
+                )}
+                {metodoEnvioObj && (
+                  <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-cyan-500/10 border border-cyan-500/25 text-cyan-700 dark:text-cyan-300 text-[10px] font-medium">
+                    <span>{metodoEnvioObj.icon}</span>
+                    <span>{metodoEnvioObj.label}</span>
+                  </span>
+                )}
+              </div>
+              {textoDescripcion ? (
+                <span className="text-[11px] text-zinc-500 dark:text-zinc-400 block mt-0.5 truncate" title={textoDescripcion}>
+                  {textoDescripcion}
+                </span>
+              ) : null}
+            </div>
+
+            {/* Iconos minimalistas de Foto, Audio y Envío rápido a Proveedor */}
+            <div className="flex items-center gap-1 shrink-0">
+              <button
+                type="button"
+                onClick={() => handleAbrirFlotanteFotos(pin || item)}
+                className="w-7 h-7 rounded-xl bg-blue-50/90 dark:bg-blue-500/15 border border-blue-200/80 dark:border-blue-500/30 flex items-center justify-center text-blue-600 dark:text-blue-400 hover:bg-blue-100 transition-all cursor-pointer active:scale-95"
+                title="Fotos"
+              >
+                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect width="18" height="18" x="3" y="3" rx="4" />
+                  <circle cx="8.5" cy="8.5" r="1.5" />
+                  <path d="m21 15-5-5L5 21" />
+                </svg>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleAbrirFlotanteAudios(pin || item)}
+                className="w-7 h-7 rounded-xl bg-amber-50/90 dark:bg-amber-500/15 border border-amber-200/80 dark:border-amber-500/30 flex items-center justify-center text-amber-600 dark:text-amber-400 hover:bg-amber-100 transition-all cursor-pointer active:scale-95"
+                title="Audio"
+              >
+                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+                  <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                  <line x1="12" x2="12" y1="19" y2="22" />
+                </svg>
+              </button>
+              {(!item.inStock || item.isManual) && (
+                <button
+                  type="button"
+                  onClick={() => abrirModalProveedor("INDIVIDUAL", item, pin)}
+                  className="w-7 h-7 rounded-xl bg-emerald-500/15 border border-emerald-500/35 flex items-center justify-center text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/25 transition-all cursor-pointer active:scale-95"
+                  title="Enviar a Proveedor por WhatsApp"
+                >
+                  <span>📤</span>
+                </button>
+              )}
+            </div>
+          </div>
+        </td>
+
+        {/* 3. TIEMPO (1 palabra + icono, clic para deslizar/elegir Tiempo y Envío) */}
+        <td className="py-2 px-2 text-center">
+          <button
+            type="button"
+            onClick={() => setItemTiempoEnvioModal({ id: item.id, isService: esServicio })}
+            className={`h-6 px-2 rounded-lg border text-[11px] font-medium inline-flex items-center gap-1 transition-all cursor-pointer active:scale-95 ${
+              item.deliveryTime
+                ? "bg-blue-500/15 border-blue-500/35 text-blue-700 dark:text-blue-300 font-semibold"
+                : "bg-zinc-100 dark:bg-white/5 border-zinc-200 dark:border-white/10 text-zinc-500 dark:text-zinc-400 hover:border-zinc-300"
+            }`}
+            title="Tiempo de llegada y método de envío"
+          >
+            <span>⏱️</span>
+            <span>{item.deliveryTime || "Tiempo"}</span>
+          </button>
+        </td>
+
+        {/* COLUMNAS DESLIZABLES SEGÚN EL MODO (DETALLES / MANUAL / PROVEEDOR) */}
+        {modoLinea === "DETALLES" && (
+          <>
+            {/* TIPO + BODEGA/PEDIR */}
+            <td className="py-2 px-2 text-center">
+              <div className="inline-flex items-center gap-1">
+                <span
+                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold border ${
+                    esServicio
+                      ? "bg-purple-500/10 border-purple-500/25 text-purple-600 dark:text-purple-400"
+                      : "bg-blue-500/10 border-blue-500/25 text-blue-600 dark:text-blue-400"
+                  }`}
+                >
+                  <span>{esServicio ? "🔧" : "📦"}</span>
+                  <span>{esServicio ? "Servicio" : "Producto"}</span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => handleToggleStock(item.id)}
+                  className={`h-5 px-1.5 rounded-md text-[10px] font-semibold border cursor-pointer transition-all ${
+                    item.inStock !== false
+                      ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-700 dark:text-emerald-300"
+                      : "bg-amber-500/15 border-amber-500/30 text-amber-700 dark:text-amber-300"
+                  }`}
+                  title="Alternar Bodega vs Pedir a Proveedor"
+                >
+                  {item.inStock !== false ? "🏢" : "🚚"}
+                </button>
+              </div>
+            </td>
+
+            {/* CANTIDAD */}
+            <td className="py-2 px-2 text-center">
+              {esServicio ? (
+                <span className="font-mono text-zinc-700 dark:text-zinc-300">1</span>
+              ) : (
+                <div className="inline-flex items-center border border-zinc-200 dark:border-white/10 rounded-lg overflow-hidden bg-white dark:bg-black">
+                  <button
+                    type="button"
+                    onClick={() => handleUpdateQty(item.id, -1)}
+                    className="w-5 h-6 text-zinc-500 hover:text-white flex items-center justify-center cursor-pointer"
+                  >
+                    -
+                  </button>
+                  <span className="w-6 text-center font-mono text-zinc-900 dark:text-white text-xs">
+                    {item.qty || 1}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => handleUpdateQty(item.id, 1)}
+                    className="w-5 h-6 text-zinc-500 hover:text-white flex items-center justify-center cursor-pointer"
+                  >
+                    +
+                  </button>
+                </div>
+              )}
+            </td>
+
+            {/* SUBTOTAL / PVP */}
+            <td className="py-2 px-2.5 text-right font-mono font-medium text-zinc-900 dark:text-white">
+              ${Number(item.subtotal ?? item.subtotalVenta ?? (item.price * (item.qty || 1))).toFixed(2)}
+            </td>
+          </>
+        )}
+
+        {modoLinea === "MANUAL" && (
+          <>
+            {/* COSTO */}
+            <td className="py-2 px-2 text-center">
+              <div className="inline-flex flex-col items-center">
+                <span className="text-[9px] text-zinc-400 uppercase font-semibold leading-none mb-1">Costo</span>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={item.costPrice || 0}
+                  onChange={(e) =>
+                    esServicio
+                      ? handleUpdateItemFields(item.id, true, { costPrice: parseFloat(e.target.value) || 0 })
+                      : handleUpdatePrice(item.id, "costPrice", e.target.value)
+                  }
+                  className="w-16 h-6 px-1 text-right rounded bg-zinc-50 dark:bg-black border border-zinc-200 dark:border-white/10 font-mono text-zinc-700 dark:text-zinc-300 text-xs"
+                  placeholder="0.00"
+                />
+              </div>
+            </td>
+            {/* PVP */}
+            <td className="py-2 px-2 text-center">
+              <div className="inline-flex flex-col items-center">
+                <span className="text-[9px] text-zinc-400 uppercase font-semibold leading-none mb-1">PVP</span>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={item.price || 0}
+                  onChange={(e) => (esServicio ? handleUpdateServicePrice(item.id, e.target.value) : handleUpdatePrice(item.id, "price", e.target.value))}
+                  className="w-16 h-6 px-1 text-right rounded bg-purple-50/50 dark:bg-black border border-purple-500/30 font-mono text-purple-700 dark:text-purple-300 font-bold text-xs"
+                  placeholder="0.00"
+                />
+              </div>
+            </td>
+            {/* MARGEN */}
+            <td className="py-2 px-2.5 text-right">
+              <div className="flex flex-col items-end">
+                <span className="text-[9px] text-zinc-400 uppercase font-semibold leading-none mb-0.5">Margen</span>
+                <span className="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                  {item.price > 0 ? `${Math.round(((item.price - (item.costPrice || 0)) / item.price) * 100)}%` : "0%"}
+                </span>
+              </div>
+            </td>
+          </>
+        )}
+
+        {modoLinea === "PROVEEDOR" && (
+          <>
+            {/* STOCK: BODEGA / PEDIR + SI HAY / NO HAY */}
+            <td className="py-2 px-2 text-center">
+              <div className="inline-flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => handleToggleStock(item.id)}
+                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold cursor-pointer border transition-all ${
+                    item.inStock !== false
+                      ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-700 dark:text-emerald-300"
+                      : "bg-amber-500/15 border-amber-500/30 text-amber-700 dark:text-amber-300"
+                  }`}
+                >
+                  <span>{item.inStock !== false ? "🏢 Bodega" : "🚚 Pedir"}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleUpdateItemFields(item.id, esServicio, {
+                      supplierAvailability: dispProv === "SI_HAY" ? "NO_HAY" : "SI_HAY",
+                    })
+                  }
+                  className={`h-5 px-1.5 rounded-full text-[10px] font-bold cursor-pointer border transition-all ${
+                    dispProv === "SI_HAY"
+                      ? "bg-emerald-600 text-white border-emerald-500"
+                      : dispProv === "NO_HAY"
+                      ? "bg-rose-600 text-white border-rose-500"
+                      : "bg-zinc-100 dark:bg-white/10 text-zinc-500 border-zinc-300 dark:border-white/10"
+                  }`}
+                  title="Estado confirmado por el proveedor: Sí hay / No hay"
+                >
+                  {dispProv === "SI_HAY" ? "✓ Sí" : dispProv === "NO_HAY" ? "✕ No" : "?"}
+                </button>
+              </div>
+            </td>
+            {/* ENVÍO */}
+            <td className="py-2 px-2 text-center">
+              <button
+                type="button"
+                onClick={() => setItemTiempoEnvioModal({ id: item.id, isService: esServicio })}
+                className="h-6 px-2 rounded-lg bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/10 text-[10px] font-medium text-zinc-700 dark:text-zinc-300 inline-flex items-center gap-1 cursor-pointer"
+                title="Elegir método de envío"
+              >
+                <span>{metodoEnvioObj?.icon || "🛵"}</span>
+                <span>{metodoEnvioObj?.label || "Envío"}</span>
+              </button>
+            </td>
+            {/* WHATSAPP INDIVIDUAL */}
+            <td className="py-2 px-2.5 text-right">
+              <button
+                type="button"
+                onClick={() => abrirModalProveedor("INDIVIDUAL", item, pin)}
+                className="h-6 px-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-medium transition-all active:scale-95 inline-flex items-center gap-1 cursor-pointer shadow-2xs"
+                title="Enviar a Proveedor por WhatsApp"
+              >
+                <span>📤</span>
+                <span>Enviar</span>
+              </button>
+            </td>
+          </>
+        )}
+
+        {/* ACCIONES DESLIZABLES: DETALLES <-> MANUAL <-> PROVEEDOR + ELIMINAR */}
+        <td className="py-2 px-2 text-center">
+          <div className="flex items-center justify-center gap-1">
+            {modoLinea !== "DETALLES" && (
+              <button
+                type="button"
+                onClick={() => retrocederModoLinea(item.id)}
+                className="w-6 h-6 rounded-lg bg-zinc-100 hover:bg-zinc-200 dark:bg-white/10 dark:hover:bg-white/20 text-zinc-600 dark:text-zinc-300 flex items-center justify-center text-xs font-bold transition-all cursor-pointer active:scale-95"
+                title="Anterior"
+              >
+                ←
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={() => avanzarModoLinea(item.id)}
+              className={`h-6 px-1.5 rounded-lg border text-[10px] font-semibold flex items-center gap-0.5 transition-all cursor-pointer active:scale-95 ${
+                modoLinea === "DETALLES"
+                  ? "bg-purple-50 hover:bg-purple-100 dark:bg-purple-500/10 border-purple-300/80 dark:border-purple-500/30 text-purple-700 dark:text-purple-300"
+                  : modoLinea === "MANUAL"
+                  ? "bg-amber-50 hover:bg-amber-100 dark:bg-amber-500/10 border-amber-300/80 dark:border-amber-500/30 text-amber-700 dark:text-amber-300"
+                  : "bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-500/10 border-emerald-300/80 dark:border-emerald-500/30 text-emerald-700 dark:text-emerald-300"
+              }`}
+            >
+              <span>
+                {modoLinea === "DETALLES" ? "Manual" : modoLinea === "MANUAL" ? "Proveedor" : "Detalles"}
+              </span>
+              <span>→</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => (esServicio ? handleDeleteService(item.id) : handleDeleteItem(item.id))}
+              className="w-6 h-6 rounded-lg hover:bg-rose-500/10 text-zinc-400 hover:text-rose-500 flex items-center justify-center cursor-pointer transition-colors text-xs"
+              title="Eliminar"
+            >
+              ✕
+            </button>
+          </div>
+        </td>
+      </tr>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans pb-12 text-zinc-900 dark:text-white selection:bg-blue-500/30">
       {/* Toast Notificaciones */}
@@ -1960,15 +3097,20 @@ export default function PaginaDetallePropuesta() {
             </div>
 
             <div className="flex items-center gap-2 sm:gap-2.5 shrink-0 flex-wrap sm:flex-nowrap">
-              {/* Mandar Todo el Pedido al Proveedor */}
+              {/* Botón minimalista 1 palabra + icono: Proveedor */}
               <button
                 type="button"
                 onClick={() => abrirModalProveedor("MASIVO")}
-                className="h-10 px-3.5 sm:px-4 rounded-2xl bg-emerald-50/90 dark:bg-emerald-950/20 border border-emerald-300 dark:border-emerald-700/60 hover:bg-emerald-100/80 dark:hover:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 text-xs sm:text-sm font-medium transition-all active:scale-95 flex items-center gap-2 cursor-pointer shadow-2xs shrink-0"
-                title="Mandar Todo el Pedido al Proveedor"
+                className="h-10 px-3.5 rounded-2xl bg-emerald-50/90 dark:bg-emerald-950/25 border border-emerald-300 dark:border-emerald-700/60 hover:bg-emerald-100/80 dark:hover:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 text-xs sm:text-sm font-medium transition-all active:scale-95 flex items-center gap-2 cursor-pointer shadow-2xs shrink-0"
+                title="Enviar pedido al Proveedor por WhatsApp"
               >
                 <span>🚚</span>
-                <span>Mandar Todo el Pedido al Proveedor</span>
+                <span>Proveedor</span>
+                {calculos.itemsPorComprar.length > 0 && (
+                  <span className="px-1.5 py-0.5 rounded-full bg-emerald-600 text-white text-[10px] font-bold">
+                    {calculos.itemsPorComprar.length}
+                  </span>
+                )}
               </button>
 
               {/* 1. Vista Link Proveedor */}
@@ -2490,12 +3632,79 @@ export default function PaginaDetallePropuesta() {
           </div>
 
           {/* ===================================================================
-              TARJETA 2 (idx 1): TALLER (PROPUESTA TIPO FACTURA: SISTEMAS + EVIDENCIAS + PRODUCTOS/SERVICIOS)
+              TARJETA 2 (idx 1): TALLER (BARRA RÁPIDA + EVIDENCIAS + ADICIONALES MANUALES)
               =================================================================== */}
-          <div className={tarjetaActiva === 1 ? "space-y-6" : "hidden print:block print:space-y-6"}>
-            {secciones.length === 0 ? (
+          <div className={tarjetaActiva === 1 ? "space-y-5" : "hidden print:block print:space-y-5"}>
+            {/* Barra superior rápida para añadir servicios/productos manuales, catálogo o rápidos en Taller */}
+            {renderBarraAgregarAdicional("TALLER")}
+
+            {/* SECCIÓN DE SERVICIOS Y PRODUCTOS MANUALES / GENERALES DE TALLER (SIN PIN ESPECÍFICO) */}
+            {adicionalesTaller.length > 0 && (
+              <div className="rounded-2xl border border-zinc-200 dark:border-white/10 overflow-hidden bg-white dark:bg-[#121216] shadow-xs">
+                <div className="bg-zinc-100/90 dark:bg-white/[0.04] px-4 py-2.5 border-b border-zinc-200 dark:border-white/10 flex items-center justify-between gap-2 flex-wrap">
+                  <div className="flex items-center gap-2">
+                    <span className="text-base">🛠️</span>
+                    <span className="font-semibold text-sm text-zinc-900 dark:text-zinc-100">
+                      Adicionales
+                    </span>
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-500/15 text-indigo-600 dark:text-indigo-300 border border-indigo-500/25 font-medium">
+                      {adicionalesTaller.length}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5 print:hidden">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setHallazgoActivoParaAsignar(null);
+                        setNuevoOrigen("TALLER");
+                        setModalNuevoRepuesto(true);
+                      }}
+                      className="h-7 px-2.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-medium flex items-center gap-1 cursor-pointer active:scale-95"
+                    >
+                      <span>📦</span>
+                      <span>Producto</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setHallazgoActivoParaAsignar(null);
+                        setNuevoServicioOrigen("TALLER");
+                        setModalNuevoServicio(true);
+                      }}
+                      className="h-7 px-2.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-[11px] font-medium flex items-center gap-1 cursor-pointer active:scale-95"
+                    >
+                      <span>🔧</span>
+                      <span>Servicio</span>
+                    </button>
+                  </div>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse table-auto text-xs font-normal">
+                    <thead>
+                      <tr className="border-b border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-white/[0.03] text-zinc-500 dark:text-zinc-400">
+                        <th className="py-2 px-2.5 w-8 text-center font-normal">✓</th>
+                        <th className="py-2 px-2.5 min-w-[100px] font-normal">Origen</th>
+                        <th className="py-2 px-2.5 min-w-[200px] font-normal">Ítem</th>
+                        <th className="py-2 px-2 w-24 text-center font-normal">Tiempo</th>
+                        <th className="py-2 px-2 w-28 text-center font-normal">Tipo</th>
+                        <th className="py-2 px-2 w-20 text-center font-normal">Cant.</th>
+                        <th className="py-2 px-2.5 w-24 text-right font-normal">Subtotal</th>
+                        <th className="py-2 px-2 min-w-[125px] text-center font-normal">Acción</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-zinc-200/60 dark:divide-white/5">
+                      {adicionalesTaller.map((item: any, idx: number) =>
+                        renderFilaItemPropuesta(item, idx, undefined, undefined, "Taller")
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {secciones.length === 0 && adicionalesTaller.length === 0 ? (
               <div className="py-8 text-center text-sm font-normal text-zinc-400 italic bg-zinc-50/50 dark:bg-white/[0.01] rounded-2xl border border-dashed border-zinc-200 dark:border-white/10 space-y-3">
-                <p>Sin hallazgos de inspección reportados en Taller.</p>
+                <p>Sin hallazgos ni ítems reportados en Taller.</p>
                 <div className="flex items-center justify-center gap-2 flex-wrap">
                   <button
                     type="button"
@@ -2503,9 +3712,10 @@ export default function PaginaDetallePropuesta() {
                       setNuevoOrigen("TALLER");
                       setModalNuevoRepuesto(true);
                     }}
-                    className="h-8 px-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-normal cursor-pointer"
+                    className="h-8 px-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-normal cursor-pointer flex items-center gap-1"
                   >
-                    + Asignar Producto a Taller
+                    <span>📦</span>
+                    <span>Producto</span>
                   </button>
                   <button
                     type="button"
@@ -2513,9 +3723,21 @@ export default function PaginaDetallePropuesta() {
                       setNuevoServicioOrigen("TALLER");
                       setModalNuevoServicio(true);
                     }}
-                    className="h-8 px-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-normal cursor-pointer"
+                    className="h-8 px-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-normal cursor-pointer flex items-center gap-1"
                   >
-                    + Asignar Servicio a Taller
+                    <span>🔧</span>
+                    <span>Servicio</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNuevoHallazgoVista("frontal");
+                      setModalNuevoHallazgo({ abierto: true, seccionId: "carroceria", seccionNombre: "Taller", vistaDefault: "frontal" });
+                    }}
+                    className="h-8 px-3 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-normal cursor-pointer flex items-center gap-1"
+                  >
+                    <span>+</span>
+                    <span>Hallazgo</span>
                   </button>
                 </div>
               </div>
@@ -2538,7 +3760,7 @@ export default function PaginaDetallePropuesta() {
                                   key={pin.id}
                                   className="text-xs font-medium text-rose-600 dark:text-rose-400 bg-rose-500/10 border border-rose-500/20 px-2 py-0.5 rounded inline-block"
                                 >
-                                  Evidencia #{num}
+                                  #{num}
                                 </span>
                               );
                             })}
@@ -2552,7 +3774,7 @@ export default function PaginaDetallePropuesta() {
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
                           <span className="text-xs bg-zinc-200 dark:bg-white/10 px-2 py-0.5 rounded font-normal text-zinc-700 dark:text-zinc-300">
-                            {sec.items.length} {sec.items.length === 1 ? "punto" : "puntos"}
+                            {sec.items.length}
                           </span>
                           <button
                             type="button"
@@ -2570,7 +3792,7 @@ export default function PaginaDetallePropuesta() {
                             title={`Crear nuevo hallazgo en ${sec.nombre}`}
                           >
                             <span>+</span>
-                            <span>Nuevo Hallazgo</span>
+                            <span>Hallazgo</span>
                           </button>
                         </div>
                       </div>
@@ -2579,15 +3801,6 @@ export default function PaginaDetallePropuesta() {
                     {/* LISTA DE EVIDENCIAS DENTRO DE ESTE SISTEMA */}
                     <div className="divide-y divide-zinc-100 dark:divide-white/5">
                       {sec.items.map((pin: any) => {
-                        const fotosPin =
-                          pin.photoUrls && pin.photoUrls.length > 0
-                            ? pin.photoUrls
-                            : pin.photoUrl
-                            ? [pin.photoUrl]
-                            : fotosVehiculo.length > 0
-                            ? [fotosVehiculo[0]]
-                            : [];
-
                         const numEvidencia = pin.numeroEvidencia || pin.pinNumber || 1;
                         const solicitaRepuesto = Boolean(pin.solicitaRepuesto);
                         const solicitaServicio = Boolean(pin.solicitaServicio);
@@ -2610,14 +3823,14 @@ export default function PaginaDetallePropuesta() {
                                   </span>
                                   {solicitaRepuesto && (
                                     <span className="text-[11px] font-bold text-amber-700 dark:text-amber-300 bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 rounded-full flex items-center gap-1">
-                                      <span>⚠️</span>
-                                      <span>Solicita Repuesto</span>
+                                      <span>📦</span>
+                                      <span>Producto</span>
                                     </span>
                                   )}
                                   {solicitaServicio && (
                                     <span className="text-[11px] font-bold text-purple-700 dark:text-purple-300 bg-purple-500/15 border border-purple-500/30 px-2 py-0.5 rounded-full flex items-center gap-1">
                                       <span>🔧</span>
-                                      <span>Solicita Servicio</span>
+                                      <span>Servicio</span>
                                     </span>
                                   )}
                                 </div>
@@ -2628,14 +3841,13 @@ export default function PaginaDetallePropuesta() {
                                 )}
                               </div>
 
-                              {/* ACCIONES AL LADO DERECHO: DETALLES, MANUAL, PROVEEDOR, + PRODUCTO Y ELIMINAR */}
-                              <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 flex-wrap">
-                                {/* 1. DETALLES */}
+                              {/* ACCIONES MINIMALISTAS (1 PALABRA + ICONO): DETALLES, MANUAL, PROVEEDOR, PRODUCTO, SERVICIO, CATÁLOGO Y ELIMINAR */}
+                              <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
                                 <button
                                   type="button"
                                   onClick={() => setFlotanteDetalles({ pin, sec })}
-                                  className="h-8 px-2.5 sm:px-3 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700/80 text-xs font-medium flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer shadow-2xs"
-                                  title="Ver y editar detalles del hallazgo"
+                                  className="h-8 px-2.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700/80 text-xs font-medium flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer shadow-2xs"
+                                  title="Detalles"
                                 >
                                   <svg className="w-3.5 h-3.5 text-zinc-600 dark:text-zinc-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -2643,12 +3855,11 @@ export default function PaginaDetallePropuesta() {
                                   <span className="hidden sm:inline">Detalles</span>
                                 </button>
 
-                                {/* 2. MANUAL */}
                                 <button
                                   type="button"
                                   onClick={() => setFlotanteManual({ pin, sec })}
-                                  className="h-8 px-2.5 sm:px-3 rounded-xl bg-purple-50/90 hover:bg-purple-100/90 dark:bg-purple-950/30 dark:hover:bg-purple-900/40 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800/60 text-xs font-medium flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer shadow-2xs"
-                                  title="Manual de servicio técnico y asignación manual"
+                                  className="h-8 px-2.5 rounded-xl bg-purple-50/90 hover:bg-purple-100/90 dark:bg-purple-950/30 dark:hover:bg-purple-900/40 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800/60 text-xs font-medium flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer shadow-2xs"
+                                  title="Manual"
                                 >
                                   <svg className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
@@ -2656,41 +3867,59 @@ export default function PaginaDetallePropuesta() {
                                   <span className="hidden sm:inline">Manual</span>
                                 </button>
 
-                                {/* 3. PROVEEDOR */}
                                 <button
                                   type="button"
                                   onClick={() => abrirModalProveedor("INDIVIDUAL", undefined, pin)}
-                                  className="h-8 px-2.5 sm:px-3 rounded-xl bg-emerald-50/90 hover:bg-emerald-100/90 dark:bg-emerald-950/30 dark:hover:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60 text-xs font-medium flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer shadow-2xs"
-                                  title="Enviar cotización al proveedor por WhatsApp"
+                                  className="h-8 px-2.5 rounded-xl bg-emerald-50/90 hover:bg-emerald-100/90 dark:bg-emerald-950/30 dark:hover:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60 text-xs font-medium flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer shadow-2xs"
+                                  title="Proveedor"
                                 >
-                                  <svg className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.175V14.25m0 0H2.25m12 0v4.5m0-4.5H16.5" />
-                                  </svg>
+                                  <span>🚚</span>
                                   <span className="hidden sm:inline">Proveedor</span>
                                 </button>
 
-                                {/* 4. AGREGAR PRODUCTO A ESTA EVIDENCIA */}
                                 <button
                                   type="button"
                                   onClick={() => {
                                     setHallazgoActivoParaAsignar(pin);
                                     setNuevoOrigen("TALLER");
-                                    setNuevoEnStock(true);
+                                    setNuevoEnStock(false);
                                     setModalNuevoRepuesto(true);
                                   }}
-                                  className="h-8 px-2 sm:px-2.5 rounded-xl bg-blue-50/90 hover:bg-blue-100/90 dark:bg-blue-950/30 dark:hover:bg-blue-900/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800/60 text-xs font-medium flex items-center gap-1 transition-all active:scale-95 cursor-pointer shadow-2xs"
-                                  title="Asignar producto/repuesto a este hallazgo"
+                                  className="h-8 px-2.5 rounded-xl bg-blue-50/90 hover:bg-blue-100/90 dark:bg-blue-950/30 dark:hover:bg-blue-900/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800/60 text-xs font-medium flex items-center gap-1 transition-all active:scale-95 cursor-pointer shadow-2xs"
+                                  title="Producto"
                                 >
-                                  <span>+</span>
+                                  <span>📦</span>
                                   <span className="hidden md:inline">Producto</span>
                                 </button>
 
-                                {/* 5. ELIMINAR HALLAZGO DE NEON */}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setHallazgoActivoParaAsignar(pin);
+                                    setNuevoServicioOrigen("TALLER");
+                                    setModalNuevoServicio(true);
+                                  }}
+                                  className="h-8 px-2.5 rounded-xl bg-purple-50/90 hover:bg-purple-100/90 dark:bg-purple-950/30 dark:hover:bg-purple-900/40 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800/60 text-xs font-medium flex items-center gap-1 transition-all active:scale-95 cursor-pointer shadow-2xs"
+                                  title="Servicio"
+                                >
+                                  <span>🔧</span>
+                                  <span className="hidden md:inline">Servicio</span>
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => setModalCatalogoTallerAbierto({ abierto: true, origen: "TALLER", pin })}
+                                  className="h-8 px-2 rounded-xl bg-indigo-50/90 hover:bg-indigo-100 dark:bg-indigo-950/30 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/60 text-xs font-medium flex items-center gap-1 transition-all active:scale-95 cursor-pointer shadow-2xs"
+                                  title="Catálogo"
+                                >
+                                  <span>🛒</span>
+                                </button>
+
                                 <button
                                   type="button"
                                   onClick={() => handleEliminarHallazgo(pin.id)}
                                   className="w-8 h-8 rounded-xl bg-rose-50/80 hover:bg-rose-100 dark:bg-rose-950/30 dark:hover:bg-rose-900/40 text-rose-600 dark:text-rose-400 border border-rose-200/80 dark:border-rose-800/60 text-xs flex items-center justify-center transition-all active:scale-95 cursor-pointer shadow-2xs shrink-0"
-                                  title="Eliminar este hallazgo y sus productos vinculados de Neon"
+                                  title="Eliminar"
                                 >
                                   <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -2699,300 +3928,30 @@ export default function PaginaDetallePropuesta() {
                               </div>
                             </div>
 
-                            {/* TABLA ESTILO FACTURA PARA LOS PRODUCTOS Y SERVICIOS DE ESTA EVIDENCIA */}
+                            {/* TABLA DESLIZABLE DE PRODUCTOS Y SERVICIOS DE ESTA EVIDENCIA */}
                             {pinItems.length > 0 ? (
                               <div className="w-full space-y-2">
                                 <div className="border border-zinc-200 dark:border-white/10 rounded-xl overflow-hidden bg-zinc-50/50 dark:bg-black/30">
                                   <div className="overflow-x-auto">
                                     <table className="w-full text-left border-collapse table-auto text-xs font-normal">
-  <thead>
-    <tr className="border-b border-zinc-200 dark:border-white/10 bg-zinc-100/70 dark:bg-white/[0.04] text-zinc-500 dark:text-zinc-400">
-      <th className="py-2 px-3 w-8 text-center font-normal">✓</th>
-      <th className="py-2 px-3 min-w-[120px] font-normal">Daño</th>
-      <th className="py-2 px-3 min-w-[200px] font-normal">Descripción</th>
-      <th className="py-2 px-2.5 w-28 font-normal text-center">Tipo / Estado</th>
-      <th className="py-2 px-2 w-24 text-center font-normal">Cant. / Detalle</th>
-      <th className="py-2 px-2.5 w-24 text-right font-normal">Subtotal</th>
-      <th className="py-2 px-2 min-w-[140px] text-center font-normal">Acciones</th>
-    </tr>
-  </thead>
-  <tbody className="divide-y divide-zinc-200/60 dark:divide-white/5">
-    {pinItems.map((item: any, itemIdx: number) => {
-      const esServicio = item.isService;
-      const textoDanio = item.danio || (pin.tipo ? formatoPrimeraMayuscula(pin.tipo) : `${formatoPrimeraMayuscula(sec.nombre)} (Evidencia #${numEvidencia})`);
-      const textoDescripcion =
-        (pin.descripcion && pin.descripcion.trim()) ||
-        (pin.description && pin.description.trim()) ||
-        (pin.desc && pin.desc.trim()) ||
-        (item.descripcion && item.descripcion.trim()) ||
-        (item.description && item.description.trim()) ||
-        (item.notes && !item.notes.startsWith("[Evidencia") ? item.notes.trim() : "") ||
-        "";
-      const modoLinea = modosLineas[item.id] || "DETALLES";
-
-      return (
-        <tr key={item.id ? `${item.id}-${itemIdx}` : `pin-item-${itemIdx}`} className="hover:bg-white/80 dark:hover:bg-white/[0.02]">
-          <td className="py-2 px-3 text-center">
-            <input
-              type="checkbox"
-              checked={!!verificadosIds[item.id]}
-              onChange={() => toggleVerificadoItem(item.id)}
-              className="w-3.5 h-3.5 rounded accent-emerald-500 cursor-pointer"
-            />
-          </td>
-
-          {/* 1. DAÑO */}
-          <td className="py-2 px-3">
-            <span className="font-semibold text-rose-600 dark:text-rose-400 block text-xs">
-              {textoDanio}
-            </span>
-            {item.danio && item.danio !== textoDanio && (
-              <span className="text-[10px] text-zinc-500 dark:text-zinc-400 block truncate max-w-[150px]">
-                {item.danio}
-              </span>
-            )}
-          </td>
-
-          {/* 2. DESCRIPCIÓN CON ICONOS FLOTANTES AL LADO */}
-          <td className="py-2 px-3">
-            <div className="flex items-center justify-between gap-2.5">
-              <div className="min-w-0 flex-1">
-                <span className="text-zinc-900 dark:text-white font-medium block">
-                  {item.name}
-                </span>
-                {textoDescripcion ? (
-                  <span className="text-[11px] text-zinc-500 dark:text-zinc-400 block mt-0.5 truncate" title={textoDescripcion}>
-                    {textoDescripcion}
-                  </span>
-                ) : item.code ? (
-                  <span className="text-[10px] text-zinc-400 font-mono block">
-                    {item.code}
-                  </span>
-                ) : null}
-              </div>
-              <div className="flex items-center gap-1.5 shrink-0">
-                <button
-                  type="button"
-                  onClick={() => handleAbrirFlotanteFotos(pin)}
-                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-blue-50/90 dark:bg-blue-500/15 border border-blue-200/80 dark:border-blue-500/30 flex items-center justify-center text-blue-600 dark:text-blue-400 hover:bg-blue-100 hover:border-blue-300 dark:hover:bg-blue-500/25 transition-all cursor-pointer shadow-xs active:scale-95"
-                  title="Ver fotos de esta evidencia"
-                >
-                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <rect width="18" height="18" x="3" y="3" rx="4" />
-                    <circle cx="8.5" cy="8.5" r="1.5" />
-                    <path d="m21 15-5-5L5 21" />
-                  </svg>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleAbrirFlotanteAudios(pin)}
-                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-amber-50/90 dark:bg-amber-500/15 border border-amber-200/80 dark:border-amber-500/30 flex items-center justify-center text-amber-600 dark:text-amber-400 hover:bg-amber-100 hover:border-amber-300 dark:hover:bg-amber-500/25 transition-all cursor-pointer shadow-xs active:scale-95"
-                  title="Escuchar notas de voz / audios"
-                >
-                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
-                    <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-                    <line x1="12" x2="12" y1="19" y2="22" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-          </td>
-
-          {/* COLUMNAS DINÁMICAS SEGÚN EL MODO DE ESTA LÍNEA (DETALLES / MANUAL / PROVEEDOR) */}
-          {modoLinea === "DETALLES" && (
-            <>
-              {/* TIPO */}
-              <td className="py-2 px-2.5 text-center">
-                {esServicio ? (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-purple-500/10 border border-purple-500/25 text-purple-600 dark:text-purple-400 text-[11px] font-semibold">
-                    🔧 Servicio
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-500/10 border border-blue-500/25 text-blue-600 dark:text-blue-400 text-[11px] font-semibold">
-                    📦 Producto
-                  </span>
-                )}
-              </td>
-              {/* CANTIDAD */}
-              <td className="py-2 px-2 text-center">
-                {esServicio ? (
-                  <span className="font-mono text-zinc-700 dark:text-zinc-300">1</span>
-                ) : (
-                  <div className="inline-flex items-center border border-zinc-200 dark:border-white/10 rounded-lg overflow-hidden bg-white dark:bg-black">
-                    <button
-                      type="button"
-                      onClick={() => handleUpdateQty(item.id, -1)}
-                      className="w-5 h-6 text-zinc-500 hover:text-white flex items-center justify-center cursor-pointer"
-                    >
-                      -
-                    </button>
-                    <span className="w-6 text-center font-mono text-zinc-900 dark:text-white text-xs">
-                      {item.qty || 1}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => handleUpdateQty(item.id, 1)}
-                      className="w-5 h-6 text-zinc-500 hover:text-white flex items-center justify-center cursor-pointer"
-                    >
-                      +
-                    </button>
-                  </div>
-                )}
-              </td>
-              {/* SUBTOTAL */}
-              <td className="py-2 px-2.5 text-right font-mono font-medium text-zinc-900 dark:text-white">
-                ${Number(item.subtotal || item.subtotalVenta || (item.price * (item.qty || 1))).toFixed(2)}
-              </td>
-            </>
-          )}
-
-          {modoLinea === "MANUAL" && (
-            <>
-              {/* COSTO */}
-              <td className="py-2 px-2 text-center">
-                <div className="inline-flex flex-col items-center">
-                  <span className="text-[9px] text-zinc-400 uppercase font-semibold leading-none mb-1">Costo</span>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={item.costPrice || 0}
-                    onChange={(e) => handleUpdatePrice(item.id, "costPrice", e.target.value)}
-                    className="w-16 h-6 px-1 text-right rounded bg-zinc-50 dark:bg-black border border-zinc-200 dark:border-white/10 font-mono text-zinc-700 dark:text-zinc-300 text-xs"
-                    placeholder="0.00"
-                  />
-                </div>
-              </td>
-              {/* PVP */}
-              <td className="py-2 px-2 text-center">
-                <div className="inline-flex flex-col items-center">
-                  <span className="text-[9px] text-zinc-400 uppercase font-semibold leading-none mb-1">PVP</span>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={item.price || 0}
-                    onChange={(e) => (esServicio ? handleUpdateServicePrice(item.id, e.target.value) : handleUpdatePrice(item.id, "price", e.target.value))}
-                    className="w-16 h-6 px-1 text-right rounded bg-purple-50/50 dark:bg-black border border-purple-500/30 font-mono text-purple-700 dark:text-purple-300 font-bold text-xs"
-                    placeholder="0.00"
-                  />
-                </div>
-              </td>
-              {/* MARGEN */}
-              <td className="py-2 px-2.5 text-right">
-                <div className="flex flex-col items-end">
-                  <span className="text-[9px] text-zinc-400 uppercase font-semibold leading-none mb-0.5">Margen</span>
-                  <span className="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                    {item.price > 0 ? `${Math.round(((item.price - (item.costPrice || 0)) / item.price) * 100)}%` : "0%"}
-                  </span>
-                </div>
-              </td>
-            </>
-          )}
-
-          {modoLinea === "PROVEEDOR" && (
-            <>
-              {/* DISPONIBILIDAD BODEGA / PEDIR */}
-              <td className="py-2 px-2.5 text-center">
-                {esServicio ? (
-                  <span className="text-[11px] text-zinc-400">Interno</span>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => handleToggleStock(item.id)}
-                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold cursor-pointer border transition-all ${
-                      item.inStock
-                        ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-700 dark:text-emerald-300"
-                        : "bg-amber-500/15 border-amber-500/30 text-amber-700 dark:text-amber-300"
-                    }`}
-                    title="Alternar: Bodega local vs Pedir a Proveedor"
-                  >
-                    <span>{item.inStock ? "🏢 Bodega" : "🚚 Pedir"}</span>
-                  </button>
-                )}
-              </td>
-              {/* PROVEEDOR */}
-              <td className="py-2 px-2 text-center">
-                <span className="text-[11px] font-medium text-zinc-600 dark:text-zinc-400 block truncate max-w-[90px] mx-auto" title={item.supplierName || (item.inStock ? "Bodega Taller" : "Proveedor")}>
-                  {item.inStock ? "Bodega" : (item.supplierName || "Proveedor")}
-                </span>
-              </td>
-              {/* COTIZAR WHATSAPP */}
-              <td className="py-2 px-2.5 text-right">
-                <button
-                  type="button"
-                  onClick={() => abrirModalProveedor("INDIVIDUAL", item, pin)}
-                  className="h-6 px-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-medium transition-all active:scale-95 inline-flex items-center gap-1 cursor-pointer shadow-2xs"
-                  title="Enviar cotización al proveedor por WhatsApp"
-                >
-                  <span>📤</span>
-                  <span>WhatsApp</span>
-                </button>
-              </td>
-            </>
-          )}
-
-          {/* ACCIONES: FLECHA PARA CAMBIAR SOLO ESTA LÍNEA + ELIMINAR */}
-          <td className="py-2 px-2 text-center">
-            <div className="flex items-center justify-center gap-1">
-              {/* Botón para REGRESAR si no está en DETALLES */}
-              {modoLinea !== "DETALLES" && (
-                <button
-                  type="button"
-                  onClick={() => retrocederModoLinea(item.id)}
-                  className="w-6 h-6 rounded-lg bg-zinc-100 hover:bg-zinc-200 dark:bg-white/10 dark:hover:bg-white/20 text-zinc-600 dark:text-zinc-300 flex items-center justify-center text-xs font-bold transition-all cursor-pointer shadow-2xs active:scale-95"
-                  title="Regresar al modo anterior"
-                >
-                  ←
-                </button>
-              )}
-
-              {/* Flecha para AVANZAR de DETALLES a MANUAL a PROVEEDOR */}
-              <button
-                type="button"
-                onClick={() => avanzarModoLinea(item.id)}
-                className={`h-6 px-1.5 rounded-lg border text-[10px] font-semibold flex items-center gap-0.5 transition-all cursor-pointer shadow-2xs active:scale-95 ${
-                  modoLinea === "DETALLES"
-                    ? "bg-purple-50 hover:bg-purple-100 dark:bg-purple-500/10 border-purple-300/80 dark:border-purple-500/30 text-purple-700 dark:text-purple-300"
-                    : modoLinea === "MANUAL"
-                    ? "bg-amber-50 hover:bg-amber-100 dark:bg-amber-500/10 border-amber-300/80 dark:border-amber-500/30 text-amber-700 dark:text-amber-300"
-                    : "bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-500/10 border-emerald-300/80 dark:border-emerald-500/30 text-emerald-700 dark:text-emerald-300"
-                }`}
-                title={
-                  modoLinea === "DETALLES"
-                    ? "Cambiar esta línea a Manual"
-                    : modoLinea === "MANUAL"
-                    ? "Cambiar esta línea a Proveedor"
-                    : "Regresar esta línea a Detalles"
-                }
-              >
-                <span>
-                  {modoLinea === "DETALLES"
-                    ? "Manual"
-                    : modoLinea === "MANUAL"
-                    ? "Proveedor"
-                    : "Detalles"}
-                </span>
-                <span>→</span>
-              </button>
-
-              {/* Botón Eliminar Fila */}
-              <button
-                type="button"
-                onClick={() => (esServicio ? handleDeleteService(item.id) : handleDeleteItem(item.id))}
-                className="w-6 h-6 rounded-lg hover:bg-rose-500/10 text-zinc-400 hover:text-rose-500 flex items-center justify-center cursor-pointer transition-colors text-xs"
-                title="Eliminar fila"
-              >
-                ✕
-              </button>
-            </div>
-          </td>
-        </tr>
-      );
-    })}
-  </tbody>
-</table>
+                                      <thead>
+                                        <tr className="border-b border-zinc-200 dark:border-white/10 bg-zinc-100/70 dark:bg-white/[0.04] text-zinc-500 dark:text-zinc-400">
+                                          <th className="py-2 px-2.5 w-8 text-center font-normal">✓</th>
+                                          <th className="py-2 px-2.5 min-w-[110px] font-normal">Daño</th>
+                                          <th className="py-2 px-2.5 min-w-[200px] font-normal">Ítem</th>
+                                          <th className="py-2 px-2 w-24 text-center font-normal">Tiempo</th>
+                                          <th className="py-2 px-2 w-28 text-center font-normal">Tipo</th>
+                                          <th className="py-2 px-2 w-20 text-center font-normal">Cant.</th>
+                                          <th className="py-2 px-2.5 w-24 text-right font-normal">Subtotal</th>
+                                          <th className="py-2 px-2 min-w-[125px] text-center font-normal">Acción</th>
+                                        </tr>
+                                      </thead>
+                                      <tbody className="divide-y divide-zinc-200/60 dark:divide-white/5">
+                                        {pinItems.map((item: any, itemIdx: number) =>
+                                          renderFilaItemPropuesta(item, itemIdx, pin, sec, "Taller")
+                                        )}
+                                      </tbody>
+                                    </table>
                                   </div>
                                 </div>
                               </div>
@@ -3000,18 +3959,15 @@ export default function PaginaDetallePropuesta() {
                               /* ESTADO SIN PRODUCTOS NI SERVICIOS ASIGNADOS */
                               <div className="w-full p-3 rounded-xl bg-zinc-50 dark:bg-white/[0.02] border border-dashed border-zinc-200 dark:border-white/10 space-y-2">
                                 <div className="flex items-center justify-between gap-2 flex-wrap">
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-xs text-zinc-500 dark:text-zinc-400 italic">
-                                      Sin productos ni servicios asignados a esta evidencia.
-                                    </span>
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                    {/* ICONOS FLOTANTES DE FOTO Y AUDIO */}
+                                  <span className="text-xs text-zinc-500 dark:text-zinc-400 italic">
+                                    Sin ítems asignados a #{numEvidencia}.
+                                  </span>
+                                  <div className="flex items-center gap-1.5">
                                     <button
                                       type="button"
                                       onClick={() => handleAbrirFlotanteFotos(pin)}
-                                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-blue-50/90 dark:bg-blue-500/15 border border-blue-200/80 dark:border-blue-500/30 flex items-center justify-center text-blue-600 dark:text-blue-400 hover:bg-blue-100 hover:border-blue-300 dark:hover:bg-blue-500/25 transition-all cursor-pointer shadow-xs active:scale-95"
-                                      title="Ver fotos de esta evidencia"
+                                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-blue-50/90 dark:bg-blue-500/15 border border-blue-200/80 dark:border-blue-500/30 flex items-center justify-center text-blue-600 dark:text-blue-400 hover:bg-blue-100 transition-all cursor-pointer shadow-xs active:scale-95"
+                                      title="Fotos"
                                     >
                                       <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                         <rect width="18" height="18" x="3" y="3" rx="4" />
@@ -3022,8 +3978,8 @@ export default function PaginaDetallePropuesta() {
                                     <button
                                       type="button"
                                       onClick={() => handleAbrirFlotanteAudios(pin)}
-                                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-amber-50/90 dark:bg-amber-500/15 border border-amber-200/80 dark:border-amber-500/30 flex items-center justify-center text-amber-600 dark:text-amber-400 hover:bg-amber-100 hover:border-amber-300 dark:hover:bg-amber-500/25 transition-all cursor-pointer shadow-xs active:scale-95"
-                                      title="Escuchar notas de voz / audios"
+                                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-amber-50/90 dark:bg-amber-500/15 border border-amber-200/80 dark:border-amber-500/30 flex items-center justify-center text-amber-600 dark:text-amber-400 hover:bg-amber-100 transition-all cursor-pointer shadow-xs active:scale-95"
+                                      title="Audios"
                                     >
                                       <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                         <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
@@ -3031,7 +3987,6 @@ export default function PaginaDetallePropuesta() {
                                         <line x1="12" x2="12" y1="19" y2="22" />
                                       </svg>
                                     </button>
-                                    
                                   </div>
                                 </div>
 
@@ -3073,14 +4028,15 @@ export default function PaginaDetallePropuesta() {
                                     onClick={() => {
                                       setHallazgoActivoParaAsignar(pin);
                                       setNuevoNombre(pin.descripcion ? `Repuesto para ${pin.tipo}: ${pin.descripcion}` : `Repuesto para ${pin.tipo}`);
-                                      setNuevoEnStock(true);
-                                      setNuevoProveedor("Bodega Taller");
+                                      setNuevoEnStock(false);
+                                      setNuevoProveedor("Proveedor General");
                                       setNuevoOrigen("TALLER");
                                       setModalNuevoRepuesto(true);
                                     }}
                                     className="h-7 px-2.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-normal transition-all active:scale-95 flex items-center gap-1 cursor-pointer shadow-2xs"
                                   >
-                                    <span>+ Elegir / Pedir Producto</span>
+                                    <span>+</span>
+                                    <span>Producto</span>
                                   </button>
                                   <button
                                     type="button"
@@ -3092,7 +4048,8 @@ export default function PaginaDetallePropuesta() {
                                     }}
                                     className="h-7 px-2.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-xs font-normal transition-all active:scale-95 flex items-center gap-1 cursor-pointer shadow-2xs"
                                   >
-                                    <span>+ Elegir Servicio</span>
+                                    <span>+</span>
+                                    <span>Servicio</span>
                                   </button>
                                 </div>
                               </div>
@@ -3128,7 +4085,7 @@ export default function PaginaDetallePropuesta() {
           </div>
 
           {/* ===================================================================
-              TARJETAS 3, 4 Y 5 (idx 2, 3, 4): LUBRICENTRO, TECNICENTRO, CAR WASH
+              TARJETAS 3, 4 Y 5 (idx 2, 3, 4): LUBRICENTRO, CAR WASH, TECNICENTRO
               =================================================================== */}
           {(
             [
@@ -3137,12 +4094,27 @@ export default function PaginaDetallePropuesta() {
               { idx: 4, key: "TECNICENTRO" as EspecialidadTipo, nombre: "Tecnicentro", icon: "⚙️", prevLabel: "Carwash", nextLabel: "Pago" },
             ] as const
           ).map((area) => {
-            const repArea = repuestos.filter((r) => (r.origin || "TALLER") === area.key);
-            const srvArea = servicios.filter((s) => (s.origin || "TALLER") === area.key);
+            const repArea = repuestos
+              .filter((r) => (r.origin || "TALLER") === area.key)
+              .map((r) => ({
+                ...r,
+                isService: false,
+                subtotal: r.subtotalVenta || Number((Number(r.price || 0) * Number(r.qty || 1)).toFixed(2)),
+              }));
+            const srvArea = servicios
+              .filter((s) => (s.origin || "TALLER") === area.key)
+              .map((s) => ({
+                ...s,
+                qty: 1,
+                isService: true,
+                subtotal: Number(s.price || 0),
+              }));
+            const itemsAreaUnificados = [...repArea, ...srvArea];
+
             return (
               <div
                 key={area.key}
-                className={tarjetaActiva === area.idx ? "space-y-6" : "hidden print:block print:space-y-6"}
+                className={tarjetaActiva === area.idx ? "space-y-5" : "hidden print:block print:space-y-5"}
               >
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-zinc-200 dark:border-white/10">
                   <div className="flex items-center gap-2.5">
@@ -3166,7 +4138,8 @@ export default function PaginaDetallePropuesta() {
                           : "bg-zinc-100 dark:bg-white/5 border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-200/70"
                       }`}
                     >
-                      <span>{areasVerificadas[area.key] ? `✓ ${area.nombre} Verificado` : `○ Marcar ${area.nombre} Verificado`}</span>
+                      <span>{areasVerificadas[area.key] ? "✓" : "○"}</span>
+                      <span>Verificado</span>
                     </button>
                     <button
                       type="button"
@@ -3174,9 +4147,10 @@ export default function PaginaDetallePropuesta() {
                         setNuevoOrigen(area.key);
                         setModalNuevoRepuesto(true);
                       }}
-                      className="h-9 px-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-normal cursor-pointer"
+                      className="h-9 px-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-normal cursor-pointer flex items-center gap-1"
                     >
-                      + Asignar Producto
+                      <span>📦</span>
+                      <span>Producto</span>
                     </button>
                     <button
                       type="button"
@@ -3184,32 +4158,34 @@ export default function PaginaDetallePropuesta() {
                         setNuevoServicioOrigen(area.key);
                         setModalNuevoServicio(true);
                       }}
-                      className="h-9 px-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-normal cursor-pointer"
+                      className="h-9 px-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-normal cursor-pointer flex items-center gap-1"
                     >
-                      + Asignar Servicio
+                      <span>🔧</span>
+                      <span>Servicio</span>
                     </button>
                   </div>
                 </div>
 
-                {repArea.length === 0 && srvArea.length === 0 ? (
+                {/* Barra rápida de ingreso para Lubricentro / Carwash / Tecnicentro */}
+                {renderBarraAgregarAdicional(area.key)}
+
+                {itemsAreaUnificados.length === 0 ? (
                   <div className="p-8 rounded-2xl border border-dashed border-zinc-200 dark:border-white/10 bg-zinc-50/50 dark:bg-white/[0.01] text-center space-y-3">
                     <div className="text-2xl">{area.icon}</div>
                     <p className="text-sm font-normal text-zinc-700 dark:text-zinc-300">
-                      No hay productos ni servicios registrados en {area.nombre}
+                      Sin ítems en {area.nombre}
                     </p>
-                    <p className="text-xs text-zinc-400">
-                      Puedes asignar productos o servicios de {area.nombre} aquí mismo, o confirmar y pasar a la siguiente tarjeta.
-                    </p>
-                    <div className="pt-2 flex items-center justify-center gap-2.5 flex-wrap">
+                    <div className="pt-2 flex items-center justify-center gap-2 flex-wrap">
                       <button
                         type="button"
                         onClick={() => {
                           setNuevoOrigen(area.key);
                           setModalNuevoRepuesto(true);
                         }}
-                        className="h-9 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-normal cursor-pointer"
+                        className="h-9 px-3.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-normal cursor-pointer flex items-center gap-1"
                       >
-                        + Asignar Producto ({area.nombre})
+                        <span>📦</span>
+                        <span>Producto</span>
                       </button>
                       <button
                         type="button"
@@ -3217,9 +4193,10 @@ export default function PaginaDetallePropuesta() {
                           setNuevoServicioOrigen(area.key);
                           setModalNuevoServicio(true);
                         }}
-                        className="h-9 px-4 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-normal cursor-pointer"
+                        className="h-9 px-3.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-normal cursor-pointer flex items-center gap-1"
                       >
-                        + Asignar Servicio ({area.nombre})
+                        <span>🔧</span>
+                        <span>Servicio</span>
                       </button>
                       <button
                         type="button"
@@ -3227,9 +4204,10 @@ export default function PaginaDetallePropuesta() {
                           setAreasVerificadas((p) => ({ ...p, [area.key]: true }));
                           setTarjetaActiva(area.idx + 1);
                         }}
-                        className="h-9 px-4 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/35 text-emerald-600 dark:text-emerald-300 text-xs font-normal cursor-pointer"
+                        className="h-9 px-3.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/35 text-emerald-600 dark:text-emerald-300 text-xs font-normal cursor-pointer flex items-center gap-1"
                       >
-                        ✓ Verificado sin ítems · Ir a {area.nextLabel} →
+                        <span>✓</span>
+                        <span>Siguiente →</span>
                       </button>
                     </div>
                   </div>
@@ -3239,110 +4217,20 @@ export default function PaginaDetallePropuesta() {
                       <table className="w-full text-left border-collapse table-auto text-xs font-normal">
                         <thead>
                           <tr className="border-b border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-white/[0.04] text-zinc-500 dark:text-zinc-400">
-                            <th className="py-2.5 px-3 w-10 text-center font-normal">✓</th>
-                            <th className="py-2.5 px-3 min-w-[180px] font-normal">Descripción</th>
-                            <th className="py-2.5 px-3 w-40 font-normal">Tipo</th>
-                            <th className="py-2.5 px-2 w-20 text-center font-normal">Cant.</th>
-                            <th className="py-2.5 px-3 w-24 text-right font-normal">Costo</th>
-                            <th className="py-2.5 px-3 w-24 text-right font-normal">PVP</th>
-                            <th className="py-2.5 px-3 w-24 text-right font-normal">Subtotal</th>
-                            <th className="py-2.5 px-2 w-8 text-center"></th>
+                            <th className="py-2 px-2.5 w-8 text-center font-normal">✓</th>
+                            <th className="py-2 px-2.5 min-w-[100px] font-normal">Origen</th>
+                            <th className="py-2 px-2.5 min-w-[200px] font-normal">Ítem</th>
+                            <th className="py-2 px-2 w-24 text-center font-normal">Tiempo</th>
+                            <th className="py-2 px-2 w-28 text-center font-normal">Tipo</th>
+                            <th className="py-2 px-2 w-20 text-center font-normal">Cant.</th>
+                            <th className="py-2 px-2.5 w-24 text-right font-normal">Subtotal</th>
+                            <th className="py-2 px-2 min-w-[125px] text-center font-normal">Acción</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-zinc-200 dark:divide-white/5">
-                          {repArea.map((item, itemIdx) => (
-                            <tr key={item.id ? `${item.id}-${itemIdx}` : `area-item-${itemIdx}`} className="hover:bg-zinc-50/80 dark:hover:bg-white/[0.02]">
-                              <td className="py-2.5 px-3 text-center">
-                                <input
-                                  type="checkbox"
-                                  checked={!!verificadosIds[item.id]}
-                                  onChange={() => toggleVerificadoItem(item.id)}
-                                  className="w-4 h-4 rounded accent-emerald-500 cursor-pointer"
-                                />
-                              </td>
-                              <td className="py-2.5 px-3">
-                                <span className="text-zinc-900 dark:text-white block">{item.name}</span>
-                                <span className="text-[11px] text-zinc-400">Producto / Insumo ({area.nombre})</span>
-                              </td>
-                              <td className="py-2.5 px-3">
-                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-500/10 border border-blue-500/25 text-blue-600 dark:text-blue-400 text-[11px] font-semibold">
-                                  📦 Producto
-                                </span>
-                              </td>
-                              <td className="py-2.5 px-2 text-center">
-                                <div className="inline-flex items-center border border-zinc-200 dark:border-white/10 rounded-lg overflow-hidden bg-zinc-50 dark:bg-black">
-                                  <button type="button" onClick={() => handleUpdateQty(item.id, -1)} className="w-6 h-7 text-zinc-500 hover:text-white">-</button>
-                                  <span className="w-7 text-center font-mono text-zinc-900 dark:text-white">{item.qty}</span>
-                                  <button type="button" onClick={() => handleUpdateQty(item.id, 1)} className="w-6 h-7 text-zinc-500 hover:text-white">+</button>
-                                </div>
-                              </td>
-                              <td className="py-2.5 px-3 text-right">
-                                <input
-                                  type="number"
-                                  step="0.01"
-                                  min="0"
-                                  value={item.costPrice}
-                                  onChange={(e) => handleUpdatePrice(item.id, "costPrice", e.target.value)}
-                                  className="w-20 h-7 px-1.5 text-right rounded-lg bg-zinc-50 dark:bg-black border border-zinc-200 dark:border-white/10 font-mono text-zinc-700 dark:text-zinc-300 text-xs"
-                                />
-                              </td>
-                              <td className="py-2.5 px-3 text-right">
-                                <input
-                                  type="number"
-                                  step="0.01"
-                                  min="0"
-                                  value={item.price}
-                                  onChange={(e) => handleUpdatePrice(item.id, "price", e.target.value)}
-                                  className="w-20 h-7 px-1.5 text-right rounded-lg bg-zinc-50 dark:bg-black border border-emerald-500/30 font-mono text-emerald-600 dark:text-emerald-400 text-xs"
-                                />
-                              </td>
-                              <td className="py-2.5 px-3 text-right font-mono text-zinc-900 dark:text-white">
-                                ${item.subtotalVenta.toFixed(2)}
-                              </td>
-                              <td className="py-2.5 px-2 text-center">
-                                <button type="button" onClick={() => handleDeleteItem(item.id)} className="text-zinc-400 hover:text-rose-500 cursor-pointer">✕</button>
-                              </td>
-                            </tr>
-                          ))}
-                          {srvArea.map((sv) => (
-                            <tr key={sv.id} className="hover:bg-zinc-50/80 dark:hover:bg-white/[0.02] bg-purple-500/[0.02]">
-                              <td className="py-2.5 px-3 text-center">
-                                <input
-                                  type="checkbox"
-                                  checked={!!verificadosIds[sv.id]}
-                                  onChange={() => toggleVerificadoItem(sv.id)}
-                                  className="w-4 h-4 rounded accent-emerald-500 cursor-pointer"
-                                />
-                              </td>
-                              <td className="py-2.5 px-3">
-                                <span className="text-zinc-900 dark:text-white block">{sv.name}</span>
-                                <span className="text-[11px] text-zinc-400">Servicio ({area.nombre})</span>
-                              </td>
-                              <td className="py-2.5 px-3">
-                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-purple-500/10 border border-purple-500/25 text-purple-600 dark:text-purple-400 text-[11px] font-semibold">
-                                  🔧 Servicio
-                                </span>
-                              </td>
-                              <td className="py-2.5 px-2 text-center font-mono">1</td>
-                              <td className="py-2.5 px-3 text-right font-mono text-zinc-400">$0.00</td>
-                              <td className="py-2.5 px-3 text-right">
-                                <input
-                                  type="number"
-                                  step="0.01"
-                                  min="0"
-                                  value={sv.price}
-                                  onChange={(e) => handleUpdateServicePrice(sv.id, e.target.value)}
-                                  className="w-20 h-7 px-1.5 text-right rounded-lg bg-zinc-50 dark:bg-black border border-purple-500/30 font-mono text-purple-600 dark:text-purple-400 text-xs"
-                                />
-                              </td>
-                              <td className="py-2.5 px-3 text-right font-mono text-zinc-900 dark:text-white">
-                                ${Number(sv.price).toFixed(2)}
-                              </td>
-                              <td className="py-2.5 px-2 text-center">
-                                <button type="button" onClick={() => handleDeleteService(sv.id)} className="text-zinc-400 hover:text-rose-500 cursor-pointer">✕</button>
-                              </td>
-                            </tr>
-                          ))}
+                          {itemsAreaUnificados.map((item, itemIdx) =>
+                            renderFilaItemPropuesta(item, itemIdx, undefined, undefined, area.nombre)
+                          )}
                         </tbody>
                       </table>
                     </div>
@@ -3389,18 +4277,17 @@ export default function PaginaDetallePropuesta() {
                 </div>
               </div>
 
-              {/* Botones rápidos para pedir TODA LA ORDEN o CONSOLIDADO */}
+              {/* Botones rápidos de 1 palabra + icono */}
               <div className="flex items-center gap-2 print:hidden flex-wrap">
-                <a
-                  href={`https://wa.me/?text=${encodeURIComponent(
-                    `Hola, te comparto el pedido de repuestos de toda la orden para ${orden.vehicle} (Placa: ${orden.plate}). Revisa fotos y especificaciones aquí: ${typeof window !== "undefined" ? window.location.origin : ""}/pedidos-proveedor/${orden.id}`
-                  )}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="h-9 px-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-normal flex items-center gap-1.5 transition-all cursor-pointer"
+                <button
+                  type="button"
+                  onClick={() => abrirModalProveedor("MASIVO")}
+                  className="h-9 px-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium flex items-center gap-1.5 transition-all cursor-pointer"
+                  title="Enviar toda la orden al proveedor"
                 >
-                  <span>💬 Pedir Toda esta Orden</span>
-                </a>
+                  <span>💬</span>
+                  <span>Todo</span>
+                </button>
                 <button
                   type="button"
                   onClick={() =>
@@ -3409,96 +4296,157 @@ export default function PaginaDetallePropuesta() {
                       "Link de toda la orden copiado al portapapeles."
                     )
                   }
-                  className="h-9 px-3 rounded-xl bg-zinc-100 dark:bg-white/10 hover:bg-zinc-200 dark:hover:bg-white/15 text-zinc-700 dark:text-zinc-200 text-xs font-normal cursor-pointer"
+                  className="h-9 px-3 rounded-xl bg-zinc-100 dark:bg-white/10 hover:bg-zinc-200 dark:hover:bg-white/15 text-zinc-700 dark:text-zinc-200 text-xs font-normal cursor-pointer flex items-center gap-1.5"
+                  title="Copiar enlace del pedido"
                 >
-                  🔗 Link Toda la Orden
+                  <span>🔗</span>
+                  <span>Enlace</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setModalWhatsApp(true)}
-                  className="h-9 px-3 rounded-xl bg-purple-600/15 hover:bg-purple-600/25 border border-purple-500/35 text-purple-600 dark:text-purple-300 text-xs font-normal cursor-pointer"
+                  className="h-9 px-3 rounded-xl bg-purple-600/15 hover:bg-purple-600/25 border border-purple-500/35 text-purple-600 dark:text-purple-300 text-xs font-normal cursor-pointer flex items-center gap-1.5"
+                  title="Consolidado diario"
                 >
-                  📲 Catálogo / Consolidado
+                  <span>📲</span>
+                  <span>Diario</span>
                 </button>
               </div>
             </div>
 
-            {/* SECCIÓN PEDIR A PROVEEDOR (INDIVIDUAL O TODA LA ORDEN) */}
+            {/* SECCIÓN PEDIR A PROVEEDOR (INDIVIDUAL O TODA LA ORDEN) CON RESPUESTAS AUTOMÁTICAS */}
             <div className="p-4 sm:p-5 rounded-2xl bg-zinc-50/70 dark:bg-[#121216] border border-zinc-200 dark:border-white/10 space-y-4">
               <div className="flex items-center justify-between flex-wrap gap-2">
-                <div>
-                  <h3 className="text-sm font-normal text-zinc-900 dark:text-white flex items-center gap-2">
-                    <span>🚚</span>
-                    <span>Productos para Pedir a Proveedor ({calculos.itemsPorComprar.length})</span>
+                <div className="flex items-center gap-2">
+                  <span>🚚</span>
+                  <h3 className="text-sm font-semibold text-zinc-900 dark:text-white">
+                    Proveedor ({calculos.itemsPorComprar.length})
                   </h3>
-                  <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                    Envía link individual por repuesto o pide toda esta orden junta
-                  </p>
                 </div>
                 <span className="text-xs font-mono text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/25 px-2.5 py-1 rounded-lg">
-                  Costo Compras Externas: ${calculos.totalCostoComprasExternas.toFixed(2)}
+                  Costo: ${calculos.totalCostoComprasExternas.toFixed(2)}
                 </span>
               </div>
 
               {calculos.itemsPorComprar.length === 0 ? (
                 <div className="p-4 rounded-xl border border-dashed border-zinc-200 dark:border-white/10 text-center text-xs text-zinc-400">
-                  Todos los productos están marcados en Bodega o no hay repuestos externos por pedir.
+                  Todos los ítems están en Bodega.
                 </div>
               ) : (
                 <div className="divide-y divide-zinc-200 dark:divide-white/10 border border-zinc-200 dark:border-white/10 rounded-xl bg-white dark:bg-[#141418] overflow-hidden">
-                  {calculos.itemsPorComprar.map((item, itemIdx) => {
-                    const itemLink = `${typeof window !== "undefined" ? window.location.origin : ""}/pedidos-proveedor/${orden.id}?item=${encodeURIComponent(item.name)}`;
-                    const waText = `Hola, necesito cotizar/pedir este repuesto para ${orden.vehicle} (${orden.plate}):\n• ${item.qty}x ${item.name}\nVer detalle y fotos aquí: ${itemLink}`;
+                  {calculos.itemsPorComprar.map((item: any, itemIdx: number) => {
+                    const itemLink = `${typeof window !== "undefined" ? window.location.origin : ""}/pedidos-proveedor/${orden.id}?itemId=${encodeURIComponent(item.id)}&item=${encodeURIComponent(item.name)}`;
+                    const dispProv = item.supplierAvailability;
+                    const envioObj = OPCIONES_ENVIO_RAPIDO.find((e) => e.id === item.shippingMethod);
+
                     return (
                       <div
                         key={item.id ? `${item.id}-${itemIdx}` : `comprar-item-${itemIdx}`}
                         className="p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs hover:bg-zinc-50/70 dark:hover:bg-white/[0.02]"
                       >
-                        <div className="space-y-1 min-w-0 flex-1">
+                        <div className="space-y-1.5 min-w-0 flex-1">
                           <div className="flex items-center gap-2 flex-wrap">
                             {renderBadgeEspecialidad(item.origin)}
-                            <span className="text-zinc-900 dark:text-white font-normal">
-                              {item.qty}x {item.name}
+                            <span className="text-zinc-900 dark:text-white font-medium">
+                              {item.qty || 1}x {item.name}
                             </span>
                             <span className="text-zinc-400 font-mono">
-                              Costo: ${Number(item.costPrice).toFixed(2)} c/u
+                              ${Number(item.costPrice || 0).toFixed(2)}
                             </span>
+
+                            {/* Badges de respuesta del proveedor */}
+                            {dispProv === "SI_HAY" && (
+                              <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/35 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold">
+                                ✓ Sí hay
+                              </span>
+                            )}
+                            {dispProv === "NO_HAY" && (
+                              <span className="px-2 py-0.5 rounded-full bg-rose-500/15 border border-rose-500/35 text-rose-700 dark:text-rose-300 text-[10px] font-bold">
+                                ✕ No hay
+                              </span>
+                            )}
+                            {item.deliveryTime && (
+                              <button
+                                type="button"
+                                onClick={() => setItemTiempoEnvioModal({ id: item.id, isService: Boolean(item.isService) })}
+                                className="px-2 py-0.5 rounded-full bg-blue-500/15 border border-blue-500/35 text-blue-700 dark:text-blue-300 text-[10px] font-semibold cursor-pointer"
+                              >
+                                ⏱️ {item.deliveryTime}
+                              </button>
+                            )}
+                            {envioObj && (
+                              <button
+                                type="button"
+                                onClick={() => setItemTiempoEnvioModal({ id: item.id, isService: Boolean(item.isService) })}
+                                className="px-2 py-0.5 rounded-full bg-cyan-500/15 border border-cyan-500/35 text-cyan-700 dark:text-cyan-300 text-[10px] font-semibold cursor-pointer"
+                              >
+                                {envioObj.icon} {envioObj.label}
+                              </button>
+                            )}
                           </div>
-                          <div className="flex items-center gap-2 pt-0.5">
-                            <span className="text-[11px] text-zinc-400">Proveedor:</span>
+
+                          <div className="flex items-center gap-2 flex-wrap">
                             <input
                               type="text"
                               value={item.supplierName || "Proveedor General"}
                               onChange={(e) => handleUpdateSupplier(item.id, e.target.value)}
                               className="h-6 px-2 rounded bg-zinc-50 dark:bg-black border border-zinc-200 dark:border-white/10 text-[11px] text-zinc-700 dark:text-zinc-300"
+                              placeholder="Proveedor"
                             />
                             <button
                               type="button"
-                              onClick={() => handleToggleStock(item.id)}
-                              className="text-[11px] text-emerald-500 hover:underline cursor-pointer"
+                              onClick={() => setItemTiempoEnvioModal({ id: item.id, isService: Boolean(item.isService) })}
+                              className="h-6 px-2 rounded bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/10 text-[11px] text-zinc-600 dark:text-zinc-300 cursor-pointer flex items-center gap-1"
                             >
-                              Cambiar a Bodega
+                              <span>⏱️</span>
+                              <span>{item.deliveryTime || "Tiempo"}</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleToggleStock(item.id)}
+                              className="h-6 px-2 rounded bg-emerald-500/10 border border-emerald-500/25 text-[11px] text-emerald-600 dark:text-emerald-400 cursor-pointer flex items-center gap-1"
+                            >
+                              <span>🏢</span>
+                              <span>Bodega</span>
                             </button>
                           </div>
                         </div>
 
-                        {/* Acciones de pedido individual con link */}
-                        <div className="flex items-center gap-2 shrink-0">
-                          <a
-                            href={`https://wa.me/?text=${encodeURIComponent(waText)}`}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="h-8 px-3 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/35 text-emerald-600 dark:text-emerald-300 text-xs font-normal flex items-center gap-1.5 cursor-pointer"
-                          >
-                            <span>💬 Pedir Individual</span>
-                          </a>
+                        {/* Acciones individuales (1 palabra + icono) */}
+                        <div className="flex items-center gap-1.5 shrink-0">
                           <button
                             type="button"
-                            onClick={() => copiarAlPortapapeles(itemLink, `Link individual de "${item.name}" copiado.`)}
-                            className="h-8 px-2.5 rounded-lg bg-zinc-100 dark:bg-white/10 hover:bg-zinc-200 dark:hover:bg-white/15 text-zinc-700 dark:text-zinc-300 text-xs font-normal cursor-pointer"
-                            title="Copiar link individual de este repuesto"
+                            onClick={() => handleAbrirFlotanteFotos(item)}
+                            className="w-8 h-8 rounded-lg bg-blue-500/10 border border-blue-500/25 text-blue-600 dark:text-blue-400 flex items-center justify-center cursor-pointer"
+                            title="Fotos"
                           >
-                            🔗 Link
+                            📷
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleAbrirFlotanteAudios(item)}
+                            className="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/25 text-amber-600 dark:text-amber-400 flex items-center justify-center cursor-pointer"
+                            title="Audio"
+                          >
+                            🎙️
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => abrirModalProveedor("INDIVIDUAL", item)}
+                            className="h-8 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium flex items-center gap-1 cursor-pointer"
+                            title="Enviar por WhatsApp al Proveedor"
+                          >
+                            <span>📤</span>
+                            <span>Enviar</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => copiarAlPortapapeles(itemLink, `Enlace de "${item.name}" copiado.`)}
+                            className="h-8 px-2.5 rounded-lg bg-zinc-100 dark:bg-white/10 hover:bg-zinc-200 dark:hover:bg-white/15 text-zinc-700 dark:text-zinc-300 text-xs font-normal cursor-pointer flex items-center gap-1"
+                            title="Copiar enlace individual"
+                          >
+                            <span>🔗</span>
+                            <span>Enlace</span>
                           </button>
                         </div>
                       </div>
@@ -3513,14 +4461,14 @@ export default function PaginaDetallePropuesta() {
             {/* Liquidación Financiera de Propuesta */}
             <div className="w-full md:w-1/2 max-w-lg p-5 rounded-2xl bg-zinc-50 dark:bg-white/[0.02] border border-zinc-200 dark:border-white/10 space-y-3 font-sans">
               <div className="flex items-center justify-between text-xs text-zinc-600 dark:text-zinc-400">
-                <span className="font-normal">Subtotal Repuestos e Insumos:</span>
+                <span className="font-normal">Productos:</span>
                 <span className="font-medium text-zinc-900 dark:text-white">
                   ${calculos.subtotalRepuestos.toFixed(2)}
                 </span>
               </div>
 
               <div className="flex items-center justify-between text-xs text-zinc-600 dark:text-zinc-400">
-                <span className="font-normal">Subtotal Mano de Obra y Servicios:</span>
+                <span className="font-normal">Servicios:</span>
                 <span className="font-medium text-zinc-900 dark:text-white">
                   ${calculos.subtotalServicios.toFixed(2)}
                 </span>
@@ -3529,7 +4477,7 @@ export default function PaginaDetallePropuesta() {
               <div className="h-px bg-zinc-200 dark:bg-white/10" />
 
               <div className="flex items-center justify-between text-xs text-zinc-700 dark:text-zinc-300">
-                <span className="font-normal">Subtotal Bruto:</span>
+                <span className="font-normal">Subtotal:</span>
                 <span className="font-semibold text-zinc-900 dark:text-white text-sm">
                   ${calculos.subtotalBruto.toFixed(2)}
                 </span>
@@ -3581,10 +4529,7 @@ export default function PaginaDetallePropuesta() {
               <div className="p-4 rounded-xl bg-blue-600/10 border border-blue-600/30 flex items-center justify-between">
                 <div>
                   <span className="text-sm font-semibold text-blue-700 dark:text-blue-300 block">
-                    Total Propuesta
-                  </span>
-                  <span className="text-[11px] text-zinc-500 font-normal">
-                    Precio total final para el cliente
+                    Total
                   </span>
                 </div>
                 <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">
@@ -3595,7 +4540,7 @@ export default function PaginaDetallePropuesta() {
               {/* RENTABILIDAD / MARGEN TALLER (Solo visible internamente) */}
               <div className="p-3 rounded-xl bg-emerald-500/[0.08] border border-emerald-500/25 flex items-center justify-between text-xs print:hidden">
                 <span className="font-normal text-emerald-800 dark:text-emerald-300">
-                  Utilidad Neta del Taller:
+                  Utilidad:
                 </span>
                 <span className="font-medium text-emerald-600 dark:text-emerald-400">
                   ${calculos.margenNetoTaller.toFixed(2)} ({calculos.margenPorcentaje}%)
@@ -3604,7 +4549,7 @@ export default function PaginaDetallePropuesta() {
             </div>
           </div>
 
-            {/* BARRA DE CIERRE FINAL EN LA ÚLTIMA TARJETA: PAGAR O PASAR A POS PARA QUE COBREN */}
+            {/* BARRA DE CIERRE FINAL EN LA ÚLTIMA TARJETA: TÍTULOS DE 1 PALABRA + ICONO */}
             <div className="print:hidden pt-5 border-t border-zinc-200 dark:border-white/10 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
               <button
                 type="button"
@@ -3620,9 +4565,10 @@ export default function PaginaDetallePropuesta() {
                   type="button"
                   disabled={guardando}
                   onClick={handleGuardarBorrador}
-                  className="h-10 px-5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 border border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-200 text-xs font-normal transition-all active:scale-95 cursor-pointer disabled:opacity-50"
+                  className="h-10 px-4 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 border border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-200 text-xs font-normal transition-all active:scale-95 cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
                 >
-                  {guardando ? "Guardando..." : "Guardar"}
+                  <span>💾</span>
+                  <span>{guardando ? "..." : "Guardar"}</span>
                 </button>
 
                 {!esPagado && (
@@ -3659,7 +4605,7 @@ export default function PaginaDetallePropuesta() {
                   type="button"
                   disabled={cambiandoEstado}
                   onClick={handleTogglePagado}
-                  className={`h-10 px-5 rounded-xl border text-xs font-normal shadow-sm transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 ${
+                  className={`h-10 px-4 rounded-xl border text-xs font-normal shadow-sm transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 ${
                     esPagado
                       ? "bg-sky-600 hover:bg-sky-500 border-sky-500 text-white"
                       : "bg-sky-500/15 hover:bg-sky-500/25 border-sky-500/35 text-sky-600 dark:text-sky-300"
@@ -3672,9 +4618,10 @@ export default function PaginaDetallePropuesta() {
                   type="button"
                   disabled={autorizando}
                   onClick={handleAutorizarYEnviarAPos}
-                  className="h-10 px-6 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-normal shadow-sm transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50"
+                  className="h-10 px-5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-normal shadow-sm transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50"
                 >
-                  <span>{autorizando ? "Enviando a POS..." : "🛒 Pasar a POS para Cobrar"}</span>
+                  <span>🛒</span>
+                  <span>{autorizando ? "..." : "POS"}</span>
                 </button>
               </div>
             </div>
@@ -5010,6 +5957,438 @@ export default function PaginaDetallePropuesta() {
                   <span>💾 Registrar Hallazgo en Neon PostgreSQL</span>
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ================================================================= */}
+      {/* MODAL: TIEMPO, ENVÍO Y ESTADO PROVEEDOR (MINIMALISTA 1 PALABRA)   */}
+      {/* ================================================================= */}
+      {itemTiempoEnvioModal && (() => {
+        const esServicioModal = itemTiempoEnvioModal.isService;
+        const currentItem: any = esServicioModal
+          ? servicios.find((s) => s.id === itemTiempoEnvioModal.id)
+          : repuestos.find((r) => r.id === itemTiempoEnvioModal.id);
+        if (!currentItem) return null;
+
+        return (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 animate-in fade-in duration-150"
+            onClick={() => setItemTiempoEnvioModal(null)}
+          >
+            <div
+              className="w-full max-w-md rounded-2xl border border-slate-800 bg-[#0d1322] p-5 shadow-2xl space-y-4"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between border-b border-slate-800/80 pb-3">
+                <div className="min-w-0 pr-2">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-blue-400 block">
+                    {esServicioModal ? "🔧 Servicio" : "📦 Producto"}
+                  </span>
+                  <h4 className="text-sm font-black text-white truncate">
+                    {currentItem.name}
+                  </h4>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setItemTiempoEnvioModal(null)}
+                  className="w-8 h-8 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center text-xs font-bold cursor-pointer shrink-0"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* 1. Stock & Disponibilidad Proveedor */}
+              <div className="space-y-1.5">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                  📦 Stock
+                </span>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      handleUpdateItemFields(currentItem.id, esServicioModal, {
+                        inStock: true,
+                        purchaseStatus: "STOCK_LOCAL",
+                        supplierName: "Bodega Taller",
+                      })
+                    }
+                    className={`h-9 rounded-xl text-xs font-bold border transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                      currentItem.inStock
+                        ? "bg-emerald-500/20 border-emerald-500/50 text-emerald-300"
+                        : "bg-slate-900/60 border-slate-800 text-slate-400 hover:text-slate-200"
+                    }`}
+                  >
+                    <span>🏢</span>
+                    <span>Bodega</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      handleUpdateItemFields(currentItem.id, esServicioModal, {
+                        inStock: false,
+                        purchaseStatus: "POR_PEDIR",
+                        supplierName:
+                          currentItem.supplierName && currentItem.supplierName !== "Bodega Taller"
+                            ? currentItem.supplierName
+                            : "Proveedor General",
+                      })
+                    }
+                    className={`h-9 rounded-xl text-xs font-bold border transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                      !currentItem.inStock
+                        ? "bg-amber-500/20 border-amber-500/50 text-amber-300"
+                        : "bg-slate-900/60 border-slate-800 text-slate-400 hover:text-slate-200"
+                    }`}
+                  >
+                    <span>🚚</span>
+                    <span>Pedir</span>
+                  </button>
+                </div>
+
+                {/* Respuesta de proveedor: Sí hay / No hay */}
+                <div className="grid grid-cols-2 gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      handleUpdateItemFields(currentItem.id, esServicioModal, {
+                        supplierAvailability:
+                          currentItem.supplierAvailability === "SI_HAY" ? null : "SI_HAY",
+                      })
+                    }
+                    className={`h-8 rounded-xl text-[11px] font-bold border transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                      currentItem.supplierAvailability === "SI_HAY"
+                        ? "bg-emerald-600 text-white border-emerald-500 shadow-sm"
+                        : "bg-slate-900/40 border-slate-800 text-slate-400 hover:text-emerald-300"
+                    }`}
+                  >
+                    <span>✓</span>
+                    <span>Sí hay</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      handleUpdateItemFields(currentItem.id, esServicioModal, {
+                        supplierAvailability:
+                          currentItem.supplierAvailability === "NO_HAY" ? null : "NO_HAY",
+                      })
+                    }
+                    className={`h-8 rounded-xl text-[11px] font-bold border transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                      currentItem.supplierAvailability === "NO_HAY"
+                        ? "bg-rose-600 text-white border-rose-500 shadow-sm"
+                        : "bg-slate-900/40 border-slate-800 text-slate-400 hover:text-rose-300"
+                    }`}
+                  >
+                    <span>✕</span>
+                    <span>No hay</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* 2. Tiempo (Cuándo llega / ejecución) - Deslizable */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    ⏱️ Tiempo
+                  </span>
+                  {currentItem.deliveryTime && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handleUpdateItemFields(currentItem.id, esServicioModal, {
+                          deliveryTime: null,
+                        })
+                      }
+                      className="text-[10px] text-slate-500 hover:text-rose-400 cursor-pointer"
+                    >
+                      Limpiar
+                    </button>
+                  )}
+                </div>
+                <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1">
+                  {OPCIONES_TIEMPO_RAPIDO.map((t) => {
+                    const active = currentItem.deliveryTime === t.id;
+                    return (
+                      <button
+                        key={t.id}
+                        type="button"
+                        onClick={() =>
+                          handleUpdateItemFields(currentItem.id, esServicioModal, {
+                            deliveryTime: active ? null : t.id,
+                          })
+                        }
+                        className={`h-8 px-3 rounded-xl text-xs font-bold border shrink-0 transition-all cursor-pointer ${
+                          active
+                            ? "bg-blue-600 text-white border-blue-400 shadow-sm"
+                            : "bg-slate-900/60 border-slate-800 text-slate-300 hover:border-slate-700"
+                        }`}
+                      >
+                        {t.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* 3. Envío (Por dónde lo envía) - Deslizable */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    🚚 Envío
+                  </span>
+                  {currentItem.shippingMethod && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handleUpdateItemFields(currentItem.id, esServicioModal, {
+                          shippingMethod: null,
+                        })
+                      }
+                      className="text-[10px] text-slate-500 hover:text-rose-400 cursor-pointer"
+                    >
+                      Limpiar
+                    </button>
+                  )}
+                </div>
+                <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1">
+                  {OPCIONES_ENVIO_RAPIDO.map((env) => {
+                    const active = currentItem.shippingMethod === env.id;
+                    return (
+                      <button
+                        key={env.id}
+                        type="button"
+                        onClick={() =>
+                          handleUpdateItemFields(currentItem.id, esServicioModal, {
+                            shippingMethod: active ? null : env.id,
+                          })
+                        }
+                        className={`h-8 px-3 rounded-xl text-xs font-bold border shrink-0 transition-all flex items-center gap-1.5 cursor-pointer ${
+                          active
+                            ? "bg-purple-600 text-white border-purple-400 shadow-sm"
+                            : "bg-slate-900/60 border-slate-800 text-slate-300 hover:border-slate-700"
+                        }`}
+                      >
+                        <span>{env.icon}</span>
+                        <span>{env.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* 4. Costo Proveedor y PVP */}
+              <div className="grid grid-cols-2 gap-3 pt-1">
+                <div>
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
+                    💵 Costo ($)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={currentItem.costPrice || 0}
+                    onChange={(e) => {
+                      const val = Math.max(0, Number(e.target.value) || 0);
+                      handleUpdateItemFields(currentItem.id, esServicioModal, {
+                        costPrice: val,
+                        supplierPrice: val,
+                      });
+                    }}
+                    className="w-full h-9 rounded-xl bg-slate-900 border border-slate-800 px-3 text-xs font-bold text-slate-200 focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 block mb-1">
+                    🏷️ PVP ($)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={currentItem.price || 0}
+                    onChange={(e) => {
+                      const val = Math.max(0, Number(e.target.value) || 0);
+                      handleUpdateItemFields(currentItem.id, esServicioModal, {
+                        price: val,
+                      });
+                    }}
+                    className="w-full h-9 rounded-xl bg-emerald-950/30 border border-emerald-500/40 px-3 text-xs font-bold text-emerald-300 focus:outline-none focus:border-emerald-400"
+                  />
+                </div>
+              </div>
+
+              {/* Footer Actions */}
+              <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-800/80">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const pinAsociado = currentItem.findingId
+                      ? hallazgos.find(
+                          (h: any) =>
+                            h.id === currentItem.findingId ||
+                            h.originalId === currentItem.findingId
+                        )
+                      : undefined;
+                    setItemTiempoEnvioModal(null);
+                    abrirModalProveedor("INDIVIDUAL", currentItem, pinAsociado);
+                  }}
+                  className="h-9 px-3.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/40 text-emerald-300 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
+                >
+                  <span>💬</span>
+                  <span>Pedir</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setItemTiempoEnvioModal(null);
+                  }}
+                  className="h-9 px-5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all cursor-pointer"
+                >
+                  ✓ Listo
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ================================================================= */}
+      {/* MODAL: CATÁLOGO INTERACTIVO TALLER (CARRITO CON STOCK Y PRECIO)   */}
+      {/* ================================================================= */}
+      {modalCatalogoTallerAbierto.abierto && (
+        <div
+          className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-3 animate-in fade-in duration-150"
+          onClick={() =>
+            setModalCatalogoTallerAbierto({ abierto: false, origen: "TALLER" })
+          }
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="relative w-full max-w-2xl max-h-[85dvh] overflow-y-auto rounded-2xl bg-white dark:bg-[#111113] border border-zinc-200 dark:border-white/10 p-4 shadow-2xl space-y-3"
+          >
+            <div className="flex items-center justify-between pb-1">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                <span className="text-sm font-bold text-zinc-900 dark:text-white">
+                  Catálogo · {modalCatalogoTallerAbierto.origen}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() =>
+                  setModalCatalogoTallerAbierto({ abierto: false, origen: "TALLER" })
+                }
+                className="w-7 h-7 rounded-lg flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-xs font-bold transition-colors cursor-pointer"
+                title="Cerrar"
+              >
+                ✕
+              </button>
+            </div>
+
+            <CatalogoProductosServiciosTaller
+              itemsSeleccionados={itemsPropuestaParaTrabajos}
+              onAgregarItem={(item, delta = 1) => {
+                if (delta > 0) {
+                  void handleAgregarDesdeCatalogoTaller([{ ...item, qty: delta }]);
+                }
+              }}
+              onEliminarItem={(itemId) => {
+                const esSrv = servicios.some((s) => s.id === itemId || s.code === itemId);
+                if (esSrv) {
+                  const target = servicios.find((s) => s.id === itemId || s.code === itemId);
+                  if (target) void handleDeleteService(target.id);
+                } else {
+                  const target = repuestos.find((r) => r.id === itemId || r.code === itemId);
+                  if (target) void handleDeleteItem(target.id);
+                }
+              }}
+              siempreAbierto
+              mostrarPrecios
+              mostrarChipsSeleccionados
+            />
+          </div>
+        </div>
+      )}
+
+      {/* ================================================================= */}
+      {/* MODAL: SERVICIOS RÁPIDOS 1-CLIC POR ESPECIALIDAD                  */}
+      {/* ================================================================= */}
+      {modalAccesosRapidosAbierto.abierto && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 animate-in fade-in duration-150"
+          onClick={() =>
+            setModalAccesosRapidosAbierto({ abierto: false, origen: "TALLER" })
+          }
+        >
+          <div
+            className="w-full max-w-md rounded-2xl border border-slate-800 bg-[#0d1322] p-5 shadow-2xl space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-slate-800/80 pb-3">
+              <div className="flex items-center gap-2">
+                <span className="text-base">⚡</span>
+                <h4 className="text-sm font-black text-white">
+                  Rápidos · {modalAccesosRapidosAbierto.origen}
+                </h4>
+              </div>
+              <button
+                type="button"
+                onClick={() =>
+                  setModalAccesosRapidosAbierto({ abierto: false, origen: "TALLER" })
+                }
+                className="w-8 h-8 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center text-xs font-bold cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <input
+              type="text"
+              value={busquedaAccesoRapido}
+              onChange={(e) => setBusquedaAccesoRapido(e.target.value)}
+              placeholder="🔍 Filtrar..."
+              className="w-full h-9 rounded-xl bg-slate-900 border border-slate-800 px-3 text-xs text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-blue-500"
+            />
+
+            <div className="max-h-72 overflow-y-auto space-y-1.5 pr-1">
+              {(
+                SERVICIOS_RAPIDOS_POR_ESPECIALIDAD[modalAccesosRapidosAbierto.origen] ||
+                SERVICIOS_RAPIDOS_POR_ESPECIALIDAD.TALLER
+              )
+                .filter((s) =>
+                  !busquedaAccesoRapido.trim()
+                    ? true
+                    : s.nombre.toLowerCase().includes(busquedaAccesoRapido.toLowerCase())
+                )
+                .map((srv, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-center justify-between gap-2 p-2.5 rounded-xl bg-slate-900/60 border border-slate-800/80 hover:border-slate-700 transition-all"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold text-slate-200 truncate">
+                        {srv.nombre}
+                      </p>
+                      <span className="text-[10px] font-semibold text-emerald-400">
+                        ${srv.precio.toFixed(2)}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handleAgregarAccesoRapido(
+                          srv.nombre,
+                          srv.precio,
+                          modalAccesosRapidosAbierto.origen
+                        )
+                      }
+                      className="h-7 px-3 rounded-lg bg-purple-600/20 hover:bg-purple-600 text-purple-300 hover:text-white border border-purple-500/40 text-xs font-bold transition-all cursor-pointer shrink-0"
+                    >
+                      + Añadir
+                    </button>
+                  </div>
+                ))}
             </div>
           </div>
         </div>
