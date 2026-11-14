@@ -1032,6 +1032,27 @@
       "metadataJson": "{\"originalName\":\"audio_pc_1794582270802.wav\"}",
       "createdAt": "2026-11-13T15:04:34.063Z",
       "updatedAt": "2026-11-13T15:04:34.063Z"
+    },
+    {
+      "id": "evi_snb25r1mwdzjezw",
+      "orderId": "ord_wdm6k2bmwdzmmtv",
+      "orderNumber": "OT #00002",
+      "vehicleId": "cmwdzmmoj0002wtqy2ae9tgq4",
+      "plate": "CCCCCCCCCCC",
+      "type": "image",
+      "r2Key": "taller_recepcion/8ac689bf-7391-42ce-a0ff-4b5f3aee3e89.jpg",
+      "mimeType": "image/jpeg",
+      "fileSizeBytes": 42897,
+      "durationSeconds": null,
+      "transcriptionText": null,
+      "uploadStatus": "COMPLETED",
+      "transcriptionStatus": "NOT_APPLICABLE",
+      "uploadedBy": "Taller Mecánico",
+      "clientTempId": "temp_vx1ch6nmwdzj7cb",
+      "branch": "PRINCIPAL",
+      "metadataJson": "{\"originalName\":\"fOTO.png\"}",
+      "createdAt": "2026-11-12T20:13:18.503Z",
+      "updatedAt": "2026-11-12T20:15:49.676Z"
     }
   ],
   "orderRequest": [],

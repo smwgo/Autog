@@ -45,6 +45,18 @@ export const SERVICIOS_RAPIDOS_POR_ESPECIALIDAD: Record<
     { nombre: "Cambio de ruliman posterior", precio: 20 },
     { nombre: "Cambio de aceite de caja", precio: 10 },
     { nombre: "Cambio de aceite corona", precio: 10 },
+    { nombre: "Lavado completo", precio: 12 },
+    { nombre: "Lavado completo mas grafito", precio: 15 },
+    { nombre: "Lavado exterior", precio: 6 },
+    { nombre: "Aspirador interior", precio: 5 },
+    { nombre: "Limpieza tapicería más lavado", precio: 45 },
+    { nombre: "Lavado chasis", precio: 10 },
+    { nombre: "Alineación", precio: 15 },
+    { nombre: "Balanceo", precio: 12 },
+    { nombre: "Rotación", precio: 8 },
+    { nombre: "Corrección caída", precio: 20 },
+    { nombre: "Corrección camber", precio: 20 },
+    { nombre: "Corrección caster", precio: 20 },
   ],
   LUBRICENTRO: [
     { nombre: "Cambio de aceite", precio: 10 },
@@ -1875,7 +1887,7 @@ export default function PaginaDetallePropuesta() {
     });
 
     const prodsTaller = repuestos
-      .filter((r) => (r.origin || "TALLER") === "TALLER" && !idsEnPines.has(String(r.id)))
+      .filter((r) => !idsEnPines.has(String(r.id)))
       .map((r) => ({
         ...r,
         isService: false,
@@ -1883,7 +1895,7 @@ export default function PaginaDetallePropuesta() {
       }));
 
     const srvsTaller = servicios
-      .filter((s) => (s.origin || "TALLER") === "TALLER" && !idsEnPines.has(String(s.id)))
+      .filter((s) => !idsEnPines.has(String(s.id)))
       .map((s) => ({
         ...s,
         qty: 1,
@@ -3183,15 +3195,7 @@ export default function PaginaDetallePropuesta() {
       <main className="w-full max-w-[1920px] mx-auto p-3 sm:p-6 md:p-8 lg:px-8 mt-2 sm:mt-4 print:m-0 print:p-0 print:max-w-none space-y-4">
         {/* BARRA DE TARJETAS DESLIZABLES (STEPPER INTELIGENTE) */}
         {(() => {
-          const countArea = (orig: EspecialidadTipo) =>
-            repuestos.filter((r) => (r.origin || "TALLER") === orig).length +
-            servicios.filter((s) => (s.origin || "TALLER") === orig).length;
-
-          const totalItemsPago =
-            countArea("TALLER") +
-            countArea("LUBRICENTRO") +
-            countArea("CARWASH") +
-            countArea("TECNICENTRO");
+          const totalItemsPago = repuestos.length + servicios.length;
 
           const tarjetasMeta = [
             {
@@ -3214,44 +3218,10 @@ export default function PaginaDetallePropuesta() {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 11-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.743-.07a4.5 4.5 0 004.486-6.336l-3.276 3.277a3.004 3.004 0 01-2.25-2.25l3.276-3.276a4.5 4.5 0 00-6.336 4.486c.091.455.087.935-.012 1.39" />
                 </svg>
               ),
-              count: countArea("TALLER"),
+              count: totalItemsPago,
             },
             {
               idx: 2,
-              titulo: "Lubricentro",
-              iconBg: "bg-red-500/10 text-red-500",
-              icon: (
-                <svg className="w-4 h-4 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 3c-4 5-6 8.5-6 12a6 6 0 1012 0c0-3.5-2-7-6-12z" />
-                </svg>
-              ),
-              count: countArea("LUBRICENTRO"),
-            },
-            {
-              idx: 3,
-              titulo: "Carwash",
-              iconBg: "bg-cyan-500/10 text-cyan-500",
-              icon: (
-                <svg className="w-4 h-4 text-cyan-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
-                </svg>
-              ),
-              count: countArea("CARWASH"),
-            },
-            {
-              idx: 4,
-              titulo: "Tecnicentro",
-              iconBg: "bg-amber-500/10 text-amber-500",
-              icon: (
-                <svg className="w-4 h-4 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-              ),
-              count: countArea("TECNICENTRO"),
-            },
-            {
-              idx: 5,
               titulo: "Pago",
               iconBg: "bg-emerald-500/10 text-emerald-500",
               icon: (
@@ -3305,7 +3275,7 @@ export default function PaginaDetallePropuesta() {
             const endX = e.changedTouches[0]?.clientX ?? touchStartX;
             const diff = touchStartX - endX;
             if (Math.abs(diff) > 60) {
-              if (diff > 0 && tarjetaActiva < 5) setTarjetaActiva((p) => Math.min(5, p + 1));
+              if (diff > 0 && tarjetaActiva < 2) setTarjetaActiva((p) => Math.min(2, p + 1));
               if (diff < 0 && tarjetaActiva > 0) setTarjetaActiva((p) => Math.max(0, p - 1));
             }
             setTouchStartX(null);
@@ -4085,185 +4055,9 @@ export default function PaginaDetallePropuesta() {
           </div>
 
           {/* ===================================================================
-              TARJETAS 3, 4 Y 5 (idx 2, 3, 4): LUBRICENTRO, CAR WASH, TECNICENTRO
+              TARJETA 3 (idx 2): PEDIR A PROVEEDOR CON LINK + LIQUIDACIÓN + PAGAR O PASAR A POS
               =================================================================== */}
-          {(
-            [
-              { idx: 2, key: "LUBRICENTRO" as EspecialidadTipo, nombre: "Lubricentro", icon: "🛢️", prevLabel: "Taller", nextLabel: "Carwash" },
-              { idx: 3, key: "CARWASH" as EspecialidadTipo, nombre: "Carwash", icon: "🚿", prevLabel: "Lubricentro", nextLabel: "Tecnicentro" },
-              { idx: 4, key: "TECNICENTRO" as EspecialidadTipo, nombre: "Tecnicentro", icon: "⚙️", prevLabel: "Carwash", nextLabel: "Pago" },
-            ] as const
-          ).map((area) => {
-            const repArea = repuestos
-              .filter((r) => (r.origin || "TALLER") === area.key)
-              .map((r) => ({
-                ...r,
-                isService: false,
-                subtotal: r.subtotalVenta || Number((Number(r.price || 0) * Number(r.qty || 1)).toFixed(2)),
-              }));
-            const srvArea = servicios
-              .filter((s) => (s.origin || "TALLER") === area.key)
-              .map((s) => ({
-                ...s,
-                qty: 1,
-                isService: true,
-                subtotal: Number(s.price || 0),
-              }));
-            const itemsAreaUnificados = [...repArea, ...srvArea];
-
-            return (
-              <div
-                key={area.key}
-                className={tarjetaActiva === area.idx ? "space-y-5" : "hidden print:block print:space-y-5"}
-              >
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-zinc-200 dark:border-white/10">
-                  <div className="flex items-center gap-2.5">
-                    <span className="w-9 h-9 rounded-xl bg-blue-500/15 border border-blue-500/30 text-blue-500 flex items-center justify-center text-base">
-                      {area.icon}
-                    </span>
-                    <div>
-                      <h2 className="text-base font-normal text-zinc-900 dark:text-white">
-                        {area.nombre}
-                      </h2>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2 print:hidden flex-wrap">
-                    <button
-                      type="button"
-                      onClick={() => toggleAreaVerificada(area.key)}
-                      className={`h-9 px-3 rounded-xl border text-xs font-normal transition-all cursor-pointer flex items-center gap-1.5 ${
-                        areasVerificadas[area.key]
-                          ? "bg-emerald-500/15 border-emerald-500/40 text-emerald-600 dark:text-emerald-300"
-                          : "bg-zinc-100 dark:bg-white/5 border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-200/70"
-                      }`}
-                    >
-                      <span>{areasVerificadas[area.key] ? "✓" : "○"}</span>
-                      <span>Verificado</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setNuevoOrigen(area.key);
-                        setModalNuevoRepuesto(true);
-                      }}
-                      className="h-9 px-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-normal cursor-pointer flex items-center gap-1"
-                    >
-                      <span>📦</span>
-                      <span>Producto</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setNuevoServicioOrigen(area.key);
-                        setModalNuevoServicio(true);
-                      }}
-                      className="h-9 px-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-normal cursor-pointer flex items-center gap-1"
-                    >
-                      <span>🔧</span>
-                      <span>Servicio</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Barra rápida de ingreso para Lubricentro / Carwash / Tecnicentro */}
-                {renderBarraAgregarAdicional(area.key)}
-
-                {itemsAreaUnificados.length === 0 ? (
-                  <div className="p-8 rounded-2xl border border-dashed border-zinc-200 dark:border-white/10 bg-zinc-50/50 dark:bg-white/[0.01] text-center space-y-3">
-                    <div className="text-2xl">{area.icon}</div>
-                    <p className="text-sm font-normal text-zinc-700 dark:text-zinc-300">
-                      Sin ítems en {area.nombre}
-                    </p>
-                    <div className="pt-2 flex items-center justify-center gap-2 flex-wrap">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setNuevoOrigen(area.key);
-                          setModalNuevoRepuesto(true);
-                        }}
-                        className="h-9 px-3.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-normal cursor-pointer flex items-center gap-1"
-                      >
-                        <span>📦</span>
-                        <span>Producto</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setNuevoServicioOrigen(area.key);
-                          setModalNuevoServicio(true);
-                        }}
-                        className="h-9 px-3.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-normal cursor-pointer flex items-center gap-1"
-                      >
-                        <span>🔧</span>
-                        <span>Servicio</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setAreasVerificadas((p) => ({ ...p, [area.key]: true }));
-                          setTarjetaActiva(area.idx + 1);
-                        }}
-                        className="h-9 px-3.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/35 text-emerald-600 dark:text-emerald-300 text-xs font-normal cursor-pointer flex items-center gap-1"
-                      >
-                        <span>✓</span>
-                        <span>Siguiente →</span>
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="border border-zinc-200 dark:border-white/10 rounded-2xl overflow-hidden bg-white dark:bg-[#121216]">
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-left border-collapse table-auto text-xs font-normal">
-                        <thead>
-                          <tr className="border-b border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-white/[0.04] text-zinc-500 dark:text-zinc-400">
-                            <th className="py-2 px-2.5 w-8 text-center font-normal">✓</th>
-                            <th className="py-2 px-2.5 min-w-[100px] font-normal">Origen</th>
-                            <th className="py-2 px-2.5 min-w-[200px] font-normal">Ítem</th>
-                            <th className="py-2 px-2 w-24 text-center font-normal">Tiempo</th>
-                            <th className="py-2 px-2 w-28 text-center font-normal">Tipo</th>
-                            <th className="py-2 px-2 w-20 text-center font-normal">Cant.</th>
-                            <th className="py-2 px-2.5 w-24 text-right font-normal">Subtotal</th>
-                            <th className="py-2 px-2 min-w-[125px] text-center font-normal">Acción</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-zinc-200 dark:divide-white/5">
-                          {itemsAreaUnificados.map((item, itemIdx) =>
-                            renderFilaItemPropuesta(item, itemIdx, undefined, undefined, area.nombre)
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                )}
-
-                {/* Pie de navegación Tarjeta de Área */}
-                <div className="print:hidden flex items-center justify-between pt-4 border-t border-zinc-200 dark:border-white/10">
-                  <button
-                    type="button"
-                    onClick={() => setTarjetaActiva(area.idx - 1)}
-                    className="h-9 px-4 rounded-xl bg-zinc-100 dark:bg-white/5 hover:bg-zinc-200 dark:hover:bg-white/10 text-zinc-700 dark:text-zinc-300 text-xs font-normal cursor-pointer flex items-center gap-1.5"
-                  >
-                    <span>←</span>
-                    <span>Anterior</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setTarjetaActiva(area.idx + 1)}
-                    className="h-9 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-normal cursor-pointer flex items-center gap-1.5"
-                  >
-                    <span>Siguiente</span>
-                    <span>→</span>
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-
-          {/* ===================================================================
-              TARJETA 6 (idx 5): PEDIR A PROVEEDOR CON LINK + LIQUIDACIÓN + PAGAR O PASAR A POS
-              =================================================================== */}
-          <div className={tarjetaActiva === 5 ? "space-y-6" : "hidden print:block print:space-y-6"}>
+          <div className={tarjetaActiva === 2 ? "space-y-6" : "hidden print:block print:space-y-6"}>
             {/* Cabecera Última Tarjeta */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-zinc-200 dark:border-white/10">
               <div className="flex items-center gap-2.5">
@@ -4553,7 +4347,7 @@ export default function PaginaDetallePropuesta() {
             <div className="print:hidden pt-5 border-t border-zinc-200 dark:border-white/10 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
               <button
                 type="button"
-                onClick={() => setTarjetaActiva(4)}
+                onClick={() => setTarjetaActiva(1)}
                 className="h-10 px-4 rounded-xl bg-zinc-100 dark:bg-white/5 hover:bg-zinc-200 dark:hover:bg-white/10 text-zinc-700 dark:text-zinc-300 text-xs font-normal cursor-pointer self-start md:self-auto flex items-center gap-1.5"
               >
                 <span>←</span>
