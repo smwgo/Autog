@@ -4061,10 +4061,12 @@ export default function PaginaDetallePropuesta() {
                                           <button
                                             type="button"
                                             onClick={() => abrirModalProveedor("INDIVIDUAL", it)}
-                                            className="h-7 px-2 rounded-lg border bg-emerald-50/80 hover:bg-emerald-100 dark:bg-emerald-500/15 dark:hover:bg-emerald-500/25 border-emerald-200 dark:border-emerald-500/30 text-emerald-600 dark:text-emerald-300 inline-flex items-center gap-1 text-[11px] font-medium cursor-pointer active:scale-95 transition-all shrink-0"
+                                            className="h-7 px-2 rounded-lg border bg-emerald-50/80 hover:bg-emerald-100 dark:bg-emerald-500/15 dark:hover:bg-emerald-500/25 border-emerald-200 dark:border-emerald-500/30 text-emerald-600 dark:text-emerald-300 inline-flex items-center justify-center gap-1 text-[11px] font-medium cursor-pointer active:scale-95 transition-all shrink-0"
                                             title="Cotizar con proveedor"
                                           >
-                                            <span>🚚</span>
+                                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                                              <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 18.75a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 0 1-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 0 0-3.213-9.193 2.056 2.056 0 0 0-1.58-.86H14.25M16.5 18.75h-2.25m0-11.175V14.25m0 0H2.25m12 0v4.5m0-4.5H16.5" />
+                                            </svg>
                                           </button>
                                           {it.supplierAvailability === "SI_HAY" && (
                                             <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-500/40 text-[10px] font-bold shrink-0">
@@ -4214,10 +4216,12 @@ export default function PaginaDetallePropuesta() {
                                           <button
                                             type="button"
                                             onClick={() => abrirModalProveedor("INDIVIDUAL", it)}
-                                            className="h-7 px-2 rounded-lg border bg-emerald-50/80 hover:bg-emerald-100 dark:bg-emerald-500/15 dark:hover:bg-emerald-500/25 border-emerald-200 dark:border-emerald-500/30 text-emerald-600 dark:text-emerald-300 inline-flex items-center gap-1 text-[11px] font-medium cursor-pointer active:scale-95 transition-all shrink-0"
+                                            className="h-7 px-2 rounded-lg border bg-emerald-50/80 hover:bg-emerald-100 dark:bg-emerald-500/15 dark:hover:bg-emerald-500/25 border-emerald-200 dark:border-emerald-500/30 text-emerald-600 dark:text-emerald-300 inline-flex items-center justify-center gap-1 text-[11px] font-medium cursor-pointer active:scale-95 transition-all shrink-0"
                                             title="Cotizar con proveedor"
                                           >
-                                            <span>🚚</span>
+                                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                                              <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 18.75a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 0 1-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 0 0-3.213-9.193 2.056 2.056 0 0 0-1.58-.86H14.25M16.5 18.75h-2.25m0-11.175V14.25m0 0H2.25m12 0v4.5m0-4.5H16.5" />
+                                            </svg>
                                           </button>
                                           {it.supplierAvailability === "SI_HAY" && (
                                             <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-500/40 text-[10px] font-bold shrink-0">
