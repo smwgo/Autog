@@ -617,7 +617,6 @@ function esPropuestaAprobadaOrden(o?: UnifiedOrder | null): boolean {
     st.includes("aprob") ||
     st === "en proceso" ||
     st === "trabajando" ||
-    st.includes("reparac") ||
     st === "en_caja" ||
     st === "pagado" ||
     st === "facturado" ||
@@ -918,6 +917,7 @@ export default function TallerPanel() {
   // Reanudar el trabajo de una orden pausada y seleccionarla
   const handleReanudarOrden = async (auto: UnifiedOrder, e?: React.MouseEvent) => {
     e?.stopPropagation();
+    const estadoAReanudar = esPropuestaAprobadaOrden(auto) ? "Reparación" : "Diagnóstico";
     try {
       const res = await fetch("/api/taller/operacion", {
         method: "POST",
@@ -925,14 +925,17 @@ export default function TallerPanel() {
         body: JSON.stringify({
           action: "ACTUALIZAR_ORDEN",
           orderId: auto.id,
-          status: "En Proceso",
+          status: estadoAReanudar,
           startTimer: !auto.startedAt,
         }),
       });
       const data = await res.json();
-      const updated = data.success && data.activeOrder ? data.activeOrder : { ...auto, status: "En Proceso" };
+      const updated = data.success && data.activeOrder ? data.activeOrder : { ...auto, status: estadoAReanudar };
       setAutosEnPista((prev) => prev.map((o) => (o.id === auto.id ? updated : o)));
       setOrdenActiva(updated);
+      setEtapa6EstadoSeleccionado(estadoAReanudar);
+      setEtapa6ColorSeleccionado(estadoAReanudar === "Reparación" ? "rose" : "blue");
+      setEtapa6ProgresoSeleccionado(estadoAReanudar === "Reparación" ? 60 : 30);
       setKmActualInput(updated.mileage ? String(updated.mileage) : "");
       setFotosRecepcion(updated.receptionPhotos || []);
       setMostrarModalAutosAtencion(false);
@@ -951,11 +954,11 @@ export default function TallerPanel() {
       const res = await fetch("/api/presupuestos/estado", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orderId: target.id, quoteStatus: "Aprobado" }),
+        body: JSON.stringify({ orderId: target.id, quoteStatus: "Aprobado", status: "Reparación" }),
       });
       const data = await res.json();
       if (data.success) {
-        mostrarToast(`Propuesta aprobada para ${target.plate}. Orden lista para trabajar`, "ok");
+        mostrarToast(`Propuesta aprobada para ${target.plate}. En Reparación`, "ok");
         if (typeof window !== "undefined") {
           try {
             localStorage.setItem("taller_orden_activa_id", target.id);
@@ -964,11 +967,18 @@ export default function TallerPanel() {
         const updated: UnifiedOrder = {
           ...target,
           quoteStatus: "Aprobado",
-          status: target.status === "Pausada" ? "Pausada" : "En Proceso",
+          status: "Reparación",
+          statusColor: "rose",
+          progress: 60,
         };
         setAutosEnPista((prev) => prev.map((o) => (o.id === target.id ? updated : o)));
         if (ordenActiva?.id === target.id) {
           setOrdenActiva(updated);
+          setEtapa6EstadoSeleccionado("Reparación");
+          setEtapa6ColorSeleccionado("rose");
+          setEtapa6ProgresoSeleccionado(60);
+          const msgPreescrito = generarMensajeAvisoClienteEtapa6("Reparación");
+          setEtapa6MensajeAviso(msgPreescrito);
         }
       } else {
         mostrarToast(data.error || "No se pudo aprobar la propuesta", "err");
@@ -1161,6 +1171,9 @@ export default function TallerPanel() {
         ...prev.filter((c) => c.id !== cliente.id),
       ]);
     }
+
+    // Sincronizar con la base de datos para mantener todas las órdenes activas en pista
+    void cargarOperacionInicial(false);
 
     // Sincronizar campos de ingreso táctil en el panel principal
     if (nuevaOrden.fuelLevel) {
@@ -2389,25 +2402,6 @@ export default function TallerPanel() {
       Array.isArray(ordenActiva.technicianHours) ? ordenActiva.technicianHours : []
     );
 
-    // Sincronizar Etapa 6: Estado y Aviso
-    const pinOrden = ordenActiva.trackingPin || "4821";
-    const estadoOrden = ordenActiva.status || "En Reparación";
-    const colorOrden = (ordenActiva.statusColor as CustomOrderStatus["color"]) || "sky";
-    setEtapa6TrackingPin(pinOrden);
-    setEtapa6EstadoSeleccionado(estadoOrden);
-    setEtapa6ColorSeleccionado(colorOrden);
-    setEtapa6ProgresoSeleccionado(ordenActiva.progress ?? 65);
-    setEtapa6ClienteTelefono(
-      ordenActiva.clientPhone && ordenActiva.clientPhone !== "S/N"
-        ? ordenActiva.clientPhone
-        : clienteEncontrado?.phone && clienteEncontrado.phone !== "S/N"
-          ? clienteEncontrado.phone
-          : ""
-    );
-    setEtapa6ClienteEmail(
-      ordenActiva.clientEmail || clienteEncontrado?.email || ""
-    );
-
     const normalizarUnaPalabra = (nombre: string): string => {
       const n = (nombre || "").trim();
       const nLower = n.toLowerCase();
@@ -2419,6 +2413,52 @@ export default function TallerPanel() {
       // Si es un estado personalizado, tomar la palabra principal sin números
       return n.replace(/^\d+\s*(?:En\s+)?/i, "").split(/\s+/)[0] || n;
     };
+
+    // Sincronizar Etapa 6: Estado y Aviso
+    const pinOrden = ordenActiva.trackingPin || "4821";
+    const propuestaAprobada = esPropuestaAprobadaOrden(ordenActiva);
+    const estaPausada = ordenActiva.status === "Pausada";
+
+    const normalizado = normalizarUnaPalabra(ordenActiva.status || "");
+    const ultimaEtapaHistorial = Array.isArray(ordenActiva.statusHistory) && ordenActiva.statusHistory.length > 0
+      ? normalizarUnaPalabra(ordenActiva.statusHistory[0].status)
+      : "";
+
+    // Si ordenActiva ya tiene un estado de las 4 etapas ("Diagnóstico", "Reparación", "Listo", "Entregada"), respetarlo
+    let estadoOrden = normalizado && normalizado !== "Pausada" && normalizado !== "En Proceso"
+      ? normalizado
+      : (ultimaEtapaHistorial || "");
+
+    let colorOrden = (ordenActiva.statusColor as CustomOrderStatus["color"]) || "blue";
+    let progresoOrden = ordenActiva.progress ?? 30;
+
+    // Si aún no tiene etapa definida, usar valor por defecto según propuesta
+    if (!estadoOrden) {
+      if (propuestaAprobada) {
+        estadoOrden = "Reparación";
+        colorOrden = "rose";
+        progresoOrden = 60;
+      } else {
+        estadoOrden = "Diagnóstico";
+        colorOrden = "blue";
+        progresoOrden = 30;
+      }
+    }
+
+    setEtapa6TrackingPin(pinOrden);
+    setEtapa6EstadoSeleccionado(estadoOrden || "Diagnóstico");
+    setEtapa6ColorSeleccionado(colorOrden);
+    setEtapa6ProgresoSeleccionado(progresoOrden);
+    setEtapa6ClienteTelefono(
+      ordenActiva.clientPhone && ordenActiva.clientPhone !== "S/N"
+        ? ordenActiva.clientPhone
+        : clienteEncontrado?.phone && clienteEncontrado.phone !== "S/N"
+          ? clienteEncontrado.phone
+          : ""
+    );
+    setEtapa6ClienteEmail(
+      ordenActiva.clientEmail || clienteEncontrado?.email || ""
+    );
 
     if (Array.isArray(ordenActiva.customStatuses) && ordenActiva.customStatuses.length > 0) {
       const mergedMap = new Map<string, CustomOrderStatus>();
@@ -3466,7 +3506,7 @@ Hola *${clienteNom}*, actualización de su vehículo *${vehiculoDesc}* (Placa: *
     return null;
   };
 
-  // Al cambiar el estado, la app actualiza el estado y escribe automáticamente el aviso listo para enviar
+  // Al cambiar el estado (los 4 botones de abajo), NO debe cambiar lo de arriba
   const handleSeleccionarEstadoEtapa6 = async (st: CustomOrderStatus) => {
     setEtapa6EstadoSeleccionado(st.name);
     setEtapa6ColorSeleccionado(st.color);
@@ -3475,8 +3515,23 @@ Hola *${clienteNom}*, actualización de su vehículo *${vehiculoDesc}* (Placa: *
     setEtapa6MensajeAviso(msgPreescrito);
 
     if (ordenActiva) {
+      // Preservar el estado operativo del semáforo superior (Trabajando / Pausada / En espera)
+      const estaPausada = ordenActiva.status === "Pausada";
+      const statusFinal = estaPausada ? "Pausada" : (ordenActiva.status === "En Proceso" ? "En Proceso" : st.name);
+
+      const updatedLocal: UnifiedOrder = {
+        ...ordenActiva,
+        status: statusFinal,
+        statusColor: st.color,
+        progress: st.progress,
+      };
+      setOrdenActiva(updatedLocal);
+      setAutosEnPista((prev) =>
+        prev.map((o) => (o.id === ordenActiva.id ? updatedLocal : o))
+      );
+
       await sincronizarEtapa6EnNeon({
-        status: st.name,
+        status: statusFinal,
         statusColor: st.color,
         progress: st.progress,
         notificationMessage: msgPreescrito,
@@ -5371,12 +5426,18 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                         if (autosEnPista.length < 2) return;
                         const index = autosEnPista.findIndex((item) => item.id === auto.id);
                         const nextIndex = (index + 1) % autosEnPista.length;
-                        handleSeleccionarAutoYVolver(autosEnPista[nextIndex]);
+                        const targetAuto = autosEnPista[nextIndex];
+                        handleSeleccionarAutoYVolver(targetAuto);
                         const container = ordenesCarouselRef.current;
-                        container?.scrollTo({
-                          left: nextIndex * (container.clientWidth + 8),
-                          behavior: "smooth",
-                        });
+                        const targetCard = container?.querySelector(`[data-order-id="${targetAuto.id}"]`);
+                        if (targetCard) {
+                          targetCard.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+                        } else if (container) {
+                          container.scrollTo({
+                            left: nextIndex * (container.clientWidth + 8),
+                            behavior: "smooth",
+                          });
+                        }
                       }}
                       onDoubleClick={(e) => {
                         e.preventDefault();
@@ -5463,39 +5524,86 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                           </span>
                         )}
                       </div>
-                      <span
-                        role="button"
-                        tabIndex={0}
-                        title={
-                          autosEnPista.length > 1
-                            ? `Siguiente auto en atención (${index + 1} de ${autosEnPista.length})`
-                            : "Siguiente auto"
-                        }
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (autosEnPista.length > 1) {
-                            const nextIndex = (index + 1) % autosEnPista.length;
-                            handleSeleccionarAutoYVolver(autosEnPista[nextIndex]);
-                            const container = ordenesCarouselRef.current;
-                            container?.scrollTo({
-                              left: nextIndex * (container.clientWidth + 8),
-                              behavior: "smooth",
-                            });
-                          }
-                        }}
-                        className="p-2 sm:p-2.5 rounded-xl text-zinc-400 hover:text-blue-600 dark:text-zinc-500 dark:hover:text-blue-400 hover:bg-blue-50/70 dark:hover:bg-blue-500/10 active:scale-90 transition-all duration-200 cursor-pointer shrink-0 group/flecha flex items-center justify-center select-none"
-                      >
-                        <svg
-                          className="w-5 h-5 sm:w-6 sm:h-6 transition-transform duration-200 group-hover/flecha:translate-x-1 group-hover/flecha:scale-110"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                          strokeWidth={2}
-                          aria-hidden="true"
+
+                      {autosEnPista.length > 1 ? (
+                        <div className="flex items-center gap-1 shrink-0 bg-zinc-100 dark:bg-white/5 rounded-xl p-1 border border-zinc-200 dark:border-white/10">
+                          <span
+                            role="button"
+                            tabIndex={0}
+                            title={`Auto anterior (${index === 0 ? autosEnPista.length : index} de ${autosEnPista.length})`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const prevIndex = (index - 1 + autosEnPista.length) % autosEnPista.length;
+                              const targetAuto = autosEnPista[prevIndex];
+                              handleSeleccionarAutoYVolver(targetAuto);
+                              const container = ordenesCarouselRef.current;
+                              const targetCard = container?.querySelector(`[data-order-id="${targetAuto.id}"]`);
+                              if (targetCard) {
+                                targetCard.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+                              } else if (container) {
+                                container.scrollTo({
+                                  left: prevIndex * (container.clientWidth + 8),
+                                  behavior: "smooth",
+                                });
+                              }
+                            }}
+                            className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg hover:bg-blue-500/10 hover:text-blue-500 text-zinc-400 dark:text-zinc-400 flex items-center justify-center transition-all cursor-pointer select-none active:scale-90"
+                          >
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+                            </svg>
+                          </span>
+                          <span className="text-[11px] sm:text-xs font-mono font-bold text-blue-600 dark:text-blue-400 px-1 select-none whitespace-nowrap">
+                            {index + 1}/{autosEnPista.length}
+                          </span>
+                          <span
+                            role="button"
+                            tabIndex={0}
+                            title={`Siguiente auto (${((index + 1) % autosEnPista.length) + 1} de ${autosEnPista.length})`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const nextIndex = (index + 1) % autosEnPista.length;
+                              const targetAuto = autosEnPista[nextIndex];
+                              handleSeleccionarAutoYVolver(targetAuto);
+                              const container = ordenesCarouselRef.current;
+                              const targetCard = container?.querySelector(`[data-order-id="${targetAuto.id}"]`);
+                              if (targetCard) {
+                                targetCard.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+                              } else if (container) {
+                                container.scrollTo({
+                                  left: nextIndex * (container.clientWidth + 8),
+                                  behavior: "smooth",
+                                });
+                              }
+                            }}
+                            className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg hover:bg-blue-500/10 hover:text-blue-500 text-zinc-400 dark:text-zinc-400 flex items-center justify-center transition-all cursor-pointer select-none active:scale-90"
+                          >
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                            </svg>
+                          </span>
+                        </div>
+                      ) : (
+                        <span
+                          role="button"
+                          tabIndex={0}
+                          title="Auto actual en atención"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                          }}
+                          className="p-2 sm:p-2.5 rounded-xl text-zinc-400 dark:text-zinc-500 shrink-0 flex items-center justify-center select-none"
                         >
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
-                        </svg>
-                      </span>
+                          <svg
+                            className="w-5 h-5 sm:w-6 sm:h-6 text-zinc-400 dark:text-zinc-600"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                            strokeWidth={2}
+                          >
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                          </svg>
+                        </span>
+                      )}
                     </button>
                   );
                 })}

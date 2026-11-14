@@ -111,14 +111,18 @@ export async function POST(request: Request) {
           orderId
         );
       } else {
-        // Actualizar Aprobado (pasa a En Proceso / Trabajando) o Pendiente (En espera)
+        // Actualizar Aprobado (pasa a Trabajando / Reparación) o Pendiente (En espera / Diagnóstico)
+        const targetStatus = body.status
+          ? String(body.status).trim()
+          : (estadoNormalizado === "Aprobado" ? "Reparación" : "Diagnóstico");
+
         await prisma.$executeRawUnsafe(
           `UPDATE "WorkshopOrder"
            SET "quoteStatus" = $2,
                "quoteApprovedAt" = $3::timestamp,
                "status" = CASE
-                 WHEN $2 = 'Aprobado' THEN 'En Proceso'
-                 WHEN "status" IN ('Pagado', 'PAGADO', 'Facturado', 'FACTURADO', 'Pausada', 'PAUSADA') THEN 'En Proceso'
+                 WHEN $2 = 'Aprobado' THEN $4
+                 WHEN "status" IN ('Pagado', 'PAGADO', 'Facturado', 'FACTURADO', 'Pausada', 'PAUSADA') THEN $4
                  ELSE "status"
                END,
                "deliveryStatus" = CASE WHEN "deliveryStatus" IN ('Facturado', 'FACTURADO', 'Pagado', 'PAGADO') THEN 'Pendiente' ELSE "deliveryStatus" END,
@@ -126,7 +130,8 @@ export async function POST(request: Request) {
            WHERE "id" = $1 OR "orderNumber" = $1`,
           orderId,
           estadoNormalizado,
-          approvedAt
+          approvedAt,
+          targetStatus
         );
       }
 

@@ -971,9 +971,7 @@ export async function GET(request: Request) {
       const [ordersRows, products, services, employeesRows, customersRows, custBranchRows] = (await Promise.all([
         prisma.$queryRawUnsafe(
           `SELECT * FROM "WorkshopOrder"
-           WHERE "status" NOT IN ('Entregado', 'ENTREGADO', '05 Entregada', 'Entregada', 'Finalizado', 'FINALIZADO', 'Terminado', 'TERMINADO', 'Historial', 'HISTORIAL', 'Cancelado', 'CANCELADO', 'Pagado', 'PAGADO', 'Facturado', 'FACTURADO', 'Facturada', 'FACTURADA', 'Cobrado', 'COBRADO')
-             AND COALESCE("quoteStatus", '') NOT IN ('Pagado', 'PAGADO', 'Facturado', 'FACTURADO', 'Facturada', 'FACTURADA')
-             AND COALESCE("deliveryStatus", '') NOT IN ('Facturado', 'FACTURADO', 'Pagado', 'PAGADO')
+           WHERE "status" NOT IN ('Entregado', 'ENTREGADO', '05 Entregada', 'Entregada', 'Finalizado', 'FINALIZADO', 'Terminado', 'TERMINADO', 'Historial', 'HISTORIAL', 'Cancelado', 'CANCELADO')
            ORDER BY "updatedAt" DESC LIMIT 50`
         ),
         prisma.product.findMany({
@@ -1016,63 +1014,39 @@ export async function GET(request: Request) {
       );
 
       const rawAutosEnPista = ordersRows.map(mapOrderRow);
-      const idsParaMarcarPagado: string[] = [];
       const allAutosEnPista = rawAutosEnPista.filter((o: any) => {
-        const stLower = String(o.status || "").toLowerCase();
-        const qtLower = String(o.quoteStatus || "").toLowerCase();
-        const dlLower = String(o.deliveryStatus || "").toLowerCase();
-        const normNum = String(o.orderNumber || "").trim().replace(/^OT-/i, "").toUpperCase();
-        const normId = String(o.id || "").trim().toUpperCase();
-        const normPlate = String(o.plate || "").trim().toUpperCase();
-        const orderCreatedMs = o.createdAt ? new Date(o.createdAt).getTime() : 0;
+        const stLower = String(o.status || "").toLowerCase().trim();
+        const dlLower = String(o.deliveryStatus || "").toLowerCase().trim();
 
-        const paidBySalePlate =
-          Boolean(normPlate) &&
-          recentSales.some((s: any) => {
-            const sPlate = String(s.vehiclePlate || "").trim().toUpperCase();
-            if (!sPlate || sPlate !== normPlate) return false;
-            const saleMs = s.createdAt ? new Date(s.createdAt).getTime() : 0;
-            return saleMs >= orderCreatedMs - 60000;
-          });
+        // Estados activos de taller que SIEMPRE deben permanecer visibles en pista
+        const esEstadoActivo =
+          stLower.includes("diag") ||
+          stLower.includes("repar") ||
+          stLower.includes("pista") ||
+          stLower.includes("paus") ||
+          stLower.includes("espera") ||
+          stLower.includes("trabaj") ||
+          stLower.includes("listo") ||
+          stLower.includes("01") ||
+          stLower.includes("02") ||
+          stLower.includes("03") ||
+          stLower.includes("04");
 
-        const yaEstaPagado =
-          stLower.includes("pagad") ||
-          stLower.includes("factur") ||
-          stLower.includes("cobrad") ||
+        if (esEstadoActivo) {
+          return true;
+        }
+
+        // Si fue entregado al cliente, finalizado o cancelado, sale de pista
+        const yaFueEntregadoOFinalizado =
           stLower.includes("entregad") ||
           stLower.includes("finaliz") ||
           stLower.includes("terminad") ||
+          stLower.includes("cancelad") ||
           stLower.includes("historial") ||
-          qtLower.includes("pagad") ||
-          qtLower.includes("factur") ||
-          dlLower.includes("factur") ||
-          dlLower.includes("pagad") ||
-          (o.posRequestId && dispatchedReqIds.has(String(o.posRequestId).trim())) ||
-          (normNum && (dispatchedOrderNums.has(normNum) || invoicedOrderKeys.has(normNum) || soldOrderNums.has(normNum))) ||
-          (normId && invoicedOrderKeys.has(normId)) ||
-          paidBySalePlate ||
-          (Number(o.totalCost || 0) > 0 && Number(o.totalPaid || 0) >= Number(o.totalCost || 0));
+          dlLower.includes("entregad");
 
-        if (yaEstaPagado) {
-          idsParaMarcarPagado.push(o.id);
-          return false;
-        }
-        return true;
+        return !yaFueEntregadoOFinalizado;
       });
-
-      if (idsParaMarcarPagado.length > 0) {
-        prisma
-          .$executeRawUnsafe(
-            `UPDATE "WorkshopOrder"
-             SET "status" = 'Pagado',
-                 "quoteStatus" = 'Pagado',
-                 "deliveryStatus" = 'Facturado',
-                 "updatedAt" = NOW()
-             WHERE "id" = ANY($1::text[])`,
-            idsParaMarcarPagado
-          )
-          .catch(() => {});
-      }
       const autosEnPista = allAutosEnPista.filter((o: any) => {
         const orderBranch = (o.branch || "PRINCIPAL").toUpperCase();
         if (userBranchParam === "SUCURSAL") return orderBranch === "SUCURSAL";

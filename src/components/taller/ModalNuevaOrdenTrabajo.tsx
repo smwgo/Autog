@@ -594,21 +594,13 @@ export default function ModalNuevaOrdenTrabajo({
 
   const irAPaso = (nuevoPaso: 1 | 2 | 3 | 4) => {
     if (pasoActivo === 3 && nuevoPaso !== 3) {
-      if (
-        subiendoFoto ||
-        grabandoVideo ||
-        subiendoVideo ||
-        grabandoAudio ||
-        subiendoAudio ||
-        camaraFotoActiva
-      ) {
-        mostrarToast(
-          "Hay una captura, grabación o subida de evidencia en curso. Espera o finalízala antes de continuar.",
-          "err"
-        );
-        return;
-      }
       detenerTracksMedia();
+      setCamaraFotoActiva(false);
+      setGrabandoVideo(false);
+      setGrabandoAudio(false);
+      setSubiendoFoto(false);
+      setSubiendoVideo(false);
+      setSubiendoAudio(false);
     }
     // Cerrar escáner de matrícula al cambiar de paso
     detenerCamara();
@@ -655,7 +647,6 @@ export default function ModalNuevaOrdenTrabajo({
     const video = camaraFotoVideoRef.current;
     if (!video) return;
 
-    let previewUrl: string | null = null;
     try {
       setSubiendoFoto(true);
       setProgresoSubida({ percent: 20, status: "Capturando fotograma de alta nitidez..." });
@@ -668,50 +659,60 @@ export default function ModalNuevaOrdenTrabajo({
 
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
+      const dataUrl = canvas.toDataURL("image/jpeg", MULTIMEDIA_CONFIG.PHOTO_QUALITY);
+      setFotosIniciales((prev) => [...prev, dataUrl].slice(0, MULTIMEDIA_CONFIG.MAX_PHOTOS));
+      detenerCamaraFoto();
+
+      setProgresoSubida({ percent: 45, status: "Optimizando compresión de imagen..." });
+
       const blob = await new Promise<Blob | null>((resolve) =>
         canvas.toBlob(resolve, "image/jpeg", MULTIMEDIA_CONFIG.PHOTO_QUALITY)
       );
 
-      if (!blob) throw new Error("Fallo al procesar captura fotográfica.");
-      const localPreviewUrl = URL.createObjectURL(blob);
-      previewUrl = localPreviewUrl;
-      setFotosIniciales((prev) => [...prev, localPreviewUrl].slice(0, MULTIMEDIA_CONFIG.MAX_PHOTOS));
-      detenerCamaraFoto();
+      if (blob) {
+        try {
+          const { file: optimizada } = await comprimirImagenEnNavegador(blob);
+          const uploadPromise = subirEvidenciaSegura({
+            archivo: optimizada,
+            tipo: "foto",
+            carpeta: "taller_recepcion",
+            nombreArchivo: `foto_${Date.now()}.jpg`,
+            plate: vehiculoPlaca.trim().toUpperCase() || undefined,
+            uploadedBy: ingresadoPor.trim() || empleadoLogueado.nombre,
+            branch: getClientActiveBranch("/taller") === "SUCURSAL" ? "SUCURSAL" : "PRINCIPAL",
+            onProgress: (p) => setProgresoSubida(p),
+          });
 
-      setProgresoSubida({ percent: 45, status: "Optimizando compresión de imagen..." });
-      const { file: optimizada } = await comprimirImagenEnNavegador(blob);
+          const timeoutPromise = new Promise<null>((resolve) =>
+            setTimeout(() => resolve(null), 5000)
+          );
 
-      const res = await subirEvidenciaSegura({
-        archivo: optimizada,
-        tipo: "foto",
-        carpeta: "taller_recepcion",
-        nombreArchivo: `foto_${Date.now()}.jpg`,
-        plate: vehiculoPlaca.trim().toUpperCase() || undefined,
-        uploadedBy: ingresadoPor.trim() || empleadoLogueado.nombre,
-        branch: getClientActiveBranch("/taller") === "SUCURSAL" ? "SUCURSAL" : "PRINCIPAL",
-        onProgress: (p) => setProgresoSubida(p),
-      });
+          const res = await Promise.race([uploadPromise, timeoutPromise]);
 
-      setFotosIniciales((prev) => prev.map((url) => (url === localPreviewUrl ? res.url : url)));
-      setEvidenciasMetadata((prev) => [
-        ...prev,
-        {
-          url: res.url,
-          key: res.key,
-          evidenceId: res.evidenceId,
-          tipo: "foto",
-          fileSizeBytes: res.fileSizeBytes,
-          mimeType: res.mimeType,
-          clientTempId: res.clientTempId,
-        },
-      ]);
-      URL.revokeObjectURL(localPreviewUrl);
-      mostrarToast("Fotografía guardada y respaldada en Cloudflare R2", "ok");
-    } catch (err: any) {
-      if (previewUrl) {
-        setFotosIniciales((prev) => prev.filter((url) => url !== previewUrl));
-        URL.revokeObjectURL(previewUrl);
+          if (res && res.url) {
+            setFotosIniciales((prev) => prev.map((url) => (url === dataUrl ? res.url : url)));
+            setEvidenciasMetadata((prev) => [
+              ...prev,
+              {
+                url: res.url,
+                key: res.key,
+                evidenceId: res.evidenceId,
+                tipo: "foto",
+                fileSizeBytes: res.fileSizeBytes,
+                mimeType: res.mimeType,
+                clientTempId: res.clientTempId,
+              },
+            ]);
+            mostrarToast("Fotografía guardada y respaldada en Cloudflare R2", "ok");
+          } else {
+            mostrarToast("Fotografía capturada localmente", "ok");
+          }
+        } catch (uploadErr) {
+          console.warn("Subida a R2 en background:", uploadErr);
+          mostrarToast("Fotografía capturada localmente", "ok");
+        }
       }
+    } catch (err: any) {
       mostrarToast(err?.message || "Error al capturar fotografía", "err");
     } finally {
       setSubiendoFoto(false);
@@ -733,66 +734,75 @@ export default function ModalNuevaOrdenTrabajo({
     if (fileInputFotosRef.current) fileInputFotosRef.current.value = "";
     const espacio = MULTIMEDIA_CONFIG.MAX_PHOTOS - fotosIniciales.length;
     const aSubir = archivos.slice(0, espacio);
-    const previews = aSubir.map((file) => URL.createObjectURL(file));
-    setFotosIniciales((prev) => [...prev, ...previews].slice(0, MULTIMEDIA_CONFIG.MAX_PHOTOS));
+
+    // Leer inmediatamente como Base64 para que la foto nunca se pierda ni quede bloqueada
+    const dataUrls: string[] = await Promise.all(
+      aSubir.map(
+        (f) =>
+          new Promise<string>((resolve) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result as string);
+            reader.onerror = () => resolve(URL.createObjectURL(f));
+            reader.readAsDataURL(f);
+          })
+      )
+    );
+
+    setFotosIniciales((prev) => [...prev, ...dataUrls].slice(0, MULTIMEDIA_CONFIG.MAX_PHOTOS));
 
     try {
       setSubiendoFoto(true);
-      const errores: string[] = [];
 
-      await Promise.all(aSubir.map(async (f, i) => {
-        const previewUrl = previews[i];
-        try {
-          setProgresoSubida({
-            percent: Math.round(((i + 1) / aSubir.length) * 20),
-            status: `Comprimiendo imagen ${i + 1} de ${aSubir.length}...`,
-          });
+      await Promise.all(
+        aSubir.map(async (f, i) => {
+          const currentUrl = dataUrls[i];
+          try {
+            setProgresoSubida({
+              percent: Math.round(((i + 1) / aSubir.length) * 20),
+              status: `Comprimiendo imagen ${i + 1} de ${aSubir.length}...`,
+            });
 
-          // Compresión en navegador conservando nitidez de daños
-          const { file: optimizada } = await comprimirImagenEnNavegador(f);
+            const { file: optimizada } = await comprimirImagenEnNavegador(f);
 
-          const res = await subirEvidenciaSegura({
-            archivo: optimizada,
-            tipo: "foto",
-            carpeta: "taller_recepcion",
-            nombreArchivo: f.name,
-            plate: vehiculoPlaca.trim().toUpperCase() || undefined,
-            uploadedBy: ingresadoPor.trim() || empleadoLogueado.nombre,
-            branch: getClientActiveBranch("/taller") === "SUCURSAL" ? "SUCURSAL" : "PRINCIPAL",
-            onProgress: (p) => setProgresoSubida(p),
-          });
-
-          setFotosIniciales((prev) => prev.map((url) => (url === previewUrl ? res.url : url)));
-          setEvidenciasMetadata((prev) => [
-            ...prev,
-            {
-              url: res.url,
-              key: res.key,
-              evidenceId: res.evidenceId,
+            const uploadPromise = subirEvidenciaSegura({
+              archivo: optimizada,
               tipo: "foto",
-              fileSizeBytes: res.fileSizeBytes,
-              mimeType: res.mimeType,
-              clientTempId: res.clientTempId,
-            },
-          ]);
-          URL.revokeObjectURL(previewUrl);
-        } catch (err: any) {
-          errores.push(err?.message || `Error al subir ${f.name}`);
-          setFotosIniciales((prev) => prev.filter((url) => url !== previewUrl));
-          URL.revokeObjectURL(previewUrl);
-        }
-      }));
+              carpeta: "taller_recepcion",
+              nombreArchivo: f.name,
+              plate: vehiculoPlaca.trim().toUpperCase() || undefined,
+              uploadedBy: ingresadoPor.trim() || empleadoLogueado.nombre,
+              branch: getClientActiveBranch("/taller") === "SUCURSAL" ? "SUCURSAL" : "PRINCIPAL",
+              onProgress: (p) => setProgresoSubida(p),
+            });
 
-      if (errores.length > 0) {
-        mostrarToast(
-          errores.length === aSubir.length
-            ? errores[0]
-            : `Algunas fotos no pudieron subirse: ${errores[0]}`,
-          "err"
-        );
-      } else {
-        mostrarToast("Fotografías guardadas en Cloudflare R2", "ok");
-      }
+            const timeoutPromise = new Promise<null>((resolve) =>
+              setTimeout(() => resolve(null), 5000)
+            );
+
+            const res = await Promise.race([uploadPromise, timeoutPromise]);
+
+            if (res && res.url) {
+              setFotosIniciales((prev) => prev.map((url) => (url === currentUrl ? res.url : url)));
+              setEvidenciasMetadata((prev) => [
+                ...prev,
+                {
+                  url: res.url,
+                  key: res.key,
+                  evidenceId: res.evidenceId,
+                  tipo: "foto",
+                  fileSizeBytes: res.fileSizeBytes,
+                  mimeType: res.mimeType,
+                  clientTempId: res.clientTempId,
+                },
+              ]);
+            }
+          } catch (err: any) {
+            console.warn("Subida a R2 omitida o falló, conservando foto local:", err);
+          }
+        })
+      );
+
+      mostrarToast("Fotografías preparadas exitosamente", "ok");
     } catch (err: any) {
       mostrarToast(err?.message || "Error al procesar fotografías", "err");
     } finally {
@@ -5078,7 +5088,7 @@ export default function ModalNuevaOrdenTrabajo({
                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
                                 {fotosIniciales.map((url, i) => (
                                   <div
-                                    key={url}
+                                    key={url + "_" + i}
                                     className="relative aspect-[4/3] overflow-hidden rounded-xl border border-zinc-200 dark:border-white/10 bg-zinc-100 dark:bg-black/40 shadow-xs cursor-pointer"
                                     onClick={() => setFotoEnZoom(url)}
                                     title="Clic para ampliar detalle"
@@ -5088,9 +5098,14 @@ export default function ModalNuevaOrdenTrabajo({
                                       alt={`Foto ${i + 1}`}
                                       className="w-full h-full object-cover"
                                     />
-                                    {url.startsWith("blob:") && (
-                                      <span className="absolute bottom-2 left-2 px-2 py-1 rounded-full bg-black/70 text-white text-[10px]">
+                                    {subiendoFoto ? (
+                                      <span className="absolute bottom-2 left-2 px-2 py-1 rounded-full bg-black/70 text-white text-[10px] flex items-center gap-1">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-ping" />
                                         Subiendo...
+                                      </span>
+                                    ) : (
+                                      <span className="absolute bottom-2 left-2 px-2 py-0.5 rounded-full bg-emerald-600/80 text-white text-[9px] font-semibold">
+                                        ✓ Lista
                                       </span>
                                     )}
                                     <button
@@ -5099,9 +5114,8 @@ export default function ModalNuevaOrdenTrabajo({
                                         event.stopPropagation();
                                         handleEliminarFoto(i);
                                       }}
-                                      disabled={subiendoFoto}
                                       title="Eliminar foto"
-                                      className="absolute top-2 right-2 w-6 h-6 rounded-full bg-black/80 hover:bg-rose-600 text-white flex items-center justify-center text-xs font-bold border border-white/20 transition-all cursor-pointer disabled:opacity-50"
+                                      className="absolute top-2 right-2 w-6 h-6 rounded-full bg-black/80 hover:bg-rose-600 text-white flex items-center justify-center text-xs font-bold border border-white/20 transition-all cursor-pointer"
                                     >
                                       ✕
                                     </button>

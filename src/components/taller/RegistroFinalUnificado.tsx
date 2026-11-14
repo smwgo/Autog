@@ -95,9 +95,18 @@ const SERVICIOS_RAPIDOS_POR_MODULO: Record<ModuloEspecialidad, string[]> = {
   ],
 };
 
-function formatearPrimeraMayuscula(texto?: string) {
-  const s = (texto || "").trim();
-  if (!s) return "";
+function formatearPrimeraMayuscula(texto?: any): string {
+  if (texto === null || texto === undefined) return "";
+  let raw = "";
+  if (typeof texto === "string") {
+    raw = texto;
+  } else if (typeof texto === "object") {
+    raw = texto.name || texto.nombre || texto.fullName || texto.label || texto.title || "";
+  } else {
+    raw = String(texto);
+  }
+  const s = String(raw || "").trim();
+  if (!s || s === "[object Object]") return "";
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 

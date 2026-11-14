@@ -225,10 +225,17 @@ export default function PosVehiculosPage() {
       );
       const data = await res.json();
       if (res.ok && data.success) {
+        const targetId = vehiculoAEliminar.id;
+        const targetPlate = (vehiculoAEliminar.plate || "").trim().toUpperCase();
+        setVehicles((prev) =>
+          prev.filter(
+            (item) => item.id !== targetId && item.plate.trim().toUpperCase() !== targetPlate
+          )
+        );
         setMensajeExito(`Vehículo ${vehiculoAEliminar.plate} eliminado exitosamente.`);
         setTimeout(() => setMensajeExito(null), 3500);
         setVehiculoAEliminar(null);
-        if (vehiculoDetalle?.id === vehiculoAEliminar.id) {
+        if (vehiculoDetalle?.id === targetId || vehiculoDetalle?.plate.trim().toUpperCase() === targetPlate) {
           setVehiculoDetalle(null);
         }
         await cargarVehiculos(searchTerm, true);

@@ -385,6 +385,32 @@ export async function DELETE(request: Request) {
       }
     }
 
+    // Desvincular claves foráneas en Neon para no violar restricciones referenciales
+    if (id && !id.startsWith("taller-")) {
+      await prisma
+        .$executeRawUnsafe(
+          `UPDATE "WorkshopOrder" SET "vehicleId" = NULL WHERE "vehicleId" = $1`,
+          id
+        )
+        .catch(() => {});
+
+      await prisma
+        .$executeRawUnsafe(
+          `UPDATE "WorkshopEvidence" SET "vehicleId" = NULL WHERE "vehicleId" = $1`,
+          id
+        )
+        .catch(() => {});
+    }
+
+    if (plate) {
+      await prisma
+        .$executeRawUnsafe(
+          `UPDATE "WorkshopOrder" SET "vehicleId" = NULL WHERE UPPER("plate") = $1`,
+          plate
+        )
+        .catch(() => {});
+    }
+
     // 1. Eliminar de prisma.vehicle por ID
     if (id && !id.startsWith("taller-")) {
       await prisma.vehicle
@@ -392,9 +418,13 @@ export async function DELETE(request: Request) {
           where: { id },
         })
         .catch((e) => console.warn("Error delete vehicle by id:", e));
+
+      await prisma
+        .$executeRawUnsafe(`DELETE FROM "Vehicle" WHERE "id" = $1`, id)
+        .catch(() => {});
     }
 
-    // 2. Si tenemos la placa, eliminar de todas las tablas en Neon
+    // 2. Si tenemos la placa, eliminar de todas las tablas en Neon y en el espejo
     if (plate) {
       await prisma.vehicle
         .deleteMany({
@@ -402,11 +432,25 @@ export async function DELETE(request: Request) {
         })
         .catch((e) => console.warn("Error delete vehicle by plate:", e));
 
+      await prisma
+        .$executeRawUnsafe(
+          `DELETE FROM "Vehicle" WHERE UPPER("plate") = $1`,
+          plate
+        )
+        .catch(() => {});
+
       await prisma.workshopOrder
         .deleteMany({
           where: { plate: { equals: plate, mode: "insensitive" } },
         })
         .catch((e) => console.warn("Error delete workshopOrder by plate:", e));
+
+      await prisma
+        .$executeRawUnsafe(
+          `DELETE FROM "WorkshopOrder" WHERE UPPER("plate") = $1`,
+          plate
+        )
+        .catch(() => {});
 
       await prisma.workshopInspection
         .deleteMany({

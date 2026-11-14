@@ -738,10 +738,10 @@ function syncNeonResultToMirror(modelName: string, method: string, result: any, 
     ) {
       upsertRow(result);
       saveMirrorDb(db);
-    } else if (method === "delete" && args?.where) {
-      const idx = table.findIndex((r) => matchesWhere(r, args.where));
-      if (idx !== -1) {
-        table.splice(idx, 1);
+    } else if ((method === "delete" || method === "deleteMany") && args?.where) {
+      const before = table.length;
+      db[modelName] = table.filter((r) => !matchesWhere(r, args.where));
+      if (before !== db[modelName].length) {
         saveMirrorDb(db);
       }
     }
@@ -814,6 +814,12 @@ function createModelProxy(modelName: string) {
                         res.push(item);
                       }
                     }
+                  }
+                }
+                if (method === "delete" || method === "deleteMany") {
+                  const mirrorRes = executeMirrorOperation(modelName, method, args);
+                  if (method === "deleteMany" && res && typeof res === "object") {
+                    res.count = (res.count || 0) + (mirrorRes?.count || 0);
                   }
                 }
                 syncNeonResultToMirror(modelName, method, res, args);

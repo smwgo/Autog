@@ -263,6 +263,7 @@ export async function subirEvidenciaSegura(
         const xhr = new XMLHttpRequest();
         xhr.open("PUT", authData.uploadUrl, true);
         xhr.setRequestHeader("Content-Type", mimeType);
+        xhr.timeout = 8000;
 
         xhr.upload.onprogress = (evt) => {
           if (evt.lengthComputable) {
@@ -365,10 +366,18 @@ export async function subirEvidenciaSegura(
   if (durationSeconds) formData.append("durationSeconds", String(durationSeconds));
   if (transcriptionText) formData.append("transcriptionText", transcriptionText);
 
-  const res = await fetch("/api/storage/upload", {
-    method: "POST",
-    body: formData,
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 10000);
+  let res: Response;
+  try {
+    res = await fetch("/api/storage/upload", {
+      method: "POST",
+      body: formData,
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timeoutId);
+  }
   const data = await res.json();
 
   if (!res.ok || !data.success || !data.url) {
