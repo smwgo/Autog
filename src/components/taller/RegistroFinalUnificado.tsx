@@ -1460,7 +1460,7 @@ export default function RegistroFinalUnificado({
                               <div className="flex flex-wrap items-center gap-2">
                                 <span>{formatearPrimeraMayuscula(it.name || it.fullName)}</span>
                                 {(it.isManual || String(it.id || "").startsWith("reg-")) && (
-                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-zinc-100 dark:bg-white/10 text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-white/15 shrink-0">
+                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/35 shrink-0">
                                     Manual
                                   </span>
                                 )}
@@ -1577,7 +1577,7 @@ export default function RegistroFinalUnificado({
                               <div className="flex flex-wrap items-center gap-2">
                                 <span>{formatearPrimeraMayuscula(it.name || it.fullName)}</span>
                                 {(it.isManual || String(it.id || "").startsWith("reg-")) && (
-                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-zinc-100 dark:bg-white/10 text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-white/15 shrink-0">
+                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/35 shrink-0">
                                     Manual
                                   </span>
                                 )}

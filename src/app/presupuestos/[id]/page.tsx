@@ -105,6 +105,7 @@ interface ItemPropuesta {
   notes?: string;
   danio?: string;
   descripcion?: string;
+  agregadoEnPropuesta?: boolean;
   inStock?: boolean; // true = sí hay en bodega taller, false = pedir a proveedor externo
   isManual?: boolean;
   enviadoProveedor?: boolean;
@@ -135,6 +136,7 @@ interface ServicioPropuesta {
   notes?: string;
   danio?: string;
   descripcion?: string;
+  agregadoEnPropuesta?: boolean;
   isManual?: boolean;
   enviadoProveedor?: boolean;
   inStock?: boolean;
@@ -380,6 +382,18 @@ export default function PaginaDetallePropuesta() {
   const [esAprobadoLocal, setEsAprobadoLocal] = useState<boolean | null>(null);
   const [esPagadoLocal, setEsPagadoLocal] = useState<boolean | null>(null);
   const [esPausadoLocal, setEsPausadoLocal] = useState<boolean | null>(null);
+  const [ordenActivaEnTaller, setOrdenActivaEnTaller] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && orden?.id) {
+      try {
+        const activaId = localStorage.getItem("taller_orden_activa_id");
+        if (activaId && (activaId === orden.id || activaId === orden.orderNumber)) {
+          setOrdenActivaEnTaller(true);
+        }
+      } catch { }
+    }
+  }, [orden?.id, orden?.orderNumber]);
   const [menuEstadoTallerAbierto, setMenuEstadoTallerAbierto] = useState(false);
   const [cambiandoEstado, setCambiandoEstado] = useState(false);
   const [subiendoFoto, setSubiendoFoto] = useState(false);
@@ -463,10 +477,10 @@ export default function PaginaDetallePropuesta() {
             const p = resolverPrecioProductoCatalogo(it, it.isManual);
             return p > 0
               ? {
-                  ...it,
-                  price: p,
-                  subtotalVenta: Number((p * (Number(it.qty) || 1)).toFixed(2)),
-                }
+                ...it,
+                price: p,
+                subtotalVenta: Number((p * (Number(it.qty) || 1)).toFixed(2)),
+              }
               : it;
           })
         );
@@ -495,10 +509,10 @@ export default function PaginaDetallePropuesta() {
                   detallesCacheRef.current[prop.id] = d.order;
                 }
               })
-              .catch(() => {});
+              .catch(() => { });
           });
         }
-      } catch {}
+      } catch { }
     }
     void cargarListaPropuestasYCatalogo();
     return () => {
@@ -513,7 +527,7 @@ export default function PaginaDetallePropuesta() {
     fotoActivaIdx: number;
   } | null>(null);
 
-    // Estado dinámico por línea: DETALLES -> MANUAL -> PROVEEDOR (o regresar)
+  // Estado dinámico por línea: DETALLES -> MANUAL -> PROVEEDOR (o regresar)
   const [modosLineas, setModosLineas] = useState<Record<string, "DETALLES" | "MANUAL" | "PROVEEDOR">>({});
 
   const avanzarModoLinea = (itemId: string) => {
@@ -523,8 +537,8 @@ export default function PaginaDetallePropuesta() {
         actual === "DETALLES"
           ? "MANUAL"
           : actual === "MANUAL"
-          ? "PROVEEDOR"
-          : "DETALLES";
+            ? "PROVEEDOR"
+            : "DETALLES";
       return { ...prev, [itemId]: siguiente };
     });
   };
@@ -536,8 +550,8 @@ export default function PaginaDetallePropuesta() {
         actual === "PROVEEDOR"
           ? "MANUAL"
           : actual === "MANUAL"
-          ? "DETALLES"
-          : "PROVEEDOR";
+            ? "DETALLES"
+            : "PROVEEDOR";
       return { ...prev, [itemId]: anterior };
     });
   };
@@ -822,7 +836,7 @@ export default function PaginaDetallePropuesta() {
       try {
         const parsed = JSON.parse(ord.servicesJson);
         if (Array.isArray(parsed)) rawServicesList = parsed;
-      } catch {}
+      } catch { }
     }
 
     let rawItemsList: any[] = [];
@@ -832,7 +846,7 @@ export default function PaginaDetallePropuesta() {
       try {
         const parsed = JSON.parse(ord.itemsJson);
         if (Array.isArray(parsed)) rawItemsList = parsed;
-      } catch {}
+      } catch { }
     }
 
     // Unificar servicios que vengan dentro de itemsJson (type === "SERVICE") con servicesJson
@@ -890,6 +904,13 @@ export default function PaginaDetallePropuesta() {
         ...svObj,
         price: precioSrvResuelto,
         qty: Number(svObj.qty || 1),
+        agregadoEnPropuesta: Boolean(
+          svObj.agregadoEnPropuesta ||
+          svObj.addedInQuote ||
+          svObj.creadoEnPropuesta ||
+          String(svObj.id || "").includes("rap-srv-") ||
+          String(svObj.id || "").includes("prop-")
+        ),
         category: svObj.category || "Taller",
         origin: svObj.origin || deducirEspecialidad(svObj.name || "", svObj.category || ""),
         inStock: svObj.inStock !== undefined ? Boolean(svObj.inStock) : !Boolean(esManualSrv && svObj.purchaseStatus === "POR_PEDIR"),
@@ -897,8 +918,8 @@ export default function PaginaDetallePropuesta() {
         isManual: esManualSrv,
         enviadoProveedor: Boolean(
           svObj.enviadoProveedor ||
-            svObj.purchaseStatus === "PEDIDO_WHATSAPP" ||
-            svObj.purchaseStatus === "COTIZADO"
+          svObj.purchaseStatus === "PEDIDO_WHATSAPP" ||
+          svObj.purchaseStatus === "COTIZADO"
         ),
         fotos: Array.isArray(svObj.fotos) ? svObj.fotos : [],
         audios: Array.isArray(svObj.audios) ? svObj.audios : [],
@@ -926,14 +947,20 @@ export default function PaginaDetallePropuesta() {
           ...it,
           price: precioProdResuelto,
           subtotalVenta: Number((precioProdResuelto * cantProd).toFixed(2)),
+          agregadoEnPropuesta: Boolean(
+            it.agregadoEnPropuesta ||
+            it.addedInQuote ||
+            it.creadoEnPropuesta ||
+            String(it.id || "").includes("prop-")
+          ),
           origin: it.origin || deducirEspecialidad(it.name || "", it.category || ""),
           inStock: it.inStock !== undefined ? Boolean(it.inStock) : !esManualPart,
           purchaseStatus: it.purchaseStatus || (it.inStock === false || esManualPart ? "POR_PEDIR" : "STOCK_LOCAL"),
           isManual: esManualPart,
           enviadoProveedor: Boolean(
             it.enviadoProveedor ||
-              it.purchaseStatus === "PEDIDO_WHATSAPP" ||
-              it.purchaseStatus === "COTIZADO"
+            it.purchaseStatus === "PEDIDO_WHATSAPP" ||
+            it.purchaseStatus === "COTIZADO"
           ),
           fotos: Array.isArray(it.fotos) ? it.fotos : [],
           audios: Array.isArray(it.audios) ? it.audios : [],
@@ -1058,7 +1085,7 @@ export default function PaginaDetallePropuesta() {
         if (res.ok) {
           try {
             data = await res.json();
-          } catch {}
+          } catch { }
         }
 
         // Fallback: si no se encontró por ID directo, buscar en el listado general de propuestas (pagadas o no)
@@ -1088,7 +1115,7 @@ export default function PaginaDetallePropuesta() {
                 };
               }
             }
-          } catch {}
+          } catch { }
         }
 
         if (!data?.success || !data?.order) {
@@ -1103,7 +1130,7 @@ export default function PaginaDetallePropuesta() {
             .then((d) => {
               if (d.success && Array.isArray(d.proveedores)) setProveedores(d.proveedores);
             })
-            .catch(() => {});
+            .catch(() => { });
         }
       } catch {
         if (!silencioso) setError("Error de conexión al cargar el presupuesto.");
@@ -1249,13 +1276,13 @@ export default function PaginaDetallePropuesta() {
       setOrden((prev: any) =>
         prev
           ? {
-              ...prev,
-              items: itemsParaGuardar,
-              services: serviciosParaGuardar,
-              inspectionFindings: findingsParaGuardar,
-              notes: notasParaGuardar,
-              totalCost: data.total,
-            }
+            ...prev,
+            items: itemsParaGuardar,
+            services: serviciosParaGuardar,
+            inspectionFindings: findingsParaGuardar,
+            notes: notasParaGuardar,
+            totalCost: data.total,
+          }
           : prev
       );
       return true;
@@ -1529,6 +1556,7 @@ export default function PaginaDetallePropuesta() {
         purchaseStatus: enStockRapido ? "STOCK_LOCAL" : "POR_PEDIR",
         supplierName: enStockRapido ? "Bodega Taller" : "Proveedor General",
         isManual: true,
+        agregadoEnPropuesta: true,
         fotos: [...fotosBorradorRapido],
         audios: [...audiosBorradorRapido],
         deliveryTime: tiempoRapido || null,
@@ -1559,6 +1587,7 @@ export default function PaginaDetallePropuesta() {
         inStock: enStockRapido,
         origin: origen,
         isManual: true,
+        agregadoEnPropuesta: true,
         fotos: [...fotosBorradorRapido],
         audios: [...audiosBorradorRapido],
         deliveryTime: tiempoRapido || null,
@@ -1605,6 +1634,7 @@ export default function PaginaDetallePropuesta() {
           origin: orig,
           inStock: true,
           purchaseStatus: "STOCK_LOCAL",
+          agregadoEnPropuesta: true,
           notes: pinTarget ? `[Evidencia #${numEv}] ${pinTarget.tipo || ""}`.trim() : undefined,
         };
         nuevosSrv.push(srvNuevo);
@@ -1629,6 +1659,7 @@ export default function PaginaDetallePropuesta() {
           origin: orig,
           imageUrl: sel.imageUrl || null,
           fotos: sel.imageUrl ? [sel.imageUrl] : [],
+          agregadoEnPropuesta: true,
           notes: pinTarget ? `[Evidencia #${numEv}] ${pinTarget.tipo || ""}`.trim() : undefined,
         };
         nuevosRep.push(repNuevo);
@@ -1654,6 +1685,7 @@ export default function PaginaDetallePropuesta() {
       origin: origen,
       inStock: true,
       purchaseStatus: "STOCK_LOCAL",
+      agregadoEnPropuesta: true,
     };
     const nuevosServicios = [...servicios, nuevoSrv];
     setServicios(nuevosServicios);
@@ -2246,8 +2278,8 @@ export default function PaginaDetallePropuesta() {
   const handleToggleMarcarProveedor = (item: any, esServicio: boolean) => {
     const yaMarcado = Boolean(
       item.enviadoProveedor ||
-        item.purchaseStatus === "PEDIDO_WHATSAPP" ||
-        item.purchaseStatus === "COTIZADO"
+      item.purchaseStatus === "PEDIDO_WHATSAPP" ||
+      item.purchaseStatus === "COTIZADO"
     );
     const nuevoEstado = !yaMarcado;
 
@@ -2264,8 +2296,8 @@ export default function PaginaDetallePropuesta() {
 
     mostrarToast(
       nuevoEstado
-        ? `🚚 Enviado a pedidos de proveedor: ${item.name}`
-        : `Quitado de pedidos a proveedor: ${item.name}`
+        ? "✓ Enviado a proveedor"
+        : "Quitado de proveedor"
     );
   };
 
@@ -2424,23 +2456,23 @@ export default function PaginaDetallePropuesta() {
     const nuevosSrv = servicios.map((s) =>
       idsSet.has(s.id)
         ? {
-            ...s,
-            enviadoProveedor: true,
-            inStock: false,
-            purchaseStatus: "PEDIDO_WHATSAPP",
-            supplierName: nombresProvs,
-          }
+          ...s,
+          enviadoProveedor: true,
+          inStock: false,
+          purchaseStatus: "PEDIDO_WHATSAPP",
+          supplierName: nombresProvs,
+        }
         : s
     );
     const nuevosRep = repuestos.map((r) =>
       idsSet.has(r.id)
         ? {
-            ...r,
-            enviadoProveedor: true,
-            inStock: false,
-            purchaseStatus: "PEDIDO_WHATSAPP",
-            supplierName: nombresProvs,
-          }
+          ...r,
+          enviadoProveedor: true,
+          inStock: false,
+          purchaseStatus: "PEDIDO_WHATSAPP",
+          supplierName: nombresProvs,
+        }
         : r
     );
     setServicios(nuevosSrv);
@@ -2464,8 +2496,8 @@ export default function PaginaDetallePropuesta() {
       itemsElegidosParaPedir.length > 0
         ? itemsElegidosParaPedir
         : itemsMarcadosProveedor.length > 0
-        ? itemsMarcadosProveedor
-        : repuestos;
+          ? itemsMarcadosProveedor
+          : repuestos;
     const itemsList = lista
       .map((r: any) => `• ${r.qty || 1}x ${r.name}`)
       .join("\n");
@@ -2767,6 +2799,7 @@ export default function PaginaDetallePropuesta() {
       purchaseStatus: nuevoEnStock ? "STOCK_LOCAL" : "POR_PEDIR",
       inStock: nuevoEnStock,
       origin: nuevoOrigen,
+      agregadoEnPropuesta: true,
       notes: pinActivo
         ? `[Evidencia #${pinActivo.numeroEvidencia || pinActivo.pinNumber || 1}] ${pinActivo.tipo || ""}`.trim()
         : undefined,
@@ -2828,6 +2861,7 @@ export default function PaginaDetallePropuesta() {
       price: precio,
       mechanic: orden?.mechanic || "Taller",
       origin: nuevoServicioOrigen,
+      agregadoEnPropuesta: true,
       notes: pinActivo
         ? `[Evidencia #${pinActivo.numeroEvidencia || pinActivo.pinNumber || 1}] ${pinActivo.tipo || ""}`.trim()
         : undefined,
@@ -2877,8 +2911,8 @@ export default function PaginaDetallePropuesta() {
     const baseList = !orden
       ? listaPropuestas
       : listaPropuestas.some((item) => item.id === orden.id)
-      ? listaPropuestas.map((item) => (item.id === orden.id ? { ...item, ...orden } : item))
-      : [orden, ...listaPropuestas];
+        ? listaPropuestas.map((item) => (item.id === orden.id ? { ...item, ...orden } : item))
+        : [orden, ...listaPropuestas];
 
     const seenIds = new Set<string>();
     return baseList.filter((item) => {
@@ -2920,7 +2954,7 @@ export default function PaginaDetallePropuesta() {
             savedAt: Date.now(),
           })
         );
-      } catch {}
+      } catch { }
       router.push(`/taller/nueva-orden?editId=${encodeURIComponent(target.id)}`);
     },
     [orden, router]
@@ -2939,7 +2973,7 @@ export default function PaginaDetallePropuesta() {
             `/presupuestos/${encodeURIComponent(targetAuto.id)}`
           );
         }
-      } catch {}
+      } catch { }
 
       // Aplicar inmediatamente desde caché o desde los datos del carrusel sin pantalla de carga
       const cached = detallesCacheRef.current[targetAuto.id];
@@ -3033,24 +3067,32 @@ export default function PaginaDetallePropuesta() {
     );
   }
 
+  const statusLower = String(orden.status || "").trim().toLowerCase();
+  const quoteStatusLower = String(orden.quoteStatus || "").trim().toLowerCase();
+
   const esPagado =
     esPagadoLocal !== null
       ? esPagadoLocal
-      : orden.quoteStatus === "Pagado" ||
-        orden.status === "Pagado" ||
-        String(orden.status || "").toLowerCase().includes("pagad") ||
-        String(orden.status || "").toLowerCase().includes("factur");
+      : quoteStatusLower === "pagado" ||
+      statusLower === "pagado" ||
+      statusLower.includes("pagad") ||
+      statusLower.includes("factur");
   const esPausado =
     esPausadoLocal !== null
       ? esPausadoLocal
-      : orden.status === "Pausada" || String(orden.status || "").toLowerCase().includes("pausa");
+      : statusLower === "pausada" || statusLower.includes("pausa");
   const esAprobado =
     esAprobadoLocal !== null
       ? esAprobadoLocal
-      : String(orden.quoteStatus || "").toLowerCase().includes("aprob") ||
-        String(orden.quoteStatus || "").toLowerCase().includes("acept") ||
-        String(orden.status || "").toLowerCase().includes("aprob") ||
-        String(orden.status || "").toLowerCase() === "en_caja";
+      : quoteStatusLower.includes("aprob") ||
+      quoteStatusLower.includes("acept") ||
+      statusLower.includes("aprob") ||
+      statusLower === "en proceso" ||
+      statusLower === "reparando" ||
+      statusLower === "trabajando" ||
+      statusLower.includes("reparac") ||
+      statusLower === "en_caja" ||
+      (!esPausado && !esPagado && ordenActivaEnTaller);
 
   const limpiarNumeroOrden = (val?: string | number | null) => {
     if (!val) return "";
@@ -3106,24 +3148,36 @@ export default function PaginaDetallePropuesta() {
         if (nuevoEstado === "Aprobado") {
           setEsAprobadoLocal(true);
           setEsPausadoLocal(false);
+          setOrdenActivaEnTaller(true);
+          try {
+            if (orden?.id) localStorage.setItem("taller_orden_activa_id", orden.id);
+          } catch { }
           mostrarToast("Propuesta aprobada · Trabajando en Taller");
         } else if (nuevoEstado === "Pausada") {
           setEsPausadoLocal(true);
           setEsAprobadoLocal(false);
+          setOrdenActivaEnTaller(false);
           mostrarToast("Orden en Pausa · Pausada en Taller");
         } else {
           setEsAprobadoLocal(false);
           setEsPausadoLocal(false);
+          setOrdenActivaEnTaller(false);
+          try {
+            const activaId = localStorage.getItem("taller_orden_activa_id");
+            if (activaId === orden.id || activaId === orden.orderNumber) {
+              localStorage.removeItem("taller_orden_activa_id");
+            }
+          } catch { }
           mostrarToast("Estado: En espera en Taller");
         }
 
         setOrden((prev) =>
           prev
             ? {
-                ...prev,
-                status: nuevoStatusOrden,
-                quoteStatus: nuevoQuoteStatusOrden,
-              }
+              ...prev,
+              status: nuevoStatusOrden,
+              quoteStatus: nuevoQuoteStatusOrden,
+            }
             : prev
         );
         if (orden.id && detallesCacheRef.current[orden.id]) {
@@ -3197,7 +3251,7 @@ export default function PaginaDetallePropuesta() {
             if (activaId === orden.id || activaId === orden.orderNumber) {
               localStorage.removeItem("taller_orden_activa_id");
             }
-          } catch {}
+          } catch { }
         }
         mostrarToast(nuevoEstado === "Pagado" ? "Trabajo marcado como Pagado (retirado de Pista de Taller)" : "Estado: Aprobado");
       } else {
@@ -3318,11 +3372,10 @@ export default function PaginaDetallePropuesta() {
           type="button"
           onClick={() => setModalCatalogoTallerAbierto({ abierto: true, origen })}
           title="Productos y Servicios"
-          className={`h-10 w-10 sm:h-11 sm:w-11 rounded-xl border flex items-center justify-center cursor-pointer active:scale-95 transition-all ${
-            modalCatalogoTallerAbierto.abierto
-              ? "bg-emerald-600 text-white border-emerald-600"
-              : "bg-emerald-50/80 hover:bg-emerald-100 dark:bg-emerald-500/10 dark:hover:bg-emerald-500/20 border-emerald-200 dark:border-emerald-500/30 text-emerald-600 dark:text-emerald-400"
-          }`}
+          className={`h-10 w-10 sm:h-11 sm:w-11 rounded-xl border flex items-center justify-center cursor-pointer active:scale-95 transition-all ${modalCatalogoTallerAbierto.abierto
+            ? "bg-emerald-600 text-white border-emerald-600"
+            : "bg-emerald-50/80 hover:bg-emerald-100 dark:bg-emerald-500/10 dark:hover:bg-emerald-500/20 border-emerald-200 dark:border-emerald-500/30 text-emerald-600 dark:text-emerald-400"
+            }`}
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 0 0-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 0 0-16.536-1.84M7.5 14.25 5.106 5.272M6 20.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Zm12.75 0a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Z" />
@@ -3336,11 +3389,10 @@ export default function PaginaDetallePropuesta() {
             setModalAccesosRapidosAbierto({ abierto: true, origen });
           }}
           title="Servicio rápido"
-          className={`h-10 w-10 sm:h-11 sm:w-11 rounded-xl border flex items-center justify-center cursor-pointer active:scale-95 transition-all ${
-            modalAccesosRapidosAbierto.abierto
-              ? "bg-purple-600 text-white border-purple-600"
-              : "bg-purple-50/80 hover:bg-purple-100 dark:bg-purple-500/10 dark:hover:bg-purple-500/20 border-purple-200 dark:border-purple-500/30 text-purple-600 dark:text-purple-400"
-          }`}
+          className={`h-10 w-10 sm:h-11 sm:w-11 rounded-xl border flex items-center justify-center cursor-pointer active:scale-95 transition-all ${modalAccesosRapidosAbierto.abierto
+            ? "bg-purple-600 text-white border-purple-600"
+            : "bg-purple-50/80 hover:bg-purple-100 dark:bg-purple-500/10 dark:hover:bg-purple-500/20 border-purple-200 dark:border-purple-500/30 text-purple-600 dark:text-purple-400"
+            }`}
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
             <path strokeLinecap="round" strokeLinejoin="round" d="m3.75 13.5 10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75Z" />
@@ -3522,11 +3574,10 @@ export default function PaginaDetallePropuesta() {
           <button
             type="button"
             onClick={() => setItemTiempoEnvioModal({ id: item.id, isService: esServicio })}
-            className={`h-6 px-2 rounded-lg border text-[11px] font-medium inline-flex items-center gap-1 transition-all cursor-pointer active:scale-95 ${
-              item.deliveryTime
-                ? "bg-blue-500/15 border-blue-500/35 text-blue-700 dark:text-blue-300 font-semibold"
-                : "bg-zinc-100 dark:bg-white/5 border-zinc-200 dark:border-white/10 text-zinc-500 dark:text-zinc-400 hover:border-zinc-300"
-            }`}
+            className={`h-6 px-2 rounded-lg border text-[11px] font-medium inline-flex items-center gap-1 transition-all cursor-pointer active:scale-95 ${item.deliveryTime
+              ? "bg-blue-500/15 border-blue-500/35 text-blue-700 dark:text-blue-300 font-semibold"
+              : "bg-zinc-100 dark:bg-white/5 border-zinc-200 dark:border-white/10 text-zinc-500 dark:text-zinc-400 hover:border-zinc-300"
+              }`}
             title="Tiempo de llegada y método de envío"
           >
             <span>⏱️</span>
@@ -3541,11 +3592,10 @@ export default function PaginaDetallePropuesta() {
             <td className="py-2 px-2 text-center">
               <div className="inline-flex items-center gap-1">
                 <span
-                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold border ${
-                    esServicio
-                      ? "bg-purple-500/10 border-purple-500/25 text-purple-600 dark:text-purple-400"
-                      : "bg-blue-500/10 border-blue-500/25 text-blue-600 dark:text-blue-400"
-                  }`}
+                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold border ${esServicio
+                    ? "bg-purple-500/10 border-purple-500/25 text-purple-600 dark:text-purple-400"
+                    : "bg-blue-500/10 border-blue-500/25 text-blue-600 dark:text-blue-400"
+                    }`}
                 >
                   <span>{esServicio ? "🔧" : "📦"}</span>
                   <span>{esServicio ? "Servicio" : "Producto"}</span>
@@ -3553,11 +3603,10 @@ export default function PaginaDetallePropuesta() {
                 <button
                   type="button"
                   onClick={() => handleToggleStock(item.id)}
-                  className={`h-5 px-1.5 rounded-md text-[10px] font-semibold border cursor-pointer transition-all ${
-                    item.inStock !== false
-                      ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-700 dark:text-emerald-300"
-                      : "bg-amber-500/15 border-amber-500/30 text-amber-700 dark:text-amber-300"
-                  }`}
+                  className={`h-5 px-1.5 rounded-md text-[10px] font-semibold border cursor-pointer transition-all ${item.inStock !== false
+                    ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-700 dark:text-emerald-300"
+                    : "bg-amber-500/15 border-amber-500/30 text-amber-700 dark:text-amber-300"
+                    }`}
                   title="Alternar Bodega vs Pedir a Proveedor"
                 >
                   {item.inStock !== false ? "🏢" : "🚚"}
@@ -3655,11 +3704,10 @@ export default function PaginaDetallePropuesta() {
                 <button
                   type="button"
                   onClick={() => handleToggleStock(item.id)}
-                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold cursor-pointer border transition-all ${
-                    item.inStock !== false
-                      ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-700 dark:text-emerald-300"
-                      : "bg-amber-500/15 border-amber-500/30 text-amber-700 dark:text-amber-300"
-                  }`}
+                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold cursor-pointer border transition-all ${item.inStock !== false
+                    ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-700 dark:text-emerald-300"
+                    : "bg-amber-500/15 border-amber-500/30 text-amber-700 dark:text-amber-300"
+                    }`}
                 >
                   <span>{item.inStock !== false ? "🏢 Bodega" : "🚚 Pedir"}</span>
                 </button>
@@ -3670,13 +3718,12 @@ export default function PaginaDetallePropuesta() {
                       supplierAvailability: dispProv === "SI_HAY" ? "NO_HAY" : "SI_HAY",
                     })
                   }
-                  className={`h-5 px-1.5 rounded-full text-[10px] font-bold cursor-pointer border transition-all ${
-                    dispProv === "SI_HAY"
-                      ? "bg-emerald-600 text-white border-emerald-500"
-                      : dispProv === "NO_HAY"
+                  className={`h-5 px-1.5 rounded-full text-[10px] font-bold cursor-pointer border transition-all ${dispProv === "SI_HAY"
+                    ? "bg-emerald-600 text-white border-emerald-500"
+                    : dispProv === "NO_HAY"
                       ? "bg-rose-600 text-white border-rose-500"
                       : "bg-zinc-100 dark:bg-white/10 text-zinc-500 border-zinc-300 dark:border-white/10"
-                  }`}
+                    }`}
                   title="Estado confirmado por el proveedor: Sí hay / No hay"
                 >
                   {dispProv === "SI_HAY" ? "✓ Sí" : dispProv === "NO_HAY" ? "✕ No" : "?"}
@@ -3727,13 +3774,12 @@ export default function PaginaDetallePropuesta() {
             <button
               type="button"
               onClick={() => avanzarModoLinea(item.id)}
-              className={`h-6 px-1.5 rounded-lg border text-[10px] font-semibold flex items-center gap-0.5 transition-all cursor-pointer active:scale-95 ${
-                modoLinea === "DETALLES"
-                  ? "bg-purple-50 hover:bg-purple-100 dark:bg-purple-500/10 border-purple-300/80 dark:border-purple-500/30 text-purple-700 dark:text-purple-300"
-                  : modoLinea === "MANUAL"
+              className={`h-6 px-1.5 rounded-lg border text-[10px] font-semibold flex items-center gap-0.5 transition-all cursor-pointer active:scale-95 ${modoLinea === "DETALLES"
+                ? "bg-purple-50 hover:bg-purple-100 dark:bg-purple-500/10 border-purple-300/80 dark:border-purple-500/30 text-purple-700 dark:text-purple-300"
+                : modoLinea === "MANUAL"
                   ? "bg-amber-50 hover:bg-amber-100 dark:bg-amber-500/10 border-amber-300/80 dark:border-amber-500/30 text-amber-700 dark:text-amber-300"
                   : "bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-500/10 border-emerald-300/80 dark:border-emerald-500/30 text-emerald-700 dark:text-emerald-300"
-              }`}
+                }`}
             >
               <span>
                 {modoLinea === "DETALLES" ? "Manual" : modoLinea === "MANUAL" ? "Proveedor" : "Detalles"}
@@ -3806,7 +3852,7 @@ export default function PaginaDetallePropuesta() {
               {/* Etiqueta de estado de la propuesta a la derecha (clic directo para cambiar estado en Taller) */}
               <div className="relative shrink-0 ml-auto">
                 {esPagado ? (
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold bg-sky-500/15 border-sky-500/40 text-sky-600 dark:text-sky-400">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-normal bg-sky-500/15 border-sky-500/40 text-sky-600 dark:text-sky-400">
                     <span>✓ Pagado</span>
                   </span>
                 ) : (
@@ -3817,27 +3863,25 @@ export default function PaginaDetallePropuesta() {
                       const siguienteEstado: "Aprobado" | "Pausada" | "Pendiente" = esPausado
                         ? "Pendiente"
                         : esAprobado
-                        ? "Pausada"
-                        : "Aprobado";
+                          ? "Pausada"
+                          : "Aprobado";
                       void handleCambiarEstadoTaller(siguienteEstado);
                     }}
                     title="Clic para cambiar estado en Taller (En espera → Trabajando → Pausa)"
-                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all cursor-pointer active:scale-95 ${
-                      esPausado
-                        ? "bg-amber-500/15 hover:bg-amber-500/25 border-amber-500/40 text-amber-600 dark:text-amber-400"
-                        : esAprobado
-                        ? "bg-emerald-500/15 hover:bg-emerald-500/25 border-emerald-500/40 text-emerald-600 dark:text-emerald-400"
+                    className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-normal transition-all cursor-pointer active:scale-95 ${esPausado
+                      ? "bg-amber-500/15 hover:bg-amber-500/25 border-amber-500/40 text-amber-600 dark:text-amber-400"
+                      : esAprobado
+                        ? "bg-emerald-500/15 hover:bg-emerald-500/25 border-emerald-500/40 text-emerald-400 dark:text-emerald-300"
                         : "bg-amber-500/15 hover:bg-amber-500/25 border-amber-500/40 text-amber-600 dark:text-amber-400"
-                    }`}
+                      }`}
                   >
                     <span
-                      className={`w-2 h-2 rounded-full ${
-                        esPausado
-                          ? "bg-amber-500"
-                          : esAprobado
-                          ? "bg-emerald-500 animate-pulse"
+                      className={`w-1.5 h-1.5 rounded-full ${esPausado
+                        ? "bg-amber-500"
+                        : esAprobado
+                          ? "bg-emerald-400 animate-pulse"
                           : "bg-amber-500"
-                      }`}
+                        }`}
                     />
                     <span>{esPausado ? "Pausa" : esAprobado ? "Trabajando" : "En espera"}</span>
                   </button>
@@ -3937,7 +3981,7 @@ export default function PaginaDetallePropuesta() {
                       if (Array.isArray(parsed)) {
                         fotosCard = parsed.filter((f): f is string => typeof f === "string");
                       }
-                    } catch {}
+                    } catch { }
                   }
                   if (vehiculoCatalogo?.imageUrl && !fotosCard.includes(vehiculoCatalogo.imageUrl)) {
                     fotosCard.unshift(vehiculoCatalogo.imageUrl);
@@ -3969,8 +4013,8 @@ export default function PaginaDetallePropuesta() {
                   const rawClient = auto.client || auto.customer?.name || clienteCatalogo?.name || "";
                   const nombreClienteDisplay =
                     rawClient &&
-                    !String(rawClient).toLowerCase().includes("consumidor final") &&
-                    !String(rawClient).toLowerCase().includes("cliente mostrador")
+                      !String(rawClient).toLowerCase().includes("consumidor final") &&
+                      !String(rawClient).toLowerCase().includes("cliente mostrador")
                       ? String(rawClient)
                       : "";
 
@@ -4013,11 +4057,10 @@ export default function PaginaDetallePropuesta() {
                         handleAbrirDatosIngreso(auto);
                       }}
                       aria-pressed={esActivo}
-                      className={`snap-start shrink-0 w-full min-h-[76px] sm:min-h-[68px] px-3.5 py-2.5 sm:px-3 sm:py-2 rounded-2xl sm:rounded-xl border text-left flex items-center justify-between gap-3 transition-colors cursor-pointer ${
-                        esActivo
-                          ? "bg-purple-50/90 dark:bg-purple-950/35 border-purple-300 dark:border-purple-500/40 shadow-sm"
-                          : "bg-white dark:bg-[#111113] border-zinc-200 dark:border-white/10"
-                      }`}
+                      className={`snap-start shrink-0 w-full min-h-[76px] sm:min-h-[68px] px-3.5 py-2.5 sm:px-3 sm:py-2 rounded-2xl sm:rounded-xl border text-left flex items-center justify-between gap-3 transition-colors cursor-pointer ${esActivo
+                        ? "bg-purple-50/90 dark:bg-purple-950/35 border-purple-300 dark:border-purple-500/40 shadow-sm"
+                        : "bg-white dark:bg-[#111113] border-zinc-200 dark:border-white/10"
+                        }`}
                     >
                       <span
                         role={fotoVehiculoCard ? "button" : undefined}
@@ -4029,11 +4072,10 @@ export default function PaginaDetallePropuesta() {
                             setFotoZoom(fotoVehiculoCard);
                           }
                         }}
-                        className={`relative w-16 h-14 sm:w-14 sm:h-12 rounded-xl sm:rounded-lg shrink-0 bg-purple-100/70 dark:bg-purple-500/10 text-purple-600 dark:text-purple-300 flex items-center justify-center overflow-hidden border border-purple-200/60 dark:border-purple-500/20 group/thumb ${
-                          fotoVehiculoCard
-                            ? "cursor-zoom-in hover:ring-2 hover:ring-purple-500/80 hover:scale-[1.04] transition-all"
-                            : ""
-                        }`}
+                        className={`relative w-16 h-14 sm:w-14 sm:h-12 rounded-xl sm:rounded-lg shrink-0 bg-purple-100/70 dark:bg-purple-500/10 text-purple-600 dark:text-purple-300 flex items-center justify-center overflow-hidden border border-purple-200/60 dark:border-purple-500/20 group/thumb ${fotoVehiculoCard
+                          ? "cursor-zoom-in hover:ring-2 hover:ring-purple-500/80 hover:scale-[1.04] transition-all"
+                          : ""
+                          }`}
                       >
                         <svg
                           className="w-8 h-8 sm:w-7 sm:h-7"
@@ -4245,11 +4287,10 @@ export default function PaginaDetallePropuesta() {
               <button
                 type="button"
                 onClick={() => abrirModalProveedor("MASIVO")}
-                className={`h-9 px-3.5 rounded-xl text-xs sm:text-sm transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-95 border backdrop-blur-sm font-semibold relative ${
-                  itemsMarcadosProveedor.length > 0
-                    ? "bg-blue-600 hover:bg-blue-500 text-white border-blue-400/50 shadow-md shadow-blue-500/20"
-                    : "bg-zinc-900/5 hover:bg-zinc-900/10 dark:bg-white/[0.06] dark:hover:bg-white/[0.12] border-zinc-300/80 dark:border-white/15 text-zinc-700 dark:text-zinc-200"
-                }`}
+                className={`h-9 px-3.5 rounded-xl text-xs sm:text-sm transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-95 border backdrop-blur-sm font-semibold relative ${itemsMarcadosProveedor.length > 0
+                  ? "bg-blue-600 hover:bg-blue-500 text-white border-blue-400/50 shadow-md shadow-blue-500/20"
+                  : "bg-zinc-900/5 hover:bg-zinc-900/10 dark:bg-white/[0.06] dark:hover:bg-white/[0.12] border-zinc-300/80 dark:border-white/15 text-zinc-700 dark:text-zinc-200"
+                  }`}
                 title="Abrir flotante con todos los pedidos que se van a proveedor"
               >
                 <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.9}>
@@ -4257,11 +4298,10 @@ export default function PaginaDetallePropuesta() {
                 </svg>
                 <span className="whitespace-nowrap">Pedidos Proveedor</span>
                 <span
-                  className={`min-w-5 h-5 px-1.5 rounded-full text-[11px] font-bold inline-flex items-center justify-center transition-all ${
-                    itemsMarcadosProveedor.length > 0
-                      ? "bg-white text-blue-700 shadow-xs"
-                      : "bg-zinc-200 dark:bg-white/15 text-zinc-600 dark:text-zinc-300"
-                  }`}
+                  className={`min-w-5 h-5 px-1.5 rounded-full text-[11px] font-bold inline-flex items-center justify-center transition-all ${itemsMarcadosProveedor.length > 0
+                    ? "bg-white text-blue-700 shadow-xs"
+                    : "bg-zinc-200 dark:bg-white/15 text-zinc-600 dark:text-zinc-300"
+                    }`}
                 >
                   {itemsMarcadosProveedor.length}
                 </span>
@@ -4283,13 +4323,13 @@ export default function PaginaDetallePropuesta() {
               const serviciosOrdenados = [...servicios].sort((a, b) => {
                 const aEsManual = Boolean(
                   a.isManual ||
-                    String(a.id || "").startsWith("reg-") ||
-                    String(a.id || "").startsWith("man-")
+                  String(a.id || "").startsWith("reg-") ||
+                  String(a.id || "").startsWith("man-")
                 );
                 const bEsManual = Boolean(
                   b.isManual ||
-                    String(b.id || "").startsWith("reg-") ||
-                    String(b.id || "").startsWith("man-")
+                  String(b.id || "").startsWith("reg-") ||
+                  String(b.id || "").startsWith("man-")
                 );
                 if (aEsManual && !bEsManual) return -1;
                 if (!aEsManual && bEsManual) return 1;
@@ -4345,7 +4385,8 @@ export default function PaginaDetallePropuesta() {
                             <tr className="border-b border-zinc-200/80 dark:border-white/10 bg-zinc-50/80 dark:bg-white/[0.03] text-zinc-500 dark:text-zinc-400 text-[11px] font-semibold">
                               <th className="py-2 px-3 w-24 text-center">Cant.</th>
                               <th className="py-2 px-3">Descripción</th>
-                              <th className="py-2 px-2.5 w-32">Detalle</th>
+                              <th className="py-2 px-2.5 w-28 text-center">Detalle</th>
+                              <th className="py-2 px-2.5 w-28 text-center">Pedir</th>
                               <th className="py-2 px-2.5 w-28 text-center">PVP</th>
                               <th className="py-2 px-2 w-10 text-center"></th>
                             </tr>
@@ -4356,13 +4397,21 @@ export default function PaginaDetallePropuesta() {
                               const origenLabel = getNombreModulo(it.origin, it.category);
                               const esManual = Boolean(
                                 it.isManual ||
-                                  String(it.id || "").startsWith("reg-") ||
-                                  String(it.id || "").startsWith("man-")
+                                String(it.id || "").startsWith("reg-") ||
+                                String(it.id || "").startsWith("man-")
+                              );
+                              const marcadoProv = Boolean(
+                                it.enviadoProveedor ||
+                                it.purchaseStatus === "PEDIDO_WHATSAPP" ||
+                                it.purchaseStatus === "COTIZADO"
                               );
                               return (
                                 <tr
                                   key={it.id || it.code || `srv-${idx}`}
-                                  className="hover:bg-zinc-50/60 dark:hover:bg-white/[0.02]"
+                                  className={`transition-colors ${it.agregadoEnPropuesta
+                                    ? "bg-amber-500/[0.07] dark:bg-amber-400/[0.06] border-l-2 border-l-amber-500/60 hover:bg-amber-500/[0.12] dark:hover:bg-amber-400/[0.10]"
+                                    : "hover:bg-zinc-50/60 dark:hover:bg-white/[0.02]"
+                                    }`}
                                 >
                                   <td className="py-2 px-3 text-center">
                                     <div className="inline-flex items-center border border-zinc-200 dark:border-white/10 rounded-lg overflow-hidden bg-zinc-50 dark:bg-white/[0.04]">
@@ -4389,7 +4438,7 @@ export default function PaginaDetallePropuesta() {
                                     <div className="flex flex-wrap items-center gap-2">
                                       <span>{formatoPrimeraMayuscula(it.name)}</span>
                                       {esManual && (
-                                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-zinc-100 dark:bg-white/10 text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-white/15 shrink-0">
+                                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/35 shrink-0">
                                           Manual
                                         </span>
                                       )}
@@ -4419,49 +4468,9 @@ export default function PaginaDetallePropuesta() {
                                           {it.audios.length > 1 && <span>{it.audios.length}</span>}
                                         </button>
                                       )}
-                                      {esManual && (() => {
-                                        const marcadoProv = Boolean(
-                                          it.enviadoProveedor ||
-                                            it.purchaseStatus === "PEDIDO_WHATSAPP" ||
-                                            it.purchaseStatus === "COTIZADO"
-                                        );
-                                        return (
-                                          <>
-                                            <button
-                                              type="button"
-                                              onClick={() => handleToggleMarcarProveedor(it, true)}
-                                              className={`h-7 px-2 rounded-lg border inline-flex items-center justify-center gap-1 text-[11px] font-semibold cursor-pointer active:scale-95 transition-all shrink-0 ${
-                                                marcadoProv
-                                                  ? "bg-blue-600 hover:bg-blue-500 text-white border-blue-500 shadow-sm shadow-blue-500/30"
-                                                  : "bg-emerald-50/80 hover:bg-emerald-100 dark:bg-emerald-500/15 dark:hover:bg-emerald-500/25 border-emerald-200 dark:border-emerald-500/30 text-emerald-600 dark:text-emerald-300"
-                                              }`}
-                                              title={
-                                                marcadoProv
-                                                  ? "Enviado a pedidos de proveedor (clic para quitar)"
-                                                  : "Marcar para pedir a proveedor"
-                                              }
-                                            >
-                                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
-                                                <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 18.75a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 0 1-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 0 0-3.213-9.193 2.056 2.056 0 0 0-1.58-.86H14.25M16.5 18.75h-2.25m0-11.175V14.25m0 0H2.25m12 0v4.5m0-4.5H16.5" />
-                                              </svg>
-                                              {marcadoProv && <span className="text-[10px]">✓ Enviado</span>}
-                                            </button>
-                                            {it.supplierAvailability === "SI_HAY" && (
-                                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-500/40 text-[10px] font-bold shrink-0">
-                                                ✓ Sí hay{it.deliveryTime ? ` · ${it.deliveryTime}` : ""}
-                                              </span>
-                                            )}
-                                            {it.supplierAvailability === "NO_HAY" && (
-                                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-rose-50 dark:bg-rose-500/15 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-500/40 text-[10px] font-bold shrink-0">
-                                                ✕ No hay
-                                              </span>
-                                            )}
-                                          </>
-                                        );
-                                      })()}
                                     </div>
                                   </td>
-                                  <td className="py-2 px-2.5">
+                                  <td className="py-2 px-2.5 text-center">
                                     <span
                                       className={`inline-block px-2 py-0.5 rounded-md text-[10px] font-semibold border ${getBadgeModuloClase(
                                         origenLabel
@@ -4469,6 +4478,45 @@ export default function PaginaDetallePropuesta() {
                                     >
                                       {origenLabel}
                                     </span>
+                                  </td>
+                                  <td className="py-2 px-2.5 text-center">
+                                    {esManual ? (
+                                      <div className="inline-flex items-center justify-center gap-1.5">
+                                        <button
+                                          type="button"
+                                          onClick={() => handleToggleMarcarProveedor(it, true)}
+                                          className={`h-7 px-2 rounded-lg border inline-flex items-center justify-center gap-1 text-[11px] font-semibold cursor-pointer active:scale-95 transition-all shrink-0 ${marcadoProv
+                                            ? "bg-blue-600 hover:bg-blue-500 text-white border-blue-500 shadow-sm shadow-blue-500/30"
+                                            : "bg-emerald-50/80 hover:bg-emerald-100 dark:bg-emerald-500/15 dark:hover:bg-emerald-500/25 border-emerald-200 dark:border-emerald-500/30 text-emerald-600 dark:text-emerald-300"
+                                            }`}
+                                          title={
+                                            marcadoProv
+                                              ? "Enviado a pedidos de proveedor (clic para quitar)"
+                                              : "Marcar para pedir a proveedor"
+                                          }
+                                        >
+                                          {!marcadoProv ? (
+                                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                                              <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 18.75a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 0 1-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 0 0-3.213-9.193 2.056 2.056 0 0 0-1.58-.86H14.25M16.5 18.75h-2.25m0-11.175V14.25m0 0H2.25m12 0v4.5m0-4.5H16.5" />
+                                            </svg>
+                                          ) : (
+                                            <span className="text-[10px]">✓ Enviado</span>
+                                          )}
+                                        </button>
+                                        {it.supplierAvailability === "SI_HAY" && (
+                                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-500/40 text-[10px] font-bold shrink-0">
+                                            ✓ Sí hay{it.deliveryTime ? ` · ${it.deliveryTime}` : ""}
+                                          </span>
+                                        )}
+                                        {it.supplierAvailability === "NO_HAY" && (
+                                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-rose-50 dark:bg-rose-500/15 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-500/40 text-[10px] font-bold shrink-0">
+                                            ✕ No hay
+                                          </span>
+                                        )}
+                                      </div>
+                                    ) : (
+                                      <span className="text-zinc-300 dark:text-zinc-600 text-xs">—</span>
+                                    )}
                                   </td>
                                   <td className="py-2 px-2.5 text-center">
                                     {esManual ? (
@@ -4522,7 +4570,8 @@ export default function PaginaDetallePropuesta() {
                             <tr className="border-b border-zinc-200/80 dark:border-white/10 bg-zinc-50/80 dark:bg-white/[0.03] text-zinc-500 dark:text-zinc-400 text-[11px] font-semibold">
                               <th className="py-2 px-3 w-24 text-center">Cant.</th>
                               <th className="py-2 px-3">Descripción</th>
-                              <th className="py-2 px-2.5 w-32">Detalle</th>
+                              <th className="py-2 px-2.5 w-28 text-center">Detalle</th>
+                              <th className="py-2 px-2.5 w-28 text-center">Pedir</th>
                               <th className="py-2 px-2.5 w-28 text-center">PVP</th>
                               <th className="py-2 px-2 w-10 text-center"></th>
                             </tr>
@@ -4533,13 +4582,21 @@ export default function PaginaDetallePropuesta() {
                               const origenLabel = getNombreModulo(it.origin, it.category);
                               const esManual = Boolean(
                                 it.isManual ||
-                                  String(it.id || "").startsWith("reg-") ||
-                                  String(it.id || "").startsWith("man-")
+                                String(it.id || "").startsWith("reg-") ||
+                                String(it.id || "").startsWith("man-")
+                              );
+                              const marcadoProv = Boolean(
+                                it.enviadoProveedor ||
+                                it.purchaseStatus === "PEDIDO_WHATSAPP" ||
+                                it.purchaseStatus === "COTIZADO"
                               );
                               return (
                                 <tr
                                   key={it.id || it.code || `prod-${idx}`}
-                                  className="hover:bg-zinc-50/60 dark:hover:bg-white/[0.02]"
+                                  className={`transition-colors ${it.agregadoEnPropuesta
+                                    ? "bg-amber-500/[0.07] dark:bg-amber-400/[0.06] border-l-2 border-l-amber-500/60 hover:bg-amber-500/[0.12] dark:hover:bg-amber-400/[0.10]"
+                                    : "hover:bg-zinc-50/60 dark:hover:bg-white/[0.02]"
+                                    }`}
                                 >
                                   <td className="py-2 px-3 text-center">
                                     <div className="inline-flex items-center border border-zinc-200 dark:border-white/10 rounded-lg overflow-hidden bg-zinc-50 dark:bg-white/[0.04]">
@@ -4566,7 +4623,7 @@ export default function PaginaDetallePropuesta() {
                                     <div className="flex flex-wrap items-center gap-2">
                                       <span>{formatoPrimeraMayuscula(it.name)}</span>
                                       {esManual && (
-                                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-zinc-100 dark:bg-white/10 text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-white/15 shrink-0">
+                                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/35 shrink-0">
                                           Manual
                                         </span>
                                       )}
@@ -4596,49 +4653,9 @@ export default function PaginaDetallePropuesta() {
                                           {it.audios.length > 1 && <span>{it.audios.length}</span>}
                                         </button>
                                       )}
-                                      {esManual && (() => {
-                                        const marcadoProv = Boolean(
-                                          it.enviadoProveedor ||
-                                            it.purchaseStatus === "PEDIDO_WHATSAPP" ||
-                                            it.purchaseStatus === "COTIZADO"
-                                        );
-                                        return (
-                                          <>
-                                            <button
-                                              type="button"
-                                              onClick={() => handleToggleMarcarProveedor(it, false)}
-                                              className={`h-7 px-2 rounded-lg border inline-flex items-center justify-center gap-1 text-[11px] font-semibold cursor-pointer active:scale-95 transition-all shrink-0 ${
-                                                marcadoProv
-                                                  ? "bg-blue-600 hover:bg-blue-500 text-white border-blue-500 shadow-sm shadow-blue-500/30"
-                                                  : "bg-emerald-50/80 hover:bg-emerald-100 dark:bg-emerald-500/15 dark:hover:bg-emerald-500/25 border-emerald-200 dark:border-emerald-500/30 text-emerald-600 dark:text-emerald-300"
-                                              }`}
-                                              title={
-                                                marcadoProv
-                                                  ? "Enviado a pedidos de proveedor (clic para quitar)"
-                                                  : "Marcar para pedir a proveedor"
-                                              }
-                                            >
-                                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
-                                                <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 18.75a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 0 1-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 0 0-3.213-9.193 2.056 2.056 0 0 0-1.58-.86H14.25M16.5 18.75h-2.25m0-11.175V14.25m0 0H2.25m12 0v4.5m0-4.5H16.5" />
-                                              </svg>
-                                              {marcadoProv && <span className="text-[10px]">✓ Enviado</span>}
-                                            </button>
-                                            {it.supplierAvailability === "SI_HAY" && (
-                                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-500/40 text-[10px] font-bold shrink-0">
-                                                ✓ Sí hay{it.deliveryTime ? ` · ${it.deliveryTime}` : ""}
-                                              </span>
-                                            )}
-                                            {it.supplierAvailability === "NO_HAY" && (
-                                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-rose-50 dark:bg-rose-500/15 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-500/40 text-[10px] font-bold shrink-0">
-                                                ✕ No hay
-                                              </span>
-                                            )}
-                                          </>
-                                        );
-                                      })()}
                                     </div>
                                   </td>
-                                  <td className="py-2 px-2.5">
+                                  <td className="py-2 px-2.5 text-center">
                                     <span
                                       className={`inline-block px-2 py-0.5 rounded-md text-[10px] font-semibold border ${getBadgeModuloClase(
                                         origenLabel
@@ -4646,6 +4663,45 @@ export default function PaginaDetallePropuesta() {
                                     >
                                       {origenLabel}
                                     </span>
+                                  </td>
+                                  <td className="py-2 px-2.5 text-center">
+                                    {esManual ? (
+                                      <div className="inline-flex items-center justify-center gap-1.5">
+                                        <button
+                                          type="button"
+                                          onClick={() => handleToggleMarcarProveedor(it, false)}
+                                          className={`h-7 px-2 rounded-lg border inline-flex items-center justify-center gap-1 text-[11px] font-semibold cursor-pointer active:scale-95 transition-all shrink-0 ${marcadoProv
+                                            ? "bg-blue-600 hover:bg-blue-500 text-white border-blue-500 shadow-sm shadow-blue-500/30"
+                                            : "bg-emerald-50/80 hover:bg-emerald-100 dark:bg-emerald-500/15 dark:hover:bg-emerald-500/25 border-emerald-200 dark:border-emerald-500/30 text-emerald-600 dark:text-emerald-300"
+                                            }`}
+                                          title={
+                                            marcadoProv
+                                              ? "Enviado a pedidos de proveedor (clic para quitar)"
+                                              : "Marcar para pedir a proveedor"
+                                          }
+                                        >
+                                          {!marcadoProv ? (
+                                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                                              <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 18.75a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 0 1-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 0 0-3.213-9.193 2.056 2.056 0 0 0-1.58-.86H14.25M16.5 18.75h-2.25m0-11.175V14.25m0 0H2.25m12 0v4.5m0-4.5H16.5" />
+                                            </svg>
+                                          ) : (
+                                            <span className="text-[10px]">✓ Enviado</span>
+                                          )}
+                                        </button>
+                                        {it.supplierAvailability === "SI_HAY" && (
+                                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-500/40 text-[10px] font-bold shrink-0">
+                                            ✓ Sí hay{it.deliveryTime ? ` · ${it.deliveryTime}` : ""}
+                                          </span>
+                                        )}
+                                        {it.supplierAvailability === "NO_HAY" && (
+                                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-rose-50 dark:bg-rose-500/15 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-500/40 text-[10px] font-bold shrink-0">
+                                            ✕ No hay
+                                          </span>
+                                        )}
+                                      </div>
+                                    ) : (
+                                      <span className="text-zinc-300 dark:text-zinc-600 text-xs">—</span>
+                                    )}
                                   </td>
                                   <td className="py-2 px-2.5 text-center">
                                     {esManual ? (
@@ -4691,163 +4747,161 @@ export default function PaginaDetallePropuesta() {
 
             {/* SECCIÓN FINAL: LIQUIDACIÓN + GUARDAR + PAGAR / POS */}
             <div className="pt-4 border-t border-zinc-200 dark:border-white/10 space-y-6">
-          {/* LIQUIDACIÓN DE LA FACTURA & TOTALES */}
-          <div className="flex justify-end pt-4 border-t border-zinc-200 dark:border-white/10">
-            {/* Liquidación Financiera de Propuesta */}
-            <div className="w-full md:w-1/2 max-w-lg p-5 rounded-2xl bg-zinc-50 dark:bg-white/[0.02] border border-zinc-200 dark:border-white/10 space-y-3 font-sans">
-              <div className="flex items-center justify-between text-xs text-zinc-600 dark:text-zinc-400">
-                <span className="font-normal">Productos:</span>
-                <span className="font-medium text-zinc-900 dark:text-white">
-                  ${calculos.subtotalRepuestos.toFixed(2)}
-                </span>
-              </div>
+              {/* LIQUIDACIÓN DE LA FACTURA & TOTALES */}
+              <div className="flex justify-end pt-4 border-t border-zinc-200 dark:border-white/10">
+                {/* Liquidación Financiera de Propuesta */}
+                <div className="w-full md:w-1/2 max-w-lg p-5 rounded-2xl bg-zinc-50 dark:bg-white/[0.02] border border-zinc-200 dark:border-white/10 space-y-3 font-sans">
+                  <div className="flex items-center justify-between text-xs text-zinc-600 dark:text-zinc-400">
+                    <span className="font-normal">Productos:</span>
+                    <span className="font-medium text-zinc-900 dark:text-white">
+                      ${calculos.subtotalRepuestos.toFixed(2)}
+                    </span>
+                  </div>
 
-              <div className="flex items-center justify-between text-xs text-zinc-600 dark:text-zinc-400">
-                <span className="font-normal">Servicios:</span>
-                <span className="font-medium text-zinc-900 dark:text-white">
-                  ${calculos.subtotalServicios.toFixed(2)}
-                </span>
-              </div>
+                  <div className="flex items-center justify-between text-xs text-zinc-600 dark:text-zinc-400">
+                    <span className="font-normal">Servicios:</span>
+                    <span className="font-medium text-zinc-900 dark:text-white">
+                      ${calculos.subtotalServicios.toFixed(2)}
+                    </span>
+                  </div>
 
-              <div className="h-px bg-zinc-200 dark:bg-white/10" />
+                  <div className="h-px bg-zinc-200 dark:bg-white/10" />
 
-              <div className="flex items-center justify-between text-xs text-zinc-700 dark:text-zinc-300">
-                <span className="font-normal">Subtotal:</span>
-                <span className="font-semibold text-zinc-900 dark:text-white text-sm">
-                  ${calculos.subtotalBruto.toFixed(2)}
-                </span>
-              </div>
+                  <div className="flex items-center justify-between text-xs text-zinc-700 dark:text-zinc-300">
+                    <span className="font-normal">Subtotal:</span>
+                    <span className="font-semibold text-zinc-900 dark:text-white text-sm">
+                      ${calculos.subtotalBruto.toFixed(2)}
+                    </span>
+                  </div>
 
-              {/* Descuento editable */}
-              <div className="flex items-center justify-between text-xs text-zinc-600 dark:text-zinc-400">
-                <div className="flex items-center gap-2">
-                  <span className="font-normal">Descuento:</span>
-                  <div className="inline-flex items-center gap-1 print:hidden">
-                    <input
-                      type="number"
-                      min="0"
-                      max="100"
-                      value={porcentajeDescuento}
-                      onChange={(e) => setPorcentajeDescuento(parseFloat(e.target.value) || 0)}
-                      className="w-12 h-6 px-1 text-center rounded bg-white dark:bg-black border border-zinc-300 dark:border-white/10 text-xs font-normal"
-                    />
-                    <span className="text-[10px]">%</span>
+                  {/* Descuento editable */}
+                  <div className="flex items-center justify-between text-xs text-zinc-600 dark:text-zinc-400">
+                    <div className="flex items-center gap-2">
+                      <span className="font-normal">Descuento:</span>
+                      <div className="inline-flex items-center gap-1 print:hidden">
+                        <input
+                          type="number"
+                          min="0"
+                          max="100"
+                          value={porcentajeDescuento}
+                          onChange={(e) => setPorcentajeDescuento(parseFloat(e.target.value) || 0)}
+                          className="w-12 h-6 px-1 text-center rounded bg-white dark:bg-black border border-zinc-300 dark:border-white/10 text-xs font-normal"
+                        />
+                        <span className="text-[10px]">%</span>
+                      </div>
+                    </div>
+                    <span className="text-rose-500 font-medium">
+                      -${calculos.descuento.toFixed(2)}
+                    </span>
+                  </div>
+
+                  {/* IVA editable */}
+                  <div className="flex items-center justify-between text-xs text-zinc-600 dark:text-zinc-400">
+                    <div className="flex items-center gap-2">
+                      <span className="font-normal">IVA ({porcentajeIva}%):</span>
+                      <div className="inline-flex items-center gap-1 print:hidden">
+                        <select
+                          value={porcentajeIva}
+                          onChange={(e) => setPorcentajeIva(Number(e.target.value))}
+                          className="h-6 px-1 rounded bg-white dark:bg-black border border-zinc-300 dark:border-white/10 text-[11px]"
+                        >
+                          <option value={15}>15%</option>
+                          <option value={12}>12%</option>
+                          <option value={0}>0%</option>
+                        </select>
+                      </div>
+                    </div>
+                    <span className="font-medium text-zinc-800 dark:text-zinc-200">
+                      ${calculos.iva.toFixed(2)}
+                    </span>
+                  </div>
+
+                  {/* TOTAL PROPUESTA */}
+                  <div className="p-4 rounded-xl bg-blue-600/10 border border-blue-600/30 flex items-center justify-between">
+                    <div>
+                      <span className="text-sm font-semibold text-blue-700 dark:text-blue-300 block">
+                        Total
+                      </span>
+                    </div>
+                    <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                      ${calculos.totalFacturaCliente.toFixed(2)}
+                    </span>
+                  </div>
+
+                  {/* RENTABILIDAD / MARGEN TALLER (Solo visible internamente) */}
+                  <div className="p-3 rounded-xl bg-emerald-500/[0.08] border border-emerald-500/25 flex items-center justify-between text-xs print:hidden">
+                    <span className="font-normal text-emerald-800 dark:text-emerald-300">
+                      Utilidad:
+                    </span>
+                    <span className="font-medium text-emerald-600 dark:text-emerald-400">
+                      ${calculos.margenNetoTaller.toFixed(2)} ({calculos.margenPorcentaje}%)
+                    </span>
                   </div>
                 </div>
-                <span className="text-rose-500 font-medium">
-                  -${calculos.descuento.toFixed(2)}
-                </span>
               </div>
 
-              {/* IVA editable */}
-              <div className="flex items-center justify-between text-xs text-zinc-600 dark:text-zinc-400">
-                <div className="flex items-center gap-2">
-                  <span className="font-normal">IVA ({porcentajeIva}%):</span>
-                  <div className="inline-flex items-center gap-1 print:hidden">
-                    <select
-                      value={porcentajeIva}
-                      onChange={(e) => setPorcentajeIva(Number(e.target.value))}
-                      className="h-6 px-1 rounded bg-white dark:bg-black border border-zinc-300 dark:border-white/10 text-[11px]"
+              {/* BARRA DE CIERRE FINAL: TÍTULOS DE 1 PALABRA + ICONO */}
+              <div className="print:hidden pt-5 border-t border-zinc-200 dark:border-white/10 flex flex-col md:flex-row items-stretch md:items-center justify-end gap-4">
+                <div className="flex items-center gap-2.5 flex-wrap justify-end">
+                  <button
+                    type="button"
+                    disabled={guardando}
+                    onClick={handleGuardarBorrador}
+                    className="h-10 px-4 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 border border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-200 text-xs font-normal transition-all active:scale-95 cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+                  >
+                    <span>💾</span>
+                    <span>{guardando ? "..." : "Guardar"}</span>
+                  </button>
+
+                  {!esPagado && (
+                    <button
+                      type="button"
+                      disabled={cambiandoEstado}
+                      onClick={() => {
+                        const siguienteEstado =
+                          esAprobado && !esPausado
+                            ? "Pausada"
+                            : esPausado
+                              ? "Pendiente"
+                              : "Aprobado";
+                        void handleCambiarEstadoTaller(siguienteEstado);
+                      }}
+                      className={`h-10 px-4 rounded-xl border text-xs font-normal shadow-sm transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 ${esAprobado && !esPausado
+                        ? "bg-emerald-600 hover:bg-emerald-500 border-emerald-500 text-white"
+                        : esPausado
+                          ? "bg-amber-500 hover:bg-amber-400 border-amber-500 text-white"
+                          : "bg-amber-500/15 hover:bg-amber-500/25 border-amber-500/35 text-amber-700 dark:text-amber-300"
+                        }`}
+                      title="Clic para cambiar estado (Trabajando → Pausa → En espera)"
                     >
-                      <option value={15}>15%</option>
-                      <option value={12}>12%</option>
-                      <option value={0}>0%</option>
-                    </select>
-                  </div>
-                </div>
-                <span className="font-medium text-zinc-800 dark:text-zinc-200">
-                  ${calculos.iva.toFixed(2)}
-                </span>
-              </div>
+                      <span className={`w-2 h-2 rounded-full ${esAprobado && !esPausado ? "bg-white" : esPausado ? "bg-white" : "bg-amber-500"}`} />
+                      <span>{esAprobado && !esPausado ? "Trabajando" : esPausado ? "Pausa" : "En espera"}</span>
+                    </button>
+                  )}
 
-              {/* TOTAL PROPUESTA */}
-              <div className="p-4 rounded-xl bg-blue-600/10 border border-blue-600/30 flex items-center justify-between">
-                <div>
-                  <span className="text-sm font-semibold text-blue-700 dark:text-blue-300 block">
-                    Total
-                  </span>
-                </div>
-                <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                  ${calculos.totalFacturaCliente.toFixed(2)}
-                </span>
-              </div>
-
-              {/* RENTABILIDAD / MARGEN TALLER (Solo visible internamente) */}
-              <div className="p-3 rounded-xl bg-emerald-500/[0.08] border border-emerald-500/25 flex items-center justify-between text-xs print:hidden">
-                <span className="font-normal text-emerald-800 dark:text-emerald-300">
-                  Utilidad:
-                </span>
-                <span className="font-medium text-emerald-600 dark:text-emerald-400">
-                  ${calculos.margenNetoTaller.toFixed(2)} ({calculos.margenPorcentaje}%)
-                </span>
-              </div>
-            </div>
-          </div>
-
-            {/* BARRA DE CIERRE FINAL: TÍTULOS DE 1 PALABRA + ICONO */}
-            <div className="print:hidden pt-5 border-t border-zinc-200 dark:border-white/10 flex flex-col md:flex-row items-stretch md:items-center justify-end gap-4">
-              <div className="flex items-center gap-2.5 flex-wrap justify-end">
-                <button
-                  type="button"
-                  disabled={guardando}
-                  onClick={handleGuardarBorrador}
-                  className="h-10 px-4 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 border border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-200 text-xs font-normal transition-all active:scale-95 cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
-                >
-                  <span>💾</span>
-                  <span>{guardando ? "..." : "Guardar"}</span>
-                </button>
-
-                {!esPagado && (
                   <button
                     type="button"
                     disabled={cambiandoEstado}
-                    onClick={() => {
-                      const siguienteEstado =
-                        esAprobado && !esPausado
-                          ? "Pausada"
-                          : esPausado
-                          ? "Pendiente"
-                          : "Aprobado";
-                      void handleCambiarEstadoTaller(siguienteEstado);
-                    }}
-                    className={`h-10 px-4 rounded-xl border text-xs font-normal shadow-sm transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 ${
-                      esAprobado && !esPausado
-                        ? "bg-emerald-600 hover:bg-emerald-500 border-emerald-500 text-white"
-                        : esPausado
-                        ? "bg-amber-500 hover:bg-amber-400 border-amber-500 text-white"
-                        : "bg-amber-500/15 hover:bg-amber-500/25 border-amber-500/35 text-amber-700 dark:text-amber-300"
-                    }`}
-                    title="Clic para cambiar estado (Trabajando → Pausa → En espera)"
-                  >
-                    <span className={`w-2 h-2 rounded-full ${esAprobado && !esPausado ? "bg-white" : esPausado ? "bg-white" : "bg-amber-500"}`} />
-                    <span>{esAprobado && !esPausado ? "Trabajando" : esPausado ? "Pausa" : "En espera"}</span>
-                  </button>
-                )}
-
-                <button
-                  type="button"
-                  disabled={cambiandoEstado}
-                  onClick={handleTogglePagado}
-                  className={`h-10 px-4 rounded-xl border text-xs font-normal shadow-sm transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 ${
-                    esPagado
+                    onClick={handleTogglePagado}
+                    className={`h-10 px-4 rounded-xl border text-xs font-normal shadow-sm transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 ${esPagado
                       ? "bg-sky-600 hover:bg-sky-500 border-sky-500 text-white"
                       : "bg-sky-500/15 hover:bg-sky-500/25 border-sky-500/35 text-sky-600 dark:text-sky-300"
-                  }`}
-                >
-                  <span>{esPagado ? "✓ Pagado" : "💳 Pagar"}</span>
-                </button>
+                      }`}
+                  >
+                    <span>{esPagado ? "✓ Pagado" : "💳 Pagar"}</span>
+                  </button>
 
-                <button
-                  type="button"
-                  disabled={autorizando}
-                  onClick={handleAutorizarYEnviarAPos}
-                  className="h-10 px-5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-normal shadow-sm transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50"
-                >
-                  <span>🛒</span>
-                  <span>{autorizando ? "..." : "POS"}</span>
-                </button>
+                  <button
+                    type="button"
+                    disabled={autorizando}
+                    onClick={handleAutorizarYEnviarAPos}
+                    className="h-10 px-5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-normal shadow-sm transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50"
+                  >
+                    <span>🛒</span>
+                    <span>{autorizando ? "..." : "POS"}</span>
+                  </button>
+                </div>
               </div>
-            </div>
             </div>
           </div>
 
@@ -5084,27 +5138,24 @@ export default function PaginaDetallePropuesta() {
                       <div
                         key={prov.id}
                         onClick={() => toggleSeleccionProveedor(prov)}
-                        className={`p-2.5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-2 ${
-                          esElegido
-                            ? "bg-emerald-500/10 dark:bg-emerald-500/15 border-emerald-500/50 text-zinc-900 dark:text-white shadow-xs"
-                            : "bg-zinc-50/70 dark:bg-white/[0.03] border-zinc-200/80 dark:border-white/10 hover:border-zinc-300 dark:hover:border-white/20"
-                        }`}
+                        className={`p-2.5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-2 ${esElegido
+                          ? "bg-emerald-500/10 dark:bg-emerald-500/15 border-emerald-500/50 text-zinc-900 dark:text-white shadow-xs"
+                          : "bg-zinc-50/70 dark:bg-white/[0.03] border-zinc-200/80 dark:border-white/10 hover:border-zinc-300 dark:hover:border-white/20"
+                          }`}
                       >
                         <div className="min-w-0">
                           <div className="flex items-center gap-1.5">
                             <span
-                              className={`w-4 h-4 rounded-md flex items-center justify-center text-[10px] font-bold shrink-0 ${
-                                esElegido
-                                  ? "bg-emerald-500 text-zinc-950"
-                                  : "border border-zinc-300 dark:border-white/20 text-transparent"
-                              }`}
+                              className={`w-4 h-4 rounded-md flex items-center justify-center text-[10px] font-bold shrink-0 ${esElegido
+                                ? "bg-emerald-500 text-zinc-950"
+                                : "border border-zinc-300 dark:border-white/20 text-transparent"
+                                }`}
                             >
                               ✓
                             </span>
                             <span
-                              className={`font-bold truncate ${
-                                esElegido ? "text-emerald-700 dark:text-emerald-400" : "text-zinc-800 dark:text-zinc-200"
-                              }`}
+                              className={`font-bold truncate ${esElegido ? "text-emerald-700 dark:text-emerald-400" : "text-zinc-800 dark:text-zinc-200"
+                                }`}
                             >
                               {prov.name}
                             </span>
@@ -5171,7 +5222,7 @@ export default function PaginaDetallePropuesta() {
                       className="text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
                     >
                       {listaItemsEnModalProveedor.length > 0 &&
-                      listaItemsEnModalProveedor.every((it) => itemsSeleccionadosModalProv[it.id])
+                        listaItemsEnModalProveedor.every((it) => itemsSeleccionadosModalProv[it.id])
                         ? "Desmarcar todos"
                         : "Marcar todos"}
                     </button>
@@ -5188,8 +5239,8 @@ export default function PaginaDetallePropuesta() {
                       const seleccionado = Boolean(itemsSeleccionadosModalProv[it.id]);
                       const yaEnviado = Boolean(
                         it.enviadoProveedor ||
-                          it.purchaseStatus === "PEDIDO_WHATSAPP" ||
-                          it.purchaseStatus === "COTIZADO"
+                        it.purchaseStatus === "PEDIDO_WHATSAPP" ||
+                        it.purchaseStatus === "COTIZADO"
                       );
                       const cantFotos = Array.isArray(it.fotos) ? it.fotos.length : 0;
                       const cantAudios = Array.isArray(it.audios) ? it.audios.length : 0;
@@ -5203,19 +5254,17 @@ export default function PaginaDetallePropuesta() {
                               [it.id]: !seleccionado,
                             }))
                           }
-                          className={`p-3 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${
-                            seleccionado
-                              ? "bg-blue-500/[0.08] dark:bg-blue-500/[0.12] border-blue-500/40 text-zinc-900 dark:text-white"
-                              : "bg-zinc-50/60 dark:bg-white/[0.02] border-zinc-200/70 dark:border-white/10 opacity-75 hover:opacity-100"
-                          }`}
+                          className={`p-3 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${seleccionado
+                            ? "bg-blue-500/[0.08] dark:bg-blue-500/[0.12] border-blue-500/40 text-zinc-900 dark:text-white"
+                            : "bg-zinc-50/60 dark:bg-white/[0.02] border-zinc-200/70 dark:border-white/10 opacity-75 hover:opacity-100"
+                            }`}
                         >
                           <div className="flex items-center gap-3 min-w-0">
                             <span
-                              className={`w-5 h-5 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 transition-colors ${
-                                seleccionado
-                                  ? "bg-blue-600 text-white"
-                                  : "border border-zinc-300 dark:border-white/20 text-transparent"
-                              }`}
+                              className={`w-5 h-5 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 transition-colors ${seleccionado
+                                ? "bg-blue-600 text-white"
+                                : "border border-zinc-300 dark:border-white/20 text-transparent"
+                                }`}
                             >
                               ✓
                             </span>
@@ -5784,11 +5833,10 @@ export default function PaginaDetallePropuesta() {
                         key={`thumb-${idx}`}
                         type="button"
                         onClick={() => setFlotanteFotos((prev) => prev ? { ...prev, fotoActivaIdx: idx } : null)}
-                        className={`w-14 h-12 rounded-xl overflow-hidden shrink-0 border-2 transition-all cursor-pointer ${
-                          flotanteFotos.fotoActivaIdx === idx
-                            ? "border-blue-500 scale-105 shadow-md shadow-blue-500/20"
-                            : "border-transparent opacity-60 hover:opacity-100"
-                        }`}
+                        className={`w-14 h-12 rounded-xl overflow-hidden shrink-0 border-2 transition-all cursor-pointer ${flotanteFotos.fotoActivaIdx === idx
+                          ? "border-blue-500 scale-105 shadow-md shadow-blue-500/20"
+                          : "border-transparent opacity-60 hover:opacity-100"
+                          }`}
                       >
                         <img src={f} alt={`Miniatura ${idx + 1}`} className="w-full h-full object-cover" />
                       </button>
@@ -6011,11 +6059,10 @@ export default function PaginaDetallePropuesta() {
                 </label>
                 <div className="grid grid-cols-2 gap-2">
                   <label
-                    className={`p-2.5 rounded-xl border flex items-center gap-2 cursor-pointer transition-all ${
-                      flotanteDetalles.pin.solicitaRepuesto
-                        ? "bg-amber-500/10 border-amber-500/40 text-amber-700 dark:text-amber-300 font-semibold"
-                        : "bg-zinc-50 dark:bg-white/[0.02] border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-400"
-                    }`}
+                    className={`p-2.5 rounded-xl border flex items-center gap-2 cursor-pointer transition-all ${flotanteDetalles.pin.solicitaRepuesto
+                      ? "bg-amber-500/10 border-amber-500/40 text-amber-700 dark:text-amber-300 font-semibold"
+                      : "bg-zinc-50 dark:bg-white/[0.02] border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-400"
+                      }`}
                   >
                     <input
                       type="checkbox"
@@ -6032,11 +6079,10 @@ export default function PaginaDetallePropuesta() {
                   </label>
 
                   <label
-                    className={`p-2.5 rounded-xl border flex items-center gap-2 cursor-pointer transition-all ${
-                      flotanteDetalles.pin.solicitaServicio
-                        ? "bg-purple-500/10 border-purple-500/40 text-purple-700 dark:text-purple-300 font-semibold"
-                        : "bg-zinc-50 dark:bg-white/[0.02] border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-400"
-                    }`}
+                    className={`p-2.5 rounded-xl border flex items-center gap-2 cursor-pointer transition-all ${flotanteDetalles.pin.solicitaServicio
+                      ? "bg-purple-500/10 border-purple-500/40 text-purple-700 dark:text-purple-300 font-semibold"
+                      : "bg-zinc-50 dark:bg-white/[0.02] border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-400"
+                      }`}
                   >
                     <input
                       type="checkbox"
@@ -6335,11 +6381,10 @@ export default function PaginaDetallePropuesta() {
 
               <div className="grid grid-cols-2 gap-2 pt-1">
                 <label
-                  className={`p-2.5 rounded-xl border flex items-center gap-2 cursor-pointer transition-all ${
-                    nuevoHallazgoSolicitaRepuesto
-                      ? "bg-amber-500/10 border-amber-500/40 text-amber-700 dark:text-amber-300 font-semibold"
-                      : "bg-zinc-50 dark:bg-white/[0.02] border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-400"
-                  }`}
+                  className={`p-2.5 rounded-xl border flex items-center gap-2 cursor-pointer transition-all ${nuevoHallazgoSolicitaRepuesto
+                    ? "bg-amber-500/10 border-amber-500/40 text-amber-700 dark:text-amber-300 font-semibold"
+                    : "bg-zinc-50 dark:bg-white/[0.02] border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-400"
+                    }`}
                 >
                   <input
                     type="checkbox"
@@ -6351,11 +6396,10 @@ export default function PaginaDetallePropuesta() {
                 </label>
 
                 <label
-                  className={`p-2.5 rounded-xl border flex items-center gap-2 cursor-pointer transition-all ${
-                    nuevoHallazgoSolicitaServicio
-                      ? "bg-purple-500/10 border-purple-500/40 text-purple-700 dark:text-purple-300 font-semibold"
-                      : "bg-zinc-50 dark:bg-white/[0.02] border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-400"
-                  }`}
+                  className={`p-2.5 rounded-xl border flex items-center gap-2 cursor-pointer transition-all ${nuevoHallazgoSolicitaServicio
+                    ? "bg-purple-500/10 border-purple-500/40 text-purple-700 dark:text-purple-300 font-semibold"
+                    : "bg-zinc-50 dark:bg-white/[0.02] border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-400"
+                    }`}
                 >
                   <input
                     type="checkbox"
@@ -6434,11 +6478,10 @@ export default function PaginaDetallePropuesta() {
                         supplierName: "Bodega Taller",
                       })
                     }
-                    className={`h-9 rounded-xl text-xs font-bold border transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                      currentItem.inStock
-                        ? "bg-emerald-500/20 border-emerald-500/50 text-emerald-300"
-                        : "bg-slate-900/60 border-slate-800 text-slate-400 hover:text-slate-200"
-                    }`}
+                    className={`h-9 rounded-xl text-xs font-bold border transition-all flex items-center justify-center gap-1.5 cursor-pointer ${currentItem.inStock
+                      ? "bg-emerald-500/20 border-emerald-500/50 text-emerald-300"
+                      : "bg-slate-900/60 border-slate-800 text-slate-400 hover:text-slate-200"
+                      }`}
                   >
                     <span>🏢</span>
                     <span>Bodega</span>
@@ -6455,11 +6498,10 @@ export default function PaginaDetallePropuesta() {
                             : "Proveedor General",
                       })
                     }
-                    className={`h-9 rounded-xl text-xs font-bold border transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                      !currentItem.inStock
-                        ? "bg-amber-500/20 border-amber-500/50 text-amber-300"
-                        : "bg-slate-900/60 border-slate-800 text-slate-400 hover:text-slate-200"
-                    }`}
+                    className={`h-9 rounded-xl text-xs font-bold border transition-all flex items-center justify-center gap-1.5 cursor-pointer ${!currentItem.inStock
+                      ? "bg-amber-500/20 border-amber-500/50 text-amber-300"
+                      : "bg-slate-900/60 border-slate-800 text-slate-400 hover:text-slate-200"
+                      }`}
                   >
                     <span>🚚</span>
                     <span>Pedir</span>
@@ -6476,11 +6518,10 @@ export default function PaginaDetallePropuesta() {
                           currentItem.supplierAvailability === "SI_HAY" ? null : "SI_HAY",
                       })
                     }
-                    className={`h-8 rounded-xl text-[11px] font-bold border transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                      currentItem.supplierAvailability === "SI_HAY"
-                        ? "bg-emerald-600 text-white border-emerald-500 shadow-sm"
-                        : "bg-slate-900/40 border-slate-800 text-slate-400 hover:text-emerald-300"
-                    }`}
+                    className={`h-8 rounded-xl text-[11px] font-bold border transition-all flex items-center justify-center gap-1.5 cursor-pointer ${currentItem.supplierAvailability === "SI_HAY"
+                      ? "bg-emerald-600 text-white border-emerald-500 shadow-sm"
+                      : "bg-slate-900/40 border-slate-800 text-slate-400 hover:text-emerald-300"
+                      }`}
                   >
                     <span>✓</span>
                     <span>Sí hay</span>
@@ -6493,11 +6534,10 @@ export default function PaginaDetallePropuesta() {
                           currentItem.supplierAvailability === "NO_HAY" ? null : "NO_HAY",
                       })
                     }
-                    className={`h-8 rounded-xl text-[11px] font-bold border transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                      currentItem.supplierAvailability === "NO_HAY"
-                        ? "bg-rose-600 text-white border-rose-500 shadow-sm"
-                        : "bg-slate-900/40 border-slate-800 text-slate-400 hover:text-rose-300"
-                    }`}
+                    className={`h-8 rounded-xl text-[11px] font-bold border transition-all flex items-center justify-center gap-1.5 cursor-pointer ${currentItem.supplierAvailability === "NO_HAY"
+                      ? "bg-rose-600 text-white border-rose-500 shadow-sm"
+                      : "bg-slate-900/40 border-slate-800 text-slate-400 hover:text-rose-300"
+                      }`}
                   >
                     <span>✕</span>
                     <span>No hay</span>
@@ -6537,11 +6577,10 @@ export default function PaginaDetallePropuesta() {
                             deliveryTime: active ? null : t.id,
                           })
                         }
-                        className={`h-8 px-3 rounded-xl text-xs font-bold border shrink-0 transition-all cursor-pointer ${
-                          active
-                            ? "bg-blue-600 text-white border-blue-400 shadow-sm"
-                            : "bg-slate-900/60 border-slate-800 text-slate-300 hover:border-slate-700"
-                        }`}
+                        className={`h-8 px-3 rounded-xl text-xs font-bold border shrink-0 transition-all cursor-pointer ${active
+                          ? "bg-blue-600 text-white border-blue-400 shadow-sm"
+                          : "bg-slate-900/60 border-slate-800 text-slate-300 hover:border-slate-700"
+                          }`}
                       >
                         {t.label}
                       </button>
@@ -6582,11 +6621,10 @@ export default function PaginaDetallePropuesta() {
                             shippingMethod: active ? null : env.id,
                           })
                         }
-                        className={`h-8 px-3 rounded-xl text-xs font-bold border shrink-0 transition-all flex items-center gap-1.5 cursor-pointer ${
-                          active
-                            ? "bg-purple-600 text-white border-purple-400 shadow-sm"
-                            : "bg-slate-900/60 border-slate-800 text-slate-300 hover:border-slate-700"
-                        }`}
+                        className={`h-8 px-3 rounded-xl text-xs font-bold border shrink-0 transition-all flex items-center gap-1.5 cursor-pointer ${active
+                          ? "bg-purple-600 text-white border-purple-400 shadow-sm"
+                          : "bg-slate-900/60 border-slate-800 text-slate-300 hover:border-slate-700"
+                          }`}
                       >
                         <span>{env.icon}</span>
                         <span>{env.label}</span>
@@ -6644,10 +6682,10 @@ export default function PaginaDetallePropuesta() {
                   onClick={() => {
                     const pinAsociado = currentItem.findingId
                       ? hallazgos.find(
-                          (h: any) =>
-                            h.id === currentItem.findingId ||
-                            h.originalId === currentItem.findingId
-                        )
+                        (h: any) =>
+                          h.id === currentItem.findingId ||
+                          h.originalId === currentItem.findingId
+                      )
                       : undefined;
                     setItemTiempoEnvioModal(null);
                     abrirModalProveedor("INDIVIDUAL", currentItem, pinAsociado);

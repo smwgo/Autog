@@ -39,11 +39,10 @@ export interface ServicioExpressItem {
 }
 
 const ESTADOS_LUBRICENTRO = [
-  { id: "st-1", name: "01 Pendiente", color: "amber", progress: 15 },
-  { id: "st-2", name: "02 En Lubricación", color: "blue", progress: 45 },
-  { id: "st-3", name: "03 En Lavado", color: "rose", progress: 75 },
-  { id: "st-4", name: "04 Listo para Entrega", color: "emerald", progress: 95 },
-  { id: "st-5", name: "05 Entregada", color: "purple", progress: 100 },
+  { id: "st-2", name: "Lubricación", color: "blue", progress: 45 },
+  { id: "st-3", name: "Lavado", color: "rose", progress: 75 },
+  { id: "st-4", name: "Listo", color: "emerald", progress: 95 },
+  { id: "st-5", name: "Entregada", color: "purple", progress: 100 },
 ];
 
 export interface CategoriaConfig {

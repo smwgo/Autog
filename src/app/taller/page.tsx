@@ -234,11 +234,10 @@ export interface ServicePreset {
 // CONSTANTES PARA FLOTANTE 06 (ETAPA 6: ESTADO Y AVISO)
 // ============================================================================
 const ESTADOS_ORDEN_DEFAULT: CustomOrderStatus[] = [
-  { id: "st-1", name: "01 Pendiente", color: "amber", progress: 10 },
-  { id: "st-2", name: "02 En Diagnóstico", color: "blue", progress: 30 },
-  { id: "st-3", name: "03 En Reparación", color: "rose", progress: 60 },
-  { id: "st-4", name: "04 Listo para Entrega", color: "emerald", progress: 90 },
-  { id: "st-5", name: "05 Entregada", color: "purple", progress: 100 },
+  { id: "st-2", name: "Diagnóstico", color: "blue", progress: 30 },
+  { id: "st-3", name: "Reparación", color: "rose", progress: 60 },
+  { id: "st-4", name: "Listo", color: "emerald", progress: 90 },
+  { id: "st-5", name: "Entregada", color: "purple", progress: 100 },
 ];
 
 const COLORES_ESTADO_ETAPA6: {
@@ -249,63 +248,63 @@ const COLORES_ESTADO_ETAPA6: {
   text: string;
   dot: string;
 }[] = [
-  {
-    id: "blue",
-    label: "Azul",
-    bg: "bg-blue-500/20",
-    border: "border-blue-500/40",
-    text: "text-blue-300",
-    dot: "bg-blue-400",
-  },
-  {
-    id: "amber",
-    label: "Ámbar",
-    bg: "bg-amber-500/20",
-    border: "border-amber-500/40",
-    text: "text-amber-300",
-    dot: "bg-amber-400",
-  },
-  {
-    id: "purple",
-    label: "Morado",
-    bg: "bg-purple-500/20",
-    border: "border-purple-500/40",
-    text: "text-purple-300",
-    dot: "bg-purple-400",
-  },
-  {
-    id: "sky",
-    label: "Celeste",
-    bg: "bg-sky-500/20",
-    border: "border-sky-500/40",
-    text: "text-sky-300",
-    dot: "bg-sky-400",
-  },
-  {
-    id: "emerald",
-    label: "Esmeralda",
-    bg: "bg-emerald-500/20",
-    border: "border-emerald-500/40",
-    text: "text-emerald-300",
-    dot: "bg-emerald-400",
-  },
-  {
-    id: "pink",
-    label: "Rosa",
-    bg: "bg-pink-500/20",
-    border: "border-pink-500/40",
-    text: "text-pink-300",
-    dot: "bg-pink-400",
-  },
-  {
-    id: "rose",
-    label: "Coral",
-    bg: "bg-rose-500/20",
-    border: "border-rose-500/40",
-    text: "text-rose-300",
-    dot: "bg-rose-400",
-  },
-];
+    {
+      id: "blue",
+      label: "Azul",
+      bg: "bg-blue-500/20",
+      border: "border-blue-500/40",
+      text: "text-blue-300",
+      dot: "bg-blue-400",
+    },
+    {
+      id: "amber",
+      label: "Ámbar",
+      bg: "bg-amber-500/20",
+      border: "border-amber-500/40",
+      text: "text-amber-300",
+      dot: "bg-amber-400",
+    },
+    {
+      id: "purple",
+      label: "Morado",
+      bg: "bg-purple-500/20",
+      border: "border-purple-500/40",
+      text: "text-purple-300",
+      dot: "bg-purple-400",
+    },
+    {
+      id: "sky",
+      label: "Celeste",
+      bg: "bg-sky-500/20",
+      border: "border-sky-500/40",
+      text: "text-sky-300",
+      dot: "bg-sky-400",
+    },
+    {
+      id: "emerald",
+      label: "Esmeralda",
+      bg: "bg-emerald-500/20",
+      border: "border-emerald-500/40",
+      text: "text-emerald-300",
+      dot: "bg-emerald-400",
+    },
+    {
+      id: "pink",
+      label: "Rosa",
+      bg: "bg-pink-500/20",
+      border: "border-pink-500/40",
+      text: "text-pink-300",
+      dot: "bg-pink-400",
+    },
+    {
+      id: "rose",
+      label: "Coral",
+      bg: "bg-rose-500/20",
+      border: "border-rose-500/40",
+      text: "text-rose-300",
+      dot: "bg-rose-400",
+    },
+  ];
 
 function getEstiloColorEstado(colorId?: string) {
   return (
@@ -364,73 +363,73 @@ const VISTAS_INSPECCION: {
   shortLabel: string;
   zonas: { nombre: string; x: number; y: number }[];
 }[] = [
-  {
-    id: "frontal",
-    label: "Vista Frontal",
-    shortLabel: "Frontal",
-    zonas: [
-      { nombre: "Parabrisas delantero", x: 50, y: 26 },
-      { nombre: "Capó delantero", x: 50, y: 48 },
-      { nombre: "Faro delantero izquierdo", x: 24, y: 58 },
-      { nombre: "Faro delantero derecho", x: 76, y: 58 },
-      { nombre: "Parrilla central", x: 50, y: 62 },
-      { nombre: "Parachoques delantero", x: 50, y: 76 },
-    ],
-  },
-  {
-    id: "trasera",
-    label: "Vista Trasera",
-    shortLabel: "Trasera",
-    zonas: [
-      { nombre: "Parabrisas trasero", x: 50, y: 26 },
-      { nombre: "Maletera / Compuerta", x: 50, y: 50 },
-      { nombre: "Faro posterior izquierdo", x: 24, y: 56 },
-      { nombre: "Faro posterior derecho", x: 76, y: 56 },
-      { nombre: "Parachoques trasero", x: 50, y: 75 },
-      { nombre: "Tubo de escape / Difusor", x: 72, y: 84 },
-    ],
-  },
-  {
-    id: "lateral_izq",
-    label: "Lateral Izquierdo (Conductor)",
-    shortLabel: "Lat. Izquierdo",
-    zonas: [
-      { nombre: "Guardafango delantero izq.", x: 22, y: 56 },
-      { nombre: "Llanta / Aro delantero izq.", x: 23, y: 74 },
-      { nombre: "Espejo retrovisor izq.", x: 35, y: 42 },
-      { nombre: "Puerta delantera izq.", x: 43, y: 56 },
-      { nombre: "Puerta trasera izq.", x: 62, y: 56 },
-      { nombre: "Guardafango trasero izq.", x: 80, y: 55 },
-      { nombre: "Llanta / Aro trasero izq.", x: 77, y: 74 },
-    ],
-  },
-  {
-    id: "lateral_der",
-    label: "Lateral Derecho (Copiloto)",
-    shortLabel: "Lat. Derecho",
-    zonas: [
-      { nombre: "Guardafango trasero der.", x: 20, y: 55 },
-      { nombre: "Llanta / Aro trasero der.", x: 23, y: 74 },
-      { nombre: "Puerta trasera der.", x: 38, y: 56 },
-      { nombre: "Puerta delantera der.", x: 57, y: 56 },
-      { nombre: "Espejo retrovisor der.", x: 65, y: 42 },
-      { nombre: "Guardafango delantero der.", x: 78, y: 56 },
-      { nombre: "Llanta / Aro delantero der.", x: 77, y: 74 },
-    ],
-  },
-  {
-    id: "superior",
-    label: "Vista Superior (Planta)",
-    shortLabel: "Superior",
-    zonas: [
-      { nombre: "Capó (Vista superior)", x: 50, y: 20 },
-      { nombre: "Parabrisas (Vista superior)", x: 50, y: 35 },
-      { nombre: "Techo / Quemacocos", x: 50, y: 52 },
-      { nombre: "Medallón trasero", x: 50, y: 70 },
-      { nombre: "Tapa de maletera", x: 50, y: 84 },
-    ],
-  },
-];
+    {
+      id: "frontal",
+      label: "Vista Frontal",
+      shortLabel: "Frontal",
+      zonas: [
+        { nombre: "Parabrisas delantero", x: 50, y: 26 },
+        { nombre: "Capó delantero", x: 50, y: 48 },
+        { nombre: "Faro delantero izquierdo", x: 24, y: 58 },
+        { nombre: "Faro delantero derecho", x: 76, y: 58 },
+        { nombre: "Parrilla central", x: 50, y: 62 },
+        { nombre: "Parachoques delantero", x: 50, y: 76 },
+      ],
+    },
+    {
+      id: "trasera",
+      label: "Vista Trasera",
+      shortLabel: "Trasera",
+      zonas: [
+        { nombre: "Parabrisas trasero", x: 50, y: 26 },
+        { nombre: "Maletera / Compuerta", x: 50, y: 50 },
+        { nombre: "Faro posterior izquierdo", x: 24, y: 56 },
+        { nombre: "Faro posterior derecho", x: 76, y: 56 },
+        { nombre: "Parachoques trasero", x: 50, y: 75 },
+        { nombre: "Tubo de escape / Difusor", x: 72, y: 84 },
+      ],
+    },
+    {
+      id: "lateral_izq",
+      label: "Lateral Izquierdo (Conductor)",
+      shortLabel: "Lat. Izquierdo",
+      zonas: [
+        { nombre: "Guardafango delantero izq.", x: 22, y: 56 },
+        { nombre: "Llanta / Aro delantero izq.", x: 23, y: 74 },
+        { nombre: "Espejo retrovisor izq.", x: 35, y: 42 },
+        { nombre: "Puerta delantera izq.", x: 43, y: 56 },
+        { nombre: "Puerta trasera izq.", x: 62, y: 56 },
+        { nombre: "Guardafango trasero izq.", x: 80, y: 55 },
+        { nombre: "Llanta / Aro trasero izq.", x: 77, y: 74 },
+      ],
+    },
+    {
+      id: "lateral_der",
+      label: "Lateral Derecho (Copiloto)",
+      shortLabel: "Lat. Derecho",
+      zonas: [
+        { nombre: "Guardafango trasero der.", x: 20, y: 55 },
+        { nombre: "Llanta / Aro trasero der.", x: 23, y: 74 },
+        { nombre: "Puerta trasera der.", x: 38, y: 56 },
+        { nombre: "Puerta delantera der.", x: 57, y: 56 },
+        { nombre: "Espejo retrovisor der.", x: 65, y: 42 },
+        { nombre: "Guardafango delantero der.", x: 78, y: 56 },
+        { nombre: "Llanta / Aro delantero der.", x: 77, y: 74 },
+      ],
+    },
+    {
+      id: "superior",
+      label: "Vista Superior (Planta)",
+      shortLabel: "Superior",
+      zonas: [
+        { nombre: "Capó (Vista superior)", x: 50, y: 20 },
+        { nombre: "Parabrisas (Vista superior)", x: 50, y: 35 },
+        { nombre: "Techo / Quemacocos", x: 50, y: 52 },
+        { nombre: "Medallón trasero", x: 50, y: 70 },
+        { nombre: "Tapa de maletera", x: 50, y: 84 },
+      ],
+    },
+  ];
 
 const TIPOS_HALLAZGO = [
   { id: "Rayón", color: "bg-amber-500 text-black border-amber-300" },
@@ -616,6 +615,9 @@ function esPropuestaAprobadaOrden(o?: UnifiedOrder | null): boolean {
     qs === "pagado" ||
     qs === "facturado" ||
     st.includes("aprob") ||
+    st === "en proceso" ||
+    st === "trabajando" ||
+    st.includes("reparac") ||
     st === "en_caja" ||
     st === "pagado" ||
     st === "facturado" ||
@@ -812,7 +814,7 @@ export default function TallerPanel() {
             setIsPanelSelectorAdmin(true);
           }
         }
-      } catch {}
+      } catch { }
     }
     fetch("/api/auth/me")
       .then((response) => response.json())
@@ -822,7 +824,7 @@ export default function TallerPanel() {
           setIsPanelSelectorAdmin(
             Boolean(
               isProtectedAdminEmail(user?.email) &&
-                (user?.role?.toUpperCase() === "ROOT" || user?.isSuperAdmin)
+              (user?.role?.toUpperCase() === "ROOT" || user?.isSuperAdmin)
             )
           );
         }
@@ -871,7 +873,7 @@ export default function TallerPanel() {
           vehicle: vehMatch || null,
         })
       );
-    } catch {}
+    } catch { }
     router.push(`/taller/nueva-orden?editId=${encodeURIComponent(autoParaEditar.id)}`);
   }, [clientesCatalogo, router]);
 
@@ -954,6 +956,11 @@ export default function TallerPanel() {
       const data = await res.json();
       if (data.success) {
         mostrarToast(`Propuesta aprobada para ${target.plate}. Orden lista para trabajar`, "ok");
+        if (typeof window !== "undefined") {
+          try {
+            localStorage.setItem("taller_orden_activa_id", target.id);
+          } catch { }
+        }
         const updated: UnifiedOrder = {
           ...target,
           quoteStatus: "Aprobado",
@@ -980,7 +987,7 @@ export default function TallerPanel() {
     setFotosRecepcion(fresca.receptionPhotos || []);
     try {
       localStorage.setItem("taller_orden_activa_id", fresca.id);
-    } catch {}
+    } catch { }
     setMostrarModalAutosAtencion(false);
     mostrarToast(`Atendiendo a ${fresca.client} (${fresca.plate})`);
   };
@@ -1036,7 +1043,7 @@ export default function TallerPanel() {
           items: Array.isArray(auto.items)
             ? auto.items
             : Array.isArray(auto.services)
-            ? auto.services.map((s: string, idx: number) => ({
+              ? auto.services.map((s: string, idx: number) => ({
                 id: `srv_${idx}`,
                 name: s,
                 type: "SERVICE",
@@ -1044,7 +1051,7 @@ export default function TallerPanel() {
                 qty: 1,
                 status: "Listo",
               }))
-            : [],
+              : [],
           mechanic: auto.mechanic || "Taller",
           mileage: Number(auto.mileage) || null,
           nextOilChangeKm: null,
@@ -1097,7 +1104,7 @@ export default function TallerPanel() {
             } else {
               localStorage.removeItem("taller_orden_activa_id");
             }
-          } catch {}
+          } catch { }
         }
       }
       return restantes;
@@ -1312,7 +1319,7 @@ export default function TallerPanel() {
   const [etapa6EstadosLista, setEtapa6EstadosLista] = useState<CustomOrderStatus[]>(
     ESTADOS_ORDEN_DEFAULT
   );
-  const [etapa6EstadoSeleccionado, setEtapa6EstadoSeleccionado] = useState<string>("En Reparación");
+  const [etapa6EstadoSeleccionado, setEtapa6EstadoSeleccionado] = useState<string>("Diagnóstico");
   const [etapa6ColorSeleccionado, setEtapa6ColorSeleccionado] =
     useState<CustomOrderStatus["color"]>("sky");
   const [etapa6ProgresoSeleccionado, setEtapa6ProgresoSeleccionado] = useState<number>(65);
@@ -1590,7 +1597,7 @@ export default function TallerPanel() {
         if (data.history) setHistorialVehiculo(data.history);
         setOrdenesHistorialVehiculo(Array.isArray(data.orders) ? data.orders : []);
       })
-      .catch(() => {});
+      .catch(() => { });
     return () => {
       cancel = true;
     };
@@ -2092,9 +2099,8 @@ export default function TallerPanel() {
       ordenActiva?.plate ||
       "POR-ASIGNAR";
     const descVeh =
-      `${etapa2Marca || vehiculoEncontrado?.brand || ""} ${
-        etapa2Modelo || vehiculoEncontrado?.model || ""
-      } ${etapa2Anio || vehiculoEncontrado?.year || ""}`.trim() ||
+      `${etapa2Marca || vehiculoEncontrado?.brand || ""} ${etapa2Modelo || vehiculoEncontrado?.model || ""
+        } ${etapa2Anio || vehiculoEncontrado?.year || ""}`.trim() ||
       ordenActiva?.vehicle ||
       "Vehículo en Recepción";
     const kmVeh =
@@ -2108,26 +2114,26 @@ export default function TallerPanel() {
       etapa3Hallazgos.length === 0
         ? `<tr><td colspan="4" style="text-align:center;padding:14px;color:#555;">Sin daños ni hallazgos exteriores registrados en las 5 vistas.</td></tr>`
         : etapa3Hallazgos
-            .map(
-              (h, idx) => `
+          .map(
+            (h, idx) => `
           <tr>
             <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;font-weight:700;">#${idx + 1}</td>
             <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;">${h.vistaLabel}</td>
             <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;font-weight:600;">${h.tipo} — ${h.zona}</td>
             <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;">${h.descripcion}</td>
           </tr>`
-            )
-            .join("");
+          )
+          .join("");
 
     const inventarioBadgesHtml =
       etapa2InventarioTrae.length === 0
         ? `<span style="color:#666;">Sin accesorios marcados</span>`
         : etapa2InventarioTrae
-            .map(
-              (it) =>
-                `<span style="display:inline-block;margin:3px 5px 3px 0;padding:4px 9px;background:#f3f4f6;border:1px solid #d1d5db;border-radius:6px;font-size:11px;">✓ ${it}</span>`
-            )
-            .join("");
+          .map(
+            (it) =>
+              `<span style="display:inline-block;margin:3px 5px 3px 0;padding:4px 9px;background:#f3f4f6;border:1px solid #d1d5db;border-radius:6px;font-size:11px;">✓ ${it}</span>`
+          )
+          .join("");
 
     const todasLasFotos = Array.from(
       new Set([...fotosRecepcion, ...(ordenActiva?.evidencePhotos || [])])
@@ -2137,21 +2143,20 @@ export default function TallerPanel() {
         ? `<p style="font-size:12px;color:#666;">Sin fotografías adjuntas en este momento.</p>`
         : `<div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:8px;">
             ${todasLasFotos
-              .map(
-                (url, i) => `
+          .map(
+            (url, i) => `
               <div style="border:1px solid #d1d5db;border-radius:8px;padding:4px;width:145px;">
                 <img src="${url}" style="width:100%;height:95px;object-fit:cover;border-radius:6px;" />
                 <div style="font-size:10px;color:#555;text-align:center;margin-top:3px;">Evidencia #${i + 1}</div>
               </div>`
-              )
-              .join("")}
+          )
+          .join("")}
           </div>`;
 
     const resumenPorVistaHtml = VISTAS_INSPECCION.map((v) => {
       const count = etapa3Hallazgos.filter((h) => h.vista === v.id).length;
       return `
-        <div style="flex:1;min-width:110px;border:1px solid #d1d5db;border-radius:8px;padding:8px;text-align:center;background:${
-          count > 0 ? "#fffbeb" : "#f9fafb"
+        <div style="flex:1;min-width:110px;border:1px solid #d1d5db;border-radius:8px;padding:8px;text-align:center;background:${count > 0 ? "#fffbeb" : "#f9fafb"
         };">
           <div style="font-size:11px;font-weight:700;color:#111827;">${v.shortLabel}</div>
           <div style="font-size:12px;color:${count > 0 ? "#d97706" : "#059669"};margin-top:2px;font-weight:600;">
@@ -2238,21 +2243,19 @@ export default function TallerPanel() {
               ${hallazgosRowsHtml}
             </tbody>
           </table>
-          ${
-            etapa3NotasGenerales
-              ? `<p style="font-size:12px;margin:10px 0 0;"><strong>Notas de inspección:</strong> ${etapa3NotasGenerales}</p>`
-              : ""
-          }
+          ${etapa3NotasGenerales
+        ? `<p style="font-size:12px;margin:10px 0 0;"><strong>Notas de inspección:</strong> ${etapa3NotasGenerales}</p>`
+        : ""
+      }
         </div>
 
         <div class="section">
           <div class="section-title">3. Inventario de lo que trae el vehículo</div>
           <div>${inventarioBadgesHtml}</div>
-          ${
-            etapa2ObjetosValor
-              ? `<p style="font-size:12px;margin:8px 0 0;"><strong>Pertenencias / Objetos de valor:</strong> ${etapa2ObjetosValor}</p>`
-              : ""
-          }
+          ${etapa2ObjetosValor
+        ? `<p style="font-size:12px;margin:8px 0 0;"><strong>Pertenencias / Objetos de valor:</strong> ${etapa2ObjetosValor}</p>`
+        : ""
+      }
         </div>
 
         <div class="section">
@@ -2398,20 +2401,35 @@ export default function TallerPanel() {
       ordenActiva.clientPhone && ordenActiva.clientPhone !== "S/N"
         ? ordenActiva.clientPhone
         : clienteEncontrado?.phone && clienteEncontrado.phone !== "S/N"
-        ? clienteEncontrado.phone
-        : ""
+          ? clienteEncontrado.phone
+          : ""
     );
     setEtapa6ClienteEmail(
       ordenActiva.clientEmail || clienteEncontrado?.email || ""
     );
 
+    const normalizarUnaPalabra = (nombre: string): string => {
+      const n = (nombre || "").trim();
+      const nLower = n.toLowerCase();
+      if (!n || nLower.includes("pendiente")) return "";
+      if (nLower.includes("diagn")) return "Diagnóstico";
+      if (nLower.includes("repara")) return "Reparación";
+      if (nLower.includes("listo")) return "Listo";
+      if (nLower.includes("entregad")) return "Entregada";
+      // Si es un estado personalizado, tomar la palabra principal sin números
+      return n.replace(/^\d+\s*(?:En\s+)?/i, "").split(/\s+/)[0] || n;
+    };
+
     if (Array.isArray(ordenActiva.customStatuses) && ordenActiva.customStatuses.length > 0) {
       const mergedMap = new Map<string, CustomOrderStatus>();
       ESTADOS_ORDEN_DEFAULT.forEach((s) => mergedMap.set(s.name.toLowerCase(), s));
       ordenActiva.customStatuses.forEach((s) => {
-        if (s?.name) mergedMap.set(s.name.toLowerCase(), s);
+        const norm = normalizarUnaPalabra(s?.name || "");
+        if (norm) {
+          mergedMap.set(norm.toLowerCase(), { ...s, name: norm });
+        }
       });
-      setEtapa6EstadosLista(Array.from(mergedMap.values()));
+      setEtapa6EstadosLista(Array.from(mergedMap.values()).filter((s) => !s.name.toLowerCase().includes("pendiente")));
     } else {
       setEtapa6EstadosLista(ESTADOS_ORDEN_DEFAULT);
     }
@@ -2423,12 +2441,9 @@ export default function TallerPanel() {
     )}&pin=${encodeURIComponent(pinOrden)}`;
 
     setEtapa6MensajeAviso(
-      `Hola *${ordenActiva.client || "Cliente"}*, te informamos sobre tu vehículo *${
-        ordenActiva.vehicle
-      }* (${ordenActiva.plate}).\n\n📌 *Nuevo estado de tu orden #${
-        ordenActiva.orderNumber
-      }:* ${estadoOrden}\n\n🔎 *Revisa el seguimiento en línea en tiempo real:*\n${trackingLink}\n• *N° de Orden:* ${
-        ordenActiva.orderNumber
+      `Hola *${ordenActiva.client || "Cliente"}*, te informamos sobre tu vehículo *${ordenActiva.vehicle
+      }* (${ordenActiva.plate}).\n\n📌 *Nuevo estado de tu orden #${ordenActiva.orderNumber
+      }:* ${estadoOrden}\n\n🔎 *Revisa el seguimiento en línea en tiempo real:*\n${trackingLink}\n• *N° de Orden:* ${ordenActiva.orderNumber
       }\n• *PIN de acceso:* ${pinOrden}`
     );
 
@@ -2451,14 +2466,11 @@ export default function TallerPanel() {
         : "• Mantenimiento y revisión técnica general";
     setEtapa7InformeTecnico(
       ordenActiva.technicalReportText ||
-        `INFORME TÉCNICO DE ENTREGA - ORDEN #${ordenActiva.orderNumber}\nVehículo: ${
-          ordenActiva.vehicle
-        } (${ordenActiva.plate})\nTécnico responsable: ${
-          ordenActiva.mechanic
-        }\n\nTrabajos realizados:\n${serviciosResumen}\n\nObservación final: El vehículo fue sometido a control de calidad y se entrega en óptimas condiciones de operación. Próximo mantenimiento sugerido a los ${
-          ordenActiva.nextOilChangeKm ||
-          (ordenActiva.mileage ? ordenActiva.mileage + 5000 : 55000)
-        } km.`
+      `INFORME TÉCNICO DE ENTREGA - ORDEN #${ordenActiva.orderNumber}\nVehículo: ${ordenActiva.vehicle
+      } (${ordenActiva.plate})\nTécnico responsable: ${ordenActiva.mechanic
+      }\n\nTrabajos realizados:\n${serviciosResumen}\n\nObservación final: El vehículo fue sometido a control de calidad y se entrega en óptimas condiciones de operación. Próximo mantenimiento sugerido a los ${ordenActiva.nextOilChangeKm ||
+      (ordenActiva.mileage ? ordenActiva.mileage + 5000 : 55000)
+      } km.`
     );
     setEtapa7InformeAdjuntoUrl(ordenActiva.technicalReportUrl || null);
     setEtapa7FirmaDataUrl(ordenActiva.deliverySignatureUrl || null);
@@ -2907,7 +2919,7 @@ export default function TallerPanel() {
         setEtapa4QuoteStatus(data.activeOrder.quoteStatus || statusEnviar);
         mostrarToast(
           data.message ||
-            `Presupuesto ${data.quoteNumber} actualizado ($${calculosPresupuestoEtapa4.total.toFixed(2)})`
+          `Presupuesto ${data.quoteNumber} actualizado ($${calculosPresupuestoEtapa4.total.toFixed(2)})`
         );
         if (!forzarEstado) {
           setMostrarFlotanteEtapa4(false);
@@ -3139,8 +3151,8 @@ export default function TallerPanel() {
       const mimeType = MediaRecorder.isTypeSupported("audio/webm")
         ? "audio/webm"
         : MediaRecorder.isTypeSupported("audio/mp4")
-        ? "audio/mp4"
-        : "audio/ogg";
+          ? "audio/mp4"
+          : "audio/ogg";
 
       const recorder = new MediaRecorder(stream, { mimeType });
       audioChunksRef.current = [];
@@ -3406,7 +3418,7 @@ Hola *${clienteNom}*, actualización de su vehículo *${vehiculoDesc}* (Placa: *
     ]
   );
 
-    const sincronizarEtapa6EnNeon = async (partial: {
+  const sincronizarEtapa6EnNeon = async (partial: {
     status?: string;
     statusColor?: CustomOrderStatus["color"];
     progress?: number;
@@ -4092,7 +4104,7 @@ Hola *${clienteNom}*, actualización de su vehículo *${vehiculoDesc}* (Placa: *
             setAutosEnPista(data.autosEnPista);
           }
         }
-      } catch {}
+      } catch { }
     };
     const pollTimer = setInterval(sincronizarEstado, 4000);
     const onFocusOrVisible = () => {
@@ -4288,8 +4300,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
             });
             if (!silent) {
               mostrarToast(
-                `Orden activa ${data.activeOrder.orderNumber} seleccionada (${
-                  data.vehicle?.plate || q
+                `Orden activa ${data.activeOrder.orderNumber} seleccionada (${data.vehicle?.plate || q
                 })`
               );
             }
@@ -5335,8 +5346,8 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                   const rawClient = auto.client || (auto as any).customer?.name || clienteCatalogo?.name || "";
                   const nombreClienteDisplay =
                     rawClient &&
-                    !rawClient.toLowerCase().includes("consumidor final") &&
-                    !rawClient.toLowerCase().includes("cliente mostrador")
+                      !rawClient.toLowerCase().includes("consumidor final") &&
+                      !rawClient.toLowerCase().includes("cliente mostrador")
                       ? rawClient
                       : "";
                   return (
@@ -5372,11 +5383,10 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                         handleAbrirEditarOrden(auto);
                       }}
                       aria-pressed={esActivo}
-                      className={`snap-start shrink-0 w-full min-h-[76px] sm:min-h-[68px] px-3.5 py-2.5 sm:px-3 sm:py-2 rounded-2xl sm:rounded-xl border text-left flex items-center justify-between gap-3 transition-colors ${
-                        esActivo
-                          ? "bg-blue-50/80 dark:bg-blue-500/10 border-blue-300 dark:border-blue-500/30 shadow-sm"
-                          : "bg-white dark:bg-[#111113] border-zinc-200 dark:border-white/10"
-                      }`}
+                      className={`snap-start shrink-0 w-full min-h-[76px] sm:min-h-[68px] px-3.5 py-2.5 sm:px-3 sm:py-2 rounded-2xl sm:rounded-xl border text-left flex items-center justify-between gap-3 transition-colors ${esActivo
+                        ? "bg-blue-50/80 dark:bg-blue-500/10 border-blue-300 dark:border-blue-500/30 shadow-sm"
+                        : "bg-white dark:bg-[#111113] border-zinc-200 dark:border-white/10"
+                        }`}
                     >
                       <span
                         role={fotoVehiculo ? "button" : undefined}
@@ -5396,9 +5406,8 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                             });
                           }
                         }}
-                        className={`relative w-16 h-14 sm:w-14 sm:h-12 rounded-xl sm:rounded-lg shrink-0 bg-blue-100/60 dark:bg-white/5 text-blue-600 dark:text-zinc-400 flex items-center justify-center overflow-hidden border border-blue-200/50 dark:border-transparent group/thumb ${
-                          fotoVehiculo ? "cursor-zoom-in hover:ring-2 hover:ring-blue-500/80 hover:scale-[1.04] transition-all" : ""
-                        }`}
+                        className={`relative w-16 h-14 sm:w-14 sm:h-12 rounded-xl sm:rounded-lg shrink-0 bg-blue-100/60 dark:bg-white/5 text-blue-600 dark:text-zinc-400 flex items-center justify-center overflow-hidden border border-blue-200/50 dark:border-transparent group/thumb ${fotoVehiculo ? "cursor-zoom-in hover:ring-2 hover:ring-blue-500/80 hover:scale-[1.04] transition-all" : ""
+                          }`}
                       >
                         <svg
                           className="w-8 h-8 sm:w-7 sm:h-7"
@@ -5460,7 +5469,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                         title={
                           autosEnPista.length > 1
                             ? `Siguiente auto en atención (${index + 1} de ${autosEnPista.length})`
-                            : "Ver todos los autos en atención"
+                            : "Siguiente auto"
                         }
                         onClick={(e) => {
                           e.stopPropagation();
@@ -5472,8 +5481,6 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                               left: nextIndex * (container.clientWidth + 8),
                               behavior: "smooth",
                             });
-                          } else {
-                            setMostrarModalAutosAtencion(true);
                           }
                         }}
                         className="p-2 sm:p-2.5 rounded-xl text-zinc-400 hover:text-blue-600 dark:text-zinc-500 dark:hover:text-blue-400 hover:bg-blue-50/70 dark:hover:bg-blue-500/10 active:scale-90 transition-all duration-200 cursor-pointer shrink-0 group/flecha flex items-center justify-center select-none"
@@ -5506,11 +5513,10 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
 
                     return (
                       <div
-                        className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl sm:rounded-lg border text-xs font-medium ${
-                          estaPausada || !propuestaAprobada
-                            ? "bg-amber-500/10 border-amber-500/25 text-amber-700 dark:text-amber-400"
-                            : "bg-emerald-500/10 border-emerald-500/25 text-emerald-700 dark:text-emerald-400"
-                        }`}
+                        className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl sm:rounded-lg border text-xs font-medium ${estaPausada || !propuestaAprobada
+                          ? "bg-amber-500/10 border-amber-500/25 text-amber-700 dark:text-amber-400"
+                          : "bg-emerald-500/10 border-emerald-500/25 text-emerald-700 dark:text-emerald-400"
+                          }`}
                       >
                         <span className="text-zinc-700 dark:text-zinc-300 whitespace-nowrap">
                           Ingreso:{" "}
@@ -5540,8 +5546,8 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                         ) : !propuestaAprobada ? (
                           <button
                             type="button"
-                            onClick={() => setModalPresupuestoPdfAbierto(true)}
-                            title="Propuesta en espera de aprobación (clic para ver propuesta)"
+                            onClick={(e) => handleAprobarPropuestaDirecta(ordenActiva, e)}
+                            title="Semáforo: Clic para pasar a Trabajando"
                             className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/35 text-amber-800 dark:text-amber-300 font-bold transition-all cursor-pointer active:scale-95 shrink-0"
                           >
                             <span className="w-2.5 h-2.5 sm:w-2 sm:h-2 rounded-full bg-amber-500 dark:bg-amber-400 animate-pulse shrink-0 shadow-xs" />
@@ -5688,36 +5694,20 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
           {etapaActiva === 4 && (
             <div className="w-full space-y-4 animate-fade-in">
               <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-white/[0.03] border border-zinc-200 dark:border-white/[0.08] space-y-4 shadow-sm dark:shadow-xl">
-                {/* Cabecera */}
-                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-200 dark:border-white/[0.08] pb-3">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-400 flex items-center justify-center text-base">
-                      ✍️
-                    </div>
-                    <div>
-                      <h4 className="text-lg sm:text-xl font-normal text-zinc-900 dark:text-white">
-                        Firma
-                      </h4>
-                      <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                        {ordenActiva?.plate ? `Placa: ${ordenActiva.plate}` : "Orden en proceso"} {ordenActiva?.vehicle ? `• ${ordenActiva.vehicle}` : ""}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setModalPresupuestoPdfAbierto(true)}
-                      className="h-8 sm:h-9 px-3 sm:px-3.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/30 text-xs sm:text-sm font-normal flex items-center gap-1.5 transition-all shadow-xs cursor-pointer active:scale-95"
-                      title="Ver Propuesta de Orden"
-                    >
-                      <svg className="w-4 h-4 text-red-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 13h6m-6 4h4" />
-                      </svg>
-                      <span>Propuesta</span>
-                    </button>
-                  </div>
+                {/* Cabecera: Botón Propuesta */}
+                <div className="flex items-center justify-start gap-3 border-b border-zinc-200 dark:border-white/[0.08] pb-3">
+                  <button
+                    type="button"
+                    onClick={() => setModalPresupuestoPdfAbierto(true)}
+                    className="h-8 sm:h-9 px-3 sm:px-3.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/30 text-xs sm:text-sm font-normal flex items-center gap-1.5 transition-all shadow-xs cursor-pointer active:scale-95"
+                    title="Ver Propuesta de Orden"
+                  >
+                    <svg className="w-4 h-4 text-red-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 13h6m-6 4h4" />
+                    </svg>
+                    <span>Propuesta</span>
+                  </button>
                 </div>
 
                 {/* Contenido en 2 columnas */}
@@ -5729,35 +5719,38 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                       <span className="text-xs font-normal text-zinc-700 dark:text-zinc-300 block">
                         Estado:
                       </span>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
-                        {etapa6EstadosLista.slice(0, 5).map((st, idx) => {
-                          const sel =
-                            etapa6EstadoSeleccionado.toLowerCase() === st.name.toLowerCase() ||
-                            etapa6EstadoSeleccionado.toLowerCase().includes(st.name.toLowerCase().replace(/^\d+\s*/, ""));
+                      <div className="grid grid-cols-2 gap-2 sm:gap-2.5">
+                        {etapa6EstadosLista
+                          .filter((st) => !st.name.toLowerCase().includes("pendiente"))
+                          .slice(0, 4)
+                          .map((st) => {
+                            const sel =
+                              etapa6EstadoSeleccionado.toLowerCase() === st.name.toLowerCase() ||
+                              etapa6EstadoSeleccionado.toLowerCase().includes(st.name.toLowerCase().replace(/^\d+\s*/, ""));
 
-                          const coloresActivoPorIndice = [
-                            "bg-amber-500/25 text-amber-800 dark:text-amber-200 border-amber-400/60 ring-1 ring-amber-400/40 font-normal shadow-sm",
-                            "bg-blue-500/25 text-blue-800 dark:text-blue-200 border-blue-400/60 ring-1 ring-blue-400/40 font-normal shadow-sm",
-                            "bg-rose-500/25 text-rose-800 dark:text-rose-200 border-rose-400/60 ring-1 ring-rose-400/40 font-normal shadow-sm",
-                            "bg-emerald-500/25 text-emerald-800 dark:text-emerald-200 border-emerald-400/60 ring-1 ring-emerald-400/40 font-normal shadow-sm",
-                            "bg-purple-500/25 text-purple-800 dark:text-purple-200 border-purple-400/60 ring-1 ring-purple-400/40 font-normal shadow-sm",
-                          ];
-                          const estiloActivo = coloresActivoPorIndice[idx % coloresActivoPorIndice.length];
-                          const estiloPlomo = "bg-white dark:bg-white/[0.03] hover:bg-zinc-100 dark:hover:bg-white/[0.07] text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200 border border-zinc-200 dark:border-white/10 font-normal";
+                            const colorMap: Record<string, string> = {
+                              blue: "bg-blue-500/25 text-blue-800 dark:text-blue-200 border-blue-400/60 ring-1 ring-blue-400/40 font-medium shadow-sm",
+                              rose: "bg-rose-500/25 text-rose-800 dark:text-rose-200 border-rose-400/60 ring-1 ring-rose-400/40 font-medium shadow-sm",
+                              emerald: "bg-emerald-500/25 text-emerald-800 dark:text-emerald-200 border-emerald-400/60 ring-1 ring-emerald-400/40 font-medium shadow-sm",
+                              purple: "bg-purple-500/25 text-purple-800 dark:text-purple-200 border-purple-400/60 ring-1 ring-purple-400/40 font-medium shadow-sm",
+                              amber: "bg-amber-500/25 text-amber-800 dark:text-amber-200 border-amber-400/60 ring-1 ring-amber-400/40 font-medium shadow-sm",
+                            };
+                            const estiloActivo = colorMap[st.color] || colorMap.blue;
+                            const estiloPlomo = "bg-white dark:bg-white/[0.03] hover:bg-zinc-100 dark:hover:bg-white/[0.07] text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white border border-zinc-200 dark:border-white/10 font-normal";
 
-                          return (
-                            <button
-                              key={st.id}
-                              type="button"
-                              onClick={() => handleSeleccionarEstadoEtapa6(st)}
-                              className={`px-2 py-1.5 rounded-lg text-xs border transition-all cursor-pointer text-center active:scale-95 ${
-                                sel ? estiloActivo : estiloPlomo
-                              }`}
-                            >
-                              {st.name}
-                            </button>
-                          );
-                        })}
+                            return (
+                              <button
+                                key={st.id}
+                                type="button"
+                                onClick={() => handleSeleccionarEstadoEtapa6(st)}
+                                className={`py-2.5 px-3 min-h-[42px] rounded-xl text-xs sm:text-sm border transition-all cursor-pointer text-center flex items-center justify-center active:scale-95 ${
+                                  sel ? estiloActivo : estiloPlomo
+                                }`}
+                              >
+                                {st.name}
+                              </button>
+                            );
+                          })}
                       </div>
                     </div>
                   </div>
@@ -5774,11 +5767,10 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                               setModoFirma("ACEPTACION");
                               limpiarCanvasFirmaEtapa7();
                             }}
-                            className={`px-3 py-1 rounded-md text-xs font-normal transition-all cursor-pointer ${
-                              modoFirma === "ACEPTACION"
-                                ? "bg-blue-600 text-white shadow-xs"
-                                : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
-                            }`}
+                            className={`px-3 py-1 rounded-md text-xs font-normal transition-all cursor-pointer ${modoFirma === "ACEPTACION"
+                              ? "bg-blue-600 text-white shadow-xs"
+                              : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
+                              }`}
                           >
                             Presupuesto
                           </button>
@@ -5788,11 +5780,10 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                               setModoFirma("ENTREGA");
                               limpiarCanvasFirmaEtapa7();
                             }}
-                            className={`px-3 py-1 rounded-md text-xs font-normal transition-all cursor-pointer ${
-                              modoFirma === "ENTREGA"
-                                ? "bg-teal-600 text-white shadow-xs"
-                                : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
-                            }`}
+                            className={`px-3 py-1 rounded-md text-xs font-normal transition-all cursor-pointer ${modoFirma === "ENTREGA"
+                              ? "bg-teal-600 text-white shadow-xs"
+                              : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
+                              }`}
                           >
                             Entrega
                           </button>
@@ -5852,8 +5843,8 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                                       {firmaSolicitadaPanel
                                         ? "📲 Esperando firma del cliente en su Panel Cliente..."
                                         : modoFirma === "ACEPTACION"
-                                        ? "[Firma presupuesto]"
-                                        : "[Firma entrega]"}
+                                          ? "[Firma presupuesto]"
+                                          : "[Firma entrega]"}
                                     </div>
                                   )}
                                 </>
@@ -5875,11 +5866,10 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                                 type="button"
                                 onClick={handleEnviarWhatsAppAceptacionEtapa7}
                                 disabled={guardandoEtapa7}
-                                className={`h-9 px-3 rounded-xl border text-xs font-normal transition-all cursor-pointer flex items-center gap-1.5 active:scale-95 ${
-                                  copiadoLinkFirmaEtapa7 || firmaSolicitadaPanel
-                                    ? "bg-blue-50 border-blue-300 text-blue-700 dark:bg-blue-500/20 dark:border-blue-500/40 dark:text-blue-300"
-                                    : "bg-zinc-100 hover:bg-zinc-200 border-zinc-200 text-zinc-700 dark:bg-white/5 dark:hover:bg-white/10 dark:border-white/10 dark:text-zinc-300"
-                                }`}
+                                className={`h-9 px-3 rounded-xl border text-xs font-normal transition-all cursor-pointer flex items-center gap-1.5 active:scale-95 ${copiadoLinkFirmaEtapa7 || firmaSolicitadaPanel
+                                  ? "bg-blue-50 border-blue-300 text-blue-700 dark:bg-blue-500/20 dark:border-blue-500/40 dark:text-blue-300"
+                                  : "bg-zinc-100 hover:bg-zinc-200 border-zinc-200 text-zinc-700 dark:bg-white/5 dark:hover:bg-white/10 dark:border-white/10 dark:text-zinc-300"
+                                  }`}
                                 title="Habilita la firma remota directamente en el Panel del Cliente (/cliente/taller)"
                               >
                                 <span>
@@ -6033,9 +6023,8 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                       "Filtro"}
                   </span>
                   <svg
-                    className={`w-4 h-4 text-zinc-400 transition-transform ${
-                      mostrarMenuFiltroFlotante ? "rotate-180" : ""
-                    }`}
+                    className={`w-4 h-4 text-zinc-400 transition-transform ${mostrarMenuFiltroFlotante ? "rotate-180" : ""
+                      }`}
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -6059,11 +6048,10 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                           setFiltroFlotante(opt.id);
                           setMostrarMenuFiltroFlotante(false);
                         }}
-                        className={`w-full text-left px-4 py-2 text-xs font-medium flex items-center justify-between transition-colors cursor-pointer ${
-                          filtroFlotante === opt.id
-                            ? "bg-white/10 text-white"
-                            : "text-zinc-300 hover:bg-white/5"
-                        }`}
+                        className={`w-full text-left px-4 py-2 text-xs font-medium flex items-center justify-between transition-colors cursor-pointer ${filtroFlotante === opt.id
+                          ? "bg-white/10 text-white"
+                          : "text-zinc-300 hover:bg-white/5"
+                          }`}
                       >
                         <span>{opt.label}</span>
                         {filtroFlotante === opt.id && <span>✓</span>}
@@ -6121,19 +6109,17 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                           onClick={() =>
                             handleToggleServicioPreset(tarjetaSeleccionadaObj.title, preset)
                           }
-                          className={`p-3.5 rounded-2xl border text-left transition-all flex items-center justify-between gap-3 cursor-pointer active:scale-[0.98] ${
-                            seleccionado
-                              ? "bg-emerald-500/15 border-emerald-500/40 text-white"
-                              : "bg-white/[0.03] hover:bg-white/[0.08] border-white/[0.08] text-zinc-200"
-                          }`}
+                          className={`p-3.5 rounded-2xl border text-left transition-all flex items-center justify-between gap-3 cursor-pointer active:scale-[0.98] ${seleccionado
+                            ? "bg-emerald-500/15 border-emerald-500/40 text-white"
+                            : "bg-white/[0.03] hover:bg-white/[0.08] border-white/[0.08] text-zinc-200"
+                            }`}
                         >
                           <div className="flex items-center gap-2.5 min-w-0">
                             <div
-                              className={`w-5 h-5 rounded-md flex items-center justify-center text-xs border shrink-0 ${
-                                seleccionado
-                                  ? "bg-emerald-500 border-emerald-400 text-black font-bold"
-                                  : "border-zinc-600 bg-black/40 text-transparent"
-                              }`}
+                              className={`w-5 h-5 rounded-md flex items-center justify-center text-xs border shrink-0 ${seleccionado
+                                ? "bg-emerald-500 border-emerald-400 text-black font-bold"
+                                : "border-zinc-600 bg-black/40 text-transparent"
+                                }`}
                             >
                               ✓
                             </div>
@@ -6170,11 +6156,10 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                       <div
                         key={prod.id}
                         onClick={() => handleAgregarRepuestoAOrden(prod)}
-                        className={`p-3 rounded-2xl border transition-all flex items-center justify-between gap-3 cursor-pointer active:scale-[0.98] ${
-                          enOrden
-                            ? "bg-emerald-500/15 border-emerald-500/40"
-                            : "bg-white/[0.03] hover:bg-white/[0.08] border-white/[0.08]"
-                        }`}
+                        className={`p-3 rounded-2xl border transition-all flex items-center justify-between gap-3 cursor-pointer active:scale-[0.98] ${enOrden
+                          ? "bg-emerald-500/15 border-emerald-500/40"
+                          : "bg-white/[0.03] hover:bg-white/[0.08] border-white/[0.08]"
+                          }`}
                       >
                         <div className="flex items-center gap-3 min-w-0">
                           {prod.imageUrl ? (
@@ -6200,8 +6185,8 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                                   prod.stock > prod.minStock
                                     ? "text-emerald-400"
                                     : prod.stock > 0
-                                    ? "text-amber-400"
-                                    : "text-rose-400"
+                                      ? "text-amber-400"
+                                      : "text-rose-400"
                                 }
                               >
                                 Stock: {prod.stock}
@@ -6392,8 +6377,8 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
         </div>
       )}
 
-      
-      
+
+
 
       {/* Modal de Advertencia: Orden Ya Pasada a POS */}
       {modalYaPasadaPos && ordenActiva && (
@@ -6462,11 +6447,11 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
         orden={
           ordenActiva
             ? {
-                ...ordenActiva,
-                workshopName: "Auto / G",
-                items: ordenActiva.items && ordenActiva.items.length > 0 ? ordenActiva.items : etapa4Items || [],
-                quoteSignatureUrl: etapa7FirmaDataUrl || ordenActiva.quoteSignatureUrl,
-              }
+              ...ordenActiva,
+              workshopName: "Auto / G",
+              items: ordenActiva.items && ordenActiva.items.length > 0 ? ordenActiva.items : etapa4Items || [],
+              quoteSignatureUrl: etapa7FirmaDataUrl || ordenActiva.quoteSignatureUrl,
+            }
             : null
         }
         onCerrar={() => setModalPresupuestoPdfAbierto(false)}
@@ -6493,8 +6478,8 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                   {modalImpresionDoc === "PDF"
                     ? "Vista Previa: Orden de Trabajo en PDF"
                     : modalImpresionDoc === "TICKET"
-                    ? "Vista Previa: Ticket Térmico POS (80mm)"
-                    : "Vista Previa: Etiqueta Adhesiva QR"}
+                      ? "Vista Previa: Ticket Térmico POS (80mm)"
+                      : "Vista Previa: Etiqueta Adhesiva QR"}
                 </h3>
               </div>
               <button
@@ -6586,8 +6571,8 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                         src={`https://api.qrserver.com/v1/create-qr-code/?size=90x90&data=${encodeURIComponent(
                           typeof window !== "undefined"
                             ? `${window.location.origin}/taller/seguimiento?orden=${encodeURIComponent(
-                                ordenActiva.orderNumber
-                              )}&pin=${encodeURIComponent(etapa6TrackingPin || ordenActiva.trackingPin || "4821")}`
+                              ordenActiva.orderNumber
+                            )}&pin=${encodeURIComponent(etapa6TrackingPin || ordenActiva.trackingPin || "4821")}`
                             : ""
                         )}`}
                         alt="QR Seguimiento"
@@ -6639,8 +6624,8 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                       src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(
                         typeof window !== "undefined"
                           ? `${window.location.origin}/taller/seguimiento?orden=${encodeURIComponent(
-                              ordenActiva.orderNumber
-                            )}&pin=${encodeURIComponent(etapa6TrackingPin || ordenActiva.trackingPin || "4821")}`
+                            ordenActiva.orderNumber
+                          )}&pin=${encodeURIComponent(etapa6TrackingPin || ordenActiva.trackingPin || "4821")}`
                           : ""
                       )}`}
                       alt="QR Ticket"
@@ -6668,8 +6653,8 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                       src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(
                         typeof window !== "undefined"
                           ? `${window.location.origin}/taller/seguimiento?orden=${encodeURIComponent(
-                              ordenActiva.orderNumber
-                            )}&pin=${encodeURIComponent(etapa6TrackingPin || ordenActiva.trackingPin || "4821")}`
+                            ordenActiva.orderNumber
+                          )}&pin=${encodeURIComponent(etapa6TrackingPin || ordenActiva.trackingPin || "4821")}`
                           : ""
                       )}`}
                       alt="Código QR de la Orden"
@@ -6765,13 +6750,12 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                     <div
                       key={auto.id}
                       onClick={() => handleSeleccionarAutoYVolver(auto)}
-                      className={`p-4 rounded-2xl border transition-all cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-3 group ${
-                        esActivo
-                          ? "bg-blue-600/10 border-blue-500/40 ring-1 ring-blue-500/30"
-                          : estaPausado
+                      className={`p-4 rounded-2xl border transition-all cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-3 group ${esActivo
+                        ? "bg-blue-600/10 border-blue-500/40 ring-1 ring-blue-500/30"
+                        : estaPausado
                           ? "bg-amber-500/[0.04] border-amber-500/30 hover:bg-amber-500/[0.08]"
                           : "bg-white/[0.03] border-white/10 hover:bg-white/[0.07]"
-                      }`}
+                        }`}
                     >
                       <div className="space-y-1.5 min-w-0 flex-1">
                         {/* 1. Orden de servicio y su número (en plomo, sin negrita) */}
@@ -6780,11 +6764,10 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                             Orden de servicio: <span className="text-zinc-300 font-normal">{limpiarNumeroOrden(auto.orderNumber)}</span>
                           </span>
                           <span
-                            className={`px-2 py-0.5 rounded-full text-[10px] font-normal border ${
-                              auto.branch === "SUCURSAL"
-                                ? "bg-amber-500/20 text-amber-300 border-amber-500/35"
-                                : "bg-blue-500/15 text-blue-300 border-blue-500/30"
-                            }`}
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-normal border ${auto.branch === "SUCURSAL"
+                              ? "bg-amber-500/20 text-amber-300 border-amber-500/35"
+                              : "bg-blue-500/15 text-blue-300 border-blue-500/30"
+                              }`}
                           >
                             {auto.branch === "SUCURSAL" ? "Sucursal" : "Principal"}
                           </span>
@@ -6826,13 +6809,15 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                       <div className="flex flex-col items-end gap-2 shrink-0 self-end sm:self-center pt-2 sm:pt-0 border-t sm:border-t-0 border-white/5 w-full sm:w-auto">
                         <div className="flex items-center gap-1.5 sm:gap-2 justify-end flex-wrap">
                           {!esPropuestaAprobadaOrden(auto) ? (
-                            <span
-                              className="h-8 px-2.5 sm:px-3 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-medium flex items-center gap-1.5 select-none"
-                              title="Propuesta pendiente de aprobación"
+                            <button
+                              type="button"
+                              onClick={(e) => handleAprobarPropuestaDirecta(auto, e)}
+                              className="h-8 px-2.5 sm:px-3 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-300 text-xs font-medium flex items-center gap-1.5 transition-all cursor-pointer active:scale-95"
+                              title="Clic para aprobar propuesta y pasar a Trabajando"
                             >
                               <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
                               <span>En espera</span>
-                            </span>
+                            </button>
                           ) : estaPausado ? (
                             <button
                               type="button"
@@ -7115,11 +7100,10 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                         key={pIdx}
                         type="button"
                         onClick={() => setFotoVehiculoModal((prev) => prev ? { ...prev, index: pIdx, url: p } : null)}
-                        className={`w-10 h-9 rounded-lg overflow-hidden border transition-all cursor-pointer ${
-                          pIdx === fotoVehiculoModal.index
-                            ? "border-blue-500 ring-2 ring-blue-500/50 scale-105"
-                            : "border-white/15 opacity-60 hover:opacity-100"
-                        }`}
+                        className={`w-10 h-9 rounded-lg overflow-hidden border transition-all cursor-pointer ${pIdx === fotoVehiculoModal.index
+                          ? "border-blue-500 ring-2 ring-blue-500/50 scale-105"
+                          : "border-white/15 opacity-60 hover:opacity-100"
+                          }`}
                       >
                         <img src={p} alt="" className="w-full h-full object-cover" />
                       </button>

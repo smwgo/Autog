@@ -32,10 +32,9 @@ interface CustomStatus {
 }
 
 const DEFAULT_ETAPAS: CustomStatus[] = [
-  { id: "1", code: "01", name: "Pendiente", color: "amber" },
-  { id: "2", code: "02", name: "En Diagnóstico", color: "blue" },
-  { id: "3", code: "03", name: "En Reparación", color: "sky" },
-  { id: "4", code: "04", name: "Listo para Entrega", color: "emerald" },
+  { id: "2", code: "02", name: "Diagnóstico", color: "blue" },
+  { id: "3", code: "03", name: "Reparación", color: "sky" },
+  { id: "4", code: "04", name: "Listo", color: "emerald" },
   { id: "5", code: "05", name: "Entregada", color: "purple" },
 ];
 

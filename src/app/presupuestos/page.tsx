@@ -145,7 +145,7 @@ function formatearFechaHora(createdAt?: string | null, dateIn?: string | null): 
   return { fecha, hora };
 }
 
-function getEstadoTallerPropuesta(orden: OrdenResumen) {
+function getEstadoTallerPropuesta(orden: OrdenResumen, estaTrabajandoManual?: boolean) {
   const statusLower = (orden.status || "").trim().toLowerCase();
   const quoteStatusLower = (orden.quoteStatus || "").trim().toLowerCase();
   const esPagado =
@@ -174,11 +174,14 @@ function getEstadoTallerPropuesta(orden: OrdenResumen) {
   }
 
   const esTrabajando =
+    Boolean(estaTrabajandoManual) ||
     quoteStatusLower === "aprobado" ||
     quoteStatusLower === "aceptado" ||
+    quoteStatusLower.includes("aprob") ||
     statusLower === "en proceso" ||
     statusLower === "reparando" ||
     statusLower === "trabajando" ||
+    statusLower.includes("reparac") ||
     statusLower === "en_caja";
 
   if (esTrabajando) {
@@ -270,6 +273,12 @@ export default function PanelPresupuestosPage() {
       if (typeof window !== "undefined") {
         if (nuevo) {
           localStorage.setItem("taller_orden_activa_id", nuevo);
+          // Sincronizar con backend para reflejo en panel taller
+          void fetch("/api/presupuestos/estado", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ orderId: id, quoteStatus: "Aprobado" }),
+          }).catch(() => {});
         } else {
           localStorage.removeItem("taller_orden_activa_id");
         }
@@ -698,8 +707,8 @@ export default function PanelPresupuestosPage() {
                 {/* Vista Móvil Compacta */}
                 <div className="md:hidden space-y-2.5">
                   {ordenes.map((orden, idx) => {
-                    const stTaller = getEstadoTallerPropuesta(orden);
                     const estaTrabajando = ordenTrabajandoId === orden.id || ordenTrabajandoId === orden.orderNumber;
+                    const stTaller = getEstadoTallerPropuesta(orden, estaTrabajando);
                     const { fecha, hora } = formatearFechaHora(orden.createdAt, orden.dateIn);
                     return (
                       <div
@@ -859,8 +868,8 @@ export default function PanelPresupuestosPage() {
                       </thead>
                       <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800 text-xs font-normal">
                         {ordenes.map((orden, idx) => {
-                          const stTaller = getEstadoTallerPropuesta(orden);
                           const estaTrabajando = ordenTrabajandoId === orden.id || ordenTrabajandoId === orden.orderNumber;
+                          const stTaller = getEstadoTallerPropuesta(orden, estaTrabajando);
                           const { fecha, hora } = formatearFechaHora(orden.createdAt, orden.dateIn);
                           return (
                             <tr

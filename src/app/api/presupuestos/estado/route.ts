@@ -152,7 +152,7 @@ export async function POST(request: Request) {
                 changed = true;
                 return {
                   ...mo,
-                  status: esPagado ? "Pagado" : esPausado ? "Pausada" : "En Proceso",
+                  status: esPagado ? "Pagado" : esPausado ? "Pausada" : estadoNormalizado === "Aprobado" ? "En Proceso" : "Pendiente",
                   quoteStatus: esPagado
                     ? "Pagado"
                     : esPausado
@@ -170,6 +170,20 @@ export async function POST(request: Request) {
               }
               return mo;
             });
+
+            if (Array.isArray(mirrorData?.clientQuote)) {
+              mirrorData.clientQuote = mirrorData.clientQuote.map((cq: any) => {
+                if (cq?.id === orderId || cq?.quoteNumber === orderId || cq?.orderNumber === orderId) {
+                  changed = true;
+                  return {
+                    ...cq,
+                    status: esPagado ? "Pagada" : esPausado ? "Pausada" : estadoNormalizado === "Aprobado" ? "Aprobada" : "Pendiente",
+                    updatedAt: new Date().toISOString(),
+                  };
+                }
+                return cq;
+              });
+            }
             if (changed) {
               fs.writeFileSync(mirrorPath, JSON.stringify(mirrorData, null, 2), "utf-8");
             }
