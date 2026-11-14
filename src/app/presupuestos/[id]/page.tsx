@@ -4056,23 +4056,45 @@ export default function PaginaDetallePropuesta() {
                                           {it.audios.length > 1 && <span>{it.audios.length}</span>}
                                         </button>
                                       )}
-                                      <button
-                                        type="button"
-                                        onClick={() => abrirModalProveedor("INDIVIDUAL", it)}
-                                        className="h-7 px-2 rounded-lg border bg-emerald-50/80 hover:bg-emerald-100 dark:bg-emerald-500/15 dark:hover:bg-emerald-500/25 border-emerald-200 dark:border-emerald-500/30 text-emerald-600 dark:text-emerald-300 inline-flex items-center gap-1 text-[11px] font-medium cursor-pointer active:scale-95 transition-all shrink-0"
-                                        title="Cotizar con proveedor"
-                                      >
-                                        <span>🚚</span>
-                                      </button>
-                                      {it.supplierAvailability === "SI_HAY" && (
-                                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-500/40 text-[10px] font-bold shrink-0">
-                                          ✓ Sí hay{it.deliveryTime ? ` · ${it.deliveryTime}` : ""}
-                                        </span>
-                                      )}
-                                      {it.supplierAvailability === "NO_HAY" && (
-                                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-rose-50 dark:bg-rose-500/15 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-500/40 text-[10px] font-bold shrink-0">
-                                          ✕ No hay
-                                        </span>
+                                      {esManual && (
+                                        <>
+                                          <button
+                                            type="button"
+                                            onClick={() => abrirModalProveedor("INDIVIDUAL", it)}
+                                            className="h-7 px-2 rounded-lg border bg-emerald-50/80 hover:bg-emerald-100 dark:bg-emerald-500/15 dark:hover:bg-emerald-500/25 border-emerald-200 dark:border-emerald-500/30 text-emerald-600 dark:text-emerald-300 inline-flex items-center gap-1 text-[11px] font-medium cursor-pointer active:scale-95 transition-all shrink-0"
+                                            title="Cotizar con proveedor"
+                                          >
+                                            <span>🚚</span>
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              const targetId = orden.id || params?.id;
+                                              if (typeof window !== "undefined" && targetId) {
+                                                window.open(
+                                                  `/pedidos-proveedor/${encodeURIComponent(String(targetId))}?itemId=${encodeURIComponent(String(it.id || ""))}&item=${encodeURIComponent(String(it.name || ""))}`,
+                                                  "_blank"
+                                                );
+                                              }
+                                            }}
+                                            className="h-7 px-2 rounded-lg border bg-amber-50/80 hover:bg-amber-100 dark:bg-amber-500/15 dark:hover:bg-amber-500/25 border-amber-200 dark:border-amber-500/30 text-amber-600 dark:text-amber-400 inline-flex items-center justify-center cursor-pointer active:scale-95 transition-all shrink-0"
+                                            title="Vista Link Proveedor"
+                                          >
+                                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                              <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                            </svg>
+                                          </button>
+                                          {it.supplierAvailability === "SI_HAY" && (
+                                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-500/40 text-[10px] font-bold shrink-0">
+                                              ✓ Sí hay{it.deliveryTime ? ` · ${it.deliveryTime}` : ""}
+                                            </span>
+                                          )}
+                                          {it.supplierAvailability === "NO_HAY" && (
+                                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-rose-50 dark:bg-rose-500/15 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-500/40 text-[10px] font-bold shrink-0">
+                                              ✕ No hay
+                                            </span>
+                                          )}
+                                        </>
                                       )}
                                     </div>
                                   </td>
@@ -4205,23 +4227,45 @@ export default function PaginaDetallePropuesta() {
                                           {it.audios.length > 1 && <span>{it.audios.length}</span>}
                                         </button>
                                       )}
-                                      <button
-                                        type="button"
-                                        onClick={() => abrirModalProveedor("INDIVIDUAL", it)}
-                                        className="h-7 px-2 rounded-lg border bg-emerald-50/80 hover:bg-emerald-100 dark:bg-emerald-500/15 dark:hover:bg-emerald-500/25 border-emerald-200 dark:border-emerald-500/30 text-emerald-600 dark:text-emerald-300 inline-flex items-center gap-1 text-[11px] font-medium cursor-pointer active:scale-95 transition-all shrink-0"
-                                        title="Cotizar con proveedor"
-                                      >
-                                        <span>🚚</span>
-                                      </button>
-                                      {it.supplierAvailability === "SI_HAY" && (
-                                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-500/40 text-[10px] font-bold shrink-0">
-                                          ✓ Sí hay{it.deliveryTime ? ` · ${it.deliveryTime}` : ""}
-                                        </span>
-                                      )}
-                                      {it.supplierAvailability === "NO_HAY" && (
-                                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-rose-50 dark:bg-rose-500/15 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-500/40 text-[10px] font-bold shrink-0">
-                                          ✕ No hay
-                                        </span>
+                                      {esManual && (
+                                        <>
+                                          <button
+                                            type="button"
+                                            onClick={() => abrirModalProveedor("INDIVIDUAL", it)}
+                                            className="h-7 px-2 rounded-lg border bg-emerald-50/80 hover:bg-emerald-100 dark:bg-emerald-500/15 dark:hover:bg-emerald-500/25 border-emerald-200 dark:border-emerald-500/30 text-emerald-600 dark:text-emerald-300 inline-flex items-center gap-1 text-[11px] font-medium cursor-pointer active:scale-95 transition-all shrink-0"
+                                            title="Cotizar con proveedor"
+                                          >
+                                            <span>🚚</span>
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              const targetId = orden.id || params?.id;
+                                              if (typeof window !== "undefined" && targetId) {
+                                                window.open(
+                                                  `/pedidos-proveedor/${encodeURIComponent(String(targetId))}?itemId=${encodeURIComponent(String(it.id || ""))}&item=${encodeURIComponent(String(it.name || ""))}`,
+                                                  "_blank"
+                                                );
+                                              }
+                                            }}
+                                            className="h-7 px-2 rounded-lg border bg-amber-50/80 hover:bg-amber-100 dark:bg-amber-500/15 dark:hover:bg-amber-500/25 border-amber-200 dark:border-amber-500/30 text-amber-600 dark:text-amber-400 inline-flex items-center justify-center cursor-pointer active:scale-95 transition-all shrink-0"
+                                            title="Vista Link Proveedor"
+                                          >
+                                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                              <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                            </svg>
+                                          </button>
+                                          {it.supplierAvailability === "SI_HAY" && (
+                                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-500/40 text-[10px] font-bold shrink-0">
+                                              ✓ Sí hay{it.deliveryTime ? ` · ${it.deliveryTime}` : ""}
+                                            </span>
+                                          )}
+                                          {it.supplierAvailability === "NO_HAY" && (
+                                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-rose-50 dark:bg-rose-500/15 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-500/40 text-[10px] font-bold shrink-0">
+                                              ✕ No hay
+                                            </span>
+                                          )}
+                                        </>
                                       )}
                                     </div>
                                   </td>
