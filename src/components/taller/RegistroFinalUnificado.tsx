@@ -974,15 +974,50 @@ export default function RegistroFinalUnificado({
   const totalServicios = serviciosSeleccionados.reduce((acc, it) => acc + (Number(it.qty) || 1), 0);
 
   const serviciosRapidosFiltrados = useMemo(() => {
+    const PRECIOS_RAPIDOS: Record<string, number> = {
+      "cambio de aceite": 10,
+      "cambio de amortiguadores delanteros": 25,
+      "cambio de amortiguadores posteriores": 20,
+      "cambio de ruliman delantero": 20,
+      "cambio de ruliman posterior": 20,
+      "cambio de aceite de caja": 10,
+      "cambio de aceite corona": 10,
+      "lavado completo": 12,
+      "lavado completo mas grafito": 15,
+      "lavado completo más grafito": 15,
+      "lavado exterior": 6,
+      "aspirador interior": 5,
+      "limpieza tapicería más lavado": 45,
+      "limpieza tapiceria mas lavado": 45,
+      "lavado chasis": 10,
+      "alineación": 15,
+      "alineacion": 15,
+      "balanceo": 12,
+      "rotación": 8,
+      "rotacion": 8,
+      "corrección caída": 20,
+      "correccion caida": 20,
+      "corrección camber": 20,
+      "correccion camber": 20,
+      "corrección caster": 20,
+      "correccion caster": 20,
+    };
     const q = busquedaRapido.trim().toLowerCase();
-    const presets = (SERVICIOS_RAPIDOS_POR_MODULO[moduloActivo] || []).map((name, i) => ({
-      id: `preset-${moduloActivo}-${i}`,
-      name,
-      code: `RAP-${i + 1}`,
-      price: 0,
-    }));
+    const presets = (SERVICIOS_RAPIDOS_POR_MODULO[moduloActivo] || []).map((name, i) => {
+      const norm = name.trim().toLowerCase();
+      const enCat = Array.isArray(serviciosCatalogo)
+        ? serviciosCatalogo.find((s: any) => String(s?.name || "").trim().toLowerCase() === norm)
+        : null;
+      const precioFinal = Number(enCat?.price) > 0 ? Number(enCat.price) : (PRECIOS_RAPIDOS[norm] ?? 10);
+      return {
+        id: `preset-${moduloActivo}-${i}`,
+        name,
+        code: `RAP-${i + 1}`,
+        price: precioFinal,
+      };
+    });
     return presets.filter((s) => !q || s.name.toLowerCase().includes(q));
-  }, [busquedaRapido, moduloActivo]);
+  }, [busquedaRapido, moduloActivo, serviciosCatalogo]);
 
   if (!ordenActiva) return null;
 

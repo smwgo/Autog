@@ -356,6 +356,47 @@ export async function GET(request: Request) {
         }
       }
 
+      // Cargar catálogo de productos y servicios para resolver precios de ítems no manuales con precio 0
+      let catalogProducts: any[] = [];
+      let catalogServices: any[] = [];
+      try {
+        const [pRows, sRows] = await Promise.all([
+          prisma.$queryRawUnsafe(`SELECT "id", "code", "name", "price" FROM "Product"`).catch(() => []),
+          prisma.$queryRawUnsafe(`SELECT "id", "code", "name", "price" FROM "WorkshopService"`).catch(() => []),
+        ]);
+        if (Array.isArray(pRows)) catalogProducts = pRows;
+        if (Array.isArray(sRows)) catalogServices = sRows;
+      } catch {}
+
+      const PRECIOS_RAPIDOS_MAP: Record<string, number> = {
+        "cambio de aceite": 10,
+        "cambio de amortiguadores delanteros": 25,
+        "cambio de amortiguadores posteriores": 20,
+        "cambio de ruliman delantero": 20,
+        "cambio de ruliman posterior": 20,
+        "cambio de aceite de caja": 10,
+        "cambio de aceite corona": 10,
+        "lavado completo": 12,
+        "lavado completo mas grafito": 15,
+        "lavado completo más grafito": 15,
+        "lavado exterior": 6,
+        "aspirador interior": 5,
+        "limpieza tapicería más lavado": 45,
+        "limpieza tapiceria mas lavado": 45,
+        "lavado chasis": 10,
+        "alineación": 15,
+        "alineacion": 15,
+        "balanceo": 12,
+        "rotación": 8,
+        "rotacion": 8,
+        "corrección caída": 20,
+        "correccion caida": 20,
+        "corrección camber": 20,
+        "correccion camber": 20,
+        "corrección caster": 20,
+        "correccion caster": 20,
+      };
+
       // Separar ítems de itemsJson que fueron guardados como SERVICE desde RegistroFinalUnificado en Taller
       const rawParts: any[] = [];
       const rawExtraServices: any[] = [];
@@ -371,18 +412,39 @@ export async function GET(request: Request) {
 
       // Normalizar estructura de repuestos para presupuestos y compras
       const repuestosNormalizados = rawParts.map((it: any, index: number) => {
-        const costPrice = Number(it.supplierPrice || it.costPrice || it.cost || 0);
-        const rawPrice = Number(it.price || 0);
-        const price = rawPrice > 0 ? rawPrice : (costPrice > 0 && it.supplierAvailability === "SI_HAY" ? Number((costPrice * 1.3).toFixed(2)) : 0);
-        const qty = Number(it.qty || 1);
-        const margin = price - costPrice;
-        const marginPercent = price > 0 ? Math.round((margin / price) * 100) : 0;
         const isManual = Boolean(
           it.isManual ||
           String(it.id || "").startsWith("reg-") ||
           String(it.id || "").startsWith("man-") ||
           String(it.code || "").startsWith("MAN-")
         );
+        const costPrice = Number(it.supplierPrice || it.costPrice || it.cost || 0);
+        const rawPrice = Number(it.price || 0);
+        let catalogPrice = 0;
+        if (!isManual && rawPrice <= 0) {
+          const normName = String(it.name || it.description || "").trim().toLowerCase();
+          const matchProd = catalogProducts.find(
+            (p: any) =>
+              (it.productId && p.id === it.productId) ||
+              (it.id && p.id === it.id) ||
+              (it.code && p.code && String(p.code).toLowerCase() === String(it.code).toLowerCase()) ||
+              (normName && String(p.name || "").trim().toLowerCase() === normName)
+          );
+          if (matchProd && Number(matchProd.price) > 0) {
+            catalogPrice = Number(matchProd.price);
+          }
+        }
+        const price =
+          rawPrice > 0
+            ? rawPrice
+            : catalogPrice > 0
+            ? catalogPrice
+            : costPrice > 0 && it.supplierAvailability === "SI_HAY"
+            ? Number((costPrice * 1.3).toFixed(2))
+            : 0;
+        const qty = Number(it.qty || 1);
+        const margin = price - costPrice;
+        const marginPercent = price > 0 ? Math.round((margin / price) * 100) : 0;
 
         return {
           id: it.id || `rep_${index}_${Date.now()}`,
@@ -414,6 +476,11 @@ export async function GET(request: Request) {
           fotos: Array.isArray(it.fotos) ? it.fotos : (it.imageUrl ? [it.imageUrl] : []),
           audios: Array.isArray(it.audios) ? it.audios : [],
           isManual,
+          enviadoProveedor: Boolean(
+            it.enviadoProveedor ||
+              it.purchaseStatus === "PEDIDO_WHATSAPP" ||
+              it.purchaseStatus === "COTIZADO"
+          ),
           inStock: it.inStock !== undefined ? Boolean(it.inStock) : (!isManual && Boolean(it.purchaseStatus === "STOCK_LOCAL")),
           origin: it.origin || null,
           supplierAvailability: it.supplierAvailability || (it.purchaseStatus === "COTIZADO" ? "SI_HAY" : it.purchaseStatus === "SIN_STOCK_PROVEEDOR" ? "NO_HAY" : "PENDIENTE"),
@@ -425,13 +492,42 @@ export async function GET(request: Request) {
         };
       });
 
-      // Combinar servicesJson con servicios que venían en itemsJson (sin duplicar por id)
+      // Combinar servicesJson con servicios que venían en itemsJson (priorizando objetos ricos y filtrando duplicados o productos)
+      const partNamesSet = new Set<string>();
+      for (const p of rawParts) {
+        const n1 = String(p?.name || "").trim().toLowerCase().replace(/^\d+x\s+/i, "");
+        const n2 = String(p?.fullName || "").trim().toLowerCase().replace(/^\d+x\s+/i, "");
+        if (n1) partNamesSet.add(n1);
+        if (n2) partNamesSet.add(n2);
+      }
+
       const seenSrvIds = new Set<string>();
+      const seenSrvNames = new Set<string>();
       const combinedServices: any[] = [];
-      for (const sv of [...(Array.isArray(services) ? services : []), ...rawExtraServices]) {
-        const key = typeof sv === "string" ? sv : (sv?.id || `${sv?.name}-${sv?.category}`);
-        if (key && seenSrvIds.has(String(key))) continue;
-        if (key) seenSrvIds.add(String(key));
+
+      // Primero agregar servicios con estructura completa desde itemsJson (rawExtraServices)
+      for (const sv of rawExtraServices) {
+        if (!sv) continue;
+        const idKey = sv.id ? String(sv.id) : "";
+        const normName = String(sv.name || sv.description || "").trim().toLowerCase().replace(/^\d+x\s+/i, "");
+        if (idKey && seenSrvIds.has(idKey)) continue;
+        if (idKey) seenSrvIds.add(idKey);
+        if (normName) seenSrvNames.add(normName);
+        combinedServices.push(sv);
+      }
+
+      // Luego agregar servicios de servicesJson que no sean productos ni duplicados de los anteriores
+      for (const sv of Array.isArray(services) ? services : []) {
+        if (!sv) continue;
+        const isStr = typeof sv === "string";
+        const idKey = !isStr && sv.id ? String(sv.id) : "";
+        const normName = String(isStr ? sv : (sv.name || sv.description || "")).trim().toLowerCase().replace(/^\d+x\s+/i, "");
+        if (!normName) continue;
+        if (idKey && seenSrvIds.has(idKey)) continue;
+        if (partNamesSet.has(normName)) continue;
+        if (seenSrvNames.has(normName)) continue;
+        if (idKey) seenSrvIds.add(idKey);
+        seenSrvNames.add(normName);
         combinedServices.push(sv);
       }
 
@@ -439,18 +535,42 @@ export async function GET(request: Request) {
       const serviciosNormalizados = combinedServices.map((sv: any, index: number) => {
         const isString = typeof sv === "string";
         const name = isString ? sv : (sv.name || sv.description || "Servicio Técnico");
-        const costPrice = isString ? 0 : Number(sv.supplierPrice || sv.costPrice || 0);
-        const rawPrice = isString ? 0 : Number(sv.price || 0);
-        const price = rawPrice > 0 ? rawPrice : (costPrice > 0 && sv.supplierAvailability === "SI_HAY" ? Number((costPrice * 1.3).toFixed(2)) : 0);
-        const code = isString ? `SRV-${index + 1}` : (sv.code || `SRV-${index + 1}`);
-        const category = isString ? "Mano de Obra" : (sv.category || "Mano de Obra");
-        const qty = isString ? 1 : Number(sv.qty || 1);
         const isManual = !isString && Boolean(
           sv.isManual ||
           String(sv.id || "").startsWith("reg-") ||
           String(sv.id || "").startsWith("man-") ||
           String(sv.code || "").startsWith("MAN-")
         );
+        const costPrice = isString ? 0 : Number(sv.supplierPrice || sv.costPrice || 0);
+        const rawPrice = isString ? 0 : Number(sv.price || 0);
+        let catalogPrice = 0;
+        if (!isManual && rawPrice <= 0) {
+          const normName = String(name || "").trim().toLowerCase().replace(/^\d+x\s+/i, "");
+          if (PRECIOS_RAPIDOS_MAP[normName]) {
+            catalogPrice = PRECIOS_RAPIDOS_MAP[normName];
+          } else {
+            const matchSrv = catalogServices.find(
+              (s: any) =>
+                (!isString && sv.id && s.id === sv.id) ||
+                (!isString && sv.code && s.code && String(s.code).toLowerCase() === String(sv.code).toLowerCase()) ||
+                (normName && String(s.name || "").trim().toLowerCase() === normName)
+            );
+            if (matchSrv && Number(matchSrv.price) > 0) {
+              catalogPrice = Number(matchSrv.price);
+            }
+          }
+        }
+        const price =
+          rawPrice > 0
+            ? rawPrice
+            : catalogPrice > 0
+            ? catalogPrice
+            : costPrice > 0 && !isString && sv.supplierAvailability === "SI_HAY"
+            ? Number((costPrice * 1.3).toFixed(2))
+            : 0;
+        const code = isString ? `SRV-${index + 1}` : (sv.code || `SRV-${index + 1}`);
+        const category = isString ? "Mano de Obra" : (sv.category || "Mano de Obra");
+        const qty = isString ? 1 : Number(sv.qty || 1);
         return {
           id: isString ? `srv_${index}_${Date.now()}` : (sv.id || `srv_${index}_${Date.now()}`),
           findingId: isString ? null : (sv.findingId || null),
@@ -466,6 +586,12 @@ export async function GET(request: Request) {
           fotos: !isString && Array.isArray(sv.fotos) ? sv.fotos : [],
           audios: !isString && Array.isArray(sv.audios) ? sv.audios : [],
           isManual,
+          enviadoProveedor: Boolean(
+            !isString &&
+              (sv.enviadoProveedor ||
+                sv.purchaseStatus === "PEDIDO_WHATSAPP" ||
+                sv.purchaseStatus === "COTIZADO")
+          ),
           inStock: !isString && sv.inStock !== undefined ? Boolean(sv.inStock) : !isManual,
           supplierId: isString ? null : (sv.supplierId || null),
           supplierName: isString ? "Proveedor General" : (sv.supplierName || "Proveedor General"),

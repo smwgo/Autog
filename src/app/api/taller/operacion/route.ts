@@ -2472,7 +2472,7 @@ export async function POST(request: Request) {
 
         const current = existingRows[0];
         const itemsArr = Array.isArray(items) ? items : [];
-        const serviceNames = itemsArr.map((it: any) => it.name);
+        const serviceItemsOnly = itemsArr.filter((it: any) => it && it.type === "SERVICE");
 
         const subtotalNum = itemsArr.reduce(
           (acc: number, it: any) => acc + (Number(it.price) || 0) * (Number(it.qty) || 1),
@@ -2525,7 +2525,7 @@ export async function POST(request: Request) {
            WHERE "id" = $1`,
           current.id,
           JSON.stringify(itemsArr),
-          JSON.stringify(serviceNames),
+          JSON.stringify(serviceItemsOnly),
           quoteNumber,
           finalQuoteStatus,
           quoteToken,

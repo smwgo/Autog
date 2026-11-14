@@ -13,6 +13,9 @@ interface AudioEvidencia {
 interface PedidoItem {
   id: string;
   findingId?: string | null;
+  pinNumber?: number | null;
+  vistaLabel?: string | null;
+  category?: string;
   name: string;
   code?: string;
   qty: number;
@@ -25,6 +28,7 @@ interface PedidoItem {
   descripcion?: string;
   imageUrl?: string | null;
   fotos?: string[];
+  videos?: string[];
   audios?: AudioEvidencia[];
   orderId?: string;
   orderNumber?: string;
@@ -45,23 +49,15 @@ interface FotoItem {
 
 const OPCIONES_TIEMPO = [
   "Inmediato",
-  "15m",
-  "30m",
-  "45m",
-  "1h",
-  "2h",
+  "15 min",
+  "30 min",
+  "45 min",
+  "1 hora",
+  "2 horas",
   "Hoy",
   "Mañana",
-  "24h",
-  "48h",
-];
-
-const OPCIONES_ENVIO = [
-  { id: "Motorizado", icon: "🛵" },
-  { id: "Transporte", icon: "🚚" },
-  { id: "Encomienda", icon: "📦" },
-  { id: "Courier", icon: "✈️" },
-  { id: "Retiro", icon: "🏪" },
+  "24 horas",
+  "48 horas",
 ];
 
 function formatearTiempoAudio(seg: number) {
@@ -102,7 +98,7 @@ function MiniAudioPlayerProveedor({
       : 0;
 
   return (
-    <div className="rounded-2xl border border-amber-500/25 bg-amber-500/[0.06] p-2.5 space-y-1.5">
+    <div className="rounded-xl border border-amber-500/30 bg-amber-500/[0.08] p-2.5 space-y-1.5">
       <div className="flex items-center gap-2.5">
         <audio
           ref={audioRef}
@@ -134,7 +130,7 @@ function MiniAudioPlayerProveedor({
         <button
           type="button"
           onClick={togglePlay}
-          className="w-8 h-8 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 border border-amber-500/40 flex items-center justify-center shrink-0 transition-all active:scale-95 cursor-pointer"
+          className="w-8 h-8 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 border border-amber-500/40 flex items-center justify-center shrink-0 transition-all active:scale-95 cursor-pointer"
           title={reproduciendo ? "Pausar" : "Escuchar"}
         >
           {reproduciendo ? (
@@ -155,7 +151,7 @@ function MiniAudioPlayerProveedor({
               <span>🎙️</span>
               <span>Audio #{index + 1}</span>
             </span>
-            <span className="font-mono text-zinc-400 tabular-nums">
+            <span className="font-mono text-slate-400 tabular-nums">
               {formatearTiempoAudio(tiempoActual)}
               {duracion > 0 ? ` / ${formatearTiempoAudio(duracion)}` : ""}
             </span>
@@ -180,7 +176,7 @@ function MiniAudioPlayerProveedor({
       </div>
 
       {transcription && (
-        <p className="text-[11px] text-zinc-300 italic pl-10">
+        <p className="text-[11px] text-slate-300 italic pl-10">
           &quot;{transcription}&quot;
         </p>
       )}
@@ -192,24 +188,52 @@ export default function PaginaCatalogoProveedor() {
   const params = useParams();
   const searchParams = useSearchParams();
   const token = typeof params?.token === "string" ? decodeURIComponent(params.token) : "";
-  const isDaily = token === "diario" || token.startsWith("daily_") || searchParams?.get("mode") === "daily";
+  const isDaily =
+    token === "diario" || token.startsWith("daily_") || searchParams?.get("mode") === "daily";
   const paramItemId = searchParams?.get("itemId") || "";
+  const paramItemsList = searchParams?.get("items") || "";
   const paramItemName = searchParams?.get("item") || "";
   const paramPinId = searchParams?.get("pinId") || "";
+  const paramSupplier = searchParams?.get("supplier") || searchParams?.get("prov") || "";
+  const paramPhone = searchParams?.get("phone") || searchParams?.get("tel") || "";
+  const paramSuppliersJson = searchParams?.get("suppliers") || "";
+
+  const proveedoresUrl = useMemo(() => {
+    if (!paramSuppliersJson) return [];
+    try {
+      const parsed = JSON.parse(paramSuppliersJson);
+      if (Array.isArray(parsed)) return parsed;
+    } catch {}
+    return [];
+  }, [paramSuppliersJson]);
 
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState("");
   const [order, setOrder] = useState<any | null>(null);
   const [items, setItems] = useState<PedidoItem[]>([]);
   const [fotos, setFotos] = useState<FotoItem[]>([]);
-  const [fotoModal, setFotoModal] = useState<string | null>(null);
-  const [fotoActivaPorItem, setFotoActivaPorItem] = useState<Record<string, number>>({});
+  const [fotoModal, setFotoModal] = useState<{
+    fotos: string[];
+    idx: number;
+    titulo: string;
+  } | null>(null);
+  const [videoModal, setVideoModal] = useState<{
+    videos: string[];
+    titulo: string;
+  } | null>(null);
+  const [audioAbiertoPorItem, setAudioAbiertoPorItem] = useState<Record<string, boolean>>({});
   const [verTodos, setVerTodos] = useState(false);
   const [allItemsCount, setAllItemsCount] = useState(0);
   const [isSingleView, setIsSingleView] = useState(false);
 
-  // Estado editable de la cotización del proveedor
-  const [nombreProveedor, setNombreProveedor] = useState("");
+  // Estado editable del proveedor conectado
+  const [nombreProveedor, setNombreProveedor] = useState(
+    paramSupplier || "Repuestos Japón Express"
+  );
+  const [telefonoProveedor, setTelefonoProveedor] = useState(
+    paramPhone || "0987654321"
+  );
+  const [editandoProveedor, setEditandoProveedor] = useState(false);
   const [guardandoId, setGuardandoId] = useState<string | null>(null);
   const [guardandoTodo, setGuardandoTodo] = useState(false);
   const [confirmadosIds, setConfirmadosIds] = useState<Record<string, boolean>>({});
@@ -221,6 +245,11 @@ export default function PaginaCatalogoProveedor() {
   };
 
   useEffect(() => {
+    if (paramSupplier) setNombreProveedor(paramSupplier);
+    if (paramPhone) setTelefonoProveedor(paramPhone);
+  }, [paramSupplier, paramPhone]);
+
+  useEffect(() => {
     async function cargarCatalogo() {
       try {
         setCargando(true);
@@ -229,6 +258,7 @@ export default function PaginaCatalogoProveedor() {
         if (isDaily) {
           endpoint = `/api/presupuestos/whatsapp-catalogo?mode=daily`;
         } else if (!verTodos) {
+          if (paramItemsList) endpoint += `&items=${encodeURIComponent(paramItemsList)}`;
           if (paramItemId) endpoint += `&itemId=${encodeURIComponent(paramItemId)}`;
           if (paramItemName) endpoint += `&item=${encodeURIComponent(paramItemName)}`;
           if (paramPinId) endpoint += `&pinId=${encodeURIComponent(paramPinId)}`;
@@ -251,23 +281,38 @@ export default function PaginaCatalogoProveedor() {
             setItems(data.pedidos || []);
           } else {
             setOrder(data.order || null);
-            const loadedItems: PedidoItem[] = data.items || [];
+            const loadedItems: PedidoItem[] = (data.items || []).map((it: PedidoItem) => ({
+              ...it,
+              supplierAvailability:
+                it.supplierAvailability && it.supplierAvailability !== "PENDIENTE"
+                  ? it.supplierAvailability
+                  : "SI_HAY",
+              deliveryTime: it.deliveryTime || "30 min",
+            }));
             setItems(loadedItems);
             setFotos(data.fotos || []);
             setAllItemsCount(Number(data.allItemsCount || loadedItems.length));
             setIsSingleView(Boolean(data.isSingleItemView));
-            const firstProv = loadedItems.find(
-              (x) => x.supplierName && x.supplierName !== "Proveedor General" && x.supplierName !== "Bodega Taller"
-            );
-            if (firstProv?.supplierName) {
-              setNombreProveedor(firstProv.supplierName);
+            if (!paramSupplier) {
+              const firstProv = loadedItems.find(
+                (x) =>
+                  x.supplierName &&
+                  x.supplierName !== "Proveedor General" &&
+                  x.supplierName !== "Bodega Taller"
+              );
+              if (firstProv?.supplierName) {
+                setNombreProveedor(firstProv.supplierName);
+              }
+              if (firstProv?.supplierPhone) {
+                setTelefonoProveedor(firstProv.supplierPhone);
+              }
             }
           }
         } else {
           setError(data.error || "No se encontró el requerimiento.");
         }
       } catch {
-        setError("Error de conexión al cargar el pedido.");
+        setError("Error de conexión al cargar el catálogo de pedido.");
       } finally {
         setCargando(false);
       }
@@ -276,7 +321,7 @@ export default function PaginaCatalogoProveedor() {
     if (token) {
       void cargarCatalogo();
     }
-  }, [token, isDaily, paramItemId, paramItemName, paramPinId, verTodos]);
+  }, [token, isDaily, paramItemId, paramItemsList, paramItemName, paramPinId, paramSupplier, verTodos]);
 
   const actualizarCampoItem = (itemId: string, cambios: Partial<PedidoItem>) => {
     setItems((prev) =>
@@ -300,17 +345,19 @@ export default function PaginaCatalogoProveedor() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           orderId: targetOrderId,
-          supplierName: nombreProveedor.trim() || undefined,
+          supplierName: nombreProveedor.trim() || "Proveedor",
+          supplierPhone: telefonoProveedor.trim() || "",
           responses: listaEnviar.map((it) => ({
             id: it.id,
             name: it.name,
             isService: it.isService,
             supplierAvailability: it.supplierAvailability || "SI_HAY",
             supplierPrice: Number(it.supplierPrice || 0),
-            deliveryTime: it.deliveryTime || "",
+            deliveryTime: it.deliveryTime || "30 min",
             shippingMethod: it.shippingMethod || "",
             supplierNotes: it.supplierNotes || "",
             supplierName: nombreProveedor.trim() || it.supplierName || "Proveedor",
+            supplierPhone: telefonoProveedor.trim() || it.supplierPhone || "",
           })),
         }),
       });
@@ -324,8 +371,8 @@ export default function PaginaCatalogoProveedor() {
         setConfirmadosIds(nuevosConf);
         mostrarToast(
           itemEspecifico
-            ? `✓ Confirmado: ${itemEspecifico.name}`
-            : "✓ Cotización enviada a la Propuesta en tiempo real"
+            ? `✓ Cotización enviada: ${itemEspecifico.name}`
+            : "✓ Cotización enviada a Oficina en tiempo real"
         );
       } else {
         mostrarToast(data.error || "Error al guardar cotización", "err");
@@ -350,8 +397,16 @@ export default function PaginaCatalogoProveedor() {
     };
   }, [items]);
 
+  const numeroOrdenFormateado = useMemo(() => {
+    const raw = String(order?.orderNumber || "00001")
+      .replace(/^ORD-/i, "")
+      .replace(/^#/i, "")
+      .trim();
+    return raw.padStart(5, "0");
+  }, [order]);
+
   return (
-    <div className="min-h-screen bg-[#070709] text-white font-sans selection:bg-blue-500/30 pb-24">
+    <div className="min-h-screen bg-[#070b14] text-white font-sans selection:bg-blue-500/30 pb-28">
       {/* Toast Flotante */}
       {toast && (
         <div
@@ -366,416 +421,443 @@ export default function PaginaCatalogoProveedor() {
         </div>
       )}
 
-      {/* Barra Superior Minimalista */}
-      <header className="sticky top-0 z-30 px-4 sm:px-6 py-3 bg-[#0a0a0e]/90 backdrop-blur-xl border-b border-white/10">
-        <div className="max-w-5xl mx-auto flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center font-black text-white text-sm shadow-md shadow-blue-600/30">
-              AG
-            </div>
-            <div>
-              <h1 className="text-sm font-bold text-white tracking-tight">
-                {isDaily ? "Consolidado" : "Pedido"}
-              </h1>
-              <p className="text-[11px] text-zinc-400">
-                {order ? `${order.vehicle} • ${order.plate}` : "Proveedor"}
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            {isSingleView && allItemsCount > 1 && (
-              <button
-                type="button"
-                onClick={() => setVerTodos((v) => !v)}
-                className="h-8 px-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-medium text-zinc-200 flex items-center gap-1.5 cursor-pointer transition-all"
-              >
-                <span>📦</span>
-                <span>{verTodos ? "Individual" : `Todo (${allItemsCount})`}</span>
-              </button>
-            )}
-            <span className="px-2.5 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-xs font-semibold flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              <span>Activo</span>
-            </span>
-          </div>
-        </div>
-      </header>
-
-      {/* Contenido Principal */}
+      {/* Contenido Principal Estilo Catálogo Solicitud de Cotización */}
       <main className="max-w-5xl mx-auto p-3 sm:p-6 space-y-4">
         {cargando ? (
-          <div className="p-16 text-center space-y-3 bg-[#111115] rounded-3xl border border-white/10">
+          <div className="p-16 text-center space-y-3 bg-[#111827] rounded-3xl border border-slate-800">
             <div className="w-9 h-9 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto" />
-            <p className="text-xs text-zinc-400">Cargando pedido...</p>
+            <p className="text-xs text-slate-400">Cargando solicitud de cotización...</p>
           </div>
         ) : error ? (
-          <div className="p-12 text-center bg-[#111115] rounded-3xl border border-rose-500/30 space-y-3">
+          <div className="p-12 text-center bg-[#111827] rounded-3xl border border-rose-500/30 space-y-3">
             <div className="text-2xl">⚠️</div>
             <h2 className="text-sm font-bold text-white">{error}</h2>
           </div>
         ) : (
           <>
-            {/* Barra de Identificación de Vehículo y Proveedor */}
-            {!isDaily && order && (
-              <div className="p-4 sm:p-5 rounded-3xl bg-[#111115] border border-white/10 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-11 h-11 rounded-2xl bg-blue-500/10 border border-blue-500/25 flex items-center justify-center text-xl shrink-0">
-                    🚗
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-base sm:text-lg font-bold text-white">
-                        {order.vehicle}
-                      </span>
-                      <span className="px-2 py-0.5 rounded-md bg-amber-400 text-black font-mono text-xs font-bold">
-                        {order.plate}
-                      </span>
-                      <span className="px-2 py-0.5 rounded-md bg-white/5 text-zinc-400 font-mono text-[11px]">
-                        #{order.orderNumber}
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-zinc-400 mt-0.5">
-                      Marca disponibilidad, valor, tiempo y envío para actualizar la orden.
-                    </p>
-                  </div>
+            {/* =================================================================
+                CABECERA DE SOLICITUD DE COTIZACIÓN • OFICINA (DISEÑO IMAGEN 1)
+               ================================================================= */}
+            <div className="p-5 sm:p-6 rounded-3xl bg-[#111827] border border-slate-800/90 shadow-2xl flex flex-col md:flex-row md:items-center justify-between gap-5">
+              <div className="flex items-start sm:items-center gap-4">
+                {/* Icono Camión Azul */}
+                <div className="w-13 h-13 sm:w-14 sm:h-14 rounded-2xl bg-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-600/30 shrink-0">
+                  <svg
+                    className="w-7 h-7"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    strokeWidth={1.9}
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M8.25 18.75a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 0 1-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 0 0-3.213-9.193 2.056 2.056 0 0 0-1.58-.86H14.25M16.5 18.75h-2.25m0-11.175V14.25m0 0H2.25m12 0v4.5m0-4.5H16.5"
+                    />
+                  </svg>
                 </div>
 
-                <div className="flex items-center gap-2 sm:w-64">
-                  <div className="relative w-full">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2.5 flex-wrap">
+                    <span className="text-xs font-extrabold uppercase tracking-wider text-blue-400">
+                      SOLICITUD DE COTIZACIÓN • OFICINA
+                    </span>
+                    {order?.plate && (
+                      <span className="px-2.5 py-0.5 rounded-md bg-amber-400 text-black font-extrabold text-xs uppercase tracking-wide shadow-xs">
+                        PLACA: {order.plate}
+                      </span>
+                    )}
+                    {isSingleView && allItemsCount > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => setVerTodos((v) => !v)}
+                        className="px-2.5 py-0.5 rounded-md bg-slate-800 hover:bg-slate-700 border border-slate-700 text-[11px] font-semibold text-slate-200 cursor-pointer transition-colors"
+                      >
+                        {verTodos ? "Ver filtrados" : `Ver todos (${allItemsCount})`}
+                      </button>
+                    )}
+                  </div>
+
+                  <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+                    {order
+                      ? `${order.vehicle} — Orden #${numeroOrdenFormateado}`
+                      : "Consolidado de Pedidos — Taller"}
+                  </h1>
+
+                  <p className="text-xs sm:text-sm text-slate-400">
+                    Centro Automotriz • Marque si dispone del repuesto, su precio de venta y tiempo de envío a Oficina.
+                  </p>
+                </div>
+              </div>
+
+              {/* Tarjeta Derecha: Proveedor Conectado */}
+              <div className="rounded-2xl bg-[#0b111e] border border-slate-800 px-5 py-3.5 text-center md:text-right min-w-[230px] shrink-0 space-y-0.5">
+                <div className="flex items-center justify-center md:justify-end gap-1.5">
+                  <span className="text-[11px] text-slate-400 font-medium">
+                    Proveedor Conectado
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setEditandoProveedor((v) => !v)}
+                    className="text-[10px] text-slate-500 hover:text-slate-300 cursor-pointer"
+                    title="Cambiar o editar proveedor"
+                  >
+                    ✎
+                  </button>
+                </div>
+
+                {proveedoresUrl.length > 1 && !editandoProveedor ? (
+                  <div className="pt-0.5">
+                    <select
+                      value={nombreProveedor}
+                      onChange={(e) => {
+                        const sel = proveedoresUrl.find((p: any) => p.name === e.target.value);
+                        setNombreProveedor(e.target.value);
+                        if (sel?.phone) setTelefonoProveedor(sel.phone);
+                      }}
+                      className="bg-transparent text-emerald-400 font-extrabold text-sm sm:text-base focus:outline-none cursor-pointer text-center md:text-right"
+                    >
+                      {proveedoresUrl.map((p: any, idx: number) => (
+                        <option key={idx} value={p.name} className="bg-[#0b111e] text-white">
+                          {p.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                ) : editandoProveedor ? (
+                  <div className="space-y-1.5 pt-1">
                     <input
                       type="text"
                       value={nombreProveedor}
                       onChange={(e) => setNombreProveedor(e.target.value)}
-                      placeholder="🏢 Proveedor..."
-                      className="w-full h-9 px-3 rounded-xl bg-black/60 border border-white/10 text-xs text-white placeholder:text-zinc-500 focus:outline-none focus:border-blue-500"
+                      placeholder="Nombre del proveedor"
+                      className="w-full h-7 px-2 rounded-lg bg-[#111827] border border-slate-700 text-xs font-bold text-emerald-400 focus:outline-none focus:border-emerald-500"
+                    />
+                    <input
+                      type="text"
+                      value={telefonoProveedor}
+                      onChange={(e) => setTelefonoProveedor(e.target.value)}
+                      placeholder="WhatsApp"
+                      className="w-full h-7 px-2 rounded-lg bg-[#111827] border border-slate-700 text-xs text-slate-300 focus:outline-none focus:border-blue-500"
                     />
                   </div>
-                </div>
+                ) : (
+                  <>
+                    <div
+                      onClick={() => setEditandoProveedor(true)}
+                      className="text-sm sm:text-base font-extrabold text-emerald-400 cursor-pointer hover:underline"
+                      title="Clic para editar nombre"
+                    >
+                      {nombreProveedor || "Repuestos Japón Express"}
+                    </div>
+                    <div className="text-xs text-slate-400">
+                      WhatsApp: {telefonoProveedor || "0987654321"}
+                    </div>
+                  </>
+                )}
               </div>
-            )}
+            </div>
 
-            {/* Listado de Ítems / Servicios a Cotizar */}
+            {/* =================================================================
+                LISTADO DE REPUESTOS / SERVICIOS SOLICITADOS (DISEÑO IMAGEN 1)
+               ================================================================= */}
             {items.length === 0 ? (
-              <div className="p-12 text-center bg-[#111115] rounded-3xl border border-white/10 text-zinc-400 text-xs">
+              <div className="p-12 text-center bg-[#111827] rounded-3xl border border-slate-800 text-slate-400 text-xs">
                 Sin ítems pendientes en este pedido.
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-4">
                 {items.map((item, idx) => {
                   const fotosList =
                     Array.isArray(item.fotos) && item.fotos.length > 0
                       ? item.fotos
                       : item.imageUrl
                       ? [item.imageUrl]
-                      : [];
-                  const fotoIdx = fotoActivaPorItem[item.id] || 0;
-                  const fotoActual = fotosList[fotoIdx] || fotosList[0] || null;
+                      : fotos.map((f) => f.url);
+                  const videosList = Array.isArray(item.videos) ? item.videos : [];
                   const audiosList = Array.isArray(item.audios) ? item.audios : [];
-                  const disp = item.supplierAvailability || "PENDIENTE";
+                  const disp = item.supplierAvailability || "SI_HAY";
                   const confirmado = Boolean(confirmadosIds[item.id] || item.supplierRespondedAt);
+                  const audioAbierto = Boolean(audioAbiertoPorItem[item.id]);
+                  const detalleTexto =
+                    item.danio && item.descripcion
+                      ? `${item.danio} — ${item.descripcion}`
+                      : item.descripcion ||
+                        item.danio ||
+                        (item.notes && !item.notes.startsWith("[Evidencia")
+                          ? item.notes
+                          : "Requerimiento registrado en orden de trabajo");
 
                   return (
                     <div
                       key={item.id || idx}
-                      className={`rounded-3xl border p-4 sm:p-5 flex flex-col justify-between space-y-4 transition-all shadow-xl ${
-                        disp === "SI_HAY"
-                          ? "bg-[#111413] border-emerald-500/35"
+                      className={`rounded-3xl bg-[#111827] border p-5 sm:p-6 shadow-xl transition-all space-y-4 ${
+                        confirmado
+                          ? "border-emerald-500/40"
                           : disp === "NO_HAY"
-                          ? "bg-[#151112] border-rose-500/30"
-                          : "bg-[#111115] border-white/10"
+                          ? "border-rose-500/30"
+                          : "border-slate-800/90"
                       }`}
                     >
-                      <div className="space-y-3.5">
-                        {/* Cabecera del Ítem */}
-                        <div className="flex items-start justify-between gap-2.5">
-                          <div className="min-w-0 flex-1 space-y-1">
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                              <span className="px-2 py-0.5 rounded-md bg-white/5 border border-white/10 text-[10px] font-mono text-zinc-400">
-                                #{idx + 1}
+                      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5">
+                        {/* Columna Izquierda: Detalles del Repuesto y Evidencia Adjunta */}
+                        <div className="space-y-2.5 flex-1 min-w-0">
+                          {/* Badges Superiores: #1 • Cant: 1 | Pin #1 • Frente Der. */}
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="px-2.5 py-1 rounded-lg bg-slate-800/90 border border-slate-700 text-slate-200 text-xs font-bold">
+                              #{idx + 1} • Cant: {item.qty || 1}
+                            </span>
+
+                            <span className="px-3 py-1 rounded-full bg-blue-500/15 border border-blue-500/30 text-blue-400 text-xs font-semibold">
+                              {item.pinNumber
+                                ? `Pin #${item.pinNumber} • ${item.vistaLabel || "Frente Der."}`
+                                : `Pin #${idx + 1} • ${item.vistaLabel || item.category || "Taller"}`}
+                            </span>
+
+                            {confirmado && (
+                              <span className="px-2.5 py-1 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-bold">
+                                ✓ Confirmado
                               </span>
-                              <span
-                                className={`px-2 py-0.5 rounded-md text-[10px] font-semibold border ${
-                                  item.isService
-                                    ? "bg-purple-500/15 border-purple-500/30 text-purple-300"
-                                    : "bg-blue-500/15 border-blue-500/30 text-blue-300"
+                            )}
+                          </div>
+
+                          {/* Daño / Detalle */}
+                          <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
+                            <span>Daño/Detalle: </span>
+                            <strong className="text-slate-100 font-bold">
+                              {detalleTexto}
+                            </strong>
+                          </p>
+
+                          {/* Nombre del Repuesto / Servicio */}
+                          <h3 className="text-lg sm:text-xl font-extrabold text-white leading-snug">
+                            {item.name}
+                          </h3>
+
+                          {/* Evidencia adjunta: Foto, Video, Audio */}
+                          <div className="flex items-center gap-2 flex-wrap pt-1">
+                            <span className="text-xs text-slate-400 mr-1">
+                              Evidencia adjunta:
+                            </span>
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (fotosList.length > 0) {
+                                  setFotoModal({
+                                    fotos: fotosList,
+                                    idx: 0,
+                                    titulo: item.name,
+                                  });
+                                } else {
+                                  mostrarToast("Sin foto adjunta en este ítem", "err");
+                                }
+                              }}
+                              className="px-3 py-1.5 rounded-lg bg-sky-500/15 hover:bg-sky-500/25 border border-sky-500/35 text-sky-400 text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer transition-all active:scale-95"
+                            >
+                              <svg
+                                className="w-3.5 h-3.5"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                                strokeWidth={2}
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z"
+                                />
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  d="M16.5 12.75a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0Z"
+                                />
+                              </svg>
+                              <span>Foto{fotosList.length > 1 ? ` (${fotosList.length})` : ""}</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (videosList.length > 0) {
+                                  setVideoModal({
+                                    videos: videosList,
+                                    titulo: item.name,
+                                  });
+                                } else if (fotosList.length > 0) {
+                                  setFotoModal({
+                                    fotos: fotosList,
+                                    idx: 0,
+                                    titulo: item.name,
+                                  });
+                                } else {
+                                  mostrarToast("Sin video adjunto en este ítem", "err");
+                                }
+                              }}
+                              className="px-3 py-1.5 rounded-lg bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/35 text-purple-400 text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer transition-all active:scale-95"
+                            >
+                              <svg
+                                className="w-3.5 h-3.5"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                                strokeWidth={2}
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  d="m15.75 10.5 4.72-4.72a.75.75 0 0 1 1.28.53v11.38a.75.75 0 0 1-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 0 0 2.25-2.25v-9a2.25 2.25 0 0 0-2.25-2.25h-9A2.25 2.25 0 0 0 2.25 7.5v9a2.25 2.25 0 0 0 2.25 2.25Z"
+                                />
+                              </svg>
+                              <span>Video{videosList.length > 1 ? ` (${videosList.length})` : ""}</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (audiosList.length > 0) {
+                                  setAudioAbiertoPorItem((prev) => ({
+                                    ...prev,
+                                    [item.id]: !prev[item.id],
+                                  }));
+                                } else {
+                                  mostrarToast("Sin nota de audio en este ítem", "err");
+                                }
+                              }}
+                              className={`px-3 py-1.5 rounded-lg border text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer transition-all active:scale-95 ${
+                                audioAbierto
+                                  ? "bg-amber-500 text-black border-amber-400"
+                                  : "bg-amber-500/15 hover:bg-amber-500/25 border-amber-500/35 text-amber-400"
+                              }`}
+                            >
+                              <svg
+                                className="w-3.5 h-3.5"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                                strokeWidth={2}
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  d="M12 18.75a6 6 0 0 0 6-6v-1.5m-6 7.5a6 6 0 0 1-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 0 1-3-3V4.5a3 3 0 1 1 6 0v8.25a3 3 0 0 1-3 3Z"
+                                />
+                              </svg>
+                              <span>Audio{audiosList.length > 1 ? ` (${audiosList.length})` : ""}</span>
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Columna Derecha: Caja de Cotización (1. ¿LO TIENE? | 2. PRECIO ($) | 3. TIEMPO ENVÍO) */}
+                        <div className="rounded-2xl bg-[#0b111e] border border-slate-800/90 p-4 flex flex-wrap sm:flex-nowrap items-end gap-3.5 sm:gap-4 shrink-0">
+                          {/* 1. ¿LO TIENE? */}
+                          <div className="space-y-1.5">
+                            <span className="block text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                              1. ¿LO TIENE?
+                            </span>
+                            <div className="inline-flex rounded-xl bg-[#111827] border border-slate-700/80 p-0.5">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  actualizarCampoItem(item.id, {
+                                    supplierAvailability: "SI_HAY",
+                                  })
+                                }
+                                className={`h-9 px-3.5 rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-all ${
+                                  disp === "SI_HAY"
+                                    ? "bg-emerald-600 text-white shadow-sm"
+                                    : "text-slate-400 hover:text-white"
                                 }`}
                               >
-                                {item.isService ? "🔧 Servicio" : "📦 Producto"}
-                              </span>
-                              {item.isManual && (
-                                <span className="px-2 py-0.5 rounded-md bg-amber-500/15 border border-amber-500/30 text-amber-300 text-[10px] font-semibold">
-                                  ✍️ Manual
-                                </span>
-                              )}
-                              {confirmado && (
-                                <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-[10px] font-semibold">
-                                  ✓ Enviado
-                                </span>
-                              )}
+                                <span>✓</span>
+                                <span>Sí</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  actualizarCampoItem(item.id, {
+                                    supplierAvailability: "NO_HAY",
+                                    supplierPrice: 0,
+                                  })
+                                }
+                                className={`h-9 px-3.5 rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-all ${
+                                  disp === "NO_HAY"
+                                    ? "bg-rose-600 text-white shadow-sm"
+                                    : "text-slate-400 hover:text-white"
+                                }`}
+                              >
+                                <span>✕</span>
+                                <span>No</span>
+                              </button>
                             </div>
-
-                            <h3 className="text-base font-bold text-white leading-snug">
-                              {item.name}
-                            </h3>
-
-                            {(item.danio || item.descripcion || item.notes) && (
-                              <p className="text-xs text-zinc-400 leading-relaxed">
-                                {item.danio ? (
-                                  <strong className="text-rose-400 mr-1">{item.danio}:</strong>
-                                ) : null}
-                                {item.descripcion || item.notes}
-                              </p>
-                            )}
                           </div>
 
-                          <div className="px-3 py-1.5 rounded-2xl bg-blue-500/15 border border-blue-500/30 text-blue-300 font-black text-xs shrink-0">
-                            x{item.qty}
-                          </div>
-                        </div>
-
-                        {/* Galería de Fotos del Ítem */}
-                        {fotoActual ? (
-                          <div className="space-y-2">
-                            <div
-                              onClick={() => setFotoModal(fotoActual)}
-                              className="w-full h-44 sm:h-48 rounded-2xl bg-black border border-white/10 overflow-hidden relative group cursor-pointer"
-                            >
-                              <img
-                                src={fotoActual}
-                                alt={item.name}
-                                className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                              />
-                              <div className="absolute bottom-2 right-2 px-2.5 py-1 rounded-xl bg-black/70 backdrop-blur-xs border border-white/15 text-[11px] font-medium text-white flex items-center gap-1">
-                                <span>🔍</span>
-                                <span>Foto</span>
-                              </div>
-                            </div>
-
-                            {fotosList.length > 1 && (
-                              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none]">
-                                {fotosList.map((fUrl, fIdx) => (
-                                  <button
-                                    key={`th-${item.id}-${fIdx}`}
-                                    type="button"
-                                    onClick={() =>
-                                      setFotoActivaPorItem((prev) => ({ ...prev, [item.id]: fIdx }))
-                                    }
-                                    className={`w-12 h-10 rounded-xl overflow-hidden border-2 shrink-0 cursor-pointer transition-all ${
-                                      fotoIdx === fIdx
-                                        ? "border-blue-500 scale-105"
-                                        : "border-transparent opacity-60 hover:opacity-100"
-                                    }`}
-                                  >
-                                    <img src={fUrl} alt="" className="w-full h-full object-cover" />
-                                  </button>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        ) : null}
-
-                        {/* Reproductores de Audio en Página */}
-                        {audiosList.length > 0 && (
+                          {/* 2. PRECIO ($) */}
                           <div className="space-y-1.5">
-                            {audiosList.map((aud, aIdx) => (
-                              <MiniAudioPlayerProveedor
-                                key={aud.id || `aud-${aIdx}`}
-                                src={aud.url}
-                                transcription={aud.transcriptionText}
-                                index={aIdx}
+                            <span className="block text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                              2. PRECIO ($)
+                            </span>
+                            <div className="relative">
+                              <span className="absolute left-3 top-2.5 text-xs font-extrabold text-emerald-400">
+                                $
+                              </span>
+                              <input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                disabled={disp === "NO_HAY"}
+                                value={item.supplierPrice || ""}
+                                onChange={(e) =>
+                                  actualizarCampoItem(item.id, {
+                                    supplierAvailability: "SI_HAY",
+                                    supplierPrice: parseFloat(e.target.value) || 0,
+                                  })
+                                }
+                                placeholder="0,00"
+                                className="w-28 sm:w-32 h-10 pl-7 pr-3 rounded-xl bg-[#111827] border border-slate-700/80 focus:border-emerald-500 text-sm font-extrabold text-white placeholder:text-slate-500 focus:outline-none disabled:opacity-40"
                               />
-                            ))}
-                          </div>
-                        )}
-
-                        {/* =========================================================
-                            CONTROLES INTERACTIVOS DEL PROVEEDOR (1 PALABRA + ICONO)
-                           ========================================================= */}
-                        <div className="pt-2 border-t border-white/10 space-y-3">
-                          {/* 1. STOCK (SÍ HAY / NO HAY) + 2. VALOR ($) */}
-                          <div className="grid grid-cols-2 gap-2.5">
-                            <div className="space-y-1">
-                              <span className="text-[11px] font-medium text-zinc-400 flex items-center gap-1">
-                                <span>📦</span>
-                                <span>Stock</span>
-                              </span>
-                              <div className="grid grid-cols-2 gap-1.5">
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    actualizarCampoItem(item.id, { supplierAvailability: "SI_HAY" })
-                                  }
-                                  className={`h-9 rounded-xl border text-xs font-bold flex items-center justify-center gap-1 cursor-pointer transition-all active:scale-95 ${
-                                    disp === "SI_HAY"
-                                      ? "bg-emerald-600 border-emerald-400 text-white shadow-lg shadow-emerald-600/25"
-                                      : "bg-white/5 hover:bg-white/10 border-white/10 text-zinc-300"
-                                  }`}
-                                >
-                                  <span>✓</span>
-                                  <span>Sí hay</span>
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    actualizarCampoItem(item.id, {
-                                      supplierAvailability: "NO_HAY",
-                                      supplierPrice: 0,
-                                    })
-                                  }
-                                  className={`h-9 rounded-xl border text-xs font-bold flex items-center justify-center gap-1 cursor-pointer transition-all active:scale-95 ${
-                                    disp === "NO_HAY"
-                                      ? "bg-rose-600 border-rose-400 text-white shadow-lg shadow-rose-600/25"
-                                      : "bg-white/5 hover:bg-white/10 border-white/10 text-zinc-300"
-                                  }`}
-                                >
-                                  <span>✕</span>
-                                  <span>No hay</span>
-                                </button>
-                              </div>
-                            </div>
-
-                            {/* VALOR UNITARIO */}
-                            <div className="space-y-1">
-                              <span className="text-[11px] font-medium text-zinc-400 flex items-center justify-between">
-                                <span className="flex items-center gap-1">
-                                  <span>💲</span>
-                                  <span>Valor</span>
-                                </span>
-                                {item.qty > 1 && Number(item.supplierPrice) > 0 && (
-                                  <span className="text-[10px] font-mono text-emerald-400">
-                                    Total: ${(Number(item.supplierPrice) * item.qty).toFixed(2)}
-                                  </span>
-                                )}
-                              </span>
-                              <div className="relative">
-                                <span className="absolute left-3 top-2 text-xs font-mono text-zinc-400">
-                                  $
-                                </span>
-                                <input
-                                  type="number"
-                                  step="0.01"
-                                  min="0"
-                                  disabled={disp === "NO_HAY"}
-                                  value={item.supplierPrice || ""}
-                                  onChange={(e) =>
-                                    actualizarCampoItem(item.id, {
-                                      supplierAvailability: "SI_HAY",
-                                      supplierPrice: parseFloat(e.target.value) || 0,
-                                    })
-                                  }
-                                  placeholder="0.00"
-                                  className="w-full h-9 pl-7 pr-3 rounded-xl bg-black/70 border border-white/15 focus:border-emerald-500 text-sm font-mono font-bold text-emerald-400 placeholder:text-zinc-600 focus:outline-none disabled:opacity-40"
-                                />
-                              </div>
                             </div>
                           </div>
 
-                          {/* 3. TIEMPO (DESLIZABLE 1 PALABRA) */}
-                          {disp !== "NO_HAY" && (
-                            <div className="space-y-1.5">
-                              <div className="flex items-center justify-between">
-                                <span className="text-[11px] font-medium text-zinc-400 flex items-center gap-1">
-                                  <span>⏱️</span>
-                                  <span>Tiempo</span>
-                                </span>
-                                {item.deliveryTime && (
-                                  <span className="text-[11px] font-semibold text-blue-400">
-                                    {item.deliveryTime}
-                                  </span>
-                                )}
-                              </div>
-                              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-                                {OPCIONES_TIEMPO.map((t) => {
-                                  const activo = item.deliveryTime === t;
-                                  return (
-                                    <button
-                                      key={t}
-                                      type="button"
-                                      onClick={() =>
-                                        actualizarCampoItem(item.id, {
-                                          supplierAvailability: "SI_HAY",
-                                          deliveryTime: activo ? "" : t,
-                                        })
-                                      }
-                                      className={`h-7 px-2.5 rounded-xl border text-[11px] font-medium shrink-0 cursor-pointer transition-all active:scale-95 ${
-                                        activo
-                                          ? "bg-blue-600 border-blue-400 text-white font-semibold"
-                                          : "bg-white/[0.04] hover:bg-white/10 border-white/10 text-zinc-300"
-                                      }`}
-                                    >
-                                      {t}
-                                    </button>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          )}
-
-                          {/* 4. ENVÍO (POR DÓNDE LO ENVÍA - DESLIZABLE 1 PALABRA + ICONO) */}
-                          {disp !== "NO_HAY" && (
-                            <div className="space-y-1.5">
-                              <div className="flex items-center justify-between">
-                                <span className="text-[11px] font-medium text-zinc-400 flex items-center gap-1">
-                                  <span>🚚</span>
-                                  <span>Envío</span>
-                                </span>
-                                {item.shippingMethod && (
-                                  <span className="text-[11px] font-semibold text-purple-400">
-                                    {item.shippingMethod}
-                                  </span>
-                                )}
-                              </div>
-                              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-                                {OPCIONES_ENVIO.map((env) => {
-                                  const activo = item.shippingMethod === env.id;
-                                  return (
-                                    <button
-                                      key={env.id}
-                                      type="button"
-                                      onClick={() =>
-                                        actualizarCampoItem(item.id, {
-                                          supplierAvailability: "SI_HAY",
-                                          shippingMethod: activo ? "" : env.id,
-                                        })
-                                      }
-                                      className={`h-7 px-2.5 rounded-xl border text-[11px] font-medium shrink-0 flex items-center gap-1 cursor-pointer transition-all active:scale-95 ${
-                                        activo
-                                          ? "bg-purple-600 border-purple-400 text-white font-semibold"
-                                          : "bg-white/[0.04] hover:bg-white/10 border-white/10 text-zinc-300"
-                                      }`}
-                                    >
-                                      <span>{env.icon}</span>
-                                      <span>{env.id}</span>
-                                    </button>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          )}
+                          {/* 3. TIEMPO ENVÍO */}
+                          <div className="space-y-1.5">
+                            <span className="block text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                              3. TIEMPO ENVÍO
+                            </span>
+                            <select
+                              disabled={disp === "NO_HAY"}
+                              value={item.deliveryTime || "30 min"}
+                              onChange={(e) =>
+                                actualizarCampoItem(item.id, {
+                                  supplierAvailability: "SI_HAY",
+                                  deliveryTime: e.target.value,
+                                })
+                              }
+                              className="h-10 px-3 rounded-xl bg-[#111827] border border-slate-700/80 focus:border-amber-500 text-amber-400 font-extrabold text-sm focus:outline-none cursor-pointer disabled:opacity-40"
+                            >
+                              {OPCIONES_TIEMPO.map((t) => (
+                                <option key={t} value={t} className="bg-[#111827] text-white">
+                                  {t}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
                         </div>
                       </div>
 
-                      {/* Botón Confirmar este Ítem */}
-                      <div className="pt-3 border-t border-white/10 flex items-center justify-between gap-2">
-                        <span className="text-[11px] text-zinc-400 truncate">
-                          {disp === "SI_HAY"
-                            ? `✓ $${Number(item.supplierPrice || 0).toFixed(2)} ${item.deliveryTime ? `• ${item.deliveryTime}` : ""} ${item.shippingMethod ? `• ${item.shippingMethod}` : ""}`
-                            : disp === "NO_HAY"
-                            ? "✕ Sin stock"
-                            : "Selecciona opción"}
-                        </span>
-
-                        <button
-                          type="button"
-                          disabled={guardandoId === item.id}
-                          onClick={() => void handleGuardarRespuesta(item)}
-                          className="h-8 px-3.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-all active:scale-95 shrink-0 disabled:opacity-50"
-                        >
-                          <span>{guardandoId === item.id ? "..." : "✓"}</span>
-                          <span>Confirmar</span>
-                        </button>
-                      </div>
+                      {/* Reproductor de Audio Desplegable al pulsar "Audio" */}
+                      {audioAbierto && audiosList.length > 0 && (
+                        <div className="pt-2 border-t border-slate-800 space-y-2 animate-fade-in">
+                          {audiosList.map((aud, aIdx) => (
+                            <MiniAudioPlayerProveedor
+                              key={aud.id || `aud-${aIdx}`}
+                              src={aud.url}
+                              transcription={aud.transcriptionText}
+                              index={aIdx}
+                            />
+                          ))}
+                        </div>
+                      )}
                     </div>
                   );
                 })}
@@ -787,14 +869,14 @@ export default function PaginaCatalogoProveedor() {
 
       {/* Barra Inferior Fija de Confirmación Rápida */}
       {!cargando && !error && items.length > 0 && (
-        <div className="fixed bottom-0 inset-x-0 z-30 bg-[#0a0a0e]/95 backdrop-blur-xl border-t border-white/10 px-4 py-3">
+        <div className="fixed bottom-0 inset-x-0 z-30 bg-[#0b111e]/95 backdrop-blur-xl border-t border-slate-800 px-4 py-3.5">
           <div className="max-w-5xl mx-auto flex items-center justify-between gap-3">
             <div>
-              <span className="text-[11px] text-zinc-400 block">
-                Cotizados: {resumenTotal.disponiblesCount}/{items.length}
+              <span className="text-[11px] text-slate-400 block">
+                Disponibles: {resumenTotal.disponiblesCount} de {items.length} repuesto(s)
               </span>
-              <span className="text-base font-black text-emerald-400 font-mono">
-                Total: ${resumenTotal.totalValor.toFixed(2)}
+              <span className="text-base sm:text-lg font-black text-emerald-400 font-mono">
+                Total Cotizado: ${resumenTotal.totalValor.toFixed(2)}
               </span>
             </div>
 
@@ -802,34 +884,97 @@ export default function PaginaCatalogoProveedor() {
               type="button"
               disabled={guardandoTodo}
               onClick={() => void handleGuardarRespuesta()}
-              className="h-10 px-5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs sm:text-sm font-bold flex items-center gap-2 cursor-pointer shadow-lg shadow-emerald-600/25 transition-all active:scale-95 disabled:opacity-50"
+              className="h-11 px-6 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs sm:text-sm font-extrabold flex items-center gap-2 cursor-pointer shadow-lg shadow-emerald-600/25 transition-all active:scale-95 disabled:opacity-50"
             >
-              <span>💾</span>
-              <span>{guardandoTodo ? "Enviando..." : "Enviar"}</span>
+              <span>✓</span>
+              <span>{guardandoTodo ? "Enviando a Oficina..." : "Enviar Cotización a Oficina"}</span>
             </button>
           </div>
         </div>
       )}
 
-      {/* Modal Flotante de Foto Ampliada */}
+      {/* Modal Flotante de Fotos */}
       {fotoModal && (
         <div
           onClick={() => setFotoModal(null)}
           className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4"
         >
-          <div className="relative max-w-4xl w-full max-h-[90vh] flex flex-col items-center justify-center">
-            <button
-              type="button"
-              onClick={() => setFotoModal(null)}
-              className="absolute top-2 right-2 w-10 h-10 rounded-full bg-black/70 hover:bg-black text-white border border-white/20 flex items-center justify-center text-lg z-10 cursor-pointer"
-            >
-              ✕
-            </button>
-            <img
-              src={fotoModal}
-              alt="Foto"
-              className="max-h-[85vh] w-auto max-w-full rounded-2xl object-contain shadow-2xl border border-white/10"
-            />
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="relative max-w-3xl w-full bg-[#111827] border border-slate-800 rounded-3xl p-4 space-y-3 shadow-2xl"
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-bold text-white truncate">
+                📷 {fotoModal.titulo}
+              </span>
+              <button
+                type="button"
+                onClick={() => setFotoModal(null)}
+                className="w-8 h-8 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center text-sm cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="rounded-2xl overflow-hidden bg-black flex items-center justify-center max-h-[70vh]">
+              <img
+                src={fotoModal.fotos[fotoModal.idx]}
+                alt={fotoModal.titulo}
+                className="max-h-[70vh] w-auto object-contain"
+              />
+            </div>
+            {fotoModal.fotos.length > 1 && (
+              <div className="flex items-center gap-2 overflow-x-auto pb-1">
+                {fotoModal.fotos.map((fUrl, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => setFotoModal({ ...fotoModal, idx: i })}
+                    className={`w-14 h-12 rounded-xl overflow-hidden border-2 shrink-0 cursor-pointer ${
+                      fotoModal.idx === i ? "border-sky-400" : "border-transparent opacity-60"
+                    }`}
+                  >
+                    <img src={fUrl} alt="" className="w-full h-full object-cover" />
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Modal Flotante de Video */}
+      {videoModal && (
+        <div
+          onClick={() => setVideoModal(null)}
+          className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="relative max-w-2xl w-full bg-[#111827] border border-slate-800 rounded-3xl p-4 space-y-3 shadow-2xl"
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-bold text-white truncate">
+                📹 {videoModal.titulo}
+              </span>
+              <button
+                type="button"
+                onClick={() => setVideoModal(null)}
+                className="w-8 h-8 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center text-sm cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="space-y-2">
+              {videoModal.videos.map((vUrl, i) => (
+                <video
+                  key={i}
+                  src={vUrl}
+                  controls
+                  autoPlay={i === 0}
+                  className="w-full max-h-[65vh] rounded-2xl bg-black"
+                />
+              ))}
+            </div>
           </div>
         </div>
       )}

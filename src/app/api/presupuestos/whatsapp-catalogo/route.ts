@@ -31,6 +31,10 @@ export async function GET(request: Request) {
     const mode = searchParams.get("mode"); // "daily" | "individual"
     const dateParam = searchParams.get("date"); // YYYY-MM-DD opcional
     const targetItemId = searchParams.get("itemId") || "";
+    const targetItemsList = (searchParams.get("items") || "")
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
     const targetItemName = searchParams.get("item") || "";
     const targetPinId = searchParams.get("pinId") || "";
 
@@ -248,6 +252,13 @@ export async function GET(request: Request) {
           transcriptionText: ev.transcriptionText || null,
         }));
 
+      const videosCatalogo: Array<{ id: string; url: string }> = evRows
+        .filter((ev: any) => ev.type === "video" || (ev.mimeType && ev.mimeType.startsWith("video/")))
+        .map((ev: any) => ({
+          id: ev.id,
+          url: `/api/storage/download?key=${encodeURIComponent(ev.r2Key)}`,
+        }));
+
       // También recolectar evidencias registradas en RegistroFinalUnificado (checklist.registroEvidencias)
       if (Array.isArray(checklist?.registroEvidencias)) {
         checklist.registroEvidencias.forEach((rev: any, idx: number) => {
@@ -444,14 +455,47 @@ export async function GET(request: Request) {
           it.inStock === false ||
           isManual ||
           it.comprarAProveedor === true ||
+          it.enviadoProveedor === true ||
           it.purchaseStatus === "POR_PEDIR" ||
           it.purchaseStatus === "PEDIDO_WHATSAPP" ||
           it.purchaseStatus === "COTIZADO" ||
           it.purchaseStatus === "SIN_STOCK_PROVEEDOR";
 
+        const videosItem: string[] = [];
+        if (Array.isArray(it.videos)) {
+          it.videos.forEach((v: string) => {
+            const u = normalizarUrlMedia(v);
+            if (u && !videosItem.includes(u)) videosItem.push(u);
+          });
+        }
+        if (hallazgo?.videoUrl) {
+          const u = normalizarUrlMedia(hallazgo.videoUrl);
+          if (u && !videosItem.includes(u)) videosItem.push(u);
+        }
+        if (videosItem.length === 0 && videosCatalogo.length > 0) {
+          videosCatalogo.forEach((vc) => {
+            if (!videosItem.includes(vc.url)) videosItem.push(vc.url);
+          });
+        }
+
+        const vistaRaw = String(hallazgo?.vistaLabel || hallazgo?.vista || it.category || "Taller");
+        const vistaFormateada =
+          vistaRaw === "frontal"
+            ? "Frente"
+            : vistaRaw === "lateral_der"
+            ? "Frente Der."
+            : vistaRaw === "lateral_izq"
+            ? "Frente Izq."
+            : vistaRaw === "posterior" || vistaRaw === "trasera"
+            ? "Posterior"
+            : vistaRaw.charAt(0).toUpperCase() + vistaRaw.slice(1).replace(/_/g, " ");
+
         return {
           id: it.id || `rep_${idx}`,
           findingId: it.findingId || hallazgo?.id || null,
+          pinNumber: hallazgo?.numEv || hallazgo?.numeroEvidencia || hallazgo?.pinNumber || null,
+          vistaLabel: vistaFormateada,
+          category: it.category || "Taller",
           name: it.name || it.description || "Repuesto / Servicio",
           code: it.code || "",
           qty: Number(it.qty || 1),
@@ -466,6 +510,7 @@ export async function GET(request: Request) {
           descripcion: it.descripcion || it.description || hallazgo?.descripcion || "",
           imageUrl: fotosItem[0] || null,
           fotos: fotosItem,
+          videos: videosItem,
           audios: audiosItem,
           costPrice: Number(it.costPrice || 0),
           price: Number(it.price || 0),
@@ -477,19 +522,25 @@ export async function GET(request: Request) {
               ? "NO_HAY"
               : "PENDIENTE"),
           supplierPrice: Number(it.supplierPrice ?? it.costPrice ?? 0),
-          deliveryTime: it.deliveryTime || "",
+          deliveryTime: it.deliveryTime || "30 min",
           shippingMethod: it.shippingMethod || "",
           supplierNotes: it.supplierNotes || "",
           supplierRespondedAt: it.supplierRespondedAt || null,
         };
       });
 
-      // Si viene filtrado por itemId, item (nombre) o pinId (envío individual por WhatsApp)
+      // Si viene filtrado por items (lista de IDs), itemId, item (nombre) o pinId
       let itemsParaMostrar = todosNormalizados;
-      const hayFiltroIndividual = Boolean(targetItemId.trim() || targetItemName.trim() || targetPinId.trim());
+      const hayFiltroIndividual = Boolean(
+        targetItemsList.length > 0 ||
+          targetItemId.trim() ||
+          targetItemName.trim() ||
+          targetPinId.trim()
+      );
 
       if (hayFiltroIndividual) {
         const filtradosIndividual = todosNormalizados.filter((it) => {
+          if (targetItemsList.length > 0 && targetItemsList.includes(String(it.id))) return true;
           if (targetItemId && String(it.id) === targetItemId.trim()) return true;
           if (targetPinId && String(it.findingId) === targetPinId.trim()) return true;
           if (
@@ -504,9 +555,14 @@ export async function GET(request: Request) {
           itemsParaMostrar = filtradosIndividual;
         }
       } else {
-        // En modo masivo ("Mandar Todo el Pedido"): priorizar los que no están en stock o son manuales
-        const soloParaProveedor = todosNormalizados.filter((it) => it.comprarAProveedor || !it.inStock || it.isManual);
-        itemsParaMostrar = soloParaProveedor.length > 0 ? soloParaProveedor : todosNormalizados;
+        // En modo masivo ("Mandar Todo el Pedido"): priorizar los que están marcados para proveedor, no están en stock o son manuales
+        const marcadosExpresamente = todosNormalizados.filter(
+          (it: any) =>
+            it.comprarAProveedor ||
+            !it.inStock ||
+            it.isManual
+        );
+        itemsParaMostrar = marcadosExpresamente.length > 0 ? marcadosExpresamente : todosNormalizados;
       }
 
       return NextResponse.json({
