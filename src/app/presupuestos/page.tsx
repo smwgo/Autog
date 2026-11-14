@@ -145,6 +145,59 @@ function formatearFechaHora(createdAt?: string | null, dateIn?: string | null): 
   return { fecha, hora };
 }
 
+function getEstadoTallerPropuesta(orden: OrdenResumen) {
+  const statusLower = (orden.status || "").trim().toLowerCase();
+  const quoteStatusLower = (orden.quoteStatus || "").trim().toLowerCase();
+  const esPagado =
+    quoteStatusLower === "pagado" ||
+    statusLower === "pagado" ||
+    statusLower.includes("factur") ||
+    statusLower.includes("pagad");
+
+  if (esPagado) {
+    return {
+      tipo: "pagado" as const,
+      label: "✓ Pagado",
+      badgeClass: "bg-sky-500/15 text-sky-700 dark:text-sky-300 border-sky-500/30",
+      dotClass: "bg-sky-500",
+    };
+  }
+
+  const esPausada = statusLower === "pausada" || statusLower === "pausa";
+  if (esPausada) {
+    return {
+      tipo: "pausa" as const,
+      label: "Pausa",
+      badgeClass: "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30",
+      dotClass: "bg-amber-500",
+    };
+  }
+
+  const esTrabajando =
+    quoteStatusLower === "aprobado" ||
+    quoteStatusLower === "aceptado" ||
+    statusLower === "en proceso" ||
+    statusLower === "reparando" ||
+    statusLower === "trabajando" ||
+    statusLower === "en_caja";
+
+  if (esTrabajando) {
+    return {
+      tipo: "trabajando" as const,
+      label: "Trabajando",
+      badgeClass: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30",
+      dotClass: "bg-emerald-500",
+    };
+  }
+
+  return {
+    tipo: "espera" as const,
+    label: "En espera",
+    badgeClass: "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/30",
+    dotClass: "bg-amber-500/70",
+  };
+}
+
 export default function PanelPresupuestosPage() {
   const router = useRouter();
 
@@ -172,7 +225,7 @@ export default function PanelPresupuestosPage() {
             setIsPanelSelectorAdmin(true);
           }
         }
-      } catch {}
+      } catch { }
     }
   }, []);
 
@@ -201,6 +254,7 @@ export default function PanelPresupuestosPage() {
 
   // Casillero de verificación: orden con la que se está trabajando actualmente
   const [ordenTrabajandoId, setOrdenTrabajandoId] = useState<string | null>(null);
+  const [menuTallerFilaId, setMenuTallerFilaId] = useState<string | null>(null);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -265,32 +319,30 @@ export default function PanelPresupuestosPage() {
           setOrdenTrabajandoId(null);
           try {
             localStorage.removeItem("taller_orden_activa_id");
-          } catch {}
+          } catch { }
         }
         // Actualizar estado local inmediatamente
         setOrdenes((prev) =>
           prev.map((o) =>
             o.id === orderId || o.orderNumber === orderId
               ? {
-                  ...o,
-                  status:
-                    nuevoEstado === "Pagado"
-                      ? "Pagado"
-                      : nuevoEstado === "Pausada"
+                ...o,
+                status:
+                  nuevoEstado === "Pagado"
+                    ? "Pagado"
+                    : nuevoEstado === "Pausada"
                       ? "Pausada"
                       : nuevoEstado === "Aprobado"
-                      ? "En Proceso"
-                      : o.status === "Pausada"
-                      ? "En Proceso"
-                      : o.status,
-                  quoteStatus: nuevoEstado === "Pausada" ? o.quoteStatus : nuevoEstado,
-                  quoteApprovedAt:
-                    nuevoEstado === "Aprobado"
-                      ? new Date().toISOString()
-                      : nuevoEstado === "Pendiente"
+                        ? "En Proceso"
+                        : "Pendiente",
+                quoteStatus: nuevoEstado === "Pausada" ? o.quoteStatus : nuevoEstado,
+                quoteApprovedAt:
+                  nuevoEstado === "Aprobado"
+                    ? new Date().toISOString()
+                    : nuevoEstado === "Pendiente"
                       ? null
                       : o.quoteApprovedAt,
-                }
+              }
               : o
           )
         );
@@ -342,7 +394,7 @@ export default function PanelPresupuestosPage() {
         setOrdenTrabajandoId(null);
         try {
           localStorage.removeItem("taller_orden_activa_id");
-        } catch {}
+        } catch { }
       }
 
       // Remover inmediatamente del estado local de la tabla
@@ -394,7 +446,7 @@ export default function PanelPresupuestosPage() {
               const errData = await res.json();
               errText = errData.error || errText;
             }
-          } catch {}
+          } catch { }
           mostrarToast(errText, "err");
         }
         return;
@@ -447,13 +499,12 @@ export default function PanelPresupuestosPage() {
       {/* Toast Notificaciones */}
       {toast && (
         <div
-          className={`fixed top-4 right-4 z-50 px-4 py-2.5 rounded-2xl shadow-xl backdrop-blur-md border text-xs font-semibold flex items-center gap-2 animate-bounce ${
-            toast.tipo === "ok"
-              ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-700 dark:text-emerald-300"
-              : toast.tipo === "err"
+          className={`fixed top-4 right-4 z-50 px-4 py-2.5 rounded-2xl shadow-xl backdrop-blur-md border text-xs font-semibold flex items-center gap-2 animate-bounce ${toast.tipo === "ok"
+            ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-700 dark:text-emerald-300"
+            : toast.tipo === "err"
               ? "bg-rose-500/15 border-rose-500/30 text-rose-700 dark:text-rose-300"
               : "bg-sky-500/15 border-sky-500/30 text-sky-700 dark:text-sky-300"
-          }`}
+            }`}
         >
           <span>{toast.tipo === "ok" ? "✓" : toast.tipo === "err" ? "✕" : "ℹ"}</span>
           <span>{toast.msg}</span>
@@ -466,7 +517,7 @@ export default function PanelPresupuestosPage() {
           {/* Cabecera / Navegación */}
           <div className="order-1 mb-4 sm:mb-8 flex items-center justify-between gap-3">
             <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-              <Link 
+              <Link
                 href={isPanelSelectorAdmin ? "/modulos" : "/taller"}
                 title={isPanelSelectorAdmin ? "Volver a los paneles" : "Volver a Taller"}
                 className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center justify-center text-zinc-600 dark:text-zinc-300 hover:text-purple-600 dark:hover:text-purple-400 hover:border-purple-500 dark:hover:border-purple-500 hover:bg-purple-50/50 dark:hover:bg-purple-500/10 transition-all shadow-sm active:scale-95 group shrink-0"
@@ -582,12 +633,12 @@ export default function PanelPresupuestosPage() {
                   {filtroEstado === "PENDIENTE"
                     ? "Pendientes"
                     : filtroEstado === "APROBADO"
-                    ? "Aprobadas"
-                    : filtroEstado === "EN_CAJA"
-                    ? "Caja"
-                    : filtroEstado === "PAGADO"
-                    ? "Pagadas"
-                    : "Filtro"}
+                      ? "Aprobadas"
+                      : filtroEstado === "EN_CAJA"
+                        ? "Caja"
+                        : filtroEstado === "PAGADO"
+                          ? "Pagadas"
+                          : "Filtro"}
                 </span>
                 <svg className={`w-4 h-4 text-zinc-400 transition-transform ${menuEstadoAbierto ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
@@ -596,9 +647,9 @@ export default function PanelPresupuestosPage() {
 
               {menuEstadoAbierto && (
                 <>
-                  <div 
-                    className="fixed inset-0 z-40" 
-                    onClick={() => setMenuEstadoAbierto(false)} 
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => setMenuEstadoAbierto(false)}
                   />
                   <div className="absolute right-0 mt-1.5 w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-xl overflow-hidden z-50 py-1 animate-in fade-in zoom-in-95 duration-100">
                     {OPCIONES_ESTADO.map((opcion) => (
@@ -609,11 +660,10 @@ export default function PanelPresupuestosPage() {
                           setFiltroEstado(opcion.id);
                           setMenuEstadoAbierto(false);
                         }}
-                        className={`w-full px-4 py-2.5 text-left text-sm font-normal transition-colors flex items-center justify-between cursor-pointer ${
-                          filtroEstado === opcion.id
-                            ? "bg-purple-50 dark:bg-purple-600/15 text-purple-600 dark:text-purple-400 font-medium"
-                            : "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800/80 hover:text-zinc-900 dark:hover:text-white"
-                        }`}
+                        className={`w-full px-4 py-2.5 text-left text-sm font-normal transition-colors flex items-center justify-between cursor-pointer ${filtroEstado === opcion.id
+                          ? "bg-purple-50 dark:bg-purple-600/15 text-purple-600 dark:text-purple-400 font-medium"
+                          : "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800/80 hover:text-zinc-900 dark:hover:text-white"
+                          }`}
                       >
                         <div className="flex items-center gap-2">
                           <span className={`w-2 h-2 rounded-full ${opcion.dot || "bg-zinc-400"}`} />
@@ -648,20 +698,17 @@ export default function PanelPresupuestosPage() {
                 {/* Vista Móvil Compacta */}
                 <div className="md:hidden space-y-2.5">
                   {ordenes.map((orden, idx) => {
-                    const esPagado = orden.quoteStatus === "Pagado" || orden.status === "Pagado";
-                    const esPausada = !esPagado && orden.status === "Pausada";
-                    const esAprobado = !esPagado && !esPausada && (orden.quoteStatus === "Aprobado" || orden.status === "EN_CAJA");
+                    const stTaller = getEstadoTallerPropuesta(orden);
                     const estaTrabajando = ordenTrabajandoId === orden.id || ordenTrabajandoId === orden.orderNumber;
                     const { fecha, hora } = formatearFechaHora(orden.createdAt, orden.dateIn);
                     return (
                       <div
                         key={`movil-${orden.id || idx}`}
                         onClick={() => irAPropuesta(orden.id)}
-                        className={`rounded-2xl border p-3.5 space-y-2.5 shadow-xs transition-all cursor-pointer ${
-                          estaTrabajando
-                            ? "bg-purple-50/40 dark:bg-purple-950/20 border-purple-500/50 ring-1 ring-purple-500/30"
-                            : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700"
-                        }`}
+                        className={`rounded-2xl border p-3.5 space-y-2.5 shadow-xs transition-all cursor-pointer ${estaTrabajando
+                          ? "bg-purple-50/40 dark:bg-purple-950/20 border-purple-500/50 ring-1 ring-purple-500/30"
+                          : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700"
+                          }`}
                       >
                         <div className="flex items-center justify-between gap-3">
                           <div className="flex items-center gap-2.5 min-w-0">
@@ -669,11 +716,10 @@ export default function PanelPresupuestosPage() {
                               type="button"
                               onClick={(e) => toggleOrdenTrabajando(orden.id, e)}
                               title={estaTrabajando ? "Orden en trabajo (clic para desmarcar)" : "Marcar como orden en trabajo"}
-                              className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all cursor-pointer shrink-0 ${
-                                estaTrabajando
-                                  ? "bg-purple-600 border-purple-500 text-white"
-                                  : "border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800/80 text-transparent"
-                              }`}
+                              className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all cursor-pointer shrink-0 ${estaTrabajando
+                                ? "bg-purple-600 border-purple-500 text-white"
+                                : "border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800/80 text-transparent"
+                                }`}
                             >
                               <svg className="w-3.5 h-3.5 stroke-[3]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
@@ -699,41 +745,74 @@ export default function PanelPresupuestosPage() {
                             {fecha}{hora ? ` · ${hora}` : ""}
                           </span>
                           <div className="flex items-center gap-1.5 shrink-0 flex-wrap justify-end" onClick={(e) => e.stopPropagation()}>
-                            <span
-                              className={`px-2.5 py-0.5 rounded-lg border text-xs font-normal shrink-0 ${
-                                esPagado
-                                  ? "bg-sky-500/15 border-sky-500/30 text-sky-700 dark:text-sky-300"
-                                  : esPausada
-                                  ? "bg-amber-500/15 border-amber-500/30 text-amber-700 dark:text-amber-300"
-                                  : esAprobado
-                                  ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-700 dark:text-emerald-300"
-                                  : "bg-amber-500/15 border-amber-500/30 text-amber-700 dark:text-amber-400"
-                              }`}
-                            >
-                              {esPagado ? "✓ Pagado" : esPausada ? "⏸ Pausada" : esAprobado ? "● Trabajando" : "En Espera"}
-                            </span>
-                            {!esPagado && !esAprobado && (
-                              <button
-                                type="button"
-                                disabled={cambiandoEstadoId === orden.id}
-                                onClick={() => handleCambiarEstadoPropuesta(orden.id, "Aprobado")}
-                                className="h-7 px-2 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 text-xs font-medium transition-all cursor-pointer disabled:opacity-50"
-                                title="Aprobar y pasar a Trabajando en Taller"
-                              >
-                                ✓ Aprobar
-                              </button>
+                            {stTaller.tipo === "pagado" ? (
+                              <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-normal border ${stTaller.badgeClass}`}>
+                                {stTaller.label}
+                              </span>
+                            ) : (
+                              <div className="relative inline-block text-left">
+                                <button
+                                  type="button"
+                                  disabled={cambiandoEstadoId === orden.id}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setMenuTallerFilaId(menuTallerFilaId === orden.id ? null : orden.id);
+                                  }}
+                                  className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-normal border transition-all hover:brightness-110 active:scale-95 cursor-pointer disabled:opacity-50 ${stTaller.badgeClass}`}
+                                  title="Estado Taller (Trabajando, Pausa, En espera)"
+                                >
+                                  <span className={`w-1.5 h-1.5 rounded-full ${stTaller.dotClass}`} />
+                                  <span>{stTaller.label}</span>
+                                  <svg className="w-2.5 h-2.5 opacity-60 ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                                  </svg>
+                                </button>
+                                {menuTallerFilaId === orden.id && (
+                                  <>
+                                    <div className="fixed inset-0 z-40" onClick={() => setMenuTallerFilaId(null)} />
+                                    <div className="absolute right-0 mt-1 w-36 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-xl overflow-hidden z-50 py-1 text-xs">
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setMenuTallerFilaId(null);
+                                          handleCambiarEstadoPropuesta(orden.id, "Aprobado");
+                                        }}
+                                        className={`w-full px-3 py-2 text-left flex items-center gap-2 hover:bg-emerald-500/10 transition-colors ${stTaller.tipo === "trabajando" ? "text-emerald-600 font-bold bg-emerald-500/5" : "text-zinc-700 dark:text-zinc-300"
+                                          }`}
+                                      >
+                                        <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                                        <span>Trabajando</span>
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setMenuTallerFilaId(null);
+                                          handleCambiarEstadoPropuesta(orden.id, "Pausada");
+                                        }}
+                                        className={`w-full px-3 py-2 text-left flex items-center gap-2 hover:bg-amber-500/10 transition-colors ${stTaller.tipo === "pausa" ? "text-amber-600 font-bold bg-amber-500/5" : "text-zinc-700 dark:text-zinc-300"
+                                          }`}
+                                      >
+                                        <span className="w-2 h-2 rounded-full bg-amber-500" />
+                                        <span>Pausa</span>
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setMenuTallerFilaId(null);
+                                          handleCambiarEstadoPropuesta(orden.id, "Pendiente");
+                                        }}
+                                        className={`w-full px-3 py-2 text-left flex items-center gap-2 hover:bg-amber-500/10 transition-colors ${stTaller.tipo === "espera" ? "text-amber-600 font-bold bg-amber-500/5" : "text-zinc-700 dark:text-zinc-300"
+                                          }`}
+                                      >
+                                        <span className="w-2 h-2 rounded-full bg-amber-500/70" />
+                                        <span>En espera</span>
+                                      </button>
+                                    </div>
+                                  </>
+                                )}
+                              </div>
                             )}
-                            {!esPagado && !esPausada && (
-                              <button
-                                type="button"
-                                disabled={cambiandoEstadoId === orden.id}
-                                onClick={() => handleCambiarEstadoPropuesta(orden.id, "Pausada")}
-                                className="h-7 px-2 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-700 dark:text-amber-300 text-xs font-medium transition-all cursor-pointer disabled:opacity-50"
-                                title="Pausar orden en Taller"
-                              >
-                                ⏸ Pausa
-                              </button>
-                            )}
+
                             <button
                               type="button"
                               onClick={(e) => {
@@ -780,31 +859,27 @@ export default function PanelPresupuestosPage() {
                       </thead>
                       <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800 text-xs font-normal">
                         {ordenes.map((orden, idx) => {
-                          const esPagado = orden.quoteStatus === "Pagado" || orden.status === "Pagado";
-                          const esPausada = !esPagado && orden.status === "Pausada";
-                          const esAprobado = !esPagado && !esPausada && (orden.quoteStatus === "Aprobado" || orden.status === "EN_CAJA");
+                          const stTaller = getEstadoTallerPropuesta(orden);
                           const estaTrabajando = ordenTrabajandoId === orden.id || ordenTrabajandoId === orden.orderNumber;
                           const { fecha, hora } = formatearFechaHora(orden.createdAt, orden.dateIn);
                           return (
                             <tr
                               key={`desk-${orden.id || idx}`}
                               onClick={() => irAPropuesta(orden.id)}
-                              className={`transition-colors cursor-pointer ${
-                                estaTrabajando
-                                  ? "bg-purple-500/10 dark:bg-purple-500/15 hover:bg-purple-500/20 border-l-4 border-l-purple-500"
-                                  : "hover:bg-zinc-50 dark:hover:bg-zinc-800/40"
-                              }`}
+                              className={`transition-colors cursor-pointer ${estaTrabajando
+                                ? "bg-purple-500/10 dark:bg-purple-500/15 hover:bg-purple-500/20 border-l-4 border-l-purple-500"
+                                : "hover:bg-zinc-50 dark:hover:bg-zinc-800/40"
+                                }`}
                             >
                               <td className="py-3 px-3 text-center whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                                 <button
                                   type="button"
                                   onClick={(e) => toggleOrdenTrabajando(orden.id, e)}
                                   title={estaTrabajando ? "Orden en trabajo actual (clic para desmarcar)" : "Marcar como orden en trabajo"}
-                                  className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all cursor-pointer mx-auto ${
-                                    estaTrabajando
-                                      ? "bg-purple-600 border-purple-500 text-white shadow-xs"
-                                      : "border-zinc-300 dark:border-zinc-700 bg-white/50 dark:bg-zinc-800/60 hover:border-purple-400 text-transparent"
-                                  }`}
+                                  className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all cursor-pointer mx-auto ${estaTrabajando
+                                    ? "bg-purple-600 border-purple-500 text-white shadow-xs"
+                                    : "border-zinc-300 dark:border-zinc-700 bg-white/50 dark:bg-zinc-800/60 hover:border-purple-400 text-transparent"
+                                    }`}
                                 >
                                   <svg className="w-3.5 h-3.5 stroke-[2.5]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
@@ -826,45 +901,37 @@ export default function PanelPresupuestosPage() {
                               <td className="py-3 px-4 text-right text-xs font-normal text-zinc-900 dark:text-zinc-100 whitespace-nowrap">
                                 ${orden.totalVentaEstimada.toFixed(2)}
                               </td>
-                              <td className="py-3 px-4 text-center whitespace-nowrap">
-                                <span
-                                  className={`text-xs font-normal px-2.5 py-1 rounded-lg border inline-block ${
-                                    esPagado
-                                      ? "bg-sky-500/15 text-sky-700 dark:text-sky-300 border-sky-500/30"
-                                      : esPausada
-                                      ? "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30"
-                                      : esAprobado
-                                      ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30"
-                                      : "bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30"
-                                  }`}
-                                >
-                                  {esPagado ? "✓ Pagado" : esPausada ? "⏸ Pausada" : esAprobado ? "● Trabajando" : "En Espera"}
-                                </span>
+                              <td className="py-3 px-4 text-center whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                                {stTaller.tipo === "pagado" ? (
+                                  <span
+                                    className={`text-xs font-normal px-2.5 py-1 rounded-full border inline-flex items-center gap-1.5 ${stTaller.badgeClass}`}
+                                  >
+                                    {stTaller.label}
+                                  </span>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    disabled={cambiandoEstadoId === orden.id}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      const siguienteEstado =
+                                        stTaller.tipo === "espera"
+                                          ? "Aprobado"
+                                          : stTaller.tipo === "trabajando"
+                                            ? "Pausada"
+                                            : "Pendiente";
+                                      handleCambiarEstadoPropuesta(orden.id, siguienteEstado);
+                                    }}
+                                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-normal border transition-all hover:brightness-110 active:scale-95 cursor-pointer disabled:opacity-50 ${stTaller.badgeClass}`}
+                                    title="Clic para cambiar estado en Taller (En espera → Trabajando → Pausa)"
+                                  >
+                                    <span className={`w-1.5 h-1.5 rounded-full ${stTaller.dotClass}`} />
+                                    <span>{stTaller.label}</span>
+                                  </button>
+                                )}
                               </td>
                               <td className="py-3 px-4 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                                 <div className="flex items-center justify-end gap-1.5">
-                                  {!esPagado && !esAprobado && (
-                                    <button
-                                      type="button"
-                                      disabled={cambiandoEstadoId === orden.id}
-                                      onClick={() => handleCambiarEstadoPropuesta(orden.id, "Aprobado")}
-                                      className="h-7 px-2.5 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 text-xs font-medium transition-all cursor-pointer disabled:opacity-50"
-                                      title="Aprobar y pasar a Trabajando en Taller"
-                                    >
-                                      ✓ Aprobar
-                                    </button>
-                                  )}
-                                  {!esPagado && !esPausada && (
-                                    <button
-                                      type="button"
-                                      disabled={cambiandoEstadoId === orden.id}
-                                      onClick={() => handleCambiarEstadoPropuesta(orden.id, "Pausada")}
-                                      className="h-7 px-2.5 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-700 dark:text-amber-300 text-xs font-medium transition-all cursor-pointer disabled:opacity-50"
-                                      title="Pausar orden en Taller"
-                                    >
-                                      ⏸ Pausa
-                                    </button>
-                                  )}
                                   <button
                                     type="button"
                                     onClick={(e) => {

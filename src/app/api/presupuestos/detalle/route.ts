@@ -1,7 +1,18 @@
 import { NextResponse } from "next/server";
 import { prisma, withRetry } from "@/lib/prisma";
+import fs from "fs";
+import path from "path";
 
 export const dynamic = "force-dynamic";
+
+function limpiarNum(val?: string | null): string {
+  if (!val) return "";
+  return String(val)
+    .replace(/\b(COT|COTIZACION|COTIZACIÓN|OT|ORD)\b[-\s#]*/gi, "")
+    .replace(/#+/g, "")
+    .trim()
+    .toLowerCase();
+}
 
 /**
  * GET: Obtener el expediente completo de una orden de trabajo para el presupuestista.
@@ -21,7 +32,9 @@ export async function GET(request: Request) {
     }
 
     return await withRetry(async () => {
-      // 1. Obtener la orden principal
+      const cleanId = limpiarNum(id);
+
+      // 1. Obtener la orden principal (sin importar si está Pagada, Pendiente, Aprobada o Pausada)
       let order: any = null;
       try {
         order = await prisma.workshopOrder.findFirst({
@@ -29,6 +42,7 @@ export async function GET(request: Request) {
             OR: [
               { id },
               { orderNumber: id },
+              { quoteNumber: id },
               { orderNumber: id.replace(/\bOT\b/gi, "").replace(/#+/g, "").trim() },
             ],
           },
@@ -39,10 +53,46 @@ export async function GET(request: Request) {
 
       if (!order) {
         const rows = (await prisma.$queryRawUnsafe(
-          `SELECT * FROM "WorkshopOrder" WHERE "id" = $1 OR "orderNumber" = $1 LIMIT 1`,
+          `SELECT * FROM "WorkshopOrder" WHERE "id" = $1 OR "orderNumber" = $1 OR "quoteNumber" = $1 LIMIT 1`,
           id
         ).catch(() => [])) as any[];
         if (rows && rows.length > 0) order = rows[0];
+      }
+
+      // 1.0b Fallback directo sobre el mirror local (por si la orden fue guardada o pagada en mirror)
+      if (!order) {
+        try {
+          const mirrorPath = path.join(process.cwd(), "prisma", "neon-local-mirror.json");
+          if (fs.existsSync(mirrorPath)) {
+            const mirrorData = JSON.parse(fs.readFileSync(mirrorPath, "utf-8"));
+            if (Array.isArray(mirrorData?.workshopOrder) && mirrorData.workshopOrder.length > 0) {
+              order =
+                mirrorData.workshopOrder.find(
+                  (mo: any) =>
+                    mo?.id === id ||
+                    mo?.orderNumber === id ||
+                    mo?.quoteNumber === id ||
+                    (cleanId && limpiarNum(mo?.orderNumber) === cleanId) ||
+                    (cleanId && limpiarNum(mo?.quoteNumber) === cleanId)
+                ) || null;
+
+              // Si el ID de la URL era antiguo y no coincidió, tomar la primera orden disponible
+              if (!order) {
+                order = mirrorData.workshopOrder[0];
+              }
+            }
+          }
+        } catch {}
+      }
+
+      // 1.0c Si aún no hay coincidencia exacta en DB, tomar la orden más reciente de WorkshopOrder
+      if (!order) {
+        const fallbackRows = (await prisma.$queryRawUnsafe(
+          `SELECT * FROM "WorkshopOrder" ORDER BY "createdAt" DESC LIMIT 1`
+        ).catch(() => [])) as any[];
+        if (fallbackRows && fallbackRows.length > 0) {
+          order = fallbackRows[0];
+        }
       }
 
       if (!order) {

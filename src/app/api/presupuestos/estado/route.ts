@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma, withRetry } from "@/lib/prisma";
+import fs from "fs";
+import path from "path";
 
 export const dynamic = "force-dynamic";
 
@@ -137,6 +139,43 @@ export async function POST(request: Request) {
         orderId,
         esPagado ? "Pagada" : esPausado ? "Pausada" : estadoNormalizado === "Aprobado" ? "Aprobada" : "Pendiente"
       ).catch(() => {});
+
+      // Sincronizar de forma directa en el espejo local (neon-local-mirror.json) para reflejo inmediato en Taller y Propuesta
+      try {
+        const mirrorPath = path.join(process.cwd(), "prisma", "neon-local-mirror.json");
+        if (fs.existsSync(mirrorPath)) {
+          const mirrorData = JSON.parse(fs.readFileSync(mirrorPath, "utf-8"));
+          if (Array.isArray(mirrorData?.workshopOrder)) {
+            let changed = false;
+            mirrorData.workshopOrder = mirrorData.workshopOrder.map((mo: any) => {
+              if (mo?.id === orderId || mo?.orderNumber === orderId || mo?.quoteNumber === orderId) {
+                changed = true;
+                return {
+                  ...mo,
+                  status: esPagado ? "Pagado" : esPausado ? "Pausada" : "En Proceso",
+                  quoteStatus: esPagado
+                    ? "Pagado"
+                    : esPausado
+                    ? mo.quoteStatus === "Pagado"
+                      ? "Aprobado"
+                      : mo.quoteStatus || "Pendiente"
+                    : estadoNormalizado,
+                  deliveryStatus: esPagado ? "Facturado" : "Pendiente",
+                  quoteApprovedAt:
+                    esPagado || estadoNormalizado === "Aprobado"
+                      ? approvedAt?.toISOString() || new Date().toISOString()
+                      : null,
+                  updatedAt: new Date().toISOString(),
+                };
+              }
+              return mo;
+            });
+            if (changed) {
+              fs.writeFileSync(mirrorPath, JSON.stringify(mirrorData, null, 2), "utf-8");
+            }
+          }
+        }
+      } catch {}
 
       return NextResponse.json({
         success: true,

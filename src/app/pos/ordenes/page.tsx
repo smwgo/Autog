@@ -46,44 +46,56 @@ function getEstadoSimplificado(ord: OrderItem) {
     Boolean(ord.isBilled) ||
     ord.billingStatus?.toLowerCase() === "facturada" ||
     (ord.status || "").toLowerCase().includes("factur") ||
-    (ord.status || "").toLowerCase().includes("pagad");
+    (ord.status || "").toLowerCase().includes("pagad") ||
+    (ord.quoteStatus || "").toLowerCase() === "pagado";
 
   if (pagado) {
     return {
-      label: "Pagado",
-      badge: "border-emerald-500/30 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10",
-      dot: "bg-emerald-500",
+      tipo: "pagado",
+      label: "✓ Pagado",
+      badge: "border-sky-500/30 text-sky-700 dark:text-sky-300 bg-sky-500/15",
+      dot: "bg-sky-500",
     };
   }
   if (esOrdenEnHistorial(ord)) {
     return {
+      tipo: "terminado",
       label: "Terminado",
       badge: "border-purple-500/30 text-purple-600 dark:text-purple-400 bg-purple-500/10",
       dot: "bg-purple-500",
     };
   }
-  if ((ord.status || "").trim().toLowerCase() === "pausada") {
+  const st = (ord.status || "").trim().toLowerCase();
+  const qs = (ord.quoteStatus || "").trim().toLowerCase();
+
+  if (st === "pausada" || st === "pausa") {
     return {
-      label: "Pausada",
-      badge: "border-amber-500/30 text-amber-600 dark:text-amber-400 bg-amber-500/10",
+      tipo: "pausa",
+      label: "Pausa",
+      badge: "border-amber-500/30 text-amber-700 dark:text-amber-300 bg-amber-500/15",
       dot: "bg-amber-500",
     };
   }
   if (
-    (ord.quoteStatus || "").trim().toLowerCase() === "aprobado" ||
-    (ord.quoteStatus || "").trim().toLowerCase() === "aceptado" ||
-    (ord.status || "").trim().toLowerCase() === "aprobado"
+    qs === "aprobado" ||
+    qs === "aceptado" ||
+    st === "aprobado" ||
+    st === "en proceso" ||
+    st === "reparando" ||
+    st === "trabajando"
   ) {
     return {
+      tipo: "trabajando",
       label: "Trabajando",
-      badge: "border-emerald-500/30 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10",
+      badge: "border-emerald-500/30 text-emerald-700 dark:text-emerald-300 bg-emerald-500/15",
       dot: "bg-emerald-500",
     };
   }
   return {
-    label: "En Espera",
-    badge: "border-amber-500/30 text-amber-600 dark:text-amber-400 bg-amber-500/10",
-    dot: "bg-amber-500",
+    tipo: "espera",
+    label: "En espera",
+    badge: "border-amber-500/30 text-amber-700 dark:text-amber-400 bg-amber-500/10",
+    dot: "bg-amber-500/70",
   };
 }
 
@@ -110,6 +122,7 @@ export default function PosOrdenesPage() {
   const [seccionActiva, setSeccionActiva] = useState<"ACTIVAS" | "HISTORIAL">("ACTIVAS");
   const [filtroEstado, setFiltroEstado] = useState<string>("TODAS");
   const [filtroMenuAbierto, setFiltroMenuAbierto] = useState(false);
+  const [menuTallerFilaId, setMenuTallerFilaId] = useState<string | null>(null);
   const [guardandoId, setGuardandoId] = useState<string | null>(null);
   const [toastMensaje, setToastMensaje] = useState<{ tipo: "ok" | "err"; texto: string } | null>(null);
 
@@ -202,8 +215,11 @@ export default function PosOrdenesPage() {
     }
   };
 
-  // Aprobar (Trabajando) o Pausar orden desde POS para sincronizar con Taller
-  const handleSincronizarEstadoTaller = async (ord: OrderItem, nuevoEstado: "Aprobado" | "Pausada") => {
+  // Sincronizar estado (Trabajando / Pausa / En espera) con Taller
+  const handleSincronizarEstadoTaller = async (
+    ord: OrderItem,
+    nuevoEstado: "Aprobado" | "Pausada" | "Pendiente"
+  ) => {
     const targetId = ord.dbId || ord.id || ord.orderNumber;
     if (!targetId) return;
     try {
@@ -222,8 +238,13 @@ export default function PosOrdenesPage() {
           o.id === ord.id || o.dbId === ord.dbId
             ? {
                 ...o,
-                status: nuevoEstado === "Pausada" ? "Pausada" : "En Proceso",
-                quoteStatus: nuevoEstado === "Aprobado" ? "Aprobado" : o.quoteStatus,
+                status:
+                  nuevoEstado === "Pausada"
+                    ? "Pausada"
+                    : nuevoEstado === "Aprobado"
+                    ? "En Proceso"
+                    : "Pendiente",
+                quoteStatus: nuevoEstado === "Pausada" ? o.quoteStatus : nuevoEstado,
               }
             : o
         )
@@ -231,7 +252,9 @@ export default function PosOrdenesPage() {
       mostrarToast(
         nuevoEstado === "Aprobado"
           ? "✓ Orden aprobada · Trabajando en Taller"
-          : "⏸ Orden en Pausa · Pausada en Taller"
+          : nuevoEstado === "Pausada"
+          ? "⏸ Orden en Pausa · Pausada en Taller"
+          : "⏳ Orden en espera en Taller"
       );
     } catch (err: any) {
       mostrarToast(err.message || "Error al actualizar estado", "err");
@@ -584,34 +607,76 @@ export default function PosOrdenesPage() {
                     </div>
 
                     <div className="pt-2 border-t border-zinc-100 dark:border-zinc-800/80 flex items-center justify-between gap-2">
-                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-normal border ${estadoCfg.badge}`}>
-                        <span className={`w-1.5 h-1.5 rounded-full ${estadoCfg.dot}`} />
-                        {estadoCfg.label}
-                      </span>
+                      {ord.isBilled || estadoCfg.tipo === "pagado" || estadoCfg.tipo === "terminado" ? (
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-normal border ${estadoCfg.badge}`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${estadoCfg.dot}`} />
+                          {estadoCfg.label}
+                        </span>
+                      ) : (
+                        <div className="relative inline-block text-left" onClick={(e) => e.stopPropagation()}>
+                          <button
+                            type="button"
+                            disabled={guardandoId === (ord.dbId || ord.id)}
+                            onClick={() => setMenuTallerFilaId(menuTallerFilaId === (ord.dbId || ord.id) ? null : (ord.dbId || ord.id))}
+                            className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-normal border transition-all hover:brightness-110 active:scale-95 cursor-pointer disabled:opacity-50 ${estadoCfg.badge}`}
+                            title="Estado Taller (Trabajando, Pausa, En espera)"
+                          >
+                            <span className={`w-1.5 h-1.5 rounded-full ${estadoCfg.dot}`} />
+                            <span>{estadoCfg.label}</span>
+                            <svg className="w-2.5 h-2.5 opacity-60 ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                            </svg>
+                          </button>
+                          {menuTallerFilaId === (ord.dbId || ord.id) && (
+                            <>
+                              <div className="fixed inset-0 z-40" onClick={() => setMenuTallerFilaId(null)} />
+                              <div className="absolute left-0 mt-1 w-36 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-xl overflow-hidden z-50 py-1 text-xs">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setMenuTallerFilaId(null);
+                                    handleSincronizarEstadoTaller(ord, "Aprobado");
+                                  }}
+                                  className={`w-full px-3 py-2 text-left flex items-center gap-2 hover:bg-emerald-500/10 transition-colors ${
+                                    estadoCfg.tipo === "trabajando" ? "text-emerald-600 font-bold bg-emerald-500/5" : "text-zinc-700 dark:text-zinc-300"
+                                  }`}
+                                >
+                                  <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                                  <span>Trabajando</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setMenuTallerFilaId(null);
+                                    handleSincronizarEstadoTaller(ord, "Pausada");
+                                  }}
+                                  className={`w-full px-3 py-2 text-left flex items-center gap-2 hover:bg-amber-500/10 transition-colors ${
+                                    estadoCfg.tipo === "pausa" ? "text-amber-600 font-bold bg-amber-500/5" : "text-zinc-700 dark:text-zinc-300"
+                                  }`}
+                                >
+                                  <span className="w-2 h-2 rounded-full bg-amber-500" />
+                                  <span>Pausa</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setMenuTallerFilaId(null);
+                                    handleSincronizarEstadoTaller(ord, "Pendiente");
+                                  }}
+                                  className={`w-full px-3 py-2 text-left flex items-center gap-2 hover:bg-amber-500/10 transition-colors ${
+                                    estadoCfg.tipo === "espera" ? "text-amber-600 font-bold bg-amber-500/5" : "text-zinc-700 dark:text-zinc-300"
+                                  }`}
+                                >
+                                  <span className="w-2 h-2 rounded-full bg-amber-500/70" />
+                                  <span>En espera</span>
+                                </button>
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      )}
 
                       <div className="flex items-center gap-1.5 shrink-0">
-                        {!ord.isBilled && estadoCfg.label !== "Trabajando" && (
-                          <button
-                            type="button"
-                            disabled={guardandoId === (ord.dbId || ord.id)}
-                            onClick={() => handleSincronizarEstadoTaller(ord, "Aprobado")}
-                            className="h-8 px-2.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-xs font-medium transition-all active:scale-95 cursor-pointer disabled:opacity-50"
-                            title="Aprobar y pasar a Trabajando en Taller"
-                          >
-                            ✓ Aprobar
-                          </button>
-                        )}
-                        {!ord.isBilled && estadoCfg.label !== "Pausada" && (
-                          <button
-                            type="button"
-                            disabled={guardandoId === (ord.dbId || ord.id)}
-                            onClick={() => handleSincronizarEstadoTaller(ord, "Pausada")}
-                            className="h-8 px-2.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-xs font-medium transition-all active:scale-95 cursor-pointer disabled:opacity-50"
-                            title="Pausar orden en Taller"
-                          >
-                            ⏸ Pausa
-                          </button>
-                        )}
                         <Link
                           href={`/pos/ordenes/detalle?id=${encodeURIComponent(ord.orderNumber || ord.id || ord.dbId || "")}`}
                           className="w-8 h-8 rounded-xl bg-amber-50 hover:bg-amber-100 dark:bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-500/30 flex items-center justify-center transition-all shrink-0 active:scale-95 shadow-xs cursor-pointer"
@@ -693,39 +758,81 @@ export default function PosOrdenesPage() {
                             </span>
                           </td>
 
-                          {/* Estado Simplificado: Pagado o En Orden */}
+                          {/* Estado Taller Simplificado */}
                           <td className="py-2.5 px-4 whitespace-nowrap">
-                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-normal border ${estadoCfg.badge}`}>
-                              <span className={`w-1.5 h-1.5 rounded-full ${estadoCfg.dot}`} />
-                              {estadoCfg.label}
-                            </span>
+                            {ord.isBilled || estadoCfg.tipo === "pagado" || estadoCfg.tipo === "terminado" ? (
+                              <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-normal border ${estadoCfg.badge}`}>
+                                <span className={`w-1.5 h-1.5 rounded-full ${estadoCfg.dot}`} />
+                                {estadoCfg.label}
+                              </span>
+                            ) : (
+                              <div className="relative inline-block text-left" onClick={(e) => e.stopPropagation()}>
+                                <button
+                                  type="button"
+                                  disabled={guardandoId === (ord.dbId || ord.id)}
+                                  onClick={() => setMenuTallerFilaId(menuTallerFilaId === (ord.dbId || ord.id) ? null : (ord.dbId || ord.id))}
+                                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-normal border transition-all hover:brightness-110 active:scale-95 cursor-pointer disabled:opacity-50 ${estadoCfg.badge}`}
+                                  title="Estado Taller (Trabajando, Pausa, En espera)"
+                                >
+                                  <span className={`w-1.5 h-1.5 rounded-full ${estadoCfg.dot}`} />
+                                  <span>{estadoCfg.label}</span>
+                                  <svg className="w-3 h-3 opacity-60 ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                                  </svg>
+                                </button>
+                                {menuTallerFilaId === (ord.dbId || ord.id) && (
+                                  <>
+                                    <div className="fixed inset-0 z-40" onClick={() => setMenuTallerFilaId(null)} />
+                                    <div className="absolute right-0 mt-1.5 w-36 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-xl overflow-hidden z-50 py-1 text-xs">
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setMenuTallerFilaId(null);
+                                          handleSincronizarEstadoTaller(ord, "Aprobado");
+                                        }}
+                                        className={`w-full px-3 py-2 text-left flex items-center gap-2 hover:bg-emerald-500/10 transition-colors ${
+                                          estadoCfg.tipo === "trabajando" ? "text-emerald-600 font-bold bg-emerald-500/5" : "text-zinc-700 dark:text-zinc-300"
+                                        }`}
+                                      >
+                                        <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                                        <span>Trabajando</span>
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setMenuTallerFilaId(null);
+                                          handleSincronizarEstadoTaller(ord, "Pausada");
+                                        }}
+                                        className={`w-full px-3 py-2 text-left flex items-center gap-2 hover:bg-amber-500/10 transition-colors ${
+                                          estadoCfg.tipo === "pausa" ? "text-amber-600 font-bold bg-amber-500/5" : "text-zinc-700 dark:text-zinc-300"
+                                        }`}
+                                      >
+                                        <span className="w-2 h-2 rounded-full bg-amber-500" />
+                                        <span>Pausa</span>
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setMenuTallerFilaId(null);
+                                          handleSincronizarEstadoTaller(ord, "Pendiente");
+                                        }}
+                                        className={`w-full px-3 py-2 text-left flex items-center gap-2 hover:bg-amber-500/10 transition-colors ${
+                                          estadoCfg.tipo === "espera" ? "text-amber-600 font-bold bg-amber-500/5" : "text-zinc-700 dark:text-zinc-300"
+                                        }`}
+                                      >
+                                        <span className="w-2 h-2 rounded-full bg-amber-500/70" />
+                                        <span>En espera</span>
+                                      </button>
+                                    </div>
+                                  </>
+                                )}
+                              </div>
+                            )}
                           </td>
 
-                          {/* Acción: aprobar, pausar o ver orden completa */}
+                          {/* Acción: ver orden completa */}
                           <td className="py-2.5 px-4 text-right whitespace-nowrap">
                             <div className="flex items-center justify-end gap-1.5">
-                              {!ord.isBilled && estadoCfg.label !== "Trabajando" && (
-                                <button
-                                  type="button"
-                                  disabled={guardandoId === (ord.dbId || ord.id)}
-                                  onClick={() => handleSincronizarEstadoTaller(ord, "Aprobado")}
-                                  className="h-8 px-2.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-xs font-medium transition-all active:scale-95 cursor-pointer disabled:opacity-50"
-                                  title="Aprobar y pasar a Trabajando en Taller"
-                                >
-                                  ✓ Aprobar
-                                </button>
-                              )}
-                              {!ord.isBilled && estadoCfg.label !== "Pausada" && (
-                                <button
-                                  type="button"
-                                  disabled={guardandoId === (ord.dbId || ord.id)}
-                                  onClick={() => handleSincronizarEstadoTaller(ord, "Pausada")}
-                                  className="h-8 px-2.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-xs font-medium transition-all active:scale-95 cursor-pointer disabled:opacity-50"
-                                  title="Pausar orden en Taller"
-                                >
-                                  ⏸ Pausa
-                                </button>
-                              )}
                               <Link
                                 href={`/pos/ordenes/detalle?id=${encodeURIComponent(ord.orderNumber || ord.id || ord.dbId || "")}`}
                                 className="w-8 h-8 rounded-xl bg-amber-50 hover:bg-amber-100 dark:bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-500/30 flex items-center justify-center transition-all shrink-0 active:scale-95 shadow-xs cursor-pointer"
