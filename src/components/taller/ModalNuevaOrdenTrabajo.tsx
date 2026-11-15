@@ -3340,7 +3340,7 @@ export default function ModalNuevaOrdenTrabajo({
                       onClick={() => setPasoActivo(2)}
                       className="h-9 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-md shadow-blue-600/30 active:scale-95"
                     >
-                      <span>Continuar al Vehículo</span>
+                      <span>Continuar</span>
                       <span>→</span>
                     </button>
                   </div>
@@ -3519,7 +3519,7 @@ export default function ModalNuevaOrdenTrabajo({
                               onClick={avanzarCliente}
                               className="w-full h-12 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-sm transition-all cursor-pointer flex items-center justify-center gap-2 shadow-md shadow-emerald-500/20 active:scale-98"
                             >
-                              <span>Avanzar a Nombre</span>
+                              <span>Siguiente</span>
                               <span>→</span>
                             </button>
                           </div>
@@ -3689,7 +3689,7 @@ export default function ModalNuevaOrdenTrabajo({
                                 : "bg-zinc-200 dark:bg-white/5 text-zinc-400 dark:text-zinc-500 cursor-not-allowed"
                                 }`}
                             >
-                              <span>Avanzar a {tipoCliente === "Empresa" ? "RUC" : "Cédula"}</span>
+                              <span>Siguiente</span>
                               <span>→</span>
                             </button>
                           </div>
@@ -3736,7 +3736,7 @@ export default function ModalNuevaOrdenTrabajo({
                               onClick={avanzarCliente}
                               className="flex-1 h-12 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-sm transition-all cursor-pointer flex items-center justify-center gap-2 shadow-md shadow-emerald-500/20 active:scale-98"
                             >
-                              <span>Avanzar a Teléfono</span>
+                              <span>Siguiente</span>
                               <span>→</span>
                             </button>
                           </div>
@@ -3783,7 +3783,7 @@ export default function ModalNuevaOrdenTrabajo({
                               onClick={avanzarCliente}
                               className="flex-1 h-12 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-sm transition-all cursor-pointer flex items-center justify-center gap-2 shadow-md shadow-emerald-500/20 active:scale-98"
                             >
-                              <span>Avanzar a Correo</span>
+                              <span>Siguiente</span>
                               <span>→</span>
                             </button>
                           </div>
@@ -3833,7 +3833,7 @@ export default function ModalNuevaOrdenTrabajo({
                               onClick={avanzarCliente}
                               className="flex-1 h-12 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-sm transition-all cursor-pointer flex items-center justify-center gap-2 shadow-md shadow-emerald-500/20 active:scale-98"
                             >
-                              <span>Avanzar a Dirección</span>
+                              <span>Siguiente</span>
                               <span>→</span>
                             </button>
                           </div>
@@ -4306,7 +4306,7 @@ export default function ModalNuevaOrdenTrabajo({
                                 : "bg-zinc-200 dark:bg-white/5 text-zinc-400 dark:text-zinc-500 cursor-not-allowed"
                                 }`}
                             >
-                              <span>Avanzar a Marca</span>
+                              <span>Siguiente</span>
                               <span>→</span>
                             </button>
                           </div>
@@ -4379,7 +4379,7 @@ export default function ModalNuevaOrdenTrabajo({
                               onClick={irASiguiente}
                               className="flex-1 h-12 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm transition-all cursor-pointer flex items-center justify-center gap-2 shadow-md shadow-blue-600/20 active:scale-98"
                             >
-                              <span>Avanzar a Modelo</span>
+                              <span>Siguiente</span>
                               <span>→</span>
                             </button>
                           </div>
@@ -4586,7 +4586,7 @@ export default function ModalNuevaOrdenTrabajo({
                                 onClick={irASiguiente}
                                 className="flex-1 h-12 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm transition-all cursor-pointer flex items-center justify-center gap-2 shadow-md shadow-blue-600/20 active:scale-98"
                               >
-                                <span>Avanzar a Año</span>
+                                <span>Siguiente</span>
                                 <span>→</span>
                               </button>
                             </div>
@@ -4662,7 +4662,7 @@ export default function ModalNuevaOrdenTrabajo({
                               onClick={irASiguiente}
                               className="flex-1 h-12 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm transition-all cursor-pointer flex items-center justify-center gap-2 shadow-md shadow-blue-600/20 active:scale-98"
                             >
-                              <span>Avanzar a Tipo</span>
+                              <span>Siguiente</span>
                               <span>→</span>
                             </button>
                           </div>
