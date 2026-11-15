@@ -14,9 +14,9 @@
       "notes": null,
       "branch": "PRINCIPAL",
       "assignedToSucursal": false,
-      "lastVisit": "2026-11-14T19:40:21.287Z",
+      "lastVisit": "2026-11-14T21:10:33.476Z",
       "createdAt": "2026-11-14T19:31:03.163Z",
-      "updatedAt": "2026-11-14T19:46:10.317Z",
+      "updatedAt": "2026-11-14T21:10:33.477Z",
       "vehicles": [
         {
           "id": "cmwe27dgw0002tshx6t7wlk1s",
@@ -43,7 +43,7 @@
           "vehicleType": "Auto",
           "brand": "Toyota",
           "model": "Hilux",
-          "year": 2024,
+          "year": 2026,
           "color": "Gris",
           "mileage": 45000,
           "nextOilChangeMileage": null,
@@ -52,7 +52,7 @@
           "vin": null,
           "fuelType": "Gasolina",
           "createdAt": "2026-11-14T20:58:27.280Z",
-          "updatedAt": "2026-11-14T21:02:36.707Z"
+          "updatedAt": "2026-11-14T21:10:33.617Z"
         }
       ]
     },
