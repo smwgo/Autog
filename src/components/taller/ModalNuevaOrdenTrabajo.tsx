@@ -5081,29 +5081,6 @@ export default function ModalNuevaOrdenTrabajo({
                       </div>
                     </div>
 
-                    {/* Barra de Acción: Solo Foto */}
-                    <div className="p-1 bg-zinc-200/60 dark:bg-black/40 rounded-xl border border-zinc-200 dark:border-white/5">
-                      <button
-                        type="button"
-                        onClick={() => setPanelMultimedia((curr) => (curr === "foto" ? null : "foto"))}
-                        className={`w-full py-1.5 px-3 rounded-lg text-xs font-medium transition-all flex items-center justify-center gap-1.5 cursor-pointer ${panelMultimedia === "foto"
-                          ? "bg-sky-500/20 text-sky-700 dark:text-sky-300 border border-sky-500/30"
-                          : "text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white hover:bg-white/80 dark:hover:bg-white/5"
-                          }`}
-                      >
-                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z" />
-                          <circle cx="12" cy="13" r="3" />
-                        </svg>
-                        <span>Foto</span>
-                        {fotosIniciales.length > 0 && (
-                          <span className="w-4 h-4 rounded-full bg-sky-500/30 text-sky-800 dark:text-sky-200 text-[9px] font-bold flex items-center justify-center">
-                            {fotosIniciales.length}
-                          </span>
-                        )}
-                      </button>
-                    </div>
-
                     {/* Estados de carga / subida con barra de progreso real */}
                     {(subiendoFoto || subiendoVideo || subiendoAudio) && (
                       <div className="p-2.5 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-700 dark:text-blue-300 text-xs space-y-1.5 animate-fade-in">
@@ -5123,27 +5100,16 @@ export default function ModalNuevaOrdenTrabajo({
                       </div>
                     )}
 
-                    {/* PANEL CONTEXTUAL 1: FOTO */}
-                    {panelMultimedia === "foto" && (
-                      <div className="p-3 rounded-xl bg-white dark:bg-black/40 border border-zinc-200 dark:border-white/10 space-y-2.5 animate-fade-in shadow-xs">
-                        <div className="flex items-center justify-between text-xs pb-1">
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-zinc-900 dark:text-zinc-200 font-semibold">Fotos</span>
-                            <span className="text-[10px] text-zinc-600 dark:text-zinc-500 font-medium">
-                              ({fotosIniciales.length}/{MULTIMEDIA_CONFIG.MAX_PHOTOS})
-                            </span>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              detenerCamaraFoto();
-                              setPanelMultimedia(null);
-                            }}
-                            className="text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white text-xs px-1.5 py-0.5 rounded cursor-pointer"
-                          >
-                            ✕
-                          </button>
+                    {/* PANEL DE FOTOS SIEMPRE VISIBLE EN INGRESO */}
+                    <div className="p-3 rounded-xl bg-white dark:bg-black/40 border border-zinc-200 dark:border-white/10 space-y-2.5 animate-fade-in shadow-xs">
+                      <div className="flex items-center justify-between text-xs pb-1">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-zinc-900 dark:text-zinc-200 font-semibold">Fotos</span>
+                          <span className="text-[10px] text-zinc-600 dark:text-zinc-500 font-medium">
+                            ({fotosIniciales.length}/{MULTIMEDIA_CONFIG.MAX_PHOTOS})
+                          </span>
                         </div>
+                      </div>
 
                         {camaraFotoActiva ? (
                           <div className="space-y-2">
@@ -5294,7 +5260,6 @@ export default function ModalNuevaOrdenTrabajo({
                           </div>
                         )}
                       </div>
-                    )}
 
                     {/* PANEL CONTEXTUAL 2: VIDEO */}
                     {panelMultimedia === "video" && (

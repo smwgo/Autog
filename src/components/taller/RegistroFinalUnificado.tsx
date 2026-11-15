@@ -1058,13 +1058,13 @@ export default function RegistroFinalUnificado({
                 }
               }}
               placeholder="Escribe una descripción..."
-              className="flex-1 min-w-0 rounded-xl bg-white dark:bg-white/[0.03] border border-zinc-200 dark:border-white/10 focus:border-blue-500/50 px-3.5 py-2.5 text-sm text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none"
+              className="flex-1 min-w-0 min-h-[44px] rounded-xl bg-white dark:bg-white/[0.03] border border-zinc-200 dark:border-white/10 focus:border-blue-500/50 px-3.5 py-2.5 text-base sm:text-sm text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none"
             />
             <button
               type="button"
               disabled={!descripcion.trim() || subiendoArchivo}
               onClick={() => void handleAgregarManual()}
-              className="px-4 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:bg-zinc-200 dark:disabled:bg-white/10 disabled:text-zinc-400 dark:disabled:text-zinc-500 text-white text-xs sm:text-sm font-semibold shrink-0 transition-all cursor-pointer disabled:cursor-not-allowed active:scale-95"
+              className="min-h-[44px] px-3.5 sm:px-4 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:bg-zinc-200 dark:disabled:bg-white/10 disabled:text-zinc-400 dark:disabled:text-zinc-500 text-white text-sm font-semibold shrink-0 transition-all cursor-pointer disabled:cursor-not-allowed active:scale-95 touch-manipulation"
             >
               Añadir
             </button>

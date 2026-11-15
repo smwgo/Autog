@@ -43,6 +43,32 @@ export function proxy(request: NextRequest) {
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set("x-client-ip", clientIp);
 
+  // Si el cliente envía Authorization: Bearer (respaldo para iframes/webviews sin cookies),
+  // propagarlo también como cookie firmada interna para handlers que usan getVerifiedSessionFromRequest/cookies()
+  if (pathname.startsWith("/api/")) {
+    const authHeader = request.headers.get("authorization") || "";
+    if (authHeader.startsWith("Bearer ")) {
+      const bearerToken = authHeader.slice(7).trim();
+      const bearerSession = verifySignedSessionToken(bearerToken);
+      if (bearerSession) {
+        const dotIdx = bearerToken.indexOf(".");
+        const encodedJson = dotIdx > 0 ? bearerToken.slice(0, dotIdx).trim() : "";
+        const bearerSig = dotIdx > 0 ? bearerToken.slice(dotIdx + 1).trim() : "";
+        if (encodedJson && bearerSig) {
+          try {
+            const rawJson = Buffer.from(encodedJson, "base64url").toString("utf8");
+            const existingCookie = requestHeaders.get("cookie") || "";
+            const injected = `${SESSION_COOKIE_NAME}=${encodeURIComponent(rawJson)}; ${SESSION_SIG_COOKIE_NAME}=${bearerSig}`;
+            requestHeaders.set(
+              "cookie",
+              existingCookie ? `${existingCookie}; ${injected}` : injected
+            );
+          } catch {}
+        }
+      }
+    }
+  }
+
   // Centralized verification for internal & privileged API routes
   if (pathname.startsWith("/api/") && !isPublicApiRequest(pathname, method)) {
     const rawSession = request.cookies.get(SESSION_COOKIE_NAME)?.value;

@@ -155,7 +155,14 @@ export function getVerifiedSessionFromRequest(
   const cookies = parseCookieHeader(request.headers.get("cookie"));
   const raw = cookies[SESSION_COOKIE_NAME];
   const sig = cookies[SESSION_SIG_COOKIE_NAME];
-  return verifySignedSessionCookie(raw, sig);
+  const fromCookie = verifySignedSessionCookie(raw, sig);
+  if (fromCookie) return fromCookie;
+
+  const authHeader = request.headers.get("authorization") || "";
+  if (authHeader.startsWith("Bearer ")) {
+    return verifySignedSessionToken(authHeader.slice(7).trim());
+  }
+  return null;
 }
 
 export function isStaffRole(role?: string | null): boolean {

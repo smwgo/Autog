@@ -5226,7 +5226,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
     VISTAS_INSPECCION.find((v) => v.id === etapa3VistaActiva) || VISTAS_INSPECCION[0];
 
   return (
-    <div className="flex flex-col min-h-dvh bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-white font-sans pb-8 sm:pb-12 selection:bg-blue-500/30 overflow-x-hidden max-w-full">
+    <div className="flex flex-col min-h-dvh bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-white font-sans pb-[max(2rem,env(safe-area-inset-bottom))] sm:pb-12 selection:bg-blue-500/30 overflow-x-hidden max-w-full">
       <Header />
 
 
@@ -5238,7 +5238,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
         {/* ===================================================================
             FILA 1: FLECHA VOLVER (←) + DATOS DEL VEHÍCULO ACTIVO
             =================================================================== */}
-        <div className="flex flex-col items-stretch gap-2.5 sm:gap-3 py-1 bg-cyan-50 dark:bg-blue-900/10">
+        <div className="flex flex-col items-stretch gap-2.5 sm:gap-3 px-2 py-2 sm:px-0 sm:py-1 rounded-2xl sm:rounded-none bg-cyan-50 dark:bg-blue-900/10">
           <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
             <Link
               href={isPanelSelectorAdmin ? "/modulos" : "/acceso"}
@@ -5453,89 +5453,93 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                         handleAbrirEditarOrden(auto);
                       }}
                       aria-pressed={esActivo}
-                      className={`snap-start shrink-0 w-full min-h-[76px] sm:min-h-[68px] px-3.5 py-2.5 sm:px-3 sm:py-2 rounded-2xl sm:rounded-xl border text-left flex items-center justify-between gap-3 transition-colors ${esActivo
+                      className={`snap-start shrink-0 w-full min-h-[76px] sm:min-h-[68px] px-3 py-2.5 sm:px-3 sm:py-2 rounded-2xl sm:rounded-xl border text-left flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 sm:gap-3 transition-colors ${esActivo
                         ? "bg-blue-50/80 dark:bg-blue-500/10 border-blue-300 dark:border-blue-500/30 shadow-sm"
                         : "bg-white dark:bg-[#111113] border-zinc-200 dark:border-white/10"
                         }`}
                     >
-                      <span
-                        role={fotoVehiculo ? "button" : undefined}
-                        tabIndex={fotoVehiculo ? 0 : undefined}
-                        title={fotoVehiculo ? "🔍 Clic para ampliar foto del vehículo en grande" : undefined}
-                        onClick={(e) => {
-                          if (fotoVehiculo) {
-                            e.stopPropagation();
-                            setFotoVehiculoModal({
-                              url: fotoVehiculo,
-                              photos: todasLasFotos.length > 0 ? todasLasFotos : [fotoVehiculo],
-                              index: 0,
-                              vehiculo: nombreVehiculo,
-                              placa: auto.plate,
-                              cliente: auto.client,
-                              anio: anioVehiculo,
-                            });
-                          }
-                        }}
-                        className={`relative w-16 h-14 sm:w-14 sm:h-12 rounded-xl sm:rounded-lg shrink-0 bg-blue-100/60 dark:bg-white/5 text-blue-600 dark:text-zinc-400 flex items-center justify-center overflow-hidden border border-blue-200/50 dark:border-transparent group/thumb ${fotoVehiculo ? "cursor-zoom-in hover:ring-2 hover:ring-blue-500/80 hover:scale-[1.04] transition-all" : ""
-                          }`}
-                      >
-                        <svg
-                          className="w-8 h-8 sm:w-7 sm:h-7"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                          strokeWidth={1.5}
-                          aria-hidden="true"
+                      <div className="flex items-center gap-3 w-full sm:w-auto sm:flex-1 min-w-0">
+                        <span
+                          role={fotoVehiculo ? "button" : undefined}
+                          tabIndex={fotoVehiculo ? 0 : undefined}
+                          title={fotoVehiculo ? "🔍 Clic para ampliar foto del vehículo en grande" : undefined}
+                          onClick={(e) => {
+                            if (fotoVehiculo) {
+                              e.stopPropagation();
+                              setFotoVehiculoModal({
+                                url: fotoVehiculo,
+                                photos: todasLasFotos.length > 0 ? todasLasFotos : [fotoVehiculo],
+                                index: 0,
+                                vehiculo: nombreVehiculo,
+                                placa: auto.plate,
+                                cliente: auto.client,
+                                anio: anioVehiculo,
+                              });
+                            }
+                          }}
+                          className={`relative w-14 h-12 sm:w-14 sm:h-12 rounded-xl sm:rounded-lg shrink-0 bg-blue-100/60 dark:bg-white/5 text-blue-600 dark:text-zinc-400 flex items-center justify-center overflow-hidden border border-blue-200/50 dark:border-transparent group/thumb ${fotoVehiculo ? "cursor-zoom-in hover:ring-2 hover:ring-blue-500/80 hover:scale-[1.04] transition-all" : ""
+                            }`}
                         >
-                          <path strokeLinecap="round" strokeLinejoin="round" d="m5 11 1.5-4.5A2 2 0 0 1 8.4 5h7.2a2 2 0 0 1 1.9 1.5L19 11M3.5 11h17v7h-17zM6.5 18v1.5M17.5 18v1.5" />
-                        </svg>
-                        {fotoVehiculo && (
-                          <>
-                            <img
-                              src={fotoVehiculo}
-                              alt={`Vehículo ${auto.vehicle}`}
-                              onError={(event) => {
-                                event.currentTarget.style.display = "none";
-                              }}
-                              className="absolute inset-0 w-full h-full rounded-xl sm:rounded-lg object-cover transition-transform duration-200 group-hover/thumb:scale-110"
-                            />
-                            {/* Overlay con icono de lupa al pasar el cursor */}
-                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/thumb:opacity-100 transition-opacity flex items-center justify-center text-white">
-                              <svg className="w-5 h-5 drop-shadow-md" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v6m3-3H7" />
-                              </svg>
-                            </div>
-                          </>
-                        )}
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block text-base sm:text-sm font-bold sm:font-semibold text-zinc-900 dark:text-white truncate">
-                          {nombreVehiculo}
-                        </span>
-                        <span className="mt-1 flex items-center gap-2.5 text-sm sm:text-xs text-zinc-600 dark:text-zinc-300">
-                          <span className="font-mono tracking-wider text-blue-600 dark:text-blue-400 truncate text-base sm:text-sm font-black">
-                            {auto.plate}
-                          </span>
-                          {anioVehiculo && (
-                            <span className="shrink-0 border-l-2 border-zinc-300 dark:border-white/25 pl-2.5 font-bold text-sm sm:text-xs text-zinc-700 dark:text-zinc-300">
-                              {anioVehiculo}
-                            </span>
+                          <svg
+                            className="w-7 h-7 sm:w-7 sm:h-7"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                            strokeWidth={1.5}
+                            aria-hidden="true"
+                          >
+                            <path strokeLinecap="round" strokeLinejoin="round" d="m5 11 1.5-4.5A2 2 0 0 1 8.4 5h7.2a2 2 0 0 1 1.9 1.5L19 11M3.5 11h17v7h-17zM6.5 18v1.5M17.5 18v1.5" />
+                          </svg>
+                          {fotoVehiculo && (
+                            <>
+                              <img
+                                src={fotoVehiculo}
+                                alt={`Vehículo ${auto.vehicle}`}
+                                onError={(event) => {
+                                  event.currentTarget.style.display = "none";
+                                }}
+                                className="absolute inset-0 w-full h-full rounded-xl sm:rounded-lg object-cover transition-transform duration-200 group-hover/thumb:scale-110"
+                              />
+                              {/* Overlay con icono de lupa al pasar el cursor */}
+                              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/thumb:opacity-100 transition-opacity flex items-center justify-center text-white">
+                                <svg className="w-5 h-5 drop-shadow-md" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2}>
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v6m3-3H7" />
+                                </svg>
+                              </div>
+                            </>
                           )}
                         </span>
-                      </span>
-                      <div className="shrink-0 text-right max-w-[140px] sm:max-w-[220px] pl-1">
-                        {nombreClienteDisplay && (
-                          <span
-                            className="block text-xs sm:text-sm font-bold text-zinc-900 dark:text-white truncate"
-                            title={nombreClienteDisplay}
-                          >
-                            {nombreClienteDisplay}
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-[15px] sm:text-sm font-bold sm:font-semibold text-zinc-900 dark:text-white leading-snug break-words sm:truncate">
+                            {nombreVehiculo}
                           </span>
-                        )}
+                          <span className="mt-1 flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-sm sm:text-xs text-zinc-600 dark:text-zinc-300">
+                            <span className="font-mono tracking-wider text-blue-600 dark:text-blue-400 text-[15px] sm:text-sm font-black whitespace-nowrap">
+                              {auto.plate}
+                            </span>
+                            {anioVehiculo && (
+                              <span className="shrink-0 border-l-2 border-zinc-300 dark:border-white/25 pl-2.5 font-bold text-xs text-zinc-700 dark:text-zinc-300">
+                                {anioVehiculo}
+                              </span>
+                            )}
+                          </span>
+                        </span>
                       </div>
 
+                      <div className="flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto pt-2 sm:pt-0 border-t border-zinc-200/70 dark:border-white/10 sm:border-t-0 shrink-0">
+                        <div className="min-w-0 flex-1 sm:flex-initial text-left sm:text-right sm:max-w-[220px]">
+                          {nombreClienteDisplay && (
+                            <span
+                              className="block text-xs sm:text-sm font-bold text-zinc-900 dark:text-white break-words sm:truncate"
+                              title={nombreClienteDisplay}
+                            >
+                              {nombreClienteDisplay}
+                            </span>
+                          )}
+                        </div>
+
                       {autosEnPista.length > 1 ? (
-                        <div className="flex items-center gap-1 shrink-0 bg-zinc-100 dark:bg-white/5 rounded-xl p-1 border border-zinc-200 dark:border-white/10">
+                        <div className="flex items-center gap-1 shrink-0 ml-auto bg-zinc-100 dark:bg-white/5 rounded-xl p-1 border border-zinc-200 dark:border-white/10">
                           <span
                             role="button"
                             tabIndex={0}
@@ -5600,7 +5604,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                           onClick={(e) => {
                             e.stopPropagation();
                           }}
-                          className="p-2 sm:p-2.5 rounded-xl text-zinc-400 dark:text-zinc-500 shrink-0 flex items-center justify-center select-none"
+                          className="p-2 sm:p-2.5 rounded-xl text-zinc-400 dark:text-zinc-500 shrink-0 ml-auto flex items-center justify-center select-none"
                         >
                           <svg
                             className="w-5 h-5 sm:w-6 sm:h-6 text-zinc-400 dark:text-zinc-600"
@@ -5613,12 +5617,13 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                           </svg>
                         </span>
                       )}
+                      </div>
                     </button>
                   );
                 })}
               </div>
-              <div className="w-[calc(100%+1.25rem)] -mx-2.5 px-2.5 py-2 sm:w-[calc(100%+3rem)] sm:-mx-6 sm:px-6 md:w-[calc(100%+4rem)] md:-mx-8 md:px-8 bg-zinc-100 dark:bg-[#34343a] flex items-center justify-between gap-2 flex-wrap">
-                <div className="flex items-center gap-2 flex-wrap">
+              <div className="w-full rounded-xl px-2.5 py-2 sm:w-[calc(100%+3rem)] sm:-mx-6 sm:px-6 md:w-[calc(100%+4rem)] md:-mx-8 md:px-8 sm:rounded-none bg-zinc-100 dark:bg-[#34343a] flex items-center justify-between gap-2 flex-wrap">
+                <div className="flex items-center gap-2 flex-wrap min-w-0 max-w-full">
                   {/* Ingreso y Estado */}
                   {(() => {
                     const propuestaAprobada = esPropuestaAprobadaOrden(ordenActiva);
@@ -5630,7 +5635,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
 
                     return (
                       <div
-                        className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl sm:rounded-lg border text-xs font-medium ${estaPausada || !propuestaAprobada
+                        className={`inline-flex flex-wrap items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-xl sm:rounded-lg border text-xs font-medium max-w-full ${estaPausada || !propuestaAprobada
                           ? "bg-amber-500/10 border-amber-500/25 text-amber-700 dark:text-amber-400"
                           : "bg-emerald-500/10 border-emerald-500/25 text-emerald-700 dark:text-emerald-400"
                           }`}
