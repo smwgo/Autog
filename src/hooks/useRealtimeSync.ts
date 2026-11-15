@@ -93,6 +93,7 @@ export function useRealtimeSync({
     let pollTimer: ReturnType<typeof setInterval> | null = null;
     let eventSource: EventSource | null = null;
     let knownVersions: Record<string, number> | null = null;
+    let knownFingerprints: Record<string, string> | null = null;
     let lastEventSignature = "";
     let lastEventAt = 0;
     let isCheckingVersions = false;
@@ -135,23 +136,53 @@ export function useRealtimeSync({
       scheduleRefresh();
     };
 
-    const checkVersionsChanged = (nextVersions: Record<string, number>) => {
-      if (!knownVersions) {
-        knownVersions = { ...nextVersions };
-        return false;
-      }
+    const checkVersionsChanged = (
+      nextVersions?: Record<string, number>,
+      nextFingerprints?: Record<string, string>
+    ) => {
       let changed = false;
-      for (const ch of channelList) {
-        const prev = knownVersions[ch] ?? 0;
-        const curr = nextVersions[ch] ?? 0;
-        if (curr > prev) {
-          changed = true;
+
+      if (nextVersions) {
+        if (!knownVersions) {
+          knownVersions = { ...nextVersions };
+        } else {
+          for (const ch of channelList) {
+            const prev = knownVersions[ch] ?? 0;
+            const curr = nextVersions[ch] ?? 0;
+            if (curr > prev) {
+              changed = true;
+            }
+          }
+          if (channelSet.has("all") && (nextVersions.all ?? 0) > (knownVersions.all ?? 0)) {
+            changed = true;
+          }
+          knownVersions = { ...nextVersions };
         }
       }
-      if (channelSet.has("all") && (nextVersions.all ?? 0) > (knownVersions.all ?? 0)) {
-        changed = true;
+
+      if (nextFingerprints && Object.keys(nextFingerprints).length > 0) {
+        if (!knownFingerprints) {
+          knownFingerprints = { ...nextFingerprints };
+        } else {
+          for (const ch of channelList) {
+            const prevFp = knownFingerprints[ch];
+            const currFp = nextFingerprints[ch];
+            if (prevFp !== undefined && currFp !== undefined && currFp !== prevFp) {
+              changed = true;
+            }
+          }
+          if (
+            channelSet.has("all") &&
+            knownFingerprints.all !== undefined &&
+            nextFingerprints.all !== undefined &&
+            nextFingerprints.all !== knownFingerprints.all
+          ) {
+            changed = true;
+          }
+          knownFingerprints = { ...knownFingerprints, ...nextFingerprints };
+        }
       }
-      knownVersions = { ...nextVersions };
+
       return changed;
     };
 
@@ -171,8 +202,9 @@ export function useRealtimeSync({
         try {
           const parsed = JSON.parse((rawEvent as MessageEvent).data) as {
             versions?: Record<string, number>;
+            fingerprints?: Record<string, string>;
           };
-          if (parsed.versions && checkVersionsChanged(parsed.versions)) {
+          if (checkVersionsChanged(parsed.versions, parsed.fingerprints)) {
             scheduleRefresh();
           }
         } catch {
@@ -226,8 +258,11 @@ export function useRealtimeSync({
           cache: "no-store",
         });
         if (!res.ok) return;
-        const data = (await res.json()) as { versions?: Record<string, number> };
-        if (data.versions && checkVersionsChanged(data.versions)) {
+        const data = (await res.json()) as {
+          versions?: Record<string, number>;
+          fingerprints?: Record<string, string>;
+        };
+        if (checkVersionsChanged(data.versions, data.fingerprints)) {
           scheduleRefresh();
         }
       } catch {

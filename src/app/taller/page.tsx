@@ -1644,7 +1644,9 @@ export default function TallerPanel() {
       setCargandoInicial(true);
       const uBranch = getClientUserBranch();
       const sActiva = getClientActiveBranch("/taller");
-      const res = await fetch(`/api/taller/operacion?sede=${sActiva}&userBranch=${uBranch}`);
+      const res = await fetch(`/api/taller/operacion?sede=${sActiva}&userBranch=${uBranch}`, {
+        cache: "no-store",
+      });
       if (!res.ok) {
         console.warn(`Respuesta no exitosa al cargar taller (${res.status})`);
         return false;

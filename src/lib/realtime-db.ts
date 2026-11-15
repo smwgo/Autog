@@ -90,3 +90,46 @@ export async function getRealtimeVersionsFromDb(
   }
   return merged;
 }
+
+/**
+ * Obtiene una firma ligera (COUNT + MAX(updatedAt)) directamente desde las tablas reales
+ * de PostgreSQL para detectar creaciones, ediciones o eliminaciones hechas incluso desde
+ * otras máquinas o despliegues sin necesidad de que hayan incrementado autog_realtime_versions.
+ */
+export async function getRealtimeFingerprintsFromDb(): Promise<
+  Partial<Record<RealtimeChannelKey, string>>
+> {
+  try {
+    const rows = (await prisma.$queryRawUnsafe(`
+      SELECT
+        (SELECT COUNT(*)::text || ':' || COALESCE(MAX("updatedAt")::text, '') FROM "WorkshopOrder") AS orders_fp,
+        (SELECT COUNT(*)::text || ':' || COALESCE(MAX("updatedAt")::text, '') FROM "Customer") AS customers_fp,
+        (SELECT COUNT(*)::text || ':' || COALESCE(MAX("updatedAt")::text, '') FROM "Vehicle") AS vehicles_fp,
+        (SELECT COUNT(*)::text || ':' || COALESCE(MAX("updatedAt")::text, '') FROM "Sale") AS sales_fp
+    `)) as Array<{
+      orders_fp?: string;
+      customers_fp?: string;
+      vehicles_fp?: string;
+      sales_fp?: string;
+    }>;
+
+    const row = Array.isArray(rows) && rows[0] ? rows[0] : null;
+    if (!row) return {};
+
+    const ordersFp = row.orders_fp || "0:";
+    const customersFp = row.customers_fp || "0:";
+    const vehiclesFp = row.vehicles_fp || "0:";
+    const salesFp = row.sales_fp || "0:";
+
+    return {
+      taller: ordersFp,
+      presupuestos: ordersFp,
+      ordenes: `${ordersFp}|${salesFp}`,
+      clientes: customersFp,
+      vehiculos: vehiclesFp,
+      all: `${ordersFp}|${customersFp}|${vehiclesFp}|${salesFp}`,
+    };
+  } catch {
+    return {};
+  }
+}

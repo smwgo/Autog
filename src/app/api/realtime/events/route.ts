@@ -6,6 +6,7 @@ import {
   type RealtimeChannel,
   type RealtimeEvent,
 } from "@/lib/realtime";
+import { getRealtimeFingerprintsFromDb } from "@/lib/realtime-db";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -37,9 +38,12 @@ function parseChannels(raw: string | null): Set<RealtimeChannel> {
  */
 export async function GET(request: NextRequest) {
   if (request.nextUrl.searchParams.get("versions") === "1") {
-    const versions = await getSharedRealtimeVersions();
+    const [versions, fingerprints] = await Promise.all([
+      getSharedRealtimeVersions(),
+      getRealtimeFingerprintsFromDb(),
+    ]);
     return Response.json(
-      { versions },
+      { versions, fingerprints },
       { headers: { "Cache-Control": "no-store, no-cache, must-revalidate" } }
     );
   }
@@ -53,6 +57,7 @@ export async function GET(request: NextRequest) {
     start(controller) {
       let closed = false;
       let lastKnownVersions: Record<RealtimeChannel, number> = getRealtimeVersions();
+      let lastKnownFingerprints: Partial<Record<RealtimeChannel, string>> = {};
 
       const safeEnqueue = (chunk: string) => {
         if (closed) return;
@@ -73,10 +78,18 @@ export async function GET(request: NextRequest) {
         safeEnqueue(`${lines.join("\n")}\n`);
       };
 
-      void getSharedRealtimeVersions().then((sharedVersions) => {
+      void Promise.all([
+        getSharedRealtimeVersions(),
+        getRealtimeFingerprintsFromDb(),
+      ]).then(([sharedVersions, sharedFingerprints]) => {
         if (closed) return;
         lastKnownVersions = sharedVersions;
-        sendEvent("ready", { versions: sharedVersions, timestamp: Date.now() });
+        lastKnownFingerprints = sharedFingerprints;
+        sendEvent("ready", {
+          versions: sharedVersions,
+          fingerprints: sharedFingerprints,
+          timestamp: Date.now(),
+        });
       });
 
       const unsubscribe = subscribeRealtime((event: RealtimeEvent) => {
@@ -92,7 +105,10 @@ export async function GET(request: NextRequest) {
 
       const dbPollInterval = setInterval(() => {
         if (closed) return;
-        void getSharedRealtimeVersions().then((sharedVersions) => {
+        void Promise.all([
+          getSharedRealtimeVersions(),
+          getRealtimeFingerprintsFromDb(),
+        ]).then(([sharedVersions, sharedFingerprints]) => {
           if (closed) return;
           const channelsToCheck: Exclude<RealtimeChannel, "all">[] = [
             "taller",
@@ -105,22 +121,32 @@ export async function GET(request: NextRequest) {
             if (!subscribed.has("all") && !subscribed.has(ch)) continue;
             const prev = lastKnownVersions[ch] ?? 0;
             const curr = sharedVersions[ch] ?? 0;
-            if (curr > prev) {
-              lastKnownVersions[ch] = curr;
+            const prevFp = lastKnownFingerprints[ch];
+            const currFp = sharedFingerprints[ch];
+            const fpChanged =
+              prevFp !== undefined && currFp !== undefined && currFp !== prevFp;
+            if (curr > prev || fpChanged) {
+              lastKnownVersions[ch] = Math.max(prev, curr);
+              if (currFp !== undefined) lastKnownFingerprints[ch] = currFp;
               const syntheticEvent: RealtimeEvent = {
                 id: `db-${ch}-${curr}-${Date.now()}`,
                 channel: ch,
                 action: "updated",
                 timestamp: Date.now(),
-                version: curr,
+                version: Math.max(prev, curr),
               };
               sendEvent("change", syntheticEvent, syntheticEvent.id);
+            } else if (prevFp === undefined && currFp !== undefined) {
+              lastKnownFingerprints[ch] = currFp;
             }
           }
           lastKnownVersions.all = Math.max(
             lastKnownVersions.all ?? 0,
             sharedVersions.all ?? 0
           );
+          if (sharedFingerprints.all !== undefined) {
+            lastKnownFingerprints.all = sharedFingerprints.all;
+          }
         });
       }, 4000);
 

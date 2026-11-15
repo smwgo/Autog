@@ -3003,7 +3003,7 @@ export default function ModalNuevaOrdenTrabajo({
 
                   <div>
                     <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1 block">
-                      WhatsApp / Teléfono
+                      WhatsApp
                     </label>
                     <input
                       type="tel"
