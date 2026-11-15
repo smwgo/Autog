@@ -383,7 +383,7 @@ export default function PanelPresupuestosPage() {
       });
       const data = await res.json().catch(() => ({}));
       if (res.ok && data.success) {
-        mostrarToast(data.message || "Propuesta eliminada correctamente.", "ok");
+        mostrarToast("Propuesta eliminada.", "ok");
       } else {
         mostrarToast(data.error || "No se pudo eliminar la propuesta.", "err");
       }
@@ -943,14 +943,10 @@ export default function PanelPresupuestosPage() {
               </div>
               <div className="space-y-1">
                 <h3 className="font-semibold text-sm sm:text-base">
-                  ¿Eliminar propuesta #{limpiarNumeroOrden(ordenAEliminar.orderNumber)}?
+                  ¿Eliminar propuesta?
                 </h3>
-                <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
-                  Se eliminará definitivamente:{" "}
-                  <strong className="text-zinc-800 dark:text-zinc-200 font-medium">
-                    {ordenAEliminar.client || "Cliente"}
-                  </strong>{" "}
-                  ({ordenAEliminar.vehicle || "Vehículo"}).
+                <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                  #{limpiarNumeroOrden(ordenAEliminar.orderNumber)} · {ordenAEliminar.client || "Cliente"}
                 </p>
               </div>
             </div>

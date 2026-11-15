@@ -186,6 +186,12 @@ export default function ModalPresupuestoPdf({
       .join(" ");
   };
 
+  const rawMotivo = String((orden as any).motivoIngreso || orden.notes || "");
+  const motivoSinIngresado = rawMotivo.split(" | Ingresado por:")[0].trim();
+  const motivoIngresoTexto = motivoSinIngresado
+    .replace(/^\[(?:Lubricentro|Lavado)\]\s*/i, "")
+    .trim();
+
   const handleImprimir = () => {
     if (typeof window !== "undefined") {
       window.print();
@@ -291,6 +297,16 @@ export default function ModalPresupuestoPdf({
             <span className="text-sm font-normal text-zinc-500 block">Técnico</span>
             <span className="text-sm font-normal text-zinc-900 block truncate mt-0.5">{formatoNombrePropio((orden.mechanic || "Taller").replace(/\s*\([^)]*\)/g, "").trim() || "Taller")}</span>
           </div>
+        </div>
+
+        {/* ===================================================================
+            MOTIVO DE INGRESO
+            =================================================================== */}
+        <div className="bg-zinc-50 px-4 py-3 sm:px-5 rounded-xl border border-zinc-200 text-sm">
+          <span className="text-sm font-normal text-zinc-500 block">Motivo de ingreso</span>
+          <p className="text-sm font-normal text-zinc-900 mt-0.5 whitespace-pre-wrap">
+            {motivoIngresoTexto || "No especificado"}
+          </p>
         </div>
 
         {/* ===================================================================

@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server";
 import {
   getRealtimeVersions,
+  getSharedRealtimeVersions,
   subscribeRealtime,
   type RealtimeChannel,
   type RealtimeEvent,
@@ -36,8 +37,9 @@ function parseChannels(raw: string | null): Set<RealtimeChannel> {
  */
 export async function GET(request: NextRequest) {
   if (request.nextUrl.searchParams.get("versions") === "1") {
+    const versions = await getSharedRealtimeVersions();
     return Response.json(
-      { versions: getRealtimeVersions() },
+      { versions },
       { headers: { "Cache-Control": "no-store, no-cache, must-revalidate" } }
     );
   }
@@ -50,6 +52,7 @@ export async function GET(request: NextRequest) {
   const stream = new ReadableStream<Uint8Array>({
     start(controller) {
       let closed = false;
+      let lastKnownVersions: Record<RealtimeChannel, number> = getRealtimeVersions();
 
       const safeEnqueue = (chunk: string) => {
         if (closed) return;
@@ -70,14 +73,56 @@ export async function GET(request: NextRequest) {
         safeEnqueue(`${lines.join("\n")}\n`);
       };
 
-      sendEvent("ready", { versions: getRealtimeVersions(), timestamp: Date.now() });
+      void getSharedRealtimeVersions().then((sharedVersions) => {
+        if (closed) return;
+        lastKnownVersions = sharedVersions;
+        sendEvent("ready", { versions: sharedVersions, timestamp: Date.now() });
+      });
 
       const unsubscribe = subscribeRealtime((event: RealtimeEvent) => {
         if (!subscribed.has("all") && !subscribed.has(event.channel)) {
           return;
         }
+        lastKnownVersions[event.channel] = Math.max(
+          lastKnownVersions[event.channel] ?? 0,
+          event.version
+        );
         sendEvent("change", event, event.id);
       });
+
+      const dbPollInterval = setInterval(() => {
+        if (closed) return;
+        void getSharedRealtimeVersions().then((sharedVersions) => {
+          if (closed) return;
+          const channelsToCheck: Exclude<RealtimeChannel, "all">[] = [
+            "taller",
+            "presupuestos",
+            "clientes",
+            "vehiculos",
+            "ordenes",
+          ];
+          for (const ch of channelsToCheck) {
+            if (!subscribed.has("all") && !subscribed.has(ch)) continue;
+            const prev = lastKnownVersions[ch] ?? 0;
+            const curr = sharedVersions[ch] ?? 0;
+            if (curr > prev) {
+              lastKnownVersions[ch] = curr;
+              const syntheticEvent: RealtimeEvent = {
+                id: `db-${ch}-${curr}-${Date.now()}`,
+                channel: ch,
+                action: "updated",
+                timestamp: Date.now(),
+                version: curr,
+              };
+              sendEvent("change", syntheticEvent, syntheticEvent.id);
+            }
+          }
+          lastKnownVersions.all = Math.max(
+            lastKnownVersions.all ?? 0,
+            sharedVersions.all ?? 0
+          );
+        });
+      }, 4000);
 
       const heartbeat = setInterval(() => {
         safeEnqueue(`: ping ${Date.now()}\n\n`);
@@ -86,6 +131,7 @@ export async function GET(request: NextRequest) {
       cleanup = () => {
         if (closed) return;
         closed = true;
+        clearInterval(dbPollInterval);
         clearInterval(heartbeat);
         unsubscribe();
         try {

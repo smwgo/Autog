@@ -1,3 +1,8 @@
+import {
+  bumpRealtimeVersionInDb,
+  getRealtimeVersionsFromDb,
+} from "@/lib/realtime-db";
+
 export type RealtimeChannel =
   | "taller"
   | "presupuestos"
@@ -85,6 +90,8 @@ export function emitRealtimeEvent(input: {
     }
   }
 
+  void bumpRealtimeVersionInDb(input.channel);
+
   return event;
 }
 
@@ -104,4 +111,14 @@ export function subscribeRealtime(listener: RealtimeListener): () => void {
  */
 export function getRealtimeVersions(): Record<RealtimeChannel, number> {
   return { ...getStore().versions };
+}
+
+/**
+ * Retorna las versiones compartidas entre instancias desde PostgreSQL (Neon)
+ * combinadas con las versiones en memoria de esta instancia.
+ */
+export async function getSharedRealtimeVersions(): Promise<
+  Record<RealtimeChannel, number>
+> {
+  return getRealtimeVersionsFromDb(getRealtimeVersions());
 }

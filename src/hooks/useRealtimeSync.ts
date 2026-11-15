@@ -90,10 +90,13 @@ export function useRealtimeSync({
     let disposed = false;
     let debounceTimer: ReturnType<typeof setTimeout> | null = null;
     let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+    let pollTimer: ReturnType<typeof setInterval> | null = null;
     let eventSource: EventSource | null = null;
     let knownVersions: Record<string, number> | null = null;
     let lastEventSignature = "";
     let lastEventAt = 0;
+    let isCheckingVersions = false;
+    let sseErrorCount = 0;
 
     const matchesChannel = (ch: RealtimeChannel) =>
       channelSet.has("all") || channelSet.has(ch);
@@ -164,6 +167,7 @@ export function useRealtimeSync({
       eventSource = es;
 
       es.addEventListener("ready", (rawEvent) => {
+        sseErrorCount = 0;
         try {
           const parsed = JSON.parse((rawEvent as MessageEvent).data) as {
             versions?: Record<string, number>;
@@ -177,6 +181,7 @@ export function useRealtimeSync({
       });
 
       es.addEventListener("change", (rawEvent) => {
+        sseErrorCount = 0;
         try {
           const parsed = JSON.parse((rawEvent as MessageEvent).data) as RealtimeEvent;
           handleIncomingEvent(parsed);
@@ -187,10 +192,12 @@ export function useRealtimeSync({
 
       es.onerror = () => {
         if (disposed) return;
+        sseErrorCount += 1;
         if (es.readyState === EventSource.CLOSED) {
           es.close();
           if (reconnectTimer) clearTimeout(reconnectTimer);
-          reconnectTimer = setTimeout(connectSSE, 3000);
+          const delay = sseErrorCount >= 3 ? 15000 : sseErrorCount === 2 ? 8000 : 3000;
+          reconnectTimer = setTimeout(connectSSE, delay);
         }
       };
     };
@@ -212,7 +219,8 @@ export function useRealtimeSync({
     }
 
     const verifyOnFocusOrVisible = async () => {
-      if (disposed || document.visibilityState === "hidden") return;
+      if (disposed || isCheckingVersions || document.visibilityState === "hidden") return;
+      isCheckingVersions = true;
       try {
         const res = await fetch("/api/realtime/events?versions=1", {
           cache: "no-store",
@@ -224,8 +232,15 @@ export function useRealtimeSync({
         }
       } catch {
         // Ignorar errores de red transitorios al enfocar
+      } finally {
+        isCheckingVersions = false;
       }
     };
+
+    void verifyOnFocusOrVisible();
+    pollTimer = setInterval(() => {
+      void verifyOnFocusOrVisible();
+    }, 3500);
 
     const handleVisibility = () => {
       if (document.visibilityState === "visible") {
@@ -243,6 +258,7 @@ export function useRealtimeSync({
       disposed = true;
       if (debounceTimer) clearTimeout(debounceTimer);
       if (reconnectTimer) clearTimeout(reconnectTimer);
+      if (pollTimer) clearInterval(pollTimer);
       if (eventSource) eventSource.close();
       if (bc) bc.close();
       document.removeEventListener("visibilitychange", handleVisibility);
