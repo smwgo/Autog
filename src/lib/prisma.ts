@@ -626,6 +626,108 @@ function executeMirrorRawExecute(queryOrStrings: any, params: any[] = []): numbe
   if (!sql) return 0;
   const db = loadMirrorDb();
 
+  // Handle INSERT INTO "Customer" (...) VALUES ($1, $2, ...)
+  if (/INSERT\s+INTO\s+"?Customer"?/i.test(sql)) {
+    const colsMatch = sql.match(/INSERT\s+INTO\s+"?Customer"?\s*\(([\s\S]*?)\)\s*VALUES\s*\(([\s\S]*?)\)/i);
+    if (colsMatch) {
+      const cols = colsMatch[1]
+        .split(",")
+        .map((c) => c.replace(/["\s\r\n]/g, ""))
+        .filter(Boolean);
+      const valTokens = colsMatch[2]
+        .split(",")
+        .map((v) => v.trim())
+        .filter(Boolean);
+
+      const nowIso = new Date().toISOString();
+      const record: Record<string, any> = {
+        ...MODEL_DEFAULTS.customer(),
+        createdAt: nowIso,
+        updatedAt: nowIso,
+      };
+
+      cols.forEach((col, i) => {
+        const tok = valTokens[i] || "";
+        const pMatch = tok.match(/^\$(\d+)$/);
+        if (pMatch) {
+          const pIdx = parseInt(pMatch[1], 10) - 1;
+          record[col] = params[pIdx];
+        } else if (/^NOW\(\)$/i.test(tok)) {
+          record[col] = nowIso;
+        } else if (/^'[\s\S]*'$/.test(tok)) {
+          record[col] = tok.slice(1, -1);
+        } else if (!isNaN(Number(tok))) {
+          record[col] = Number(tok);
+        }
+      });
+
+      if (!db.customer) db.customer = [];
+      const existingIdx = db.customer.findIndex(
+        (c: any) =>
+          (record.id && c.id === record.id) ||
+          (record.identification && c.identification === record.identification)
+      );
+      if (existingIdx !== -1) {
+        db.customer[existingIdx] = { ...db.customer[existingIdx], ...record, updatedAt: nowIso };
+      } else {
+        db.customer.unshift(record);
+      }
+      saveMirrorDb(db);
+      return 1;
+    }
+  }
+
+  // Handle INSERT INTO "Vehicle" (...) VALUES ($1, $2, ...)
+  if (/INSERT\s+INTO\s+"?Vehicle"?/i.test(sql)) {
+    const colsMatch = sql.match(/INSERT\s+INTO\s+"?Vehicle"?\s*\(([\s\S]*?)\)\s*VALUES\s*\(([\s\S]*?)\)/i);
+    if (colsMatch) {
+      const cols = colsMatch[1]
+        .split(",")
+        .map((c) => c.replace(/["\s\r\n]/g, ""))
+        .filter(Boolean);
+      const valTokens = colsMatch[2]
+        .split(",")
+        .map((v) => v.trim())
+        .filter(Boolean);
+
+      const nowIso = new Date().toISOString();
+      const record: Record<string, any> = {
+        ...MODEL_DEFAULTS.vehicle(),
+        createdAt: nowIso,
+        updatedAt: nowIso,
+      };
+
+      cols.forEach((col, i) => {
+        const tok = valTokens[i] || "";
+        const pMatch = tok.match(/^\$(\d+)$/);
+        if (pMatch) {
+          const pIdx = parseInt(pMatch[1], 10) - 1;
+          record[col] = params[pIdx];
+        } else if (/^NOW\(\)$/i.test(tok)) {
+          record[col] = nowIso;
+        } else if (/^'[\s\S]*'$/.test(tok)) {
+          record[col] = tok.slice(1, -1);
+        } else if (!isNaN(Number(tok))) {
+          record[col] = Number(tok);
+        }
+      });
+
+      if (!db.vehicle) db.vehicle = [];
+      const existingIdx = db.vehicle.findIndex(
+        (v: any) =>
+          (record.id && v.id === record.id) ||
+          (record.plate && v.plate === record.plate)
+      );
+      if (existingIdx !== -1) {
+        db.vehicle[existingIdx] = { ...db.vehicle[existingIdx], ...record, updatedAt: nowIso };
+      } else {
+        db.vehicle.unshift(record);
+      }
+      saveMirrorDb(db);
+      return 1;
+    }
+  }
+
   // Handle INSERT INTO "WorkshopOrder" (...) VALUES ($1, $2, ...)
   if (/INSERT\s+INTO\s+"?WorkshopOrder"?/i.test(sql)) {
     const colsMatch = sql.match(/INSERT\s+INTO\s+"?WorkshopOrder"?\s*\(([\s\S]*?)\)\s*VALUES\s*\(([\s\S]*?)\)/i);

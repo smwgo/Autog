@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Header } from "@/components/Header";
 import { BranchTabs } from "@/components/pos/BranchTabs";
 import { getClientUserBranch, getClientActiveBranch } from "@/lib/branch";
+import { useRealtimeSync } from "@/hooks/useRealtimeSync";
 
 interface OrderItem {
   id: string;
@@ -174,6 +175,23 @@ export default function PosOrdenesPage() {
     window.addEventListener("autog-branch-change", handleBranch);
     return () => window.removeEventListener("autog-branch-change", handleBranch);
   }, [cargarOrdenes]);
+
+  useRealtimeSync({
+    channels: ["ordenes", "presupuestos", "taller"],
+    onEvent: (ev) => {
+      if (ev.action === "deleted" && ev.entityId) {
+        setOrders((prev) =>
+          prev.filter(
+            (o) =>
+              o.id !== ev.entityId &&
+              o.dbId !== ev.entityId &&
+              o.orderNumber !== ev.entityId
+          )
+        );
+      }
+    },
+    onRefresh: () => cargarOrdenes(),
+  });
 
   // Cambiar estado rápido de una orden
   const handleCambiarEstado = async (orderId: string, nuevoEstado: string) => {

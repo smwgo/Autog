@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma, withRetry } from "@/lib/prisma";
+import { emitRealtimeEvent } from "@/lib/realtime";
 
 export const dynamic = "force-dynamic";
 
@@ -36,19 +37,24 @@ export async function GET(request: Request) {
     const tallerMap = new Map<string, any>();
     for (const t of tallerOrders) {
       if (t.plate) {
-        tallerMap.set(t.plate.trim().toUpperCase(), t);
+        const alnum = t.plate.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+        if (alnum && !tallerMap.has(alnum)) {
+          tallerMap.set(alnum, t);
+        }
       }
     }
 
-    // 3. Unificar vehículos de Cliente y Taller
+    // 3. Unificar vehículos de Cliente y Taller (sin duplicar por placa normalizada)
     const listaVehiculos: any[] = [];
     const platesVistas = new Set<string>();
 
     for (const v of dbVehicles) {
       const cleanPlate = v.plate.trim().toUpperCase();
-      platesVistas.add(cleanPlate);
+      const alnumPlate = cleanPlate.replace(/[^A-Z0-9]/g, "") || cleanPlate;
+      if (platesVistas.has(alnumPlate)) continue;
+      platesVistas.add(alnumPlate);
 
-      const tInfo = tallerMap.get(cleanPlate);
+      const tInfo = tallerMap.get(alnumPlate);
       listaVehiculos.push({
         id: v.id,
         plate: cleanPlate,
@@ -73,16 +79,17 @@ export async function GET(request: Request) {
     }
 
     // 4. Agregar vehículos registrados en Taller que aún no estén en prisma.vehicle
-    for (const [plate, t] of tallerMap.entries()) {
-      if (!platesVistas.has(plate)) {
-        platesVistas.add(plate);
+    for (const [alnum, t] of tallerMap.entries()) {
+      if (!platesVistas.has(alnum)) {
+        platesVistas.add(alnum);
+        const displayPlate = String(t.plate || alnum).trim().toUpperCase();
         const parts = (t.vehicle || "").trim().split(" ");
         const brand = parts[0] || "General";
         const model = parts.slice(1).join(" ") || "Vehículo Taller";
 
         listaVehiculos.push({
-          id: `taller-${plate}`,
-          plate: plate,
+          id: `taller-${displayPlate}`,
+          plate: displayPlate,
           brand: brand,
           model: model,
           year: null,
@@ -236,6 +243,9 @@ export async function POST(request: Request) {
       }
     }
 
+    emitRealtimeEvent({ channel: "vehiculos", action: "created", entityId: nuevoVehiculo.id });
+    emitRealtimeEvent({ channel: "clientes", action: "updated", entityId: nuevoVehiculo.customerId });
+
     return NextResponse.json(
       {
         success: true,
@@ -312,6 +322,9 @@ export async function PUT(request: Request) {
         include: { customer: true },
       });
 
+      emitRealtimeEvent({ channel: "vehiculos", action: "updated", entityId: creado.id });
+      emitRealtimeEvent({ channel: "clientes", action: "updated", entityId: creado.customerId });
+
       return NextResponse.json({
         success: true,
         vehicle: creado,
@@ -336,6 +349,9 @@ export async function PUT(request: Request) {
         console.warn("Aviso al actualizar raw imageUrl en Vehicle:", errDb);
       }
     }
+
+    emitRealtimeEvent({ channel: "vehiculos", action: "updated", entityId: updated.id });
+    emitRealtimeEvent({ channel: "clientes", action: "updated", entityId: updated.customerId });
 
     return NextResponse.json({
       success: true,
@@ -482,6 +498,11 @@ export async function DELETE(request: Request) {
         })
         .catch(() => {});
     }
+
+    emitRealtimeEvent({ channel: "vehiculos", action: "deleted", entityId: id ?? undefined });
+    emitRealtimeEvent({ channel: "clientes", action: "updated" });
+    emitRealtimeEvent({ channel: "taller", action: "deleted" });
+    emitRealtimeEvent({ channel: "presupuestos", action: "deleted" });
 
     return NextResponse.json({
       success: true,

@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Header } from "@/components/Header";
+import { useRealtimeSync } from "@/hooks/useRealtimeSync";
 
 interface OrderDetail {
   id: string;
@@ -145,6 +146,20 @@ function DetalleOrdenContent() {
   useEffect(() => {
     cargarOrden();
   }, [cargarOrden]);
+
+  useRealtimeSync({
+    channels: ["ordenes", "presupuestos", "taller"],
+    onEvent: (ev) => {
+      if (
+        ev.action === "deleted" &&
+        ev.entityId &&
+        (ev.entityId === orderId || ev.entityId === order?.id || ev.entityId === order?.dbId || ev.entityId === order?.orderNumber)
+      ) {
+        setOrder(null);
+      }
+    },
+    onRefresh: () => cargarOrden(),
+  });
 
   // Cambiar estado de facturación (Pagado <-> En Orden)
   const toggleFacturacion = async () => {

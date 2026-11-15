@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { emitRealtimeEvent } from "@/lib/realtime";
 import fs from "fs";
 import path from "path";
 
@@ -361,6 +362,11 @@ export async function POST(request: Request) {
         console.warn("Aviso al sincronizar vehículo con taller:", vehSyncErr);
       }
 
+      emitRealtimeEvent({ channel: "taller", action: "created", entityId: rows?.[0]?.id });
+      emitRealtimeEvent({ channel: "presupuestos", action: "created", entityId: rows?.[0]?.id });
+      emitRealtimeEvent({ channel: "clientes", action: "updated" });
+      emitRealtimeEvent({ channel: "vehiculos", action: "updated" });
+
       return NextResponse.json({
         success: true,
         order: rows?.[0],
@@ -439,6 +445,9 @@ export async function PUT(request: Request) {
           }
         }
 
+        emitRealtimeEvent({ channel: "taller", action: "updated", entityId: id });
+        emitRealtimeEvent({ channel: "presupuestos", action: "updated", entityId: id });
+
         return NextResponse.json({
           success: true,
           branch: destBranch,
@@ -514,6 +523,9 @@ export async function PUT(request: Request) {
           console.warn("Aviso al sincronizar orden con historial:", e);
         }
       }
+
+      emitRealtimeEvent({ channel: "taller", action: "status_changed", entityId: id });
+      emitRealtimeEvent({ channel: "presupuestos", action: "status_changed", entityId: id });
 
       return NextResponse.json({
         success: true,
@@ -690,6 +702,10 @@ export async function DELETE(request: Request) {
       } catch (mirrorErr) {
         console.warn("Aviso al remover orden del mirror local:", mirrorErr);
       }
+
+      emitRealtimeEvent({ channel: "taller", action: "deleted", entityId: id ?? undefined });
+      emitRealtimeEvent({ channel: "presupuestos", action: "deleted", entityId: id ?? undefined });
+      emitRealtimeEvent({ channel: "ordenes", action: "deleted", entityId: id ?? undefined });
 
       return NextResponse.json({
         success: true,

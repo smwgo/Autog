@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma, withRetry } from "@/lib/prisma";
+import { emitRealtimeEvent } from "@/lib/realtime";
 
 export const dynamic = "force-dynamic";
 
@@ -101,9 +102,21 @@ export async function POST(request: Request) {
       `);
       const posNotes = `[PRESUPUESTO AUTORIZADO] Orden #${order.orderNumber} | Placa: ${order.plate} | Vehículo: ${order.vehicle} | Mecánico: ${order.mechanic} | Tel: ${order.clientPhone || "N/A"}${notes ? ` | Nota: ${notes}` : ""}`;
 
-      const existingReq = await (prisma as any).orderRequest
-        .findUnique({ where: { requestNumber } })
-        .catch(() => null);
+      const PAID_REQ_STATUSES = new Set(["DESPACHADO", "PAGADO", "COBRADO", "FACTURADO"]);
+      let existingReq: any = null;
+      if (order.posRequestId) {
+        existingReq = await (prisma as any).orderRequest
+          .findUnique({ where: { id: order.posRequestId } })
+          .catch(() => null);
+      }
+      if (!existingReq) {
+        existingReq = await (prisma as any).orderRequest
+          .findUnique({ where: { requestNumber } })
+          .catch(() => null);
+      }
+      const existingReqPaid = Boolean(
+        existingReq && PAID_REQ_STATUSES.has(String(existingReq.status || "").toUpperCase())
+      );
 
       let linkedCustomer = order.customerId
         ? await prisma.customer.findUnique({
@@ -128,7 +141,7 @@ export async function POST(request: Request) {
         vehiclePlate: order.plate || null,
       };
       let posRequest: any;
-      if (existingReq) {
+      if (existingReq && !existingReqPaid) {
         posRequest = await (prisma as any).orderRequest.update({
           where: { id: existingReq.id },
           data: {
@@ -142,19 +155,51 @@ export async function POST(request: Request) {
           },
         });
       } else {
-        posRequest = await (prisma as any).orderRequest.create({
-          data: {
-            requestNumber,
-            type: "TALLER",
-            customerName: order.client,
-            ...requestCustomerData,
-            itemsSummary,
-            itemsJson: JSON.stringify(posItemsPayload),
-            totalEstimated: totalCalculado,
-            notes: posNotes,
-            status: "PENDIENTE",
-          },
-        });
+        let nextRequestNumber = requestNumber;
+        if (existingReq) {
+          let suffix = 2;
+          while (suffix < 100) {
+            const candidate = `${requestNumber}-${suffix}`;
+            const taken = await (prisma as any).orderRequest
+              .findUnique({ where: { requestNumber: candidate } })
+              .catch(() => null);
+            if (!taken) {
+              nextRequestNumber = candidate;
+              break;
+            }
+            if (!PAID_REQ_STATUSES.has(String(taken.status || "").toUpperCase())) {
+              posRequest = await (prisma as any).orderRequest.update({
+                where: { id: taken.id },
+                data: {
+                  customerName: order.client,
+                  ...requestCustomerData,
+                  itemsSummary,
+                  itemsJson: JSON.stringify(posItemsPayload),
+                  totalEstimated: totalCalculado,
+                  notes: posNotes,
+                  status: "PENDIENTE",
+                },
+              });
+              break;
+            }
+            suffix++;
+          }
+        }
+        if (!posRequest) {
+          posRequest = await (prisma as any).orderRequest.create({
+            data: {
+              requestNumber: nextRequestNumber,
+              type: "TALLER",
+              customerName: order.client,
+              ...requestCustomerData,
+              itemsSummary,
+              itemsJson: JSON.stringify(posItemsPayload),
+              totalEstimated: totalCalculado,
+              notes: posNotes,
+              status: "PENDIENTE",
+            },
+          });
+        }
       }
 
       // 4. Actualizar la orden de trabajo
@@ -205,6 +250,10 @@ export async function POST(request: Request) {
           ).catch(() => {});
         }
       }
+
+      emitRealtimeEvent({ channel: "presupuestos", action: "status_changed", entityId: order.id });
+      emitRealtimeEvent({ channel: "taller", action: "status_changed", entityId: order.id });
+      emitRealtimeEvent({ channel: "ordenes", action: "created", entityId: posRequest.id });
 
       return NextResponse.json({
         success: true,

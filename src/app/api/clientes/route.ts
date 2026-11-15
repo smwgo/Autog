@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { emitRealtimeEvent } from "@/lib/realtime";
 
 let customerBranchSchemaEnsured = false;
 
@@ -149,8 +150,56 @@ export async function GET(request: Request) {
         return true;
       });
 
+    // Deduplicar clientes (misma cédula real, mismo email o mismo nombre+teléfono) y sus vehículos por placa normalizada
+    const clientesUnicosMap = new Map<string, any>();
+    for (const c of customers) {
+      const identClean = String(c.identification || "").trim().toUpperCase();
+      const esIdentReal = identClean && !identClean.startsWith("CLI-");
+      const nameClean = String(c.name || "").trim().toLowerCase();
+      const phoneClean = String(c.phone || "").replace(/\D/g, "");
+      const emailClean = String(c.email || "").trim().toLowerCase();
+
+      const dedupKey = esIdentReal
+        ? `id:${identClean}`
+        : emailClean
+        ? `em:${emailClean}`
+        : nameClean && phoneClean.length >= 7
+        ? `np:${nameClean}|${phoneClean}`
+        : `cid:${c.id}`;
+
+      const prev = clientesUnicosMap.get(dedupKey);
+      if (!prev) {
+        const vehMap = new Map<string, any>();
+        for (const v of c.vehicles || []) {
+          const pKey = String(v.plate || "").toUpperCase().replace(/[^A-Z0-9]/g, "") || v.id;
+          if (!vehMap.has(pKey)) vehMap.set(pKey, v);
+        }
+        clientesUnicosMap.set(dedupKey, {
+          ...c,
+          vehicles: Array.from(vehMap.values()),
+        });
+      } else {
+        const vehMap = new Map<string, any>();
+        for (const v of prev.vehicles || []) {
+          const pKey = String(v.plate || "").toUpperCase().replace(/[^A-Z0-9]/g, "") || v.id;
+          if (!vehMap.has(pKey)) vehMap.set(pKey, v);
+        }
+        for (const v of c.vehicles || []) {
+          const pKey = String(v.plate || "").toUpperCase().replace(/[^A-Z0-9]/g, "") || v.id;
+          if (!vehMap.has(pKey)) vehMap.set(pKey, v);
+        }
+        prev.vehicles = Array.from(vehMap.values());
+        if (!prev.email && c.email) prev.email = c.email;
+        if (!prev.address && c.address) prev.address = c.address;
+        if ((!prev.phone || prev.phone === "S/N") && c.phone) prev.phone = c.phone;
+        if (!prev.avatar && c.avatar) prev.avatar = c.avatar;
+        if (!prev.imageUrl && c.imageUrl) prev.imageUrl = c.imageUrl;
+      }
+    }
+    const customersDeduplicated = Array.from(clientesUnicosMap.values());
+
     // Calcular visitas al taller por placa para cada vehículo
-    const allPlates = customers.flatMap((c) => c.vehicles.map((v) => v.plate.trim())).filter(Boolean);
+    const allPlates = customersDeduplicated.flatMap((c) => c.vehicles.map((v: any) => v.plate.trim())).filter(Boolean);
     const platesSet = Array.from(new Set(allPlates.flatMap((p) => [p, p.toUpperCase()])));
     const visitsMap: Record<string, number> = {};
 
@@ -186,9 +235,9 @@ export async function GET(request: Request) {
       }
     }
 
-    const customersWithVisits = customers.map((c) => ({
+    const customersWithVisits = customersDeduplicated.map((c) => ({
       ...c,
-      vehicles: c.vehicles.map((v) => {
+      vehicles: c.vehicles.map((v: any) => {
         const cleanPlate = (v.plate || "").trim().toUpperCase();
         return {
           ...v,
@@ -348,6 +397,11 @@ export async function POST(request: Request) {
       )
       .catch(() => {});
 
+    emitRealtimeEvent({ channel: "clientes", action: "created", entityId: clienteCreado.id });
+    if (tieneVehiculo && clienteCreado.vehicles?.[0]?.id) {
+      emitRealtimeEvent({ channel: "vehiculos", action: "created", entityId: clienteCreado.vehicles[0].id });
+    }
+
     return NextResponse.json({
       success: true,
       cliente: {
@@ -410,6 +464,9 @@ export async function DELETE(request: Request) {
     await prisma.customer.delete({
       where: { id: clienteExistente.id },
     });
+
+    emitRealtimeEvent({ channel: "clientes", action: "deleted", entityId: clienteExistente.id });
+    emitRealtimeEvent({ channel: "vehiculos", action: "deleted" });
 
     return NextResponse.json({ 
       success: true, 
@@ -477,6 +534,7 @@ export async function PUT(request: Request) {
           targetAssigned
         );
       }
+      emitRealtimeEvent({ channel: "clientes", action: "updated", entityId: id });
       return NextResponse.json({
         success: true,
         id,
@@ -580,6 +638,11 @@ export async function PUT(request: Request) {
       where: { id },
       include: { vehicles: true },
     });
+
+    emitRealtimeEvent({ channel: "clientes", action: "updated", entityId: id });
+    if (placa && placa.trim().length > 0) {
+      emitRealtimeEvent({ channel: "vehiculos", action: "updated" });
+    }
 
     return NextResponse.json({
       success: true,

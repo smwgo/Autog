@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { emitirFacturaElectronica } from "@/lib/sri/facturaService";
+import { emitRealtimeEvent } from "@/lib/realtime";
 
 let saleInvoiceDetailsSchemaEnsured = false;
 
@@ -587,6 +588,10 @@ export async function POST(request: Request) {
       }
     }
 
+    emitRealtimeEvent({ channel: "ordenes", action: "created", entityId: sale.id });
+    emitRealtimeEvent({ channel: "presupuestos", action: "updated" });
+    emitRealtimeEvent({ channel: "taller", action: "updated" });
+
     return NextResponse.json({
       success: true,
       venta: sale,
@@ -793,6 +798,9 @@ export async function PATCH(request: Request) {
       },
     });
 
+    emitRealtimeEvent({ channel: "ordenes", action: "updated", entityId: id });
+    emitRealtimeEvent({ channel: "presupuestos", action: "updated" });
+
     return NextResponse.json({ success: true, venta: saleUpdated });
   } catch (error: any) {
     console.error("Error al actualizar venta en base de datos:", error);
@@ -873,6 +881,10 @@ export async function DELETE(request: Request) {
     await prisma.sale.delete({
       where: { id },
     });
+
+    emitRealtimeEvent({ channel: "ordenes", action: "deleted", entityId: id });
+    emitRealtimeEvent({ channel: "presupuestos", action: "updated" });
+    emitRealtimeEvent({ channel: "taller", action: "updated" });
 
     return NextResponse.json({ success: true, message: "Venta eliminada." });
   } catch (error: any) {

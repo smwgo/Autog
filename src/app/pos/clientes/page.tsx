@@ -7,6 +7,7 @@ import { PosMobileNav } from "@/components/PosMobileNav";
 import { CollapsibleMetrics } from "@/components/CollapsibleMetrics";
 import { getClientActiveBranch, getClientUserBranch, SedeType, FiltroSedeType } from "@/lib/branch";
 import { BranchTabs } from "@/components/pos/BranchTabs";
+import { useRealtimeSync } from "@/hooks/useRealtimeSync";
 
 interface Vehicle {
   id: string;
@@ -231,6 +232,16 @@ export default function GestionClientes() {
     window.addEventListener("autog-branch-change", handleBranchChange);
     return () => window.removeEventListener("autog-branch-change", handleBranchChange);
   }, [cargarClientes]);
+
+  useRealtimeSync({
+    channels: ["clientes", "vehiculos"],
+    onEvent: (ev) => {
+      if (ev.action === "deleted" && ev.entityId) {
+        setTodosClientes((prev) => prev.filter((c) => c.id !== ev.entityId));
+      }
+    },
+    onRefresh: () => cargarClientes(),
+  });
 
   const handleTransferirSucursal = async (cliente: Customer) => {
     try {

@@ -920,6 +920,7 @@ model WorkshopOrder {
   internalChatJson        String?   @default("[]")
   technicianHoursJson     String?   @default("[]")
   clientEmail             String?
+  clientAddress           String?
   statusColor             String?   @default("amber")
   trackingPin             String?   @default("1234")
   customStatusesJson      String?   @default("[]")

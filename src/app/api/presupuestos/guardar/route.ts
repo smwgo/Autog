@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma, withRetry } from "@/lib/prisma";
+import { emitRealtimeEvent } from "@/lib/realtime";
 
 export const dynamic = "force-dynamic";
 
@@ -71,6 +72,9 @@ export async function POST(request: Request) {
           JSON.stringify(inspectionFindings)
         );
       }
+
+      emitRealtimeEvent({ channel: "presupuestos", action: "updated", entityId: orderId });
+      emitRealtimeEvent({ channel: "taller", action: "updated", entityId: orderId });
 
       return NextResponse.json({
         success: true,

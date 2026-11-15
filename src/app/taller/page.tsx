@@ -18,6 +18,7 @@ import ModalCategoriasTaller from "./components/ModalCategoriasTaller";
 import CatalogoProductosServiciosTaller from "@/components/taller/CatalogoProductosServiciosTaller";
 import { getClientActiveBranch, getClientUserBranch } from "@/lib/branch";
 import { VoiceNoteRecord } from "@/lib/transcription";
+import { useRealtimeSync } from "@/hooks/useRealtimeSync";
 
 // ============================================================================
 // INTERFACES Y TIPOS OPERATIVOS
@@ -609,18 +610,40 @@ function esPropuestaAprobadaOrden(o?: UnifiedOrder | null): boolean {
   if (!o) return false;
   const qs = String(o.quoteStatus || "").trim().toLowerCase();
   const st = String(o.status || "").trim().toLowerCase();
-  return (
+
+  // Si la propuesta está explícitamente en espera, pendiente o borrador, NO está aprobada
+  if (
+    qs === "pendiente" ||
+    qs.includes("espera") ||
+    qs === "borrador" ||
+    qs === "por aprobar" ||
+    qs === "enviado"
+  ) {
+    return false;
+  }
+
+  // Si la propuesta fue explícitamente aprobada o autorizada
+  if (
     qs.includes("aprob") ||
     qs.includes("acept") ||
-    qs === "pagado" ||
-    qs === "facturado" ||
+    Boolean((o as any).hasPriceAuthorized)
+  ) {
+    return true;
+  }
+
+  // Si el estado del taller indica diagnóstico, pendiente o espera, NO está en reparación activa
+  if (st.includes("diag") || st.includes("espera") || st.includes("pend")) {
+    return false;
+  }
+
+  // Solo si está activamente en reparación o trabajando
+  return (
     st.includes("aprob") ||
     st === "en proceso" ||
     st === "trabajando" ||
-    st === "en_caja" ||
-    st === "pagado" ||
-    st === "facturado" ||
-    Boolean((o as any).hasPriceAuthorized)
+    st === "reparando" ||
+    st === "reparación" ||
+    st === "reparacion"
   );
 }
 
@@ -1536,24 +1559,11 @@ export default function TallerPanel() {
     const vehiculo = clientesCatalogo
       .flatMap((cliente) => (Array.isArray(cliente.vehicles) ? cliente.vehicles : []))
       .find((item) => item.id === ordenActiva.vehicleId || item.plate === ordenActiva.plate);
-    let fotosCatalogo: string[] = [];
-
-    if (Array.isArray(vehiculo?.photos)) {
-      fotosCatalogo = vehiculo.photos.filter((foto: unknown): foto is string => typeof foto === "string");
-    } else if (typeof vehiculo?.photosJson === "string") {
-      try {
-        const parsed: unknown = JSON.parse(vehiculo.photosJson);
-        if (Array.isArray(parsed)) {
-          fotosCatalogo = parsed.filter((foto): foto is string => typeof foto === "string");
-        }
-      } catch (error) {
-        console.warn("No se pudieron leer las fotos del vehículo para Lubricentro:", error);
-      }
+    const rawPerfil = (ordenActiva as any).vehicleImageUrl || vehiculo?.imageUrl || "";
+    if (typeof rawPerfil === "string" && /^(data:image\/|https?:\/\/|\/|blob:)/i.test(rawPerfil.trim())) {
+      return rawPerfil.trim();
     }
-
-    return fotosCatalogo.find(
-      (foto) => /^(data:image\/|https?:\/\/|\/|blob:)/i.test(foto.trim())
-    ) || null;
+    return null;
   }, [clientesCatalogo, ordenActiva]);
   const [sincronizandoOrden, setSincronizandoOrden] = useState(false);
   const [iniciandoCronometro, setIniciandoCronometro] = useState(false);
@@ -1693,6 +1703,18 @@ export default function TallerPanel() {
       window.removeEventListener("taller-catalogo-actualizado", handleCatalogoActualizado);
     };
   }, [cargarOperacionInicial]);
+
+  useRealtimeSync({
+    channels: ["taller", "presupuestos", "clientes", "vehiculos", "ordenes"],
+    onEvent: (ev) => {
+      if (ev.action === "deleted" && ev.entityId) {
+        setAutosEnPista((prev) =>
+          prev.filter((o) => o.id !== ev.entityId && o.orderNumber !== ev.entityId)
+        );
+      }
+    },
+    onRefresh: () => cargarOperacionInicial(false),
+  });
 
   // Búsqueda reactiva de clientes en Neon DB cuando el usuario escribe en Flotante 01
   useEffect(() => {
@@ -2424,7 +2446,7 @@ export default function TallerPanel() {
       ? normalizarUnaPalabra(ordenActiva.statusHistory[0].status)
       : "";
 
-    // Si ordenActiva ya tiene un estado de las 4 etapas ("Diagnóstico", "Reparación", "Listo", "Entregada"), respetarlo
+    // Si la orden está en espera (!propuestaAprobada && !estaPausada), debe estar en Diagnóstico
     let estadoOrden = normalizado && normalizado !== "Pausada" && normalizado !== "En Proceso"
       ? normalizado
       : (ultimaEtapaHistorial || "");
@@ -2432,16 +2454,17 @@ export default function TallerPanel() {
     let colorOrden = (ordenActiva.statusColor as CustomOrderStatus["color"]) || "blue";
     let progresoOrden = ordenActiva.progress ?? 30;
 
-    // Si aún no tiene etapa definida, usar valor por defecto según propuesta
-    if (!estadoOrden) {
-      if (propuestaAprobada) {
-        estadoOrden = "Reparación";
-        colorOrden = "rose";
-        progresoOrden = 60;
-      } else {
+    if (!propuestaAprobada && !estaPausada) {
+      if (estadoOrden === "Reparación" || estadoOrden === "Pagado" || !estadoOrden) {
         estadoOrden = "Diagnóstico";
         colorOrden = "blue";
         progresoOrden = 30;
+      }
+    } else if (propuestaAprobada && !estaPausada) {
+      if (estadoOrden === "Diagnóstico" || !estadoOrden) {
+        estadoOrden = "Reparación";
+        colorOrden = "rose";
+        progresoOrden = 60;
       }
     }
 
@@ -5366,28 +5389,14 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                     vehiculoCatalogo?.year ||
                     auto.vehicle.match(/\b(?:19|20)\d{2}\b/)?.[0] ||
                     "";
-                  let fotosVehiculo: string[] = [];
-                  if (Array.isArray(vehiculoCatalogo?.photos)) {
-                    fotosVehiculo = vehiculoCatalogo.photos;
-                  } else if (typeof vehiculoCatalogo?.photosJson === "string") {
-                    try {
-                      const fotosParseadas: unknown = JSON.parse(vehiculoCatalogo.photosJson);
-                      if (Array.isArray(fotosParseadas)) {
-                        fotosVehiculo = fotosParseadas.filter(
-                          (foto): foto is string => typeof foto === "string"
-                        );
-                      }
-                    } catch (error) {
-                      console.error("No se pudieron cargar las fotos del vehículo:", error);
-                    }
-                  }
-                  if (vehiculoCatalogo?.imageUrl && !fotosVehiculo.includes(vehiculoCatalogo.imageUrl)) {
-                    fotosVehiculo.unshift(vehiculoCatalogo.imageUrl);
-                  }
-                  const todasLasFotos = fotosVehiculo.filter(
-                    (foto): foto is string => typeof foto === "string" && /^(data:image\/|https?:\/\/|\/|blob:)/i.test(foto.trim())
-                  );
-                  const fotoVehiculo = todasLasFotos[0];
+                  const rawPerfilVehiculo = (auto as any).vehicleImageUrl || vehiculoCatalogo?.imageUrl || "";
+                  const fotoPerfilVehiculo =
+                    typeof rawPerfilVehiculo === "string" &&
+                    /^(data:image\/|https?:\/\/|\/|blob:)/i.test(rawPerfilVehiculo.trim())
+                      ? rawPerfilVehiculo.trim()
+                      : undefined;
+                  const todasLasFotos = fotoPerfilVehiculo ? [fotoPerfilVehiculo] : [];
+                  const fotoVehiculo = fotoPerfilVehiculo;
                   const nombreVehiculo = anioVehiculo
                     ? auto.vehicle.replace(String(anioVehiculo), "").trim()
                     : auto.vehicle;

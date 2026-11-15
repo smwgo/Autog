@@ -231,7 +231,7 @@ export default function ModalNuevaOrdenTrabajo({
   mecanicos = [],
   clientesCatalogo = [],
   onOrdenCreada,
-  mostrarToast = () => {},
+  mostrarToast = () => { },
   isPageMode = false,
   placaInicial = "",
   clienteInicial = "",
@@ -282,7 +282,7 @@ export default function ModalNuevaOrdenTrabajo({
     try {
       const immediateUrl = URL.createObjectURL(file);
       setNuevoClienteFoto(immediateUrl);
-    } catch {}
+    } catch { }
 
     try {
       setSubiendoFotoCliente(true);
@@ -356,7 +356,7 @@ export default function ModalNuevaOrdenTrabajo({
     try {
       const immediateUrl = URL.createObjectURL(file);
       setVehiculoFoto(immediateUrl);
-    } catch {}
+    } catch { }
 
     try {
       setSubiendoFotoVehiculo(true);
@@ -548,7 +548,7 @@ export default function ModalNuevaOrdenTrabajo({
     if (speechRecognitionRef.current) {
       try {
         speechRecognitionRef.current.stop();
-      } catch {}
+      } catch { }
       speechRecognitionRef.current = null;
     }
 
@@ -558,7 +558,7 @@ export default function ModalNuevaOrdenTrabajo({
     if (videoUrlTemp) {
       try {
         URL.revokeObjectURL(videoUrlTemp);
-      } catch {}
+      } catch { }
       setVideoUrlTemp(null);
     }
     setVideoBlobTemp(null);
@@ -566,7 +566,7 @@ export default function ModalNuevaOrdenTrabajo({
     if (audioUrlTemp) {
       try {
         URL.revokeObjectURL(audioUrlTemp);
-      } catch {}
+      } catch { }
       setAudioUrlTemp(null);
     }
     setAudioBlobTemp(null);
@@ -581,14 +581,14 @@ export default function ModalNuevaOrdenTrabajo({
   useEffect(() => {
     if (grabandoVideo && videoElementRef.current && videoStreamRef.current) {
       videoElementRef.current.srcObject = videoStreamRef.current;
-      videoElementRef.current.play().catch(() => {});
+      videoElementRef.current.play().catch(() => { });
     }
   }, [grabandoVideo]);
 
   useEffect(() => {
     if (camaraFotoActiva && camaraFotoVideoRef.current && camaraFotoStreamRef.current) {
       camaraFotoVideoRef.current.srcObject = camaraFotoStreamRef.current;
-      camaraFotoVideoRef.current.play().catch(() => {});
+      camaraFotoVideoRef.current.play().catch(() => { });
     }
   }, [camaraFotoActiva]);
 
@@ -952,7 +952,7 @@ export default function ModalNuevaOrdenTrabajo({
     } catch (err: any) {
       mostrarToast(
         err?.message ||
-          "No se pudo acceder a la cámara. Puedes adjuntar un archivo de video compatible.",
+        "No se pudo acceder a la cámara. Puedes adjuntar un archivo de video compatible.",
         "err"
       );
     }
@@ -970,7 +970,7 @@ export default function ModalNuevaOrdenTrabajo({
     if (videoUrlTemp) {
       try {
         URL.revokeObjectURL(videoUrlTemp);
-      } catch {}
+      } catch { }
       setVideoUrlTemp(null);
     }
     setVideoBlobTemp(null);
@@ -983,7 +983,7 @@ export default function ModalNuevaOrdenTrabajo({
     if (videoUrlTemp) {
       try {
         URL.revokeObjectURL(videoUrlTemp);
-      } catch {}
+      } catch { }
       setVideoUrlTemp(null);
     }
     setVideoBlobTemp(null);
@@ -1030,7 +1030,7 @@ export default function ModalNuevaOrdenTrabajo({
       if (videoUrlTemp) {
         try {
           URL.revokeObjectURL(videoUrlTemp);
-        } catch {}
+        } catch { }
         setVideoUrlTemp(null);
       }
       setVideoBlobTemp(null);
@@ -1229,7 +1229,7 @@ export default function ModalNuevaOrdenTrabajo({
     if (speechRecognitionRef.current) {
       try {
         speechRecognitionRef.current.stop();
-      } catch {}
+      } catch { }
       speechRecognitionRef.current = null;
     }
     setGrabandoAudio(false);
@@ -1260,7 +1260,7 @@ export default function ModalNuevaOrdenTrabajo({
     if (audioUrlTemp) {
       try {
         URL.revokeObjectURL(audioUrlTemp);
-      } catch {}
+      } catch { }
       setAudioUrlTemp(null);
     }
     setAudioBlobTemp(null);
@@ -1343,7 +1343,7 @@ export default function ModalNuevaOrdenTrabajo({
       if (audioUrlTemp) {
         try {
           URL.revokeObjectURL(audioUrlTemp);
-        } catch {}
+        } catch { }
         setAudioUrlTemp(null);
       }
       setAudioBlobTemp(null);
@@ -1374,7 +1374,7 @@ export default function ModalNuevaOrdenTrabajo({
     if (audioUrlTemp) {
       try {
         URL.revokeObjectURL(audioUrlTemp);
-      } catch {}
+      } catch { }
       setAudioUrlTemp(null);
     }
     setTranscripcionVoz("");
@@ -1403,7 +1403,7 @@ export default function ModalNuevaOrdenTrabajo({
           setEmpleadosDb(activos);
         }
       })
-      .catch(() => {});
+      .catch(() => { });
     return () => {
       cancel = true;
     };
@@ -1485,7 +1485,7 @@ export default function ModalNuevaOrdenTrabajo({
           videoRef.current.srcObject = mediaStream;
           videoRef.current.setAttribute("playsinline", "true");
           videoRef.current.setAttribute("webkit-playsinline", "true");
-          videoRef.current.play().catch(() => {});
+          videoRef.current.play().catch(() => { });
         }
       }, 60);
     } catch {
@@ -1602,8 +1602,8 @@ export default function ModalNuevaOrdenTrabajo({
           const vehiculosCliente = Array.isArray(data.customer.vehicles)
             ? data.customer.vehicles
             : data.vehicle
-            ? [data.vehicle]
-            : [];
+              ? [data.vehicle]
+              : [];
           const vExacto =
             vehiculosCliente.find(
               (v: any) => String(v.plate || "").toUpperCase().replace(/[^A-Z0-9]/g, "") === alnumBuscado
@@ -1841,7 +1841,7 @@ export default function ModalNuevaOrdenTrabajo({
             setCorrelativoOrden(String(d.correlative));
           }
         })
-        .catch(() => {});
+        .catch(() => { });
     }
     if (empleadoLogueado?.nombre) {
       setIngresadoPor(empleadoLogueado.nombre);
@@ -1880,7 +1880,7 @@ export default function ModalNuevaOrdenTrabajo({
         ) {
           setEtiquetaRolCabecera("Asesor");
         }
-      } catch {}
+      } catch { }
     }
   }, [empleadoLogueado, isOpen]);
 
@@ -1903,7 +1903,7 @@ export default function ModalNuevaOrdenTrabajo({
       const cIdent = esClienteFalso ? "" : cust?.identification || ord.clientIdDoc || "";
       const cPhone = esClienteFalso ? "" : cust?.phone || ord.clientPhone || "";
       const cEmail = esClienteFalso ? "" : cust?.email || ord.clientEmail || "";
-      const cAddr = esClienteFalso ? "" : cust?.address || "";
+      const cAddr = esClienteFalso ? "" : cust?.address || ord.clientAddress || "";
       const cType = cust?.type === "Empresa" ? "Empresa" : "Persona";
 
       setTipoCliente(cType);
@@ -1962,27 +1962,50 @@ export default function ModalNuevaOrdenTrabajo({
       setVehiculoKm(
         ord.mileage ? String(ord.mileage) : veh?.mileage ? String(veh.mileage) : ""
       );
+      setVehiculoFoto(veh?.imageUrl || ord?.vehicle?.imageUrl || null);
       setMostrarFormNuevoVehiculo(true);
 
       if (ord.fuelLevel) {
         handleBotonCombustible(ord.fuelLevel as any);
       }
       if (Array.isArray(ord.receptionInventory)) {
-        setInventarioTrae(ord.receptionInventory);
+        const invLimpio = ord.receptionInventory
+          .map((x: any) => String(x || "").trim())
+          .filter(Boolean);
+        setInventarioTrae(invLimpio);
+        setListaItemsInventario((prev) => {
+          const existentes = new Set(prev.map((i) => i.toLowerCase()));
+          const nuevos = invLimpio.filter((i: string) => !existentes.has(i.toLowerCase()));
+          return nuevos.length > 0 ? [...prev, ...nuevos] : prev;
+        });
       }
+      const voiceUrls = new Set(
+        (Array.isArray(ord.voiceNotes) ? ord.voiceNotes : [])
+          .map((a: any) => a?.audioUrl || a?.url)
+          .filter(Boolean)
+      );
       if (Array.isArray(ord.receptionPhotos)) {
+        const esVideoUrl = (u: string) => /\.(mp4|mov|avi|mkv)(?:$|\?)/i.test(u) || (u.endsWith(".webm") && !voiceUrls.has(u));
+        const esAudioUrl = (u: string) => voiceUrls.has(u) || /\.(ogg|m4a|wav|mp3|aac)(?:$|\?)/i.test(u);
         setFotosIniciales(
           ord.receptionPhotos.filter(
-            (u: string) => typeof u === "string" && !u.endsWith(".webm") && !u.endsWith(".mp4")
+            (u: string) => typeof u === "string" && !esVideoUrl(u) && !esAudioUrl(u)
           )
         );
+        const videosExistentes = ord.receptionPhotos
+          .filter((u: string) => typeof u === "string" && esVideoUrl(u))
+          .map((u: string, idx: number) => ({ url: u, duracion: 0, nombre: `Video ${idx + 1}` }));
+        setVideosIniciales(videosExistentes);
       }
-      if (Array.isArray(ord.voiceNotes)) {
-        setNotasVozIniciales(ord.voiceNotes);
-      }
+      setNotasVozIniciales(Array.isArray(ord.voiceNotes) ? ord.voiceNotes : []);
 
       const rawNotes = String(ord.notes || "");
-      const sinIngresado = rawNotes.split(" | Ingresado por:")[0].trim();
+      const partesNotes = rawNotes.split(" | Ingresado por:");
+      const sinIngresado = partesNotes[0].trim();
+      const ingresadoExtraido = partesNotes[1]?.trim();
+      if (ingresadoExtraido) {
+        setIngresadoPor(ingresadoExtraido);
+      }
       if (/^\[Lubricentro\]/i.test(sinIngresado)) {
         setTipoIngreso("Lubricentro");
       } else if (/^\[Lavado\]/i.test(sinIngresado)) {
@@ -1998,22 +2021,27 @@ export default function ModalNuevaOrdenTrabajo({
           : limpioMotivo
       );
 
-      if (ord.mechanic) {
-        const primerMec = String(ord.mechanic).split(",")[0].split("(")[0].trim();
-        const tareaMec = String(ord.mechanic).includes("(")
-          ? String(ord.mechanic).split("(")[1]?.replace(/\)/g, "").trim()
-          : "";
-        if (primerMec && primerMec.toLowerCase() !== "sin asignar") {
-          setAsignacionesTecnicos([
-            {
-              id: "asig-1",
-              nombre: primerMec,
-              tarea: tareaMec || "",
-            },
-          ]);
-        } else {
-          setAsignacionesTecnicos([]);
-        }
+      if (Array.isArray(ord.assignedTechnicians) && ord.assignedTechnicians.length > 0) {
+        const listaAsig = ord.assignedTechnicians
+          .map((t: any, idx: number) => ({
+            id: `asig-${idx + 1}`,
+            nombre: String(t?.name || t?.nombre || "").trim(),
+            tarea: String(t?.tarea || t?.labor || "").trim(),
+          }))
+          .filter((t: any) => t.nombre && t.nombre.toLowerCase() !== "sin asignar");
+        setAsignacionesTecnicos(listaAsig);
+      } else if (ord.mechanic) {
+        const listaMec = String(ord.mechanic)
+          .split(",")
+          .map((seg: string, idx: number) => {
+            const nombreMec = seg.split("(")[0].trim();
+            const tareaMec = seg.includes("(")
+              ? seg.split("(")[1]?.replace(/\)/g, "").trim() || ""
+              : "";
+            return { id: `asig-${idx + 1}`, nombre: nombreMec, tarea: tareaMec };
+          })
+          .filter((t) => t.nombre && t.nombre.toLowerCase() !== "sin asignar");
+        setAsignacionesTecnicos(listaMec);
       } else {
         setAsignacionesTecnicos([]);
       }
@@ -2034,7 +2062,7 @@ export default function ModalNuevaOrdenTrabajo({
             aplicarDatosOrden(cached.order, cached.customer, cached.vehicle);
           }
         }
-      } catch {}
+      } catch { }
     }
 
     fetch(`/api/taller/operacion?quoteToken=${encodeURIComponent(editOrderId)}`)
@@ -2043,7 +2071,7 @@ export default function ModalNuevaOrdenTrabajo({
         if (!active || !d?.success || !d?.order) return;
         aplicarDatosOrden(d.order, d.customer, d.vehicle);
       })
-      .catch(() => {});
+      .catch(() => { });
     return () => {
       active = false;
     };
@@ -2152,7 +2180,7 @@ export default function ModalNuevaOrdenTrabajo({
             setListaClientes(d.clientes);
           }
         })
-        .catch(() => {});
+        .catch(() => { });
     }
   }, [clientesCatalogo]);
 
@@ -2178,6 +2206,8 @@ export default function ModalNuevaOrdenTrabajo({
     setMostrarFormNuevoCliente(false);
     setBusquedaCliente(c.name || "");
     setEmailContacto(c.email || "");
+    setNuevoClienteEmail(c.email || "");
+    setNuevoClienteDireccion(c.address || "");
     setNuevoClienteFoto(c.avatar || c.imageUrl || null);
 
     // Si acaba de escanear una matrícula NUEVA que no existe en BD, mantener esa placa lista en Paso 2
@@ -2198,11 +2228,11 @@ export default function ModalNuevaOrdenTrabajo({
       const vehiculoCoincidente =
         qPrevio.length >= 3
           ? c.vehicles.find((vh: any) =>
-              String(vh.plate || "")
-                .toUpperCase()
-                .replace(/[^A-Z0-9]/g, "")
-                .includes(qPrevio)
-            )
+            String(vh.plate || "")
+              .toUpperCase()
+              .replace(/[^A-Z0-9]/g, "")
+              .includes(qPrevio)
+          )
           : null;
       const v = vehiculoCoincidente || c.vehicles[0];
       setVehiculoSeleccionadoId(v.id || "0");
@@ -2238,7 +2268,7 @@ export default function ModalNuevaOrdenTrabajo({
     setNuevoClienteFoto(null);
   };
 
-  // Validar datos del cliente nuevo en memoria y pasar al paso de vehículo (solo se guarda en BD al completar la orden)
+  // Validar datos del cliente nuevo en memoria, detectar si ya existe para no duplicar y pasar al paso de vehículo
   const handleGuardarClienteYPasarVehiculo = async () => {
     if (!nuevoClienteNombre.trim()) {
       mostrarToast(
@@ -2248,6 +2278,70 @@ export default function ModalNuevaOrdenTrabajo({
         "err"
       );
       return;
+    }
+
+    // Si está creando (no editando un cliente ya seleccionado explícitamente), detectar si ya existe en BD/catálogo
+    if (!editOrderId && !clienteSeleccionado?.id) {
+      const nomNorm = nuevoClienteNombre.trim().toLowerCase();
+      const identNorm = nuevoClienteIdentificacion.trim().toLowerCase();
+      const telDigits = nuevoClienteTelefono.replace(/\D/g, "");
+      const emailNorm = nuevoClienteEmail.trim().toLowerCase();
+
+      const coincideCliente = (c: any) => {
+        if (!c) return false;
+        const cIdent = String(c.identification || "").trim().toLowerCase();
+        const cName = String(c.name || "").trim().toLowerCase();
+        const cTel = String(c.phone || "").replace(/\D/g, "");
+        const cEmail = String(c.email || "").trim().toLowerCase();
+
+        if (identNorm && identNorm.length >= 4 && cIdent === identNorm) return true;
+        if (emailNorm && cEmail && cEmail === emailNorm) return true;
+        if (telDigits.length >= 7 && cTel.length >= 7 && cTel === telDigits) return true;
+        if (nomNorm && cName === nomNorm) return true;
+        return false;
+      };
+
+      let clienteExistente = (listaClientes || []).find(coincideCliente) || null;
+
+      if (!clienteExistente) {
+        const qBuscar =
+          nuevoClienteIdentificacion.trim() ||
+          nuevoClienteTelefono.trim() ||
+          nuevoClienteEmail.trim() ||
+          nuevoClienteNombre.trim();
+        if (qBuscar.length >= 3) {
+          try {
+            const res = await fetch(`/api/taller/operacion?searchCustomer=${encodeURIComponent(qBuscar)}`);
+            const data = await res.json().catch(() => null);
+            if (data?.success && Array.isArray(data.clientes)) {
+              clienteExistente = data.clientes.find(coincideCliente) || null;
+              if (clienteExistente) {
+                setListaClientes((prev) =>
+                  prev.some((item) => item.id === clienteExistente.id) ? prev : [clienteExistente, ...prev]
+                );
+              }
+            }
+          } catch { }
+        }
+      }
+
+      if (clienteExistente) {
+        setClienteSeleccionado(clienteExistente);
+        setMostrarFormNuevoCliente(false);
+        setBusquedaCliente(clienteExistente.name || nuevoClienteNombre.trim());
+        setNuevoClienteNombre(clienteExistente.name || nuevoClienteNombre.trim());
+        setNuevoClienteIdentificacion(clienteExistente.identification || nuevoClienteIdentificacion.trim());
+        setNuevoClienteTelefono(clienteExistente.phone || nuevoClienteTelefono.trim());
+        setNuevoClienteEmail(nuevoClienteEmail.trim() || clienteExistente.email || "");
+        setEmailContacto(nuevoClienteEmail.trim() || clienteExistente.email || "");
+        setNuevoClienteDireccion(nuevoClienteDireccion.trim() || clienteExistente.address || "");
+        mostrarToast(
+          `Cliente existente detectado: ${clienteExistente.name}. Selecciona o registra su vehículo.`,
+          "ok"
+        );
+        setPasoActivo(2);
+        return;
+      }
     }
 
     setPasoActivo(2);
@@ -2290,6 +2384,7 @@ export default function ModalNuevaOrdenTrabajo({
     setVehiculoPlaca("");
     setVehiculoMarca("");
     setVehiculoModelo("");
+    setVehiculoAnio(String(new Date().getFullYear()));
     setVehiculoKm("");
     setVehiculoTipo("Auto");
     setVehiculoFoto(null);
@@ -2322,8 +2417,8 @@ export default function ModalNuevaOrdenTrabajo({
       usarCamposEditados
         ? nuevoClienteNombre || clienteSeleccionado?.name || ""
         : clienteSeleccionado
-        ? clienteSeleccionado.name
-        : nuevoClienteNombre
+          ? clienteSeleccionado.name
+          : nuevoClienteNombre
     ).trim();
 
     if (!nombreFinal || nombreFinal.toLowerCase().includes("consumidor final") || nombreFinal.toLowerCase().includes("cliente mostrador")) {
@@ -2345,17 +2440,17 @@ export default function ModalNuevaOrdenTrabajo({
       const mecanicosTexto =
         asignacionesTecnicos.length > 0
           ? asignacionesTecnicos
-              .map((a) => a.nombre.trim())
-              .filter(Boolean)
-              .join(", ")
+            .map((a) => a.nombre.trim())
+            .filter(Boolean)
+            .join(", ")
           : empleadoLogueado.nombre || "Sin asignar";
 
       const motivoFinal =
         tipoIngreso === "Lubricentro"
           ? `[Lubricentro] ${motivoIngreso.trim() || "Mantenimiento y lubricación"}`
           : tipoIngreso === "Lavado"
-          ? `[Lavado] ${motivoIngreso.trim() || "Lavado y detallado general"}`
-          : (motivoIngreso.trim() || "Ingreso a taller");
+            ? `[Lavado] ${motivoIngreso.trim() || "Lavado y detallado general"}`
+            : (motivoIngreso.trim() || "Ingreso a taller");
 
       const res = await fetch("/api/taller/operacion", {
         method: "POST",
@@ -2381,26 +2476,35 @@ export default function ModalNuevaOrdenTrabajo({
           ).trim(),
           email: (
             usarCamposEditados
-              ? nuevoClienteEmail || emailContacto
+              ? nuevoClienteEmail
               : emailContacto || nuevoClienteEmail || clienteSeleccionado?.email || ""
-          ).trim() || undefined,
+          ).trim(),
           direccion: (
             usarCamposEditados
               ? nuevoClienteDireccion
-              : nuevoClienteDireccion || clienteSeleccionado?.address || ""
-          ).trim() || undefined,
+              : clienteSeleccionado?.address || nuevoClienteDireccion || ""
+          ).trim(),
           ingresadoPor: ingresadoPor.trim() || empleadoLogueado.nombre,
           mechanic: mecanicosTexto,
+          assignedTechnicians: asignacionesTecnicos
+            .map((a) => ({
+              name: a.nombre.trim(),
+              tarea: a.tarea.trim(),
+              role: "Técnico",
+            }))
+            .filter((a) => a.name),
           motivoIngreso: motivoFinal,
           placa: placaFinal,
           marca: vehiculoMarca.trim() || "Vehículo",
           modelo: vehiculoModelo.trim() || "General",
           anio: vehiculoAnio.trim() || String(new Date().getFullYear()),
           tipoVehiculo: vehiculoTipo || "Auto",
-          kilometraje: vehiculoKm ? parseInt(vehiculoKm, 10) : undefined,
+          kilometraje: vehiculoKm ? parseInt(vehiculoKm, 10) : (editOrderId ? 0 : undefined),
           vehicleImageUrl: vehiculoFoto || undefined,
           fuelLevel: nivelCombustible,
-          receptionInventory: inventarioTrae,
+          receptionInventory: itemManualInventario.trim() && !inventarioTrae.includes(itemManualInventario.trim())
+            ? [...inventarioTrae, itemManualInventario.trim()]
+            : inventarioTrae,
           receptionPhotos: [
             ...fotosIniciales,
             ...videosIniciales.map((v) => v.url),
@@ -2425,8 +2529,9 @@ export default function ModalNuevaOrdenTrabajo({
         resetFormularioCompleto();
         if (typeof window !== "undefined") {
           try {
+            sessionStorage.removeItem("taller_orden_editar_cache");
             localStorage.setItem("taller_orden_activa_id", String(data.activeOrder.id));
-          } catch {}
+          } catch { }
         }
         if (isPageMode) {
           router.push("/taller");
@@ -2506,16 +2611,14 @@ export default function ModalNuevaOrdenTrabajo({
                 key={num}
                 type="button"
                 onClick={() => irAPaso(num)}
-                className={`h-8 px-2.5 sm:px-3 rounded-xl border text-xs flex items-center gap-1.5 select-none transition-all cursor-pointer active:scale-95 ${
-                  activo
-                    ? `${cfg.pill} font-bold ring-1 ring-current/30 shadow-xs`
-                    : "bg-zinc-100/80 dark:bg-white/5 border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white font-medium"
-                }`}
+                className={`h-8 px-2.5 sm:px-3 rounded-xl border text-xs flex items-center gap-1.5 select-none transition-all cursor-pointer active:scale-95 ${activo
+                  ? `${cfg.pill} font-bold ring-1 ring-current/30 shadow-xs`
+                  : "bg-zinc-100/80 dark:bg-white/5 border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white font-medium"
+                  }`}
               >
                 <span
-                  className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-black shrink-0 ${
-                    activo ? cfg.circle : "bg-zinc-300 dark:bg-white/15 text-zinc-800 dark:text-zinc-200"
-                  }`}
+                  className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-black shrink-0 ${activo ? cfg.circle : "bg-zinc-300 dark:bg-white/15 text-zinc-800 dark:text-zinc-200"
+                    }`}
                 >
                   {num}
                 </span>
@@ -2667,7 +2770,7 @@ export default function ModalNuevaOrdenTrabajo({
               ESCÁNER DE MATRÍCULA EN VIVO (APPLE iOS / ANDROID)
               ================================================================= */}
           {mostrarEscanerMatricula && (
-          <div className="p-4 sm:p-5 rounded-3xl bg-zinc-100 dark:bg-[#18181d] border border-emerald-500/40 shadow-2xl space-y-4 animate-fade-in">
+            <div className="p-4 sm:p-5 rounded-3xl bg-zinc-100 dark:bg-[#18181d] border border-emerald-500/40 shadow-2xl space-y-4 animate-fade-in">
               <div className="flex items-center justify-between border-b border-zinc-200 dark:border-white/10 pb-3">
                 <div className="flex items-center gap-2.5">
                   <div className="w-8 h-8 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
@@ -2859,11 +2962,10 @@ export default function ModalNuevaOrdenTrabajo({
                         key={t}
                         type="button"
                         onClick={() => setTipoCliente(t)}
-                        className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                          tipoCliente === t
-                            ? "bg-amber-500 text-black shadow-xs"
-                            : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
-                        }`}
+                        className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${tipoCliente === t
+                          ? "bg-amber-500 text-black shadow-xs"
+                          : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
+                          }`}
                       >
                         {t === "Persona" ? "👤 Persona" : "🏢 Empresa"}
                       </button>
@@ -3340,13 +3442,12 @@ export default function ModalNuevaOrdenTrabajo({
                                 mostrarToast("Primero ingresa el nombre del cliente", "err");
                               }
                             }}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
-                              esActivo
-                                ? "bg-emerald-500 text-black shadow-sm font-bold scale-[1.02]"
-                                : esCompletado
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${esActivo
+                              ? "bg-emerald-500 text-black shadow-sm font-bold scale-[1.02]"
+                              : esCompletado
                                 ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20"
                                 : "bg-zinc-100 dark:bg-white/5 text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300"
-                            }`}
+                              }`}
                           >
                             <span>{p.icon}</span>
                             <span>{p.label}</span>
@@ -3379,11 +3480,10 @@ export default function ModalNuevaOrdenTrabajo({
                                 setTipoCliente("Persona");
                                 setSubPasoCliente("nombre");
                               }}
-                              className={`p-5 rounded-2xl border-2 flex items-center gap-4 transition-all cursor-pointer text-left active:scale-[0.99] ${
-                                tipoCliente === "Persona"
-                                  ? "bg-emerald-500/15 border-emerald-500 text-emerald-800 dark:text-emerald-300 shadow-sm font-bold"
-                                  : "bg-zinc-50 hover:bg-zinc-100 dark:bg-white/[0.03] dark:hover:bg-white/[0.06] border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-300 hover:border-emerald-500/50"
-                              }`}
+                              className={`p-5 rounded-2xl border-2 flex items-center gap-4 transition-all cursor-pointer text-left active:scale-[0.99] ${tipoCliente === "Persona"
+                                ? "bg-emerald-500/15 border-emerald-500 text-emerald-800 dark:text-emerald-300 shadow-sm font-bold"
+                                : "bg-zinc-50 hover:bg-zinc-100 dark:bg-white/[0.03] dark:hover:bg-white/[0.06] border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-300 hover:border-emerald-500/50"
+                                }`}
                             >
                               <div className="w-12 h-12 rounded-2xl bg-white dark:bg-white/10 flex items-center justify-center text-2xl shadow-xs shrink-0">
                                 👤
@@ -3399,11 +3499,10 @@ export default function ModalNuevaOrdenTrabajo({
                                 setTipoCliente("Empresa");
                                 setSubPasoCliente("nombre");
                               }}
-                              className={`p-5 rounded-2xl border-2 flex items-center gap-4 transition-all cursor-pointer text-left active:scale-[0.99] ${
-                                tipoCliente === "Empresa"
-                                  ? "bg-emerald-500/15 border-emerald-500 text-emerald-800 dark:text-emerald-300 shadow-sm font-bold"
-                                  : "bg-zinc-50 hover:bg-zinc-100 dark:bg-white/[0.03] dark:hover:bg-white/[0.06] border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-300 hover:border-emerald-500/50"
-                              }`}
+                              className={`p-5 rounded-2xl border-2 flex items-center gap-4 transition-all cursor-pointer text-left active:scale-[0.99] ${tipoCliente === "Empresa"
+                                ? "bg-emerald-500/15 border-emerald-500 text-emerald-800 dark:text-emerald-300 shadow-sm font-bold"
+                                : "bg-zinc-50 hover:bg-zinc-100 dark:bg-white/[0.03] dark:hover:bg-white/[0.06] border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-300 hover:border-emerald-500/50"
+                                }`}
                             >
                               <div className="w-12 h-12 rounded-2xl bg-white dark:bg-white/10 flex items-center justify-center text-2xl shadow-xs shrink-0">
                                 🏢
@@ -3585,11 +3684,10 @@ export default function ModalNuevaOrdenTrabajo({
                               type="button"
                               onClick={avanzarCliente}
                               disabled={!nuevoClienteNombre.trim()}
-                              className={`flex-1 h-12 rounded-xl font-bold text-sm transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-98 ${
-                                nuevoClienteNombre.trim()
-                                  ? "bg-emerald-500 hover:bg-emerald-400 text-black shadow-md shadow-emerald-500/20"
-                                  : "bg-zinc-200 dark:bg-white/5 text-zinc-400 dark:text-zinc-500 cursor-not-allowed"
-                              }`}
+                              className={`flex-1 h-12 rounded-xl font-bold text-sm transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-98 ${nuevoClienteNombre.trim()
+                                ? "bg-emerald-500 hover:bg-emerald-400 text-black shadow-md shadow-emerald-500/20"
+                                : "bg-zinc-200 dark:bg-white/5 text-zinc-400 dark:text-zinc-500 cursor-not-allowed"
+                                }`}
                             >
                               <span>Avanzar a {tipoCliente === "Empresa" ? "RUC" : "Cédula"}</span>
                               <span>→</span>
@@ -3918,11 +4016,10 @@ export default function ModalNuevaOrdenTrabajo({
                         <div
                           key={v.id}
                           onClick={() => handleSeleccionarVehiculo(v)}
-                          className={`p-4 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${
-                            seleccionado
-                              ? "bg-blue-600/15 border-blue-500 shadow-md ring-1 ring-blue-500/50"
-                              : "bg-zinc-50/80 hover:bg-zinc-100 dark:bg-white/[0.03] dark:hover:bg-white/[0.07] border-zinc-200 dark:border-white/10"
-                          }`}
+                          className={`p-4 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${seleccionado
+                            ? "bg-blue-600/15 border-blue-500 shadow-md ring-1 ring-blue-500/50"
+                            : "bg-zinc-50/80 hover:bg-zinc-100 dark:bg-white/[0.03] dark:hover:bg-white/[0.07] border-zinc-200 dark:border-white/10"
+                            }`}
                         >
                           <div className="space-y-1">
                             <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 leading-tight">
@@ -3984,12 +4081,93 @@ export default function ModalNuevaOrdenTrabajo({
                 ];
 
                 const pasoIdx = PASOS.findIndex((p) => p.id === subPasoVehiculo);
-                const irASiguiente = () => {
+                const irASiguiente = async () => {
                   if (subPasoVehiculo === "placa") {
-                    if (!vehiculoPlaca.trim()) {
+                    const placaLimpia = vehiculoPlaca.trim().toUpperCase();
+                    const alnumBuscado = placaLimpia.replace(/[^A-Z0-9]/g, "");
+                    if (!placaLimpia || alnumBuscado.length < 3) {
                       mostrarToast("Ingresa la placa del vehículo para continuar", "err");
                       return;
                     }
+
+                    // Verificar si el vehículo ya existe en catálogo local o en Neon
+                    let vehiculoExistente: any = null;
+                    let duenioVehiculo: any = null;
+
+                    for (const v of clienteSeleccionado?.vehicles || []) {
+                      if (String(v.plate || "").toUpperCase().replace(/[^A-Z0-9]/g, "") === alnumBuscado) {
+                        vehiculoExistente = v;
+                        duenioVehiculo = clienteSeleccionado;
+                        break;
+                      }
+                    }
+
+                    if (!vehiculoExistente) {
+                      for (const c of listaClientes || []) {
+                        const vMatch = (c.vehicles || []).find(
+                          (v: any) => String(v.plate || "").toUpperCase().replace(/[^A-Z0-9]/g, "") === alnumBuscado
+                        );
+                        if (vMatch) {
+                          vehiculoExistente = vMatch;
+                          duenioVehiculo = c;
+                          break;
+                        }
+                      }
+                    }
+
+                    if (!vehiculoExistente) {
+                      try {
+                        const res = await fetch(`/api/taller/operacion?query=${encodeURIComponent(placaLimpia)}`);
+                        const data = await res.json().catch(() => null);
+                        if (data?.success && data?.found) {
+                          const vehs = Array.isArray(data.customer?.vehicles)
+                            ? data.customer.vehicles
+                            : data.vehicle
+                              ? [data.vehicle]
+                              : [];
+                          const vExacto =
+                            vehs.find(
+                              (v: any) => String(v.plate || "").toUpperCase().replace(/[^A-Z0-9]/g, "") === alnumBuscado
+                            ) || data.vehicle;
+                          if (vExacto) {
+                            vehiculoExistente = vExacto;
+                            duenioVehiculo = data.customer || null;
+                          }
+                        }
+                      } catch { }
+                    }
+
+                    if (vehiculoExistente) {
+                      const placaReal = (vehiculoExistente.plate || placaLimpia).toUpperCase();
+                      setVehiculoSeleccionadoId(vehiculoExistente.id || "NUEVO");
+                      setVehiculoPlaca(placaReal);
+                      setVehiculoMarca(vehiculoExistente.brand || "");
+                      setVehiculoModelo(vehiculoExistente.model || "");
+                      if (vehiculoExistente.year) setVehiculoAnio(String(vehiculoExistente.year));
+                      if (vehiculoExistente.vehicleType) setVehiculoTipo(vehiculoExistente.vehicleType);
+                      setVehiculoKm(vehiculoExistente.mileage ? String(vehiculoExistente.mileage) : "");
+                      setVehiculoFoto(vehiculoExistente.imageUrl || null);
+                      setMostrarFormNuevoVehiculo(false);
+
+                      if (!clienteSeleccionado && duenioVehiculo) {
+                        setClienteSeleccionado(duenioVehiculo);
+                        setBusquedaCliente(duenioVehiculo.name || "");
+                        setNuevoClienteNombre(duenioVehiculo.name || "");
+                        setNuevoClienteIdentificacion(duenioVehiculo.identification || "");
+                        setNuevoClienteTelefono(duenioVehiculo.phone || "");
+                        setNuevoClienteEmail(duenioVehiculo.email || "");
+                        setEmailContacto(duenioVehiculo.email || "");
+                        setNuevoClienteDireccion(duenioVehiculo.address || "");
+                      }
+
+                      mostrarToast(
+                        `Vehículo existente detectado (${placaReal}${vehiculoExistente.brand ? ` • ${vehiculoExistente.brand} ${vehiculoExistente.model || ""}` : ""}). Pasando al ingreso.`,
+                        "ok"
+                      );
+                      setPasoActivo(3);
+                      return;
+                    }
+
                     setSubPasoVehiculo("marca");
                   } else if (subPasoVehiculo === "marca") {
                     setSubPasoVehiculo("modelo");
@@ -4053,8 +4231,8 @@ export default function ModalNuevaOrdenTrabajo({
                         const colorClase = esActivo
                           ? "bg-blue-600 text-white shadow-sm font-bold scale-[1.02]"
                           : esCompletado
-                          ? "bg-blue-500/10 text-blue-700 dark:text-blue-400 border border-blue-500/20 hover:bg-blue-500/20"
-                          : "bg-zinc-100 dark:bg-white/5 text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300";
+                            ? "bg-blue-500/10 text-blue-700 dark:text-blue-400 border border-blue-500/20 hover:bg-blue-500/20"
+                            : "bg-zinc-100 dark:bg-white/5 text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300";
 
                         return (
                           <button
@@ -4123,11 +4301,10 @@ export default function ModalNuevaOrdenTrabajo({
                               type="button"
                               onClick={irASiguiente}
                               disabled={!vehiculoPlaca.trim()}
-                              className={`w-full h-12 rounded-xl font-bold text-sm transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-98 ${
-                                vehiculoPlaca.trim()
-                                  ? "bg-blue-600 hover:bg-blue-500 text-white shadow-md shadow-blue-600/20"
-                                  : "bg-zinc-200 dark:bg-white/5 text-zinc-400 dark:text-zinc-500 cursor-not-allowed"
-                              }`}
+                              className={`w-full h-12 rounded-xl font-bold text-sm transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-98 ${vehiculoPlaca.trim()
+                                ? "bg-blue-600 hover:bg-blue-500 text-white shadow-md shadow-blue-600/20"
+                                : "bg-zinc-200 dark:bg-white/5 text-zinc-400 dark:text-zinc-500 cursor-not-allowed"
+                                }`}
                             >
                               <span>Avanzar a Marca</span>
                               <span>→</span>
@@ -4175,11 +4352,10 @@ export default function ModalNuevaOrdenTrabajo({
                                   onClick={() => {
                                     setVehiculoMarca(m);
                                   }}
-                                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-                                    vehiculoMarca.toUpperCase() === m.toUpperCase()
-                                      ? "bg-blue-600 text-white font-bold shadow-xs scale-105"
-                                      : "bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-white/10"
-                                  }`}
+                                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${vehiculoMarca.toUpperCase() === m.toUpperCase()
+                                    ? "bg-blue-600 text-white font-bold shadow-xs scale-105"
+                                    : "bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-white/10"
+                                    }`}
                                 >
                                   {m}
                                   {vehiculoMarca.toUpperCase() === m.toUpperCase() && " ✓"}
@@ -4383,11 +4559,10 @@ export default function ModalNuevaOrdenTrabajo({
                                         setVehiculoTipo(tipoDetectado);
                                       }
                                     }}
-                                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-                                      vehiculoModelo.toUpperCase() === mod.toUpperCase()
-                                        ? "bg-blue-600 text-white font-bold shadow-xs scale-105"
-                                        : "bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-white/10"
-                                    }`}
+                                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${vehiculoModelo.toUpperCase() === mod.toUpperCase()
+                                      ? "bg-blue-600 text-white font-bold shadow-xs scale-105"
+                                      : "bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-white/10"
+                                      }`}
                                   >
                                     {mod}
                                     {vehiculoModelo.toUpperCase() === mod.toUpperCase() && " ✓"}
@@ -4460,11 +4635,10 @@ export default function ModalNuevaOrdenTrabajo({
                                   onClick={() => {
                                     setVehiculoAnio(String(yr));
                                   }}
-                                  className={`px-3 py-1.5 rounded-xl text-xs font-mono font-semibold transition-all cursor-pointer ${
-                                    vehiculoAnio === String(yr)
-                                      ? "bg-blue-600 text-white font-bold shadow-xs scale-105"
-                                      : "bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-white/10"
-                                  }`}
+                                  className={`px-3 py-1.5 rounded-xl text-xs font-mono font-semibold transition-all cursor-pointer ${vehiculoAnio === String(yr)
+                                    ? "bg-blue-600 text-white font-bold shadow-xs scale-105"
+                                    : "bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-white/10"
+                                    }`}
                                 >
                                   {yr}
                                   {vehiculoAnio === String(yr) && " ✓"}
@@ -4596,18 +4770,16 @@ export default function ModalNuevaOrdenTrabajo({
                                   onClick={() => {
                                     setVehiculoTipo(v);
                                   }}
-                                  className={`p-3.5 sm:p-4 rounded-2xl border-2 flex flex-col items-center justify-center gap-2.5 transition-all cursor-pointer group active:scale-95 ${
-                                    esSeleccionado
-                                      ? "bg-blue-500/15 border-blue-500 text-blue-800 dark:text-blue-300 shadow-sm font-bold"
-                                      : "bg-zinc-50 hover:bg-zinc-100 dark:bg-white/[0.03] dark:hover:bg-white/[0.06] border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-300 hover:border-blue-500/50"
-                                  }`}
+                                  className={`p-3.5 sm:p-4 rounded-2xl border-2 flex flex-col items-center justify-center gap-2.5 transition-all cursor-pointer group active:scale-95 ${esSeleccionado
+                                    ? "bg-blue-500/15 border-blue-500 text-blue-800 dark:text-blue-300 shadow-sm font-bold"
+                                    : "bg-zinc-50 hover:bg-zinc-100 dark:bg-white/[0.03] dark:hover:bg-white/[0.06] border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-300 hover:border-blue-500/50"
+                                    }`}
                                 >
                                   <div
-                                    className={`transition-transform duration-200 group-hover:scale-110 ${
-                                      esSeleccionado
-                                        ? "text-blue-600 dark:text-blue-400"
-                                        : "text-zinc-500 dark:text-zinc-400 group-hover:text-blue-600 dark:group-hover:text-blue-400"
-                                    }`}
+                                    className={`transition-transform duration-200 group-hover:scale-110 ${esSeleccionado
+                                      ? "text-blue-600 dark:text-blue-400"
+                                      : "text-zinc-500 dark:text-zinc-400 group-hover:text-blue-600 dark:group-hover:text-blue-400"
+                                      }`}
                                   >
                                     {icon}
                                   </div>
@@ -4682,11 +4854,10 @@ export default function ModalNuevaOrdenTrabajo({
                             key={lvl}
                             type="button"
                             onClick={() => handleBotonCombustible(lvl)}
-                            className={`h-9 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                              sel
-                                ? "bg-emerald-500/20 border border-emerald-500/50 text-emerald-700 dark:text-emerald-300 shadow-sm shadow-emerald-500/10"
-                                : "bg-white dark:bg-white/[0.02] hover:bg-zinc-100 dark:hover:bg-white/[0.06] border border-zinc-200 dark:border-white/5 text-zinc-700 dark:text-zinc-400"
-                            }`}
+                            className={`h-9 rounded-xl text-xs font-bold transition-all cursor-pointer ${sel
+                              ? "bg-emerald-500/20 border border-emerald-500/50 text-emerald-700 dark:text-emerald-300 shadow-sm shadow-emerald-500/10"
+                              : "bg-white dark:bg-white/[0.02] hover:bg-zinc-100 dark:hover:bg-white/[0.06] border border-zinc-200 dark:border-white/5 text-zinc-700 dark:text-zinc-400"
+                              }`}
                           >
                             {lvl}
                           </button>
@@ -4701,13 +4872,12 @@ export default function ModalNuevaOrdenTrabajo({
                         <div className="w-full h-4 rounded-full bg-zinc-200 dark:bg-black/50 border border-zinc-300 dark:border-white/10 relative overflow-hidden shadow-inner">
                           {/* Relleno con gradiente dinámico */}
                           <div
-                            className={`h-full transition-all duration-100 rounded-full ${
-                              porcentajeCombustible <= 15
-                                ? "bg-gradient-to-r from-rose-500 to-amber-500"
-                                : porcentajeCombustible <= 40
+                            className={`h-full transition-all duration-100 rounded-full ${porcentajeCombustible <= 15
+                              ? "bg-gradient-to-r from-rose-500 to-amber-500"
+                              : porcentajeCombustible <= 40
                                 ? "bg-gradient-to-r from-amber-500 to-emerald-400"
                                 : "bg-gradient-to-r from-emerald-500 to-teal-400"
-                            }`}
+                              }`}
                             style={{ width: `${Math.max(porcentajeCombustible, 2)}%` }}
                           />
 
@@ -4837,11 +5007,10 @@ export default function ModalNuevaOrdenTrabajo({
                             key={item}
                             type="button"
                             onClick={() => toggleInventario(item)}
-                            className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
-                              sel
-                                ? "bg-blue-600/15 border border-blue-500/40 text-blue-700 dark:text-blue-300 shadow-xs"
-                                : "bg-white dark:bg-white/[0.02] border border-zinc-200 dark:border-white/5 text-zinc-700 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/[0.05]"
-                            }`}
+                            className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${sel
+                              ? "bg-blue-600/15 border border-blue-500/40 text-blue-700 dark:text-blue-300 shadow-xs"
+                              : "bg-white dark:bg-white/[0.02] border border-zinc-200 dark:border-white/5 text-zinc-700 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/[0.05]"
+                              }`}
                           >
                             <span>{sel ? "✓" : "+"}</span>
                             <span>{item}</span>
@@ -4917,11 +5086,10 @@ export default function ModalNuevaOrdenTrabajo({
                       <button
                         type="button"
                         onClick={() => setPanelMultimedia((curr) => (curr === "foto" ? null : "foto"))}
-                        className={`w-full py-1.5 px-3 rounded-lg text-xs font-medium transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                          panelMultimedia === "foto"
-                            ? "bg-sky-500/20 text-sky-700 dark:text-sky-300 border border-sky-500/30"
-                            : "text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white hover:bg-white/80 dark:hover:bg-white/5"
-                        }`}
+                        className={`w-full py-1.5 px-3 rounded-lg text-xs font-medium transition-all flex items-center justify-center gap-1.5 cursor-pointer ${panelMultimedia === "foto"
+                          ? "bg-sky-500/20 text-sky-700 dark:text-sky-300 border border-sky-500/30"
+                          : "text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white hover:bg-white/80 dark:hover:bg-white/5"
+                          }`}
                       >
                         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z" />
@@ -5017,65 +5185,65 @@ export default function ModalNuevaOrdenTrabajo({
                           <div className="space-y-2">
                             {fotosIniciales.length < MULTIMEDIA_CONFIG.MAX_PHOTOS ? (
                               <>
-                            <div className="grid grid-cols-2 gap-2">
-                              <button
-                                type="button"
-                                onClick={iniciarCamaraFoto}
-                                disabled={subiendoFoto}
-                                className="p-3 rounded-xl bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/30 text-sky-700 dark:text-sky-200 text-xs font-semibold transition-all flex flex-col items-center justify-center gap-1.5 cursor-pointer active:scale-95 group disabled:opacity-50 disabled:cursor-not-allowed"
-                              >
-                                <svg
-                                  className="w-5 h-5 text-sky-600 dark:text-sky-400 group-hover:scale-110 transition-transform"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                  strokeWidth={1.75}
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z"
-                                  />
-                                  <circle cx="12" cy="13" r="3" />
-                                </svg>
-                                <span>Cámara</span>
-                              </button>
+                                <div className="grid grid-cols-2 gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={iniciarCamaraFoto}
+                                    disabled={subiendoFoto}
+                                    className="p-3 rounded-xl bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/30 text-sky-700 dark:text-sky-200 text-xs font-semibold transition-all flex flex-col items-center justify-center gap-1.5 cursor-pointer active:scale-95 group disabled:opacity-50 disabled:cursor-not-allowed"
+                                  >
+                                    <svg
+                                      className="w-5 h-5 text-sky-600 dark:text-sky-400 group-hover:scale-110 transition-transform"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      viewBox="0 0 24 24"
+                                      strokeWidth={1.75}
+                                    >
+                                      <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z"
+                                      />
+                                      <circle cx="12" cy="13" r="3" />
+                                    </svg>
+                                    <span>Cámara</span>
+                                  </button>
 
-                              <button
-                                type="button"
-                                onClick={() => fileInputFotosRef.current?.click()}
-                                disabled={subiendoFoto}
-                                className="p-3 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 border border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white text-xs font-semibold transition-all flex flex-col items-center justify-center gap-1.5 cursor-pointer active:scale-95 group disabled:opacity-50 disabled:cursor-not-allowed"
-                              >
-                                <svg
-                                  className="w-5 h-5 text-zinc-500 dark:text-zinc-400 group-hover:scale-110 transition-transform"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                  strokeWidth={1.75}
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5"
-                                  />
-                                </svg>
-                                <span>Galería</span>
-                              </button>
-                            </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => fileInputFotosRef.current?.click()}
+                                    disabled={subiendoFoto}
+                                    className="p-3 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 border border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white text-xs font-semibold transition-all flex flex-col items-center justify-center gap-1.5 cursor-pointer active:scale-95 group disabled:opacity-50 disabled:cursor-not-allowed"
+                                  >
+                                    <svg
+                                      className="w-5 h-5 text-zinc-500 dark:text-zinc-400 group-hover:scale-110 transition-transform"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      viewBox="0 0 24 24"
+                                      strokeWidth={1.75}
+                                    >
+                                      <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5"
+                                      />
+                                    </svg>
+                                    <span>Galería</span>
+                                  </button>
+                                </div>
 
-                            <p className="text-[10px] text-zinc-600 dark:text-zinc-500 text-center font-medium">
-                              Compresión
-                            </p>
+                                <p className="text-[10px] text-zinc-600 dark:text-zinc-500 text-center font-medium">
+                                  Compresión
+                                </p>
 
-                            <input
-                              ref={fileInputFotosRef}
-                              type="file"
-                              accept="image/*"
-                              multiple
-                              onChange={handleSubirFotosIniciales}
-                              className="hidden"
-                            />
+                                <input
+                                  ref={fileInputFotosRef}
+                                  type="file"
+                                  accept="image/*"
+                                  multiple
+                                  onChange={handleSubirFotosIniciales}
+                                  className="hidden"
+                                />
                               </>
                             ) : (
                               <div className="p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-xs flex items-center justify-between">
@@ -5581,10 +5749,10 @@ export default function ModalNuevaOrdenTrabajo({
                                     {audio.transcriptionStatus === "corregida"
                                       ? "Corregida"
                                       : audio.transcriptionStatus === "lista"
-                                      ? "Lista"
-                                      : audio.transcriptionStatus === "manual"
-                                      ? "Manual"
-                                      : "Voz"}
+                                        ? "Lista"
+                                        : audio.transcriptionStatus === "manual"
+                                          ? "Manual"
+                                          : "Voz"}
                                   </span>
                                   <button
                                     type="button"
@@ -5675,8 +5843,8 @@ export default function ModalNuevaOrdenTrabajo({
                     tipoIngreso === "Lubricentro"
                       ? "Ej: Cambio de aceite..."
                       : tipoIngreso === "Lavado"
-                      ? "Ej: Lavado general..."
-                      : "Ej: Ruido al frenar..."
+                        ? "Ej: Lavado general..."
+                        : "Ej: Ruido al frenar..."
                   }
                   className="w-full p-3 rounded-xl bg-white dark:bg-black/40 border border-zinc-300 dark:border-white/15 focus:border-blue-500 text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-500 text-xs sm:text-sm focus:outline-none resize-none leading-relaxed shadow-xs"
                 />
@@ -5956,11 +6124,10 @@ export default function ModalNuevaOrdenTrabajo({
                                   setBusquedaTecnico(m);
                                   setMostrarDropdownTecnicos(false);
                                 }}
-                                className={`px-3 py-2.5 rounded-xl text-xs font-medium cursor-pointer flex items-center justify-between transition-colors ${
-                                  seleccionado
-                                    ? "bg-blue-600 text-white font-semibold"
-                                    : "text-zinc-800 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/[0.08]"
-                                }`}
+                                className={`px-3 py-2.5 rounded-xl text-xs font-medium cursor-pointer flex items-center justify-between transition-colors ${seleccionado
+                                  ? "bg-blue-600 text-white font-semibold"
+                                  : "text-zinc-800 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/[0.08]"
+                                  }`}
                               >
                                 <div className="flex items-center gap-2 truncate">
                                   <span className={`w-2 h-2 rounded-full shrink-0 ${seleccionado ? "bg-white" : "bg-emerald-400"}`} />
@@ -6019,21 +6186,21 @@ export default function ModalNuevaOrdenTrabajo({
                   <div className="flex flex-wrap gap-1.5 pt-1">
                     {(tipoIngreso === "Lubricentro"
                       ? [
-                          { nombre: "Aceite", color: "bg-blue-500/10 border-blue-500/20 text-blue-700 dark:text-blue-300 hover:bg-blue-500/20" },
-                          { nombre: "Filtros", color: "bg-emerald-500/10 border-emerald-500/20 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/20" },
-                          { nombre: "Fluidos", color: "bg-cyan-500/10 border-cyan-500/20 text-cyan-700 dark:text-cyan-300 hover:bg-cyan-500/20" },
-                          { nombre: "Frenos", color: "bg-rose-500/10 border-rose-500/20 text-rose-700 dark:text-rose-300 hover:bg-rose-500/20" },
-                          { nombre: "Batería", color: "bg-amber-500/10 border-amber-500/20 text-amber-700 dark:text-amber-300 hover:bg-amber-500/20" },
-                          { nombre: "Engrase", color: "bg-purple-500/10 border-purple-500/20 text-purple-700 dark:text-purple-300 hover:bg-purple-500/20" },
-                        ]
+                        { nombre: "Aceite", color: "bg-blue-500/10 border-blue-500/20 text-blue-700 dark:text-blue-300 hover:bg-blue-500/20" },
+                        { nombre: "Filtros", color: "bg-emerald-500/10 border-emerald-500/20 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/20" },
+                        { nombre: "Fluidos", color: "bg-cyan-500/10 border-cyan-500/20 text-cyan-700 dark:text-cyan-300 hover:bg-cyan-500/20" },
+                        { nombre: "Frenos", color: "bg-rose-500/10 border-rose-500/20 text-rose-700 dark:text-rose-300 hover:bg-rose-500/20" },
+                        { nombre: "Batería", color: "bg-amber-500/10 border-amber-500/20 text-amber-700 dark:text-amber-300 hover:bg-amber-500/20" },
+                        { nombre: "Engrase", color: "bg-purple-500/10 border-purple-500/20 text-purple-700 dark:text-purple-300 hover:bg-purple-500/20" },
+                      ]
                       : [
-                          { nombre: "Diagnóstico", color: "bg-blue-500/10 border-blue-500/20 text-blue-700 dark:text-blue-300 hover:bg-blue-500/20" },
-                          { nombre: "Mantenimiento", color: "bg-emerald-500/10 border-emerald-500/20 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/20" },
-                          { nombre: "Frenos", color: "bg-rose-500/10 border-rose-500/20 text-rose-700 dark:text-rose-300 hover:bg-rose-500/20" },
-                          { nombre: "Motor", color: "bg-amber-500/10 border-amber-500/20 text-amber-700 dark:text-amber-300 hover:bg-amber-500/20" },
-                          { nombre: "Suspensión", color: "bg-purple-500/10 border-purple-500/20 text-purple-700 dark:text-purple-300 hover:bg-purple-500/20" },
-                          { nombre: "Eléctrico", color: "bg-cyan-500/10 border-cyan-500/20 text-cyan-700 dark:text-cyan-300 hover:bg-cyan-500/20" },
-                        ]
+                        { nombre: "Diagnóstico", color: "bg-blue-500/10 border-blue-500/20 text-blue-700 dark:text-blue-300 hover:bg-blue-500/20" },
+                        { nombre: "Mantenimiento", color: "bg-emerald-500/10 border-emerald-500/20 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/20" },
+                        { nombre: "Frenos", color: "bg-rose-500/10 border-rose-500/20 text-rose-700 dark:text-rose-300 hover:bg-rose-500/20" },
+                        { nombre: "Motor", color: "bg-amber-500/10 border-amber-500/20 text-amber-700 dark:text-amber-300 hover:bg-amber-500/20" },
+                        { nombre: "Suspensión", color: "bg-purple-500/10 border-purple-500/20 text-purple-700 dark:text-purple-300 hover:bg-purple-500/20" },
+                        { nombre: "Eléctrico", color: "bg-cyan-500/10 border-cyan-500/20 text-cyan-700 dark:text-cyan-300 hover:bg-cyan-500/20" },
+                      ]
                     ).map((sug) => (
                       <button
                         key={sug.nombre}
@@ -6125,11 +6292,10 @@ export default function ModalNuevaOrdenTrabajo({
                       setTabFlotanteVehiculo("marca");
                       setBusquedaFlotanteVehiculo("");
                     }}
-                    className={`py-2 px-3 rounded-xl text-xs font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                      tabFlotanteVehiculo === "marca"
-                        ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/30"
-                        : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
-                    }`}
+                    className={`py-2 px-3 rounded-xl text-xs font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${tabFlotanteVehiculo === "marca"
+                      ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/30"
+                      : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
+                      }`}
                   >
                     <span>1. Marca</span>
                     {vehiculoMarca && <span className="opacity-80 font-normal truncate max-w-[90px]">({vehiculoMarca})</span>}
@@ -6141,11 +6307,10 @@ export default function ModalNuevaOrdenTrabajo({
                       setTabFlotanteVehiculo("modelo");
                       setBusquedaFlotanteVehiculo("");
                     }}
-                    className={`py-2 px-3 rounded-xl text-xs font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                      tabFlotanteVehiculo === "modelo"
-                        ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/30"
-                        : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
-                    }`}
+                    className={`py-2 px-3 rounded-xl text-xs font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${tabFlotanteVehiculo === "modelo"
+                      ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/30"
+                      : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
+                      }`}
                   >
                     <span>2. Modelo</span>
                     {vehiculoModelo && <span className="opacity-80 font-normal truncate max-w-[90px]">({vehiculoModelo})</span>}
@@ -6197,11 +6362,10 @@ export default function ModalNuevaOrdenTrabajo({
                               key={marca}
                               type="button"
                               onClick={() => seleccionarMarcaFlotante(marca)}
-                              className={`p-3 rounded-2xl text-left border transition-all cursor-pointer flex items-center justify-between ${
-                                activo
-                                  ? "bg-emerald-600/15 dark:bg-emerald-600/20 border-emerald-500 text-emerald-700 dark:text-emerald-300 font-semibold ring-1 ring-emerald-500/30"
-                                  : "bg-zinc-50 hover:bg-zinc-100 dark:bg-white/[0.03] dark:hover:bg-white/[0.08] border-zinc-200 dark:border-white/10 text-zinc-800 dark:text-zinc-200 hover:text-zinc-900 dark:hover:text-white"
-                              }`}
+                              className={`p-3 rounded-2xl text-left border transition-all cursor-pointer flex items-center justify-between ${activo
+                                ? "bg-emerald-600/15 dark:bg-emerald-600/20 border-emerald-500 text-emerald-700 dark:text-emerald-300 font-semibold ring-1 ring-emerald-500/30"
+                                : "bg-zinc-50 hover:bg-zinc-100 dark:bg-white/[0.03] dark:hover:bg-white/[0.08] border-zinc-200 dark:border-white/10 text-zinc-800 dark:text-zinc-200 hover:text-zinc-900 dark:hover:text-white"
+                                }`}
                             >
                               <span className="text-xs truncate">{marca}</span>
                               {activo ? (
@@ -6236,11 +6400,10 @@ export default function ModalNuevaOrdenTrabajo({
                               key={modelo}
                               type="button"
                               onClick={() => seleccionarModeloFlotante(modelo)}
-                              className={`p-3 rounded-2xl text-left border transition-all cursor-pointer flex items-center justify-between ${
-                                activo
-                                  ? "bg-emerald-600/15 dark:bg-emerald-600/20 border-emerald-500 text-emerald-700 dark:text-emerald-300 font-semibold ring-1 ring-emerald-500/30"
-                                  : "bg-zinc-50 hover:bg-zinc-100 dark:bg-white/[0.03] dark:hover:bg-white/[0.08] border-zinc-200 dark:border-white/10 text-zinc-800 dark:text-zinc-200 hover:text-zinc-900 dark:hover:text-white"
-                              }`}
+                              className={`p-3 rounded-2xl text-left border transition-all cursor-pointer flex items-center justify-between ${activo
+                                ? "bg-emerald-600/15 dark:bg-emerald-600/20 border-emerald-500 text-emerald-700 dark:text-emerald-300 font-semibold ring-1 ring-emerald-500/30"
+                                : "bg-zinc-50 hover:bg-zinc-100 dark:bg-white/[0.03] dark:hover:bg-white/[0.08] border-zinc-200 dark:border-white/10 text-zinc-800 dark:text-zinc-200 hover:text-zinc-900 dark:hover:text-white"
+                                }`}
                             >
                               <span className="text-xs truncate">{modelo}</span>
                               {activo && <span className="text-emerald-400 text-xs">✓</span>}

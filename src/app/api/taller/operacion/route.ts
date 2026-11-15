@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma, withRetry } from "@/lib/prisma";
+import { emitRealtimeEvent } from "@/lib/realtime";
+import fs from "fs";
+import path from "path";
 
 export const dynamic = "force-dynamic";
 
@@ -45,6 +48,7 @@ async function ensureTallerSchema() {
       `ALTER TABLE "WorkshopOrder" ADD COLUMN IF NOT EXISTS "internalChatJson" TEXT DEFAULT '[]'`,
       `ALTER TABLE "WorkshopOrder" ADD COLUMN IF NOT EXISTS "technicianHoursJson" TEXT DEFAULT '[]'`,
       `ALTER TABLE "WorkshopOrder" ADD COLUMN IF NOT EXISTS "clientEmail" TEXT`,
+      `ALTER TABLE "WorkshopOrder" ADD COLUMN IF NOT EXISTS "clientAddress" TEXT`,
       `ALTER TABLE "WorkshopOrder" ADD COLUMN IF NOT EXISTS "statusColor" TEXT DEFAULT 'amber'`,
       `ALTER TABLE "WorkshopOrder" ADD COLUMN IF NOT EXISTS "trackingPin" TEXT`,
       `ALTER TABLE "WorkshopOrder" ADD COLUMN IF NOT EXISTS "customStatusesJson" TEXT DEFAULT '[]'`,
@@ -227,31 +231,55 @@ function computeOrderPin(r: any): string {
 
 async function getNextOrderCorrelative(): Promise<string> {
   try {
-    const [ordersCount, historyCount, recentOrders] = await Promise.all([
-      prisma.workshopOrder.count().catch(() => 0),
-      prisma.workshopHistory.count().catch(() => 0),
-      prisma.workshopOrder
-        .findMany({
-          select: { orderNumber: true },
-          orderBy: { createdAt: "desc" },
-          take: 50,
-        })
-        .catch(() => []),
-    ]);
-    let maxCorrelativo = ordersCount + historyCount;
-    for (const r of recentOrders) {
-      const m = String(r.orderNumber || "").match(/(?:^|#|-)0*(\d{1,5})$/);
+    const [orderRows, historyRows, quoteRows, reqRows] = (await Promise.all([
+      prisma.$queryRawUnsafe(`SELECT "orderNumber" FROM "WorkshopOrder"`).catch(() => []),
+      prisma.$queryRawUnsafe(`SELECT "orderNumber" FROM "WorkshopHistory"`).catch(() => []),
+      prisma.$queryRawUnsafe(`SELECT "quoteNumber" FROM "ClientQuote"`).catch(() => []),
+      prisma.$queryRawUnsafe(`SELECT "requestNumber" FROM "OrderRequest" WHERE "type" = 'TALLER'`).catch(() => []),
+    ])) as [any[], any[], any[], any[]];
+
+    const usedNumbers = new Set<number>();
+    let maxCorrelativo = 0;
+
+    const extractNum = (raw: any) => {
+      const s = String(raw || "").trim();
+      if (!s) return;
+      // Extrae correlativos como "OT #00003", "#00003", "OT-00003", "COT-OT #00003", "00003" (ignora años/timestamps largos)
+      const m = s.match(/(?:^|#|-)0*(\d{1,5})(?:-\d+)?$/);
       if (m) {
         const n = parseInt(m[1], 10);
-        if (!isNaN(n) && n < 1000 && n > maxCorrelativo) {
-          maxCorrelativo = n;
+        if (!isNaN(n) && n > 0 && n < 99999) {
+          usedNumbers.add(n);
+          if (n < 10000 && n > maxCorrelativo) {
+            maxCorrelativo = n;
+          }
         }
       }
+    };
+
+    orderRows.forEach((r) => extractNum(r?.orderNumber));
+    historyRows.forEach((r) => extractNum(r?.orderNumber));
+    quoteRows.forEach((r) => extractNum(r?.quoteNumber));
+    reqRows.forEach((r) => extractNum(r?.requestNumber));
+
+    try {
+      const mirrorPath = path.join(process.cwd(), "prisma", "neon-local-mirror.json");
+      if (fs.existsSync(mirrorPath)) {
+        const mirrorData = JSON.parse(fs.readFileSync(mirrorPath, "utf-8"));
+        (mirrorData?.workshopOrder || []).forEach((r: any) => extractNum(r?.orderNumber));
+        (mirrorData?.workshopHistory || []).forEach((r: any) => extractNum(r?.orderNumber));
+        (mirrorData?.clientQuote || []).forEach((r: any) => extractNum(r?.quoteNumber));
+        (mirrorData?.orderRequest || []).forEach((r: any) => extractNum(r?.requestNumber));
+      }
+    } catch {}
+
+    let nextNum = Math.max(1, maxCorrelativo + 1);
+    while (usedNumbers.has(nextNum)) {
+      nextNum++;
     }
-    const nextNum = Math.max(1, maxCorrelativo + 1);
     return String(nextNum).padStart(5, "0");
   } catch {
-    return "00001";
+    return String(Math.floor(10000 + Math.random() * 89999));
   }
 }
 
@@ -367,11 +395,13 @@ function mapOrderRow(r: any) {
     orderNumber: r.orderNumber,
     customerId: r.customerId || null,
     vehicleId: r.vehicleId || null,
+    vehicleImageUrl: r.vehicleImageUrl || null,
     vehicle: r.vehicle,
     plate: r.plate,
     client: r.client,
     clientPhone: r.clientPhone || "",
     clientEmail: r.clientEmail || "",
+    clientAddress: r.clientAddress || "",
     clientIdDoc: r.clientIdDoc || "",
     mechanic: r.mechanic || "Carlos Rodríguez",
     assignedTechnicians,
@@ -530,7 +560,7 @@ export async function GET(request: Request) {
         }
 
         const ordRow = rows[0];
-        const [customer, vehicle] = await Promise.all([
+        let [customer, vehicle] = await Promise.all([
           ordRow.customerId
             ? prisma.customer.findUnique({ where: { id: ordRow.customerId }, include: { vehicles: true } }).catch(() => null)
             : null,
@@ -540,6 +570,21 @@ export async function GET(request: Request) {
             ? prisma.vehicle.findUnique({ where: { plate: String(ordRow.plate).toUpperCase() } }).catch(() => null)
             : null,
         ]);
+        if (!customer && ordRow.clientIdDoc) {
+          customer = await prisma.customer
+            .findUnique({ where: { identification: String(ordRow.clientIdDoc).trim() }, include: { vehicles: true } })
+            .catch(() => null);
+        }
+        if (!customer && vehicle?.customerId) {
+          customer = await prisma.customer
+            .findUnique({ where: { id: vehicle.customerId }, include: { vehicles: true } })
+            .catch(() => null);
+        }
+        if (!customer && ordRow.client) {
+          customer = await prisma.customer
+            .findFirst({ where: { name: { equals: String(ordRow.client).trim(), mode: "insensitive" } }, include: { vehicles: true } })
+            .catch(() => null);
+        }
         return NextResponse.json({
           success: true,
           order: mapOrderRow(ordRow),
@@ -971,7 +1016,7 @@ export async function GET(request: Request) {
       const [ordersRows, products, services, employeesRows, customersRows, custBranchRows] = (await Promise.all([
         prisma.$queryRawUnsafe(
           `SELECT * FROM "WorkshopOrder"
-           WHERE "status" NOT IN ('Entregado', 'ENTREGADO', '05 Entregada', 'Entregada', 'Finalizado', 'FINALIZADO', 'Terminado', 'TERMINADO', 'Historial', 'HISTORIAL', 'Cancelado', 'CANCELADO')
+           WHERE "status" NOT IN ('Entregado', 'ENTREGADO', '05 Entregada', 'Entregada', 'Finalizado', 'FINALIZADO', 'Terminado', 'TERMINADO', 'Historial', 'HISTORIAL', 'Cancelado', 'CANCELADO', 'Pagado', 'PAGADO', 'Facturado', 'FACTURADO', 'Cobrado', 'COBRADO')
            ORDER BY "updatedAt" DESC LIMIT 50`
         ),
         prisma.product.findMany({
@@ -989,11 +1034,21 @@ export async function GET(request: Request) {
         prisma.$queryRawUnsafe(`SELECT "id", COALESCE("branch", 'PRINCIPAL') AS "branch", COALESCE("assignedToSucursal", false) AS "assignedToSucursal" FROM "Customer"`).catch(() => []),
       ])) as [any[], any[], any[], any[], any[], any[]];
 
-      const [dispatchedReqs, paidInvoices, recentSales] = (await Promise.all([
-        prisma.$queryRawUnsafe(`SELECT "id", "requestNumber", "vehiclePlate", "updatedAt" FROM "OrderRequest" WHERE "status" = 'DESPACHADO'`).catch(() => []),
+      const [dispatchedReqs, paidInvoices, recentSales, vehicleImagesRows] = (await Promise.all([
+        prisma.$queryRawUnsafe(`SELECT "id", "requestNumber", "vehiclePlate", "updatedAt" FROM "OrderRequest" WHERE UPPER(COALESCE("status", '')) IN ('DESPACHADO', 'PAGADO', 'COBRADO', 'FACTURADO')`).catch(() => []),
         prisma.$queryRawUnsafe(`SELECT "orderId", "status" FROM "ClientInvoice"`).catch(() => []),
         prisma.$queryRawUnsafe(`SELECT "sourceOrderNumber", "vehiclePlate", "createdAt", "status" FROM "Sale" WHERE COALESCE("status", '') != 'Anulada' ORDER BY "createdAt" DESC LIMIT 200`).catch(() => []),
-      ])) as [any[], any[], any[]];
+        prisma.$queryRawUnsafe(`SELECT "id", "plate", "imageUrl" FROM "Vehicle" WHERE "imageUrl" IS NOT NULL AND TRIM("imageUrl") != ''`).catch(() => []),
+      ])) as [any[], any[], any[], any[]];
+
+      const vehicleImageById = new Map<string, string>();
+      const vehicleImageByPlate = new Map<string, string>();
+      for (const v of vehicleImagesRows) {
+        const img = typeof v?.imageUrl === "string" ? v.imageUrl.trim() : "";
+        if (!img) continue;
+        if (v.id) vehicleImageById.set(String(v.id), img);
+        if (v.plate) vehicleImageByPlate.set(String(v.plate).trim().toUpperCase(), img);
+      }
 
       const dispatchedReqIds = new Set(dispatchedReqs.map((r: any) => String(r.id || "").trim()).filter(Boolean));
       const dispatchedOrderNums = new Set(
@@ -1013,10 +1068,38 @@ export async function GET(request: Request) {
           .filter(Boolean)
       );
 
-      const rawAutosEnPista = ordersRows.map(mapOrderRow);
+      const rawAutosEnPista = ordersRows.map((row: any) => {
+        const plateKey = String(row.plate || "").trim().toUpperCase();
+        const vehicleImageUrl =
+          (row.vehicleId && vehicleImageById.get(String(row.vehicleId))) ||
+          (plateKey && vehicleImageByPlate.get(plateKey)) ||
+          null;
+        return mapOrderRow({ ...row, vehicleImageUrl });
+      });
       const allAutosEnPista = rawAutosEnPista.filter((o: any) => {
         const stLower = String(o.status || "").toLowerCase().trim();
+        const qtLower = String(o.quoteStatus || "").toLowerCase().trim();
         const dlLower = String(o.deliveryStatus || "").toLowerCase().trim();
+        const normOrd = String(o.orderNumber || "").trim().replace(/^OT-/i, "").toUpperCase();
+
+        // Si la orden ya está pagada / facturada / cobrada o su solicitud POS fue despachada, NO debe salir en panel taller
+        const yaEstaPagada =
+          stLower.includes("pagad") ||
+          stLower.includes("factur") ||
+          stLower.includes("cobrad") ||
+          qtLower.includes("pagad") ||
+          qtLower.includes("factur") ||
+          qtLower.includes("cobrad") ||
+          dlLower.includes("pagad") ||
+          dlLower.includes("factur") ||
+          dlLower.includes("cobrad") ||
+          Boolean(o.posRequestId && dispatchedReqIds.has(String(o.posRequestId).trim())) ||
+          (Array.isArray(o.payments) && o.payments.length > 0 && Number(o.totalPaid || 0) > 0 && Number(o.balanceDue || 0) <= 0) ||
+          (stLower === "en_caja" && (dispatchedOrderNums.has(normOrd) || invoicedOrderKeys.has(normOrd) || soldOrderNums.has(normOrd)));
+
+        if (yaEstaPagada) {
+          return false;
+        }
 
         // Estados activos de taller que SIEMPRE deben permanecer visibles en pista
         const esEstadoActivo =
@@ -1122,7 +1205,7 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { action } = body;
 
-    return await withRetry(async () => {
+    const response = await withRetry(async () => {
       await ensureTallerSchema();
 
       // =========================================================================
@@ -1250,15 +1333,15 @@ export async function POST(request: Request) {
         await prisma.$executeRawUnsafe(
           `INSERT INTO "WorkshopOrder" (
             "id", "orderNumber", "customerId", "vehicleId", "vehicle", "plate",
-            "client", "clientPhone", "clientIdDoc", "mechanic", "status", "progress",
+            "client", "clientPhone", "clientIdDoc", "clientEmail", "mechanic", "status", "progress",
             "mileage", "nextOilChangeKm", "servicesJson", "itemsJson",
             "receptionPhotosJson", "evidencePhotosJson", "notes", "estimatedOut",
             "totalCost", "dateIn", "completedAt", "createdAt", "updatedAt"
           ) VALUES (
             $1, $2, $3, $4, $5, $6,
-            $7, $8, $9, $10, 'Listo', 100,
-            $11, $12, '[]', $13,
-            $14, '[]', $15, 'Completado',
+            $7, $8, $9, $10, $11, 'Listo', 100,
+            $12, $13, '[]', $14,
+            $15, '[]', $16, 'Completado',
             0, NOW(), NOW(), NOW(), NOW()
           )`,
           orderId,
@@ -1270,6 +1353,7 @@ export async function POST(request: Request) {
           customer.name,
           customer.phone || "",
           customer.identification || "",
+          customer.email || null,
           mechanicStr,
           kmNum,
           nextKmNum,
@@ -1377,6 +1461,35 @@ export async function POST(request: Request) {
             })
             .catch(() => null);
         }
+        if (!customer && cleanEmail) {
+          customer = await prisma.customer
+            .findFirst({
+              where: { email: { equals: cleanEmail, mode: "insensitive" } },
+              include: { vehicles: true },
+            })
+            .catch(() => null);
+        }
+        if (!customer && cleanPhone !== "S/N" && cleanPhone.replace(/\D/g, "").length >= 7) {
+          customer = await prisma.customer
+            .findFirst({
+              where: { phone: cleanPhone },
+              include: { vehicles: true },
+            })
+            .catch(() => null);
+        }
+        if (
+          !customer &&
+          cleanName &&
+          !cleanName.toLowerCase().includes("consumidor final") &&
+          !cleanName.toLowerCase().includes("cliente mostrador")
+        ) {
+          customer = await prisma.customer
+            .findFirst({
+              where: { name: { equals: cleanName, mode: "insensitive" } },
+              include: { vehicles: true },
+            })
+            .catch(() => null);
+        }
 
         if (!customer) {
           customer = await prisma.customer.create({
@@ -1407,6 +1520,30 @@ export async function POST(request: Request) {
             },
             include: { vehicles: true },
           });
+        }
+
+        if (customer?.id) {
+          try {
+            await prisma.$executeRawUnsafe(
+              `INSERT INTO "Customer" ("id", "identification", "name", "phone", "email", "address", "type", "createdAt", "updatedAt")
+               VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
+               ON CONFLICT ("id") DO UPDATE SET
+                 "name" = EXCLUDED."name",
+                 "identification" = EXCLUDED."identification",
+                 "phone" = EXCLUDED."phone",
+                 "email" = EXCLUDED."email",
+                 "address" = EXCLUDED."address",
+                 "type" = EXCLUDED."type",
+                 "updatedAt" = NOW()`,
+              customer.id,
+              customer.identification || cleanIdent,
+              cleanName,
+              cleanPhone,
+              cleanEmail,
+              cleanAddress || customer.address || null,
+              dbType
+            );
+          } catch {}
         }
 
         return NextResponse.json({
@@ -1455,8 +1592,10 @@ export async function POST(request: Request) {
         const cleanIdent =
           (identificacion || "").trim() || `CLI-${Date.now().toString().slice(-6)}`;
         const cleanPhone = (telefono || "").trim() || "S/N";
-        const cleanEmail = email?.trim() || null;
-        const cleanAddress = String(direccion || "").trim();
+        const hasEmailFieldCreate = email !== undefined && email !== null;
+        const cleanEmail = hasEmailFieldCreate ? (String(email).trim() || null) : null;
+        const hasAddressFieldCreate = direccion !== undefined && direccion !== null;
+        const cleanAddress = hasAddressFieldCreate ? String(direccion).trim() : "";
         const dbType = tipoCliente === "Empresa" ? "Empresa" : "Personal";
 
         // 1. Buscar o crear el cliente en Neon DB sin salir de la orden
@@ -1470,6 +1609,35 @@ export async function POST(request: Request) {
           customer = await prisma.customer
             .findUnique({
               where: { identification: identificacion.trim() },
+              include: { vehicles: true },
+            })
+            .catch(() => null);
+        }
+        if (!customer && cleanEmail) {
+          customer = await prisma.customer
+            .findFirst({
+              where: { email: { equals: cleanEmail, mode: "insensitive" } },
+              include: { vehicles: true },
+            })
+            .catch(() => null);
+        }
+        if (!customer && cleanPhone !== "S/N" && cleanPhone.replace(/\D/g, "").length >= 7) {
+          customer = await prisma.customer
+            .findFirst({
+              where: { phone: cleanPhone },
+              include: { vehicles: true },
+            })
+            .catch(() => null);
+        }
+        if (
+          !customer &&
+          cleanName &&
+          !cleanName.toLowerCase().includes("consumidor final") &&
+          !cleanName.toLowerCase().includes("cliente mostrador")
+        ) {
+          customer = await prisma.customer
+            .findFirst({
+              where: { name: { equals: cleanName, mode: "insensitive" } },
               include: { vehicles: true },
             })
             .catch(() => null);
@@ -1490,13 +1658,15 @@ export async function POST(request: Request) {
             include: { vehicles: true },
           });
         } else {
+          const nextEmailCreate = hasEmailFieldCreate ? cleanEmail : customer.email;
+          const nextAddressCreate = hasAddressFieldCreate ? (cleanAddress || null) : customer.address;
           customer = await prisma.customer.update({
             where: { id: customer.id },
             data: {
               name: cleanName,
               phone: cleanPhone || customer.phone,
-              email: cleanEmail ?? customer.email,
-              address: cleanAddress || customer.address,
+              email: nextEmailCreate,
+              address: nextAddressCreate,
               type: dbType,
               ...((body.avatar || body.imageUrl) ? { avatar: (body.avatar || body.imageUrl).toString().trim(), imageUrl: (body.avatar || body.imageUrl).toString().trim() } : {}),
               lastVisit: new Date(),
@@ -1513,6 +1683,18 @@ export async function POST(request: Request) {
           vehicle = await prisma.vehicle
             .findUnique({ where: { plate: cleanPlateInput } })
             .catch(() => null);
+          if (!vehicle) {
+            const alnumPlate = cleanPlateInput.replace(/[^A-Z0-9]/g, "");
+            if (alnumPlate.length >= 3) {
+              const allVehs = await prisma.vehicle
+                .findMany({ take: 500 })
+                .catch(() => []);
+              vehicle =
+                allVehs.find(
+                  (v: any) => String(v.plate || "").toUpperCase().replace(/[^A-Z0-9]/g, "") === alnumPlate
+                ) || null;
+            }
+          }
 
           const yearNum = body.anio ? parseInt(String(body.anio), 10) || new Date().getFullYear() : new Date().getFullYear();
           const typeClean = (body.tipoVehiculo || "Auto").trim();
@@ -1603,54 +1785,98 @@ export async function POST(request: Request) {
           );
 
         // Garantizar que Customer y Vehicle existan en PostgreSQL para evitar fallos de Foreign Key
+        const finalOrderEmailCreate = hasEmailFieldCreate ? cleanEmail : (customer.email || null);
+        const finalOrderAddressCreate = hasAddressFieldCreate ? (cleanAddress || null) : (customer.address || null);
+        const custAvatarCreate = (body.avatar || body.imageUrl || customer.avatar || customer.imageUrl || "").toString().trim() || null;
         if (customer?.id) {
           try {
             await prisma.$executeRawUnsafe(
-              `INSERT INTO "Customer" ("id", "identification", "name", "phone", "email", "type", "createdAt", "updatedAt")
-               VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
-               ON CONFLICT ("id") DO UPDATE SET "name" = EXCLUDED."name", "phone" = EXCLUDED."phone"`,
+              `INSERT INTO "Customer" ("id", "identification", "name", "phone", "email", "address", "type", "avatar", "imageUrl", "createdAt", "updatedAt")
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())
+               ON CONFLICT ("id") DO UPDATE SET
+                 "name" = EXCLUDED."name",
+                 "identification" = EXCLUDED."identification",
+                 "phone" = EXCLUDED."phone",
+                 "email" = $5,
+                 "address" = $6,
+                 "type" = EXCLUDED."type",
+                 "avatar" = COALESCE(EXCLUDED."avatar", "Customer"."avatar"),
+                 "imageUrl" = COALESCE(EXCLUDED."imageUrl", "Customer"."imageUrl"),
+                 "updatedAt" = NOW()`,
               customer.id,
-              cleanIdent,
+              customer.identification || cleanIdent,
               cleanName,
               cleanPhone,
-              cleanEmail,
-              dbType
+              finalOrderEmailCreate,
+              finalOrderAddressCreate,
+              dbType,
+              custAvatarCreate,
+              custAvatarCreate
             );
           } catch {}
         }
+        const vehicleImgCreate = (body.vehicleImageUrl || body.vehiculoFoto || vehicle?.imageUrl || "").toString().trim() || null;
         if (vehicle?.id) {
           try {
             await prisma.$executeRawUnsafe(
-              `INSERT INTO "Vehicle" ("id", "customerId", "plate", "brand", "model", "year", "vehicleType", "createdAt", "updatedAt")
-               VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
-               ON CONFLICT ("id") DO NOTHING`,
+              `INSERT INTO "Vehicle" ("id", "customerId", "plate", "brand", "model", "year", "vehicleType", "mileage", "imageUrl", "createdAt", "updatedAt")
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())
+               ON CONFLICT ("id") DO UPDATE SET
+                 "brand" = EXCLUDED."brand",
+                 "model" = EXCLUDED."model",
+                 "year" = EXCLUDED."year",
+                 "vehicleType" = EXCLUDED."vehicleType",
+                 "mileage" = COALESCE(EXCLUDED."mileage", "Vehicle"."mileage"),
+                 "imageUrl" = COALESCE(EXCLUDED."imageUrl", "Vehicle"."imageUrl"),
+                 "updatedAt" = NOW()`,
               vehicle.id,
               customer.id,
               finalPlate,
               (marca || "Vehículo").trim(),
               (modelo || "General").trim(),
               body.anio ? parseInt(String(body.anio), 10) || new Date().getFullYear() : new Date().getFullYear(),
-              (body.tipoVehiculo || "Auto").trim()
+              (body.tipoVehiculo || "Auto").trim(),
+              kmNum || 0,
+              vehicleImgCreate
             );
           } catch {}
         }
+
+        const incomingAssignedTechs = Array.isArray(body.assignedTechnicians)
+          ? body.assignedTechnicians
+              .map((t: any) => ({
+                name: String(t?.name || t?.nombre || "").trim(),
+                tarea: String(t?.tarea || t?.labor || "").trim(),
+                role: String(t?.role || "Técnico").trim(),
+              }))
+              .filter((t: any) => t.name)
+          : [];
+        const assignedTechsCreateJson = JSON.stringify(
+          incomingAssignedTechs.length > 0
+            ? incomingAssignedTechs
+            : String(mechanic || "Hernan Marquez")
+                .split(",")
+                .map((m: string) => m.trim())
+                .filter(Boolean)
+                .map((m: string) => ({ name: m, tarea: "", role: "Técnico" }))
+        );
 
         try {
           await prisma.$executeRawUnsafe(
             `INSERT INTO "WorkshopOrder" (
               "id", "orderNumber", "customerId", "vehicleId", "vehicle", "plate",
-              "client", "clientPhone", "clientIdDoc", "mechanic", "status", "progress",
+              "client", "clientPhone", "clientIdDoc", "clientEmail", "clientAddress", "mechanic", "assignedTechniciansJson", "status", "progress",
               "mileage", "nextOilChangeKm", "fuelLevel", "receptionInventoryJson",
               "servicesJson", "itemsJson",
               "receptionPhotosJson", "evidencePhotosJson", "voiceNotesJson", "notes", "estimatedOut",
               "totalCost", "branch", "dateIn", "createdAt", "updatedAt"
             ) VALUES (
               $1, $2, $3, $4, $5, $6,
-              $7, $8, $9, $10, 'En Pista', 10,
-              $11, $12, $13, $14,
-              $19, $20,
-              $15, '[]', $16, $17, 'Hoy',
-              $21, $18, NOW(), NOW(), NOW()
+              $7, $8, $9, $10, $11, $12, $13, 'En Pista', 10,
+              $14, $15, $16, $17,
+              $22, $23,
+              $18, '[]', $19, $20, 'Hoy',
+              $24, $21, NOW(), NOW(), NOW()
             )`,
             orderId,
             orderNumber,
@@ -1661,7 +1887,10 @@ export async function POST(request: Request) {
             customer.name,
             customer.phone || "",
             customer.identification || "",
+            finalOrderEmailCreate,
+            finalOrderAddressCreate,
             mechanic || "Hernan Marquez",
+            assignedTechsCreateJson,
             kmNum || null,
             nextOilKm,
             fuelLevel || "1/2",
@@ -1687,7 +1916,10 @@ export async function POST(request: Request) {
               client: customer.name,
               clientPhone: customer.phone || "",
               clientIdDoc: customer.identification || "",
+              clientEmail: finalOrderEmailCreate,
+              clientAddress: finalOrderAddressCreate,
               mechanic: mechanic || "Hernan Marquez",
+              assignedTechniciansJson: assignedTechsCreateJson,
               status: "En Pista",
               progress: 10,
               mileage: kmNum || null,
@@ -1763,7 +1995,10 @@ export async function POST(request: Request) {
           success: true,
           customer,
           vehicle,
-          activeOrder: mapOrderRow(createdRows[0]),
+          activeOrder: {
+            ...mapOrderRow(createdRows[0]),
+            vehicleImageUrl: vehicle?.imageUrl || null,
+          },
           message: `Orden ${orderNumber} creada para ${customer.name} (Técnico: ${mechanic}).`,
         });
       }
@@ -1822,8 +2057,10 @@ export async function POST(request: Request) {
         const cleanName = String(nombres || existingOrder.client || "Cliente").trim();
         const cleanIdent = (identificacion || existingOrder.clientIdDoc || "").trim() || `CLI-${Date.now().toString().slice(-6)}`;
         const cleanPhone = (telefono || existingOrder.clientPhone || "").trim() || "S/N";
-        const cleanEmail = email?.trim() || existingOrder.clientEmail || null;
-        const cleanAddress = String(direccion || "").trim();
+        const hasEmailField = email !== undefined && email !== null;
+        const cleanEmail = hasEmailField ? (String(email).trim() || null) : (existingOrder.clientEmail || null);
+        const hasAddressField = direccion !== undefined && direccion !== null;
+        const cleanAddress = hasAddressField ? (String(direccion).trim() || null) : undefined;
         const dbType = tipoCliente === "Empresa" ? "Empresa" : "Personal";
 
         let customer: any = null;
@@ -1846,7 +2083,7 @@ export async function POST(request: Request) {
               name: cleanName,
               phone: cleanPhone,
               email: cleanEmail,
-              address: cleanAddress || null,
+              address: cleanAddress ?? null,
               type: dbType,
               avatar: (body.avatar || body.imageUrl || "").toString().trim() || null,
               imageUrl: (body.avatar || body.imageUrl || "").toString().trim() || null,
@@ -1854,20 +2091,68 @@ export async function POST(request: Request) {
             include: { vehicles: true },
           });
         } else {
-          customer = await prisma.customer.update({
-            where: { id: customer.id },
-            data: {
-              name: cleanName,
-              identification: identificacion?.trim() ? identificacion.trim() : customer.identification,
-              phone: cleanPhone || customer.phone,
-              email: cleanEmail ?? customer.email,
-              address: cleanAddress || customer.address,
-              type: dbType,
-              ...((body.avatar || body.imageUrl) ? { avatar: (body.avatar || body.imageUrl).toString().trim(), imageUrl: (body.avatar || body.imageUrl).toString().trim() } : {}),
-              lastVisit: new Date(),
-            },
-            include: { vehicles: true },
-          }).catch(() => customer);
+          const finalAddressForCust = cleanAddress !== undefined ? cleanAddress : (customer.address ?? null);
+          const finalEmailForCust = hasEmailField ? cleanEmail : (customer.email ?? null);
+          const finalIdentForCust = identificacion?.trim() ? identificacion.trim() : customer.identification;
+          const avatarVal = (body.avatar || body.imageUrl || "").toString().trim();
+          const baseUpdateData = {
+            name: cleanName,
+            phone: cleanPhone || customer.phone,
+            email: finalEmailForCust,
+            address: finalAddressForCust,
+            type: dbType,
+            ...(avatarVal ? { avatar: avatarVal, imageUrl: avatarVal } : {}),
+            lastVisit: new Date(),
+          };
+          try {
+            customer = await prisma.customer.update({
+              where: { id: customer.id },
+              data: {
+                ...baseUpdateData,
+                identification: finalIdentForCust,
+              },
+              include: { vehicles: true },
+            });
+          } catch {
+            // Si el nuevo número de identificación colisiona con otro cliente, preservar el resto de los campos
+            customer = await prisma.customer.update({
+              where: { id: customer.id },
+              data: baseUpdateData,
+              include: { vehicles: true },
+            }).catch(() => ({
+              ...customer,
+              ...baseUpdateData,
+            }));
+          }
+        }
+
+        // Asegurar persistencia directa en PostgreSQL y en neon-local-mirror.json para Customer
+        const custAvatarEdit = (body.avatar || body.imageUrl || customer.avatar || customer.imageUrl || "").toString().trim() || null;
+        if (customer?.id) {
+          try {
+            await prisma.$executeRawUnsafe(
+              `UPDATE "Customer"
+               SET "name" = $1,
+                   "identification" = $2,
+                   "phone" = $3,
+                   "email" = $4,
+                   "address" = $5,
+                   "type" = $6,
+                   "avatar" = COALESCE($7, "avatar"),
+                   "imageUrl" = COALESCE($8, "imageUrl"),
+                   "updatedAt" = NOW()
+               WHERE "id" = $9`,
+              cleanName,
+              customer.identification || cleanIdent,
+              cleanPhone,
+              hasEmailField ? cleanEmail : (customer.email ?? null),
+              cleanAddress !== undefined ? cleanAddress : (customer.address ?? null),
+              dbType,
+              custAvatarEdit,
+              custAvatarEdit,
+              customer.id
+            );
+          } catch {}
         }
 
         const cleanPlateInput = (placa || existingOrder.plate || "").trim().toUpperCase();
@@ -1927,6 +2212,33 @@ export async function POST(request: Request) {
             : existingOrder.mileage || vehicle?.mileage || 0;
         const nextOilKm = kmNum > 0 ? kmNum + 5000 : existingOrder.nextOilChangeKm;
 
+        if (vehicle?.id) {
+          try {
+            await prisma.$executeRawUnsafe(
+              `UPDATE "Vehicle"
+               SET "customerId" = $2,
+                   "plate" = $3,
+                   "brand" = $4,
+                   "model" = $5,
+                   "year" = $6,
+                   "vehicleType" = $7,
+                   "mileage" = $8,
+                   "imageUrl" = COALESCE($9, "imageUrl"),
+                   "updatedAt" = NOW()
+               WHERE "id" = $1`,
+              vehicle.id,
+              customer.id,
+              finalPlate,
+              (marca || vehicle.brand || "Vehículo").trim(),
+              (modelo || vehicle.model || "General").trim(),
+              yearNum,
+              typeClean,
+              kmNum,
+              vehicleImg
+            );
+          } catch {}
+        }
+
         const notesFormatted = [
           motivoIngreso?.trim() ? motivoIngreso.trim() : "Ingreso a taller para revisión / servicio.",
           ingresadoPor?.trim() ? `Ingresado por: ${ingresadoPor.trim()}` : null,
@@ -1943,6 +2255,27 @@ export async function POST(request: Request) {
         const jsonVoiceNotes = JSON.stringify(
           Array.isArray(voiceNotes) ? voiceNotes : safeParseJson(existingOrder.voiceNotesJson, [])
         );
+        const finalMechanicEdit = mechanic || existingOrder.mechanic || "Hernan Marquez";
+        const incomingAssignedTechsEdit = Array.isArray(body.assignedTechnicians)
+          ? body.assignedTechnicians
+              .map((t: any) => ({
+                name: String(t?.name || t?.nombre || "").trim(),
+                tarea: String(t?.tarea || t?.labor || "").trim(),
+                role: String(t?.role || "Técnico").trim(),
+              }))
+              .filter((t: any) => t.name)
+          : [];
+        const assignedTechsEditJson = JSON.stringify(
+          incomingAssignedTechsEdit.length > 0
+            ? incomingAssignedTechsEdit
+            : String(finalMechanicEdit)
+                .split(",")
+                .map((m: string) => m.trim())
+                .filter(Boolean)
+                .map((m: string) => ({ name: m, tarea: "", role: "Técnico" }))
+        );
+        const finalEmailOrderEdit = hasEmailField ? cleanEmail : (customer.email || existingOrder.clientEmail || null);
+        const finalAddressOrderEdit = hasAddressField ? (cleanAddress ?? null) : (customer.address || existingOrder.clientAddress || null);
 
         await prisma.$executeRawUnsafe(
           `UPDATE "WorkshopOrder"
@@ -1954,14 +2287,16 @@ export async function POST(request: Request) {
                "clientPhone" = $7,
                "clientIdDoc" = $8,
                "clientEmail" = $9,
-               "mechanic" = $10,
-               "mileage" = $11,
-               "nextOilChangeKm" = $12,
-               "fuelLevel" = $13,
-               "receptionInventoryJson" = $14,
-               "receptionPhotosJson" = $15,
-               "voiceNotesJson" = $16,
-               "notes" = $17,
+               "clientAddress" = $10,
+               "mechanic" = $11,
+               "assignedTechniciansJson" = $12,
+               "mileage" = $13,
+               "nextOilChangeKm" = $14,
+               "fuelLevel" = $15,
+               "receptionInventoryJson" = $16,
+               "receptionPhotosJson" = $17,
+               "voiceNotesJson" = $18,
+               "notes" = $19,
                "updatedAt" = NOW()
            WHERE "id" = $1`,
           existingOrder.id,
@@ -1972,8 +2307,10 @@ export async function POST(request: Request) {
           customer.name,
           customer.phone || "",
           customer.identification || "",
-          customer.email || null,
-          mechanic || existingOrder.mechanic || "Hernan Marquez",
+          finalEmailOrderEdit,
+          finalAddressOrderEdit,
+          finalMechanicEdit,
+          assignedTechsEditJson,
           kmNum || null,
           nextOilKm,
           fuelLevel || existingOrder.fuelLevel || "1/2",
@@ -1982,6 +2319,53 @@ export async function POST(request: Request) {
           jsonVoiceNotes,
           notesFormatted
         );
+
+        // Vincular nuevas evidencias multimedia agregadas durante la edición
+        try {
+          const incomingEvidencesEdit: any[] = Array.isArray(body.evidences) ? body.evidences : [];
+          for (const ev of incomingEvidencesEdit) {
+            const evRef = ev.evidenceId || ev.id || ev.clientTempId || ev.key;
+            if (evRef) {
+              await prisma.$executeRawUnsafe(
+                `UPDATE "WorkshopEvidence"
+                 SET "orderId" = $1,
+                     "orderNumber" = $2,
+                     "vehicleId" = COALESCE("vehicleId", $3),
+                     "plate" = COALESCE("plate", $4),
+                     "updatedAt" = NOW()
+                 WHERE "id" = $5 OR "clientTempId" = $5 OR "r2Key" = $5`,
+                existingOrder.id,
+                existingOrder.orderNumber,
+                vehicle?.id || existingOrder.vehicleId || null,
+                finalPlate,
+                evRef
+              );
+            }
+          }
+
+          if (Array.isArray(receptionPhotos) && receptionPhotos.length > 0) {
+            for (const fotoItem of receptionPhotos) {
+              const urlStr = typeof fotoItem === "string" ? fotoItem : fotoItem?.url;
+              if (urlStr && urlStr.includes("key=")) {
+                const matchedKey = new URL(urlStr, "http://localhost").searchParams.get("key");
+                if (matchedKey) {
+                  await prisma.$executeRawUnsafe(
+                    `UPDATE "WorkshopEvidence"
+                     SET "orderId" = $1, "orderNumber" = $2, "vehicleId" = COALESCE("vehicleId", $3), "plate" = COALESCE("plate", $4), "updatedAt" = NOW()
+                     WHERE "r2Key" = $5`,
+                    existingOrder.id,
+                    existingOrder.orderNumber,
+                    vehicle?.id || existingOrder.vehicleId || null,
+                    finalPlate,
+                    matchedKey
+                  );
+                }
+              }
+            }
+          }
+        } catch (linkEvErr) {
+          console.warn("Aviso al vincular evidencias en edición:", linkEvErr);
+        }
 
         const updatedRows: any[] = await prisma.$queryRawUnsafe(
           `SELECT * FROM "WorkshopOrder" WHERE "id" = $1`,
@@ -1992,7 +2376,10 @@ export async function POST(request: Request) {
           success: true,
           customer,
           vehicle,
-          activeOrder: mapOrderRow(updatedRows[0] || existingOrder),
+          activeOrder: {
+            ...mapOrderRow(updatedRows[0] || existingOrder),
+            vehicleImageUrl: vehicle?.imageUrl || null,
+          },
           message: `Orden ${existingOrder.orderNumber} actualizada correctamente.`,
         });
       }
@@ -3484,16 +3871,16 @@ export async function POST(request: Request) {
         await prisma.$executeRawUnsafe(
           `INSERT INTO "WorkshopOrder" (
             "id", "orderNumber", "customerId", "vehicleId", "vehicle", "plate",
-            "client", "clientPhone", "clientIdDoc", "mechanic", "status", "progress",
+            "client", "clientPhone", "clientIdDoc", "clientEmail", "mechanic", "status", "progress",
             "mileage", "nextOilChangeKm", "servicesJson", "itemsJson",
             "receptionPhotosJson", "evidencePhotosJson", "notes", "estimatedOut",
             "totalCost", "branch", "dateIn", "createdAt", "updatedAt"
           ) VALUES (
             $1, $2, $3, $4, $5, $6,
-            $7, $8, $9, $10, 'En Pista', 10,
-            $11, $12, '[]', '[]',
-            $13, '[]', $14, 'Hoy',
-            0, $15, NOW(), NOW(), NOW()
+            $7, $8, $9, $10, $11, 'En Pista', 10,
+            $12, $13, '[]', '[]',
+            $14, '[]', $15, 'Hoy',
+            0, $16, NOW(), NOW(), NOW()
           )`,
           orderId,
           orderNumber,
@@ -3504,6 +3891,7 @@ export async function POST(request: Request) {
           customer.name,
           customer.phone,
           customer.identification,
+          customer.email || null,
           mechanic,
           kmNum,
           nextOilKm,
@@ -3674,15 +4062,15 @@ export async function POST(request: Request) {
         await prisma.$executeRawUnsafe(
           `INSERT INTO "WorkshopOrder" (
             "id", "orderNumber", "customerId", "vehicleId", "vehicle", "plate",
-            "client", "clientPhone", "clientIdDoc", "mechanic", "status", "progress",
+            "client", "clientPhone", "clientIdDoc", "clientEmail", "mechanic", "status", "progress",
             "mileage", "nextOilChangeKm", "servicesJson", "itemsJson",
             "receptionPhotosJson", "evidencePhotosJson", "notes", "estimatedOut",
             "totalCost", "dateIn", "createdAt", "updatedAt"
           ) VALUES (
             $1, $2, $3, $4, $5, $6,
-            $7, $8, $9, $10, 'En Pista', 10,
-            $11, $12, '[]', '[]',
-            $13, '[]', $14, 'Hoy',
+            $7, $8, $9, $10, $11, 'En Pista', 10,
+            $12, $13, '[]', '[]',
+            $14, '[]', $15, 'Hoy',
             0, NOW(), NOW(), NOW()
           )`,
           orderId,
@@ -3694,6 +4082,7 @@ export async function POST(request: Request) {
           vehicle.customer?.name || "Cliente Taller",
           vehicle.customer?.phone || "",
           vehicle.customer?.identification || "",
+          vehicle.customer?.email || null,
           mechanic,
           kmNum,
           nextOilKm,
@@ -4086,20 +4475,40 @@ export async function POST(request: Request) {
           empleado_nombre: i.empleado_nombre || order.mechanic || "Taller",
         }));
 
-        const requestNumber = order.orderNumber.startsWith("OT-")
+        const baseRequestNumber = order.orderNumber.startsWith("OT-")
           ? order.orderNumber
           : `OT-${order.orderNumber}`;
 
-        const existingReq = await prisma.orderRequest
-          .findUnique({ where: { requestNumber } })
-          .catch(() => null);
+        const PAID_REQ_STATUSES = new Set(["DESPACHADO", "PAGADO", "COBRADO", "FACTURADO"]);
+        let existingReq: any = null;
+        if (order.posRequestId) {
+          existingReq = await prisma.orderRequest
+            .findUnique({ where: { id: order.posRequestId } })
+            .catch(() => null);
+        }
+        if (!existingReq) {
+          existingReq = await prisma.orderRequest
+            .findUnique({ where: { requestNumber: baseRequestNumber } })
+            .catch(() => null);
+        }
+
+        const existingReqPaid = Boolean(
+          existingReq && PAID_REQ_STATUSES.has(String(existingReq.status || "").toUpperCase())
+        );
+        const orderMarkedPaid =
+          !existingReq &&
+          (String(order.status || "").toLowerCase().includes("pagad") ||
+            String(order.status || "").toLowerCase().includes("factur") ||
+            String(order.quoteStatus || "").toLowerCase().includes("pagad") ||
+            String(order.deliveryStatus || "").toLowerCase().includes("pagad") ||
+            String(order.deliveryStatus || "").toLowerCase().includes("factur"));
 
         const posNotes = esReenvio
           ? `[REENVÍO DESDE TALLER] Orden Taller #${order.orderNumber} | Estado: EN_CAJA | Empleados: ${empleadosTexto} | Placa: ${order.plate} | Km: ${order.mileage || "N/A"}`
           : `Orden Taller #${order.orderNumber} | Estado: EN_CAJA | Empleados: ${empleadosTexto} | Placa: ${order.plate} | Km: ${order.mileage || "N/A"}`;
 
         let posRequest: any;
-        if (existingReq) {
+        if (existingReq && !existingReqPaid && !orderMarkedPaid) {
           posRequest = await prisma.orderRequest.update({
             where: { id: existingReq.id },
             data: {
@@ -4114,20 +4523,53 @@ export async function POST(request: Request) {
             },
           });
         } else {
-          posRequest = await prisma.orderRequest.create({
-            data: {
-              requestNumber,
-              type: "TALLER",
-              customerName: order.client,
-              customerPhone: order.clientPhone || null,
-              vehicleInfo: `${order.vehicle} [${order.plate}]`,
-              itemsSummary,
-              itemsJson: JSON.stringify(posItemsPayload),
-              totalEstimated: totalCalculated,
-              notes: posNotes,
-              status: "PENDIENTE",
-            },
-          });
+          let nextRequestNumber = baseRequestNumber;
+          if (existingReq || orderMarkedPaid) {
+            let suffix = 2;
+            while (suffix < 100) {
+              const candidate = `${baseRequestNumber}-${suffix}`;
+              const taken = await prisma.orderRequest
+                .findUnique({ where: { requestNumber: candidate } })
+                .catch(() => null);
+              if (!taken) {
+                nextRequestNumber = candidate;
+                break;
+              }
+              if (!PAID_REQ_STATUSES.has(String(taken.status || "").toUpperCase())) {
+                posRequest = await prisma.orderRequest.update({
+                  where: { id: taken.id },
+                  data: {
+                    customerName: order.client,
+                    customerPhone: order.clientPhone || null,
+                    vehicleInfo: `${order.vehicle} [${order.plate}]`,
+                    itemsSummary,
+                    itemsJson: JSON.stringify(posItemsPayload),
+                    totalEstimated: totalCalculated,
+                    notes: posNotes,
+                    status: "PENDIENTE",
+                  },
+                });
+                break;
+              }
+              suffix++;
+            }
+          }
+          if (!posRequest) {
+            posRequest = await prisma.orderRequest.create({
+              data: {
+                requestNumber: nextRequestNumber,
+                type: "TALLER",
+                customerName: order.client,
+                customerPhone: order.clientPhone || null,
+                vehicleInfo: `${order.vehicle} [${order.plate}]`,
+                itemsSummary,
+                itemsJson: JSON.stringify(posItemsPayload),
+                totalEstimated: totalCalculated,
+                notes: posNotes,
+                status: "PENDIENTE",
+              },
+            });
+          }
         }
 
         // 3. GERENCIA: Registrar tiempo real de ejecución y productividad en WorkshopTimeLog
@@ -4808,10 +5250,60 @@ export async function POST(request: Request) {
           rawOrder?.orderNumber ||
           body.orderNumber ||
           `OT-${Date.now().toString().slice(-4)}`;
-        const quoteNumber =
+
+        // Verificar si el ciclo actual de la orden ya fue pagado (en WorkshopOrder o en OrderRequest)
+        let currentPosReq: any = null;
+        if (rawOrder?.posRequestId) {
+          currentPosReq = await prisma.orderRequest
+            .findUnique({ where: { id: rawOrder.posRequestId } })
+            .catch(() => null);
+        }
+        if (!currentPosReq && rawOrder?.orderNumber) {
+          const baseReqNum = rawOrder.orderNumber.startsWith("OT-")
+            ? rawOrder.orderNumber
+            : `OT-${rawOrder.orderNumber}`;
+          currentPosReq = await prisma.orderRequest
+            .findUnique({ where: { requestNumber: baseReqNum } })
+            .catch(() => null);
+        }
+
+        const PAID_REQ_SET = new Set(["DESPACHADO", "PAGADO", "COBRADO", "FACTURADO"]);
+        const orderStatusStr = String(rawOrder?.status || "").toLowerCase();
+        const quoteStatusStr = String(rawOrder?.quoteStatus || "").toLowerCase();
+        const deliveryStatusStr = String(rawOrder?.deliveryStatus || "").toLowerCase();
+        const isCurrentCyclePaid = Boolean(
+          rawOrder &&
+            (orderStatusStr.includes("pagad") ||
+              orderStatusStr.includes("factur") ||
+              orderStatusStr.includes("cobrad") ||
+              quoteStatusStr.includes("pagad") ||
+              quoteStatusStr.includes("factur") ||
+              deliveryStatusStr.includes("pagad") ||
+              deliveryStatusStr.includes("factur") ||
+              (currentPosReq && PAID_REQ_SET.has(String(currentPosReq.status || "").toUpperCase())))
+        );
+
+        const baseQuoteNumber =
           rawOrder?.quoteNumber ||
           body.quoteNumber ||
           `COT-${String(finalOrderNumber).replace(/^#+/, "")}`;
+
+        let quoteNumber = baseQuoteNumber;
+        if (isCurrentCyclePaid) {
+          const rootQuoteNum = String(baseQuoteNumber).replace(/-\d+$/, "");
+          let suffix = 2;
+          while (suffix < 100) {
+            const candidate = `${rootQuoteNum}-${suffix}`;
+            const existsQuote = await prisma.clientQuote
+              .findUnique({ where: { quoteNumber: candidate } })
+              .catch(() => null);
+            if (!existsQuote) {
+              quoteNumber = candidate;
+              break;
+            }
+            suffix++;
+          }
+        }
         const quoteStatus = body.quoteStatus || "Pendiente";
 
         const itemsTotal = incomingItems.reduce(
@@ -4895,6 +5387,10 @@ export async function POST(request: Request) {
                  "totalCost" = $7,
                  "itemsJson" = COALESCE($8, "itemsJson"),
                  "servicesJson" = COALESCE($9, "servicesJson"),
+                 "status" = CASE WHEN $10 THEN 'En Diagnóstico' ELSE "status" END,
+                 "deliveryStatus" = CASE WHEN $10 THEN 'Pendiente de Firma' ELSE "deliveryStatus" END,
+                 "posRequestId" = CASE WHEN $10 THEN NULL ELSE "posRequestId" END,
+                 "stockDeducted" = CASE WHEN $10 THEN false ELSE "stockDeducted" END,
                  "updatedAt" = NOW()
              WHERE "id" = $1`,
             rawOrder.id,
@@ -4905,13 +5401,22 @@ export async function POST(request: Request) {
             nextOilChangeKm ? Number(nextOilChangeKm) : null,
             finalTotalCost,
             itemsJson,
-            servicesJson
+            servicesJson,
+            isCurrentCyclePaid
           );
 
           rawOrder = {
             ...rawOrder,
             quoteNumber,
             quoteStatus,
+            ...(isCurrentCyclePaid
+              ? {
+                  status: "En Diagnóstico",
+                  deliveryStatus: "Pendiente de Firma",
+                  posRequestId: null,
+                  stockDeducted: false,
+                }
+              : {}),
             totalCost: finalTotalCost,
             itemsJson,
             servicesJson,
@@ -4961,6 +5466,30 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     });
+
+    if (response.ok) {
+      const actStr = String(action || "").toUpperCase();
+      const rtAction = actStr.includes("ELIMINAR")
+        ? "deleted"
+        : actStr.startsWith("CREAR_") || actStr.startsWith("REGISTRAR_") || actStr.startsWith("ABRIR_")
+        ? "created"
+        : actStr.includes("INICIAR") || actStr.includes("FINALIZAR") || actStr.includes("PASAR_") || actStr.includes("ENVIAR_A_POS")
+        ? "status_changed"
+        : "updated";
+      const entityId = (body?.orderId || body?.id || undefined) as string | undefined;
+
+      emitRealtimeEvent({ channel: "taller", action: rtAction, entityId });
+      emitRealtimeEvent({ channel: "presupuestos", action: rtAction, entityId });
+      if (actStr === "GUARDAR_CLIENTE_RAPIDO" || actStr === "CREAR_ORDEN_ETAPA_1" || actStr === "EDITAR_ORDEN_ETAPA_1" || actStr === "REGISTRO_EXPRESS") {
+        emitRealtimeEvent({ channel: "clientes", action: rtAction });
+        emitRealtimeEvent({ channel: "vehiculos", action: rtAction });
+      }
+      if (actStr === "ENVIAR_A_POS" || actStr === "GUARDAR_ETAPA_8_COBRO_DOCUMENTO") {
+        emitRealtimeEvent({ channel: "ordenes", action: "updated", entityId });
+      }
+    }
+
+    return response;
   } catch (error: any) {
     console.error("Error en POST /api/taller/operacion:", error);
     return NextResponse.json(
@@ -5000,6 +5529,9 @@ export async function DELETE(request: Request) {
         `DELETE FROM "WorkshopOrder" WHERE "id" = $1`,
         existing[0].id
       );
+
+      emitRealtimeEvent({ channel: "taller", action: "deleted", entityId: existing[0].id });
+      emitRealtimeEvent({ channel: "presupuestos", action: "deleted", entityId: existing[0].id });
 
       return NextResponse.json({
         success: true,

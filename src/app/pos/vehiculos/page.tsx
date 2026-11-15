@@ -7,6 +7,7 @@ import { Header } from "@/components/Header";
 import { PosMobileNav } from "@/components/PosMobileNav";
 import { CollapsibleMetrics } from "@/components/CollapsibleMetrics";
 import { BranchTabs } from "@/components/pos/BranchTabs";
+import { useRealtimeSync } from "@/hooks/useRealtimeSync";
 
 interface VehicleItem {
   id: string;
@@ -116,6 +117,16 @@ export default function PosVehiculosPage() {
     }, 300);
     return () => clearTimeout(timer);
   }, [searchTerm, cargarVehiculos]);
+
+  useRealtimeSync({
+    channels: ["vehiculos", "clientes"],
+    onEvent: (ev) => {
+      if (ev.action === "deleted" && ev.entityId) {
+        setVehicles((prev) => prev.filter((v) => v.id !== ev.entityId));
+      }
+    },
+    onRefresh: () => cargarVehiculos(searchTerm, true),
+  });
 
   // Abrir modal de nuevo registro
   const abrirModalNuevo = () => {

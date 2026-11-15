@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { Header } from "@/components/Header";
 import CatalogoProductosServiciosTaller from "@/components/taller/CatalogoProductosServiciosTaller";
+import { useRealtimeSync } from "@/hooks/useRealtimeSync";
 
 // ============================================================================
 // INTERFACES & CONSTANTES
@@ -388,9 +389,9 @@ export default function PaginaDetallePropuesta() {
     if (typeof window !== "undefined" && orden?.id) {
       try {
         const activaId = localStorage.getItem("taller_orden_activa_id");
-        if (activaId && (activaId === orden.id || activaId === orden.orderNumber)) {
-          setOrdenActivaEnTaller(true);
-        }
+        setOrdenActivaEnTaller(
+          Boolean(activaId && (activaId === orden.id || activaId === orden.orderNumber))
+        );
       } catch { }
     }
   }, [orden?.id, orden?.orderNumber]);
@@ -484,10 +485,39 @@ export default function PaginaDetallePropuesta() {
               : it;
           })
         );
+        const esPropuestaPagada = (item: any): boolean => {
+          if (!item) return false;
+          const st = String(item.status || "").trim().toLowerCase();
+          const qs = String(item.quoteStatus || "").trim().toLowerCase();
+          const ds = String(item.deliveryStatus || "").trim().toLowerCase();
+          if (
+            qs === "pagado" ||
+            st === "pagado" ||
+            st === "facturado" ||
+            st === "cobrado" ||
+            ds === "pagado" ||
+            ds === "facturado" ||
+            ds === "cobrado" ||
+            ds === "entregado"
+          ) {
+            return true;
+          }
+          const payments = Array.isArray(item.payments) ? item.payments : [];
+          if (payments.length > 0) {
+            const totalPagado = payments.reduce((acc: number, p: any) => acc + Number(p?.amount || 0), 0);
+            const totalOrden = Number(item.total || item.totalGeneral || item.quoteTotal || 0);
+            if (totalPagado > 0 && (totalOrden <= 0 || totalPagado >= totalOrden - 0.01)) {
+              return true;
+            }
+          }
+          return false;
+        };
+
         const combinadas: any[] = [];
         const vistos = new Set<string>();
         const agregar = (item: any) => {
           if (!item?.id || vistos.has(item.id)) return;
+          if (esPropuestaPagada(item)) return;
           vistos.add(item.id);
           combinadas.push(item);
         };
@@ -497,7 +527,7 @@ export default function PaginaDetallePropuesta() {
         if (resTal?.success && Array.isArray(resTal.autosEnPista)) {
           resTal.autosEnPista.forEach(agregar);
         }
-        if (combinadas.length > 0) {
+        if (resPres?.success || resTal?.success) {
           setListaPropuestas(combinadas);
           // Pre-cargar silenciosamente en caché el detalle de cada propuesta para deslizar al instante sin pantalla de carga
           combinadas.forEach((prop) => {
@@ -1146,6 +1176,24 @@ export default function PaginaDetallePropuesta() {
     void cargarDetallePorId(id, Boolean(orden));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+
+  useRealtimeSync({
+    channels: ["presupuestos", "taller", "ordenes"],
+    onEvent: (ev) => {
+      if (
+        ev.action === "deleted" &&
+        ev.entityId &&
+        (ev.entityId === id || ev.entityId === orden?.id || ev.entityId === orden?.orderNumber)
+      ) {
+        setError("Esta propuesta fue eliminada en otra sesión.");
+      }
+    },
+    onRefresh: () => {
+      if (!guardando && estadoSync !== "guardando" && id) {
+        void cargarDetallePorId(id, true);
+      }
+    },
+  });
 
   // Sincronización automática en tiempo real de respuestas del proveedor (Sí hay / No hay, Costo, Tiempo, Envío)
   useEffect(() => {
@@ -2920,6 +2968,22 @@ export default function PaginaDetallePropuesta() {
       const key = String(item.id);
       if (seenIds.has(key)) return false;
       seenIds.add(key);
+      if (orden?.id && key === String(orden.id)) return true;
+      const st = String(item.status || "").trim().toLowerCase();
+      const qs = String(item.quoteStatus || "").trim().toLowerCase();
+      const ds = String(item.deliveryStatus || "").trim().toLowerCase();
+      if (
+        qs === "pagado" ||
+        st === "pagado" ||
+        st === "facturado" ||
+        st === "cobrado" ||
+        ds === "pagado" ||
+        ds === "facturado" ||
+        ds === "cobrado" ||
+        ds === "entregado"
+      ) {
+        return false;
+      }
       return true;
     });
   }, [orden, listaPropuestas]);
@@ -2965,7 +3029,6 @@ export default function PaginaDetallePropuesta() {
     (targetAuto: any) => {
       if (!targetAuto?.id || targetAuto.id === orden?.id) return;
       try {
-        localStorage.setItem("taller_orden_activa_id", targetAuto.id);
         if (typeof window !== "undefined") {
           window.history.replaceState(
             null,
@@ -3141,7 +3204,12 @@ export default function PaginaDetallePropuesta() {
         body: JSON.stringify({ orderId: orden.id, quoteStatus: nuevoEstado }),
       });
       if (res.ok) {
-        const nuevoStatusOrden = nuevoEstado === "Pausada" ? "Pausada" : "En Proceso";
+        const nuevoStatusOrden =
+          nuevoEstado === "Aprobado"
+            ? "Reparación"
+            : nuevoEstado === "Pausada"
+            ? "Pausada"
+            : "Diagnóstico";
         const nuevoQuoteStatusOrden =
           nuevoEstado === "Pausada" ? orden.quoteStatus || "Pendiente" : nuevoEstado;
 
@@ -3246,12 +3314,19 @@ export default function PaginaDetallePropuesta() {
       if (res.ok) {
         setEsPagadoLocal(nuevoEstado === "Pagado");
         if (nuevoEstado === "Pagado") {
+          setListaPropuestas((prev) => prev.filter((item) => item.id !== orden.id));
           try {
             const activaId = localStorage.getItem("taller_orden_activa_id");
             if (activaId === orden.id || activaId === orden.orderNumber) {
               localStorage.removeItem("taller_orden_activa_id");
             }
           } catch { }
+        } else {
+          setListaPropuestas((prev) =>
+            prev.some((item) => item.id === orden.id)
+              ? prev.map((item) => (item.id === orden.id ? { ...item, quoteStatus: nuevoEstado } : item))
+              : [{ ...orden, quoteStatus: nuevoEstado }, ...prev]
+          );
         }
         mostrarToast(nuevoEstado === "Pagado" ? "Trabajo marcado como Pagado (retirado de Pista de Taller)" : "Estado: Aprobado");
       } else {
@@ -3820,8 +3895,8 @@ export default function PaginaDetallePropuesta() {
       <div className="print:hidden">
         <Header />
 
-        {/* Encabezado Morado de Orden de Servicio / Propuesta con Carrusel Deslizable */}
-        <section className="border-b border-purple-200/70 dark:border-purple-500/20 bg-purple-50/60 dark:bg-purple-950/15">
+        {/* Encabezado muy suave estilo Taller con acento Morado + Azul Zafiro */}
+        <section className="border-b border-zinc-200/70 dark:border-white/10 bg-white/60 dark:bg-transparent">
           <div className="w-full max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 py-2.5 flex flex-col items-stretch gap-2.5 sm:gap-3">
             {/* FILA 1: FLECHA VOLVER (←) + ORDEN DE SERVICIO #00001 + ACCIONES */}
             <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
@@ -4058,7 +4133,7 @@ export default function PaginaDetallePropuesta() {
                       }}
                       aria-pressed={esActivo}
                       className={`snap-start shrink-0 w-full min-h-[76px] sm:min-h-[68px] px-3.5 py-2.5 sm:px-3 sm:py-2 rounded-2xl sm:rounded-xl border text-left flex items-center justify-between gap-3 transition-colors cursor-pointer ${esActivo
-                        ? "bg-purple-50/90 dark:bg-purple-950/35 border-purple-300 dark:border-purple-500/40 shadow-sm"
+                        ? "bg-gradient-to-r from-purple-50/80 via-purple-50/60 to-blue-50/70 dark:from-purple-500/10 dark:via-purple-500/[0.08] dark:to-blue-500/10 border-purple-300/70 dark:border-purple-400/25 shadow-sm"
                         : "bg-white dark:bg-[#111113] border-zinc-200 dark:border-white/10"
                         }`}
                     >
@@ -4072,8 +4147,8 @@ export default function PaginaDetallePropuesta() {
                             setFotoZoom(fotoVehiculoCard);
                           }
                         }}
-                        className={`relative w-16 h-14 sm:w-14 sm:h-12 rounded-xl sm:rounded-lg shrink-0 bg-purple-100/70 dark:bg-purple-500/10 text-purple-600 dark:text-purple-300 flex items-center justify-center overflow-hidden border border-purple-200/60 dark:border-purple-500/20 group/thumb ${fotoVehiculoCard
-                          ? "cursor-zoom-in hover:ring-2 hover:ring-purple-500/80 hover:scale-[1.04] transition-all"
+                        className={`relative w-16 h-14 sm:w-14 sm:h-12 rounded-xl sm:rounded-lg shrink-0 bg-purple-100/70 dark:bg-purple-500/15 text-purple-600 dark:text-purple-300 flex items-center justify-center overflow-hidden border border-purple-200/70 dark:border-purple-400/25 group/thumb ${fotoVehiculoCard
+                          ? "cursor-zoom-in hover:ring-2 hover:ring-purple-400/70 hover:scale-[1.04] transition-all"
                           : ""
                           }`}
                       >
@@ -4203,7 +4278,7 @@ export default function PaginaDetallePropuesta() {
       <main className="w-full max-w-[1920px] mx-auto p-3 sm:p-6 md:p-8 lg:px-8 mt-2 sm:mt-4 print:m-0 print:p-0 print:max-w-none space-y-4">
         {/* SELECTOR 4 EN 1 DE ESPECIALIDADES (AL MARCAR CAMBIA IGUAL QUE EN TALLER: Taller -> Lubricentro -> Car Wash -> Tecnicentro) */}
         <div className="print:hidden flex flex-wrap items-center justify-between w-full gap-2 py-1">
-          <div className="flex items-center gap-2 w-full min-w-0 sm:w-auto sm:max-w-full py-0.5">
+          <div className="flex items-center justify-between gap-2 w-full min-w-0 py-0.5">
             <div className="flex items-center p-1 rounded-2xl bg-white dark:bg-[#0d0d0e] border border-zinc-200 dark:border-white/10 backdrop-blur-md shadow-sm dark:shadow-xl">
               {(() => {
                 const MODULOS_PROP = [
@@ -4286,21 +4361,23 @@ export default function PaginaDetallePropuesta() {
             <div className="flex items-center gap-2 ml-auto">
               <button
                 type="button"
-                onClick={() => abrirModalProveedor("MASIVO")}
+                onClick={() => router.push(`/presupuestos/${encodeURIComponent(orden.id)}/pedir`)}
                 className={`h-9 px-3.5 rounded-xl text-xs sm:text-sm transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-95 border backdrop-blur-sm font-semibold relative ${itemsMarcadosProveedor.length > 0
-                  ? "bg-blue-600 hover:bg-blue-500 text-white border-blue-400/50 shadow-md shadow-blue-500/20"
-                  : "bg-zinc-900/5 hover:bg-zinc-900/10 dark:bg-white/[0.06] dark:hover:bg-white/[0.12] border-zinc-300/80 dark:border-white/15 text-zinc-700 dark:text-zinc-200"
+                  ? "bg-purple-500/15 hover:bg-purple-500/25 text-purple-700 dark:text-purple-200 border-purple-400/50 dark:border-purple-400/40 shadow-sm shadow-purple-500/15"
+                  : "bg-purple-500/10 hover:bg-purple-500/15 border-purple-300/60 dark:border-purple-400/25 text-purple-700 dark:text-purple-300"
                   }`}
-                title="Abrir flotante con todos los pedidos que se van a proveedor"
+                title="Abrir página de pedidos marcados para asignar proveedores"
               >
                 <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.9}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 18.75a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 0 1-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 0 0-3.213-9.193 2.056 2.056 0 0 0-1.58-.86H14.25M16.5 18.75h-2.25m0-11.175V14.25m0 0H2.25m12 0v4.5m0-4.5H16.5" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 7.5A1.5 1.5 0 0 1 3.75 6H14v10.5H8.5m-4 0H3.75a1.5 1.5 0 0 1-1.5-1.5V7.5ZM14 9h3.88a1.5 1.5 0 0 1 1.248.668l2.122 3.182c.163.245.25.533.25.828V15a1.5 1.5 0 0 1-1.5 1.5h-.5m-4 0H14" />
+                  <circle cx="6.5" cy="17.5" r="1.75" />
+                  <circle cx="17.5" cy="17.5" r="1.75" />
                 </svg>
-                <span className="whitespace-nowrap">Pedidos Proveedor</span>
+                <span className="whitespace-nowrap">Pedir</span>
                 <span
                   className={`min-w-5 h-5 px-1.5 rounded-full text-[11px] font-bold inline-flex items-center justify-center transition-all ${itemsMarcadosProveedor.length > 0
-                    ? "bg-white text-blue-700 shadow-xs"
-                    : "bg-zinc-200 dark:bg-white/15 text-zinc-600 dark:text-zinc-300"
+                    ? "bg-purple-500/25 text-purple-800 dark:bg-purple-400/25 dark:text-purple-100"
+                    : "bg-purple-500/15 text-purple-700 dark:bg-purple-400/15 dark:text-purple-300"
                     }`}
                 >
                   {itemsMarcadosProveedor.length}

@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Header } from "@/components/Header";
 import { CollapsibleMetrics } from "@/components/CollapsibleMetrics";
 import { isProtectedAdminEmail } from "@/lib/admin-accounts";
+import { useRealtimeSync } from "@/hooks/useRealtimeSync";
 
 // ============================================================================
 // INTERFACES Y TIPOS
@@ -145,7 +146,7 @@ function formatearFechaHora(createdAt?: string | null, dateIn?: string | null): 
   return { fecha, hora };
 }
 
-function getEstadoTallerPropuesta(orden: OrdenResumen, estaTrabajandoManual?: boolean) {
+function getEstadoTallerPropuesta(orden: OrdenResumen, _estaTrabajandoManual?: boolean) {
   const statusLower = (orden.status || "").trim().toLowerCase();
   const quoteStatusLower = (orden.quoteStatus || "").trim().toLowerCase();
   const esPagado =
@@ -174,7 +175,6 @@ function getEstadoTallerPropuesta(orden: OrdenResumen, estaTrabajandoManual?: bo
   }
 
   const esTrabajando =
-    Boolean(estaTrabajandoManual) ||
     quoteStatusLower === "aprobado" ||
     quoteStatusLower === "aceptado" ||
     quoteStatusLower.includes("aprob") ||
@@ -268,23 +268,17 @@ export default function PanelPresupuestosPage() {
 
   const toggleOrdenTrabajando = (id: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
-    setOrdenTrabajandoId((prev) => {
-      const nuevo = prev === id ? null : id;
-      if (typeof window !== "undefined") {
-        if (nuevo) {
-          localStorage.setItem("taller_orden_activa_id", nuevo);
-          // Sincronizar con backend para reflejo en panel taller
-          void fetch("/api/presupuestos/estado", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ orderId: id, quoteStatus: "Aprobado" }),
-          }).catch(() => {});
-        } else {
-          localStorage.removeItem("taller_orden_activa_id");
-        }
+    const estabaMarcada = ordenTrabajandoId === id;
+    const nuevo = estabaMarcada ? null : id;
+    setOrdenTrabajandoId(nuevo);
+    if (typeof window !== "undefined") {
+      if (nuevo) {
+        localStorage.setItem("taller_orden_activa_id", nuevo);
+      } else {
+        localStorage.removeItem("taller_orden_activa_id");
       }
-      return nuevo;
-    });
+    }
+    void handleCambiarEstadoPropuesta(id, nuevo ? "Aprobado" : "Pendiente");
   };
 
   // Cambiar estado directo de propuesta (Aprobar / Pausar / Esperar) para que impacte en Taller
@@ -330,10 +324,10 @@ export default function PanelPresupuestosPage() {
             localStorage.removeItem("taller_orden_activa_id");
           } catch { }
         }
-        // Actualizar estado local inmediatamente
+        // Actualizar estado local inmediatamente solo para la orden modificada
         setOrdenes((prev) =>
           prev.map((o) =>
-            o.id === orderId || o.orderNumber === orderId
+            o.id === orderId
               ? {
                 ...o,
                 status:
@@ -423,13 +417,9 @@ export default function PanelPresupuestosPage() {
     }
   };
 
-  // Navegación a la página de expediente / propuesta dedicada
+  // Navegación a la página de expediente / propuesta dedicada (sin alterar el estado)
   const irAPropuesta = (id: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
-    setOrdenTrabajandoId(id);
-    if (typeof window !== "undefined") {
-      localStorage.setItem("taller_orden_activa_id", id);
-    }
     router.push(`/presupuestos/${id}`);
   };
 
@@ -493,9 +483,21 @@ export default function PanelPresupuestosPage() {
     cargarOrdenes(false);
     const interval = setInterval(() => {
       cargarOrdenes(true);
-    }, 4000);
+    }, 15000);
     return () => clearInterval(interval);
   }, [cargarOrdenes]);
+
+  useRealtimeSync({
+    channels: ["presupuestos", "taller", "ordenes"],
+    onEvent: (ev) => {
+      if (ev.action === "deleted" && ev.entityId) {
+        setOrdenes((prev) =>
+          prev.filter((o) => o.id !== ev.entityId && o.orderNumber !== ev.entityId)
+        );
+      }
+    },
+    onRefresh: () => cargarOrdenes(true),
+  });
 
   // ============================================================================
   // RENDER PRINCIPAL
@@ -754,73 +756,27 @@ export default function PanelPresupuestosPage() {
                             {fecha}{hora ? ` · ${hora}` : ""}
                           </span>
                           <div className="flex items-center gap-1.5 shrink-0 flex-wrap justify-end" onClick={(e) => e.stopPropagation()}>
-                            {stTaller.tipo === "pagado" ? (
-                              <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-normal border ${stTaller.badgeClass}`}>
-                                {stTaller.label}
-                              </span>
-                            ) : (
-                              <div className="relative inline-block text-left">
-                                <button
-                                  type="button"
-                                  disabled={cambiandoEstadoId === orden.id}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setMenuTallerFilaId(menuTallerFilaId === orden.id ? null : orden.id);
-                                  }}
-                                  className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-normal border transition-all hover:brightness-110 active:scale-95 cursor-pointer disabled:opacity-50 ${stTaller.badgeClass}`}
-                                  title="Estado Taller (Trabajando, Pausa, En espera)"
-                                >
-                                  <span className={`w-1.5 h-1.5 rounded-full ${stTaller.dotClass}`} />
-                                  <span>{stTaller.label}</span>
-                                  <svg className="w-2.5 h-2.5 opacity-60 ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                                  </svg>
-                                </button>
-                                {menuTallerFilaId === orden.id && (
-                                  <>
-                                    <div className="fixed inset-0 z-40" onClick={() => setMenuTallerFilaId(null)} />
-                                    <div className="absolute right-0 mt-1 w-36 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-xl overflow-hidden z-50 py-1 text-xs">
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          setMenuTallerFilaId(null);
-                                          handleCambiarEstadoPropuesta(orden.id, "Aprobado");
-                                        }}
-                                        className={`w-full px-3 py-2 text-left flex items-center gap-2 hover:bg-emerald-500/10 transition-colors ${stTaller.tipo === "trabajando" ? "text-emerald-600 font-bold bg-emerald-500/5" : "text-zinc-700 dark:text-zinc-300"
-                                          }`}
-                                      >
-                                        <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                                        <span>Trabajando</span>
-                                      </button>
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          setMenuTallerFilaId(null);
-                                          handleCambiarEstadoPropuesta(orden.id, "Pausada");
-                                        }}
-                                        className={`w-full px-3 py-2 text-left flex items-center gap-2 hover:bg-amber-500/10 transition-colors ${stTaller.tipo === "pausa" ? "text-amber-600 font-bold bg-amber-500/5" : "text-zinc-700 dark:text-zinc-300"
-                                          }`}
-                                      >
-                                        <span className="w-2 h-2 rounded-full bg-amber-500" />
-                                        <span>Pausa</span>
-                                      </button>
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          setMenuTallerFilaId(null);
-                                          handleCambiarEstadoPropuesta(orden.id, "Pendiente");
-                                        }}
-                                        className={`w-full px-3 py-2 text-left flex items-center gap-2 hover:bg-amber-500/10 transition-colors ${stTaller.tipo === "espera" ? "text-amber-600 font-bold bg-amber-500/5" : "text-zinc-700 dark:text-zinc-300"
-                                          }`}
-                                      >
-                                        <span className="w-2 h-2 rounded-full bg-amber-500/70" />
-                                        <span>En espera</span>
-                                      </button>
-                                    </div>
-                                  </>
-                                )}
-                              </div>
-                            )}
+                            <button
+                              type="button"
+                              disabled={cambiandoEstadoId === orden.id}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const siguienteEstado =
+                                  stTaller.tipo === "pagado"
+                                    ? "Pendiente"
+                                    : stTaller.tipo === "espera"
+                                      ? "Aprobado"
+                                      : stTaller.tipo === "trabajando"
+                                        ? "Pausada"
+                                        : "Pagado";
+                                handleCambiarEstadoPropuesta(orden.id, siguienteEstado);
+                              }}
+                              className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-normal border transition-all hover:brightness-110 active:scale-95 cursor-pointer disabled:opacity-50 ${stTaller.badgeClass}`}
+                              title="Clic para cambiar estado (En espera → Trabajando → Pausa → Pagado)"
+                            >
+                              <span className={`w-1.5 h-1.5 rounded-full ${stTaller.dotClass}`} />
+                              <span>{stTaller.label}</span>
+                            </button>
 
                             <button
                               type="button"
@@ -911,33 +867,27 @@ export default function PanelPresupuestosPage() {
                                 ${orden.totalVentaEstimada.toFixed(2)}
                               </td>
                               <td className="py-3 px-4 text-center whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-                                {stTaller.tipo === "pagado" ? (
-                                  <span
-                                    className={`text-xs font-normal px-2.5 py-1 rounded-full border inline-flex items-center gap-1.5 ${stTaller.badgeClass}`}
-                                  >
-                                    {stTaller.label}
-                                  </span>
-                                ) : (
-                                  <button
-                                    type="button"
-                                    disabled={cambiandoEstadoId === orden.id}
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      const siguienteEstado =
-                                        stTaller.tipo === "espera"
+                                <button
+                                  type="button"
+                                  disabled={cambiandoEstadoId === orden.id}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    const siguienteEstado =
+                                      stTaller.tipo === "pagado"
+                                        ? "Pendiente"
+                                        : stTaller.tipo === "espera"
                                           ? "Aprobado"
                                           : stTaller.tipo === "trabajando"
                                             ? "Pausada"
-                                            : "Pendiente";
-                                      handleCambiarEstadoPropuesta(orden.id, siguienteEstado);
-                                    }}
-                                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-normal border transition-all hover:brightness-110 active:scale-95 cursor-pointer disabled:opacity-50 ${stTaller.badgeClass}`}
-                                    title="Clic para cambiar estado en Taller (En espera → Trabajando → Pausa)"
-                                  >
-                                    <span className={`w-1.5 h-1.5 rounded-full ${stTaller.dotClass}`} />
-                                    <span>{stTaller.label}</span>
-                                  </button>
-                                )}
+                                            : "Pagado";
+                                    handleCambiarEstadoPropuesta(orden.id, siguienteEstado);
+                                  }}
+                                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-normal border transition-all hover:brightness-110 active:scale-95 cursor-pointer disabled:opacity-50 ${stTaller.badgeClass}`}
+                                  title="Clic para cambiar estado (En espera → Trabajando → Pausa → Pagado)"
+                                >
+                                  <span className={`w-1.5 h-1.5 rounded-full ${stTaller.dotClass}`} />
+                                  <span>{stTaller.label}</span>
+                                </button>
                               </td>
                               <td className="py-3 px-4 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                                 <div className="flex items-center justify-end gap-1.5">

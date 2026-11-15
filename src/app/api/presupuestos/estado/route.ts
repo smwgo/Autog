@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma, withRetry } from "@/lib/prisma";
+import { emitRealtimeEvent } from "@/lib/realtime";
 import fs from "fs";
 import path from "path";
 
@@ -121,9 +122,10 @@ export async function POST(request: Request) {
            SET "quoteStatus" = $2,
                "quoteApprovedAt" = $3::timestamp,
                "status" = CASE
-                 WHEN $2 = 'Aprobado' THEN $4
+                 WHEN $2 = 'Aprobado' THEN 'Reparación'
+                 WHEN $2 = 'Pendiente' THEN 'Diagnóstico'
                  WHEN "status" IN ('Pagado', 'PAGADO', 'Facturado', 'FACTURADO', 'Pausada', 'PAUSADA') THEN $4
-                 ELSE "status"
+                 ELSE $4
                END,
                "deliveryStatus" = CASE WHEN "deliveryStatus" IN ('Facturado', 'FACTURADO', 'Pagado', 'PAGADO') THEN 'Pendiente' ELSE "deliveryStatus" END,
                "updatedAt" = CURRENT_TIMESTAMP
@@ -157,7 +159,7 @@ export async function POST(request: Request) {
                 changed = true;
                 return {
                   ...mo,
-                  status: esPagado ? "Pagado" : esPausado ? "Pausada" : estadoNormalizado === "Aprobado" ? "En Proceso" : "Pendiente",
+                  status: esPagado ? "Pagado" : esPausado ? "Pausada" : estadoNormalizado === "Aprobado" ? "Reparación" : "Diagnóstico",
                   quoteStatus: esPagado
                     ? "Pagado"
                     : esPausado
@@ -196,6 +198,12 @@ export async function POST(request: Request) {
         }
       } catch {}
 
+      emitRealtimeEvent({ channel: "presupuestos", action: "status_changed", entityId: orderId });
+      emitRealtimeEvent({ channel: "taller", action: "status_changed", entityId: orderId });
+      if (esPagado) {
+        emitRealtimeEvent({ channel: "ordenes", action: "status_changed", entityId: orderId });
+      }
+
       return NextResponse.json({
         success: true,
         orderId,
@@ -203,12 +211,12 @@ export async function POST(request: Request) {
         quoteStatus: estadoNormalizado,
         quoteApprovedAt: approvedAt,
         message: esPagado
-          ? "✓ Propuesta marcada como Pagada. Se retiró de Taller y quedó en el historial."
+          ? "✓ Pagado"
           : esPausado
-          ? "⏸ Orden puesta en Pausa. Ya figura '● Pausada' en Taller."
+          ? "⏸ En pausa"
           : estadoNormalizado === "Aprobado"
-          ? "Propuesta aprobada con éxito. Ya figura '● Trabajando' en Taller."
-          : "Propuesta puesta en espera. Ya figura '● En espera' en Taller.",
+          ? "● Trabajando"
+          : "● En espera",
       });
     });
   } catch (error: any) {

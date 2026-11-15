@@ -159,10 +159,12 @@ export async function GET(request: Request) {
         if (fs.existsSync(mirrorPath)) {
           const mirrorData = JSON.parse(fs.readFileSync(mirrorPath, "utf-8"));
           if (Array.isArray(mirrorData?.workshopOrder)) {
+            const normNum = (v: any) => String(v || "").replace(/^(?:ot|ord)[-\s#]*/gi, "").replace(/^#+/, "").trim().toUpperCase();
             const existingIds = new Set(rows.map((r: any) => r.id));
-            const existingNumbers = new Set(rows.map((r: any) => r.orderNumber));
+            const existingNumbers = new Set(rows.map((r: any) => normNum(r.orderNumber)).filter(Boolean));
             for (const mo of mirrorData.workshopOrder) {
-              if (mo?.id && !existingIds.has(mo.id) && !existingNumbers.has(mo.orderNumber)) {
+              const moNorm = normNum(mo?.orderNumber);
+              if (mo?.id && !existingIds.has(mo.id) && (!moNorm || !existingNumbers.has(moNorm))) {
                 // Aplicar filtros básicos si corresponden
                 if (busqueda) {
                   const bStr = `${mo.plate || ""} ${mo.client || ""} ${mo.orderNumber || ""} ${mo.vehicle || ""}`.toLowerCase();
