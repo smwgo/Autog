@@ -3,6 +3,7 @@ import { spawn, execFileSync, ChildProcessWithoutNullStreams } from "child_proce
 import fs from "fs";
 import path from "path";
 import os from "os";
+import { getVerifiedSessionFromRequest, isStaffSession } from "@/lib/signed-tokens";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -390,6 +391,13 @@ if (process.platform === "win32") {
 }
 
 export async function POST(req: NextRequest) {
+  const session = getVerifiedSessionFromRequest(req);
+  if (!session) {
+    return NextResponse.json({ success: false, error: "No autorizado." }, { status: 401 });
+  }
+  if (!isStaffSession(session)) {
+    return NextResponse.json({ success: false, error: "Acceso denegado." }, { status: 403 });
+  }
   try {
     const body = await req.json();
     const action = body?.action;

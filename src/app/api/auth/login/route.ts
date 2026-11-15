@@ -3,6 +3,11 @@ import { prisma, withRetry } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { isProtectedAdminEmail } from "@/lib/admin-accounts";
+import {
+  SESSION_COOKIE_NAME,
+  SESSION_SIG_COOKIE_NAME,
+  signSessionCookieValue,
+} from "@/lib/signed-tokens";
 
 export const dynamic = "force-dynamic";
 
@@ -85,19 +90,32 @@ export async function POST(req: Request) {
           );
         }
 
-        // Comparar contraseña con pinCode (o hash bcrypt si fuera el caso)
+        // Comparar contraseña con pinCode (soporta hash bcrypt y migración automática de PIN legado)
         let match = false;
+        let needsPinUpgrade = false;
         const storedPin = String(appUser.pinCode || "").trim();
 
         if (storedPin) {
-          if (cleanPassword === storedPin || password === storedPin) {
+          if (storedPin.startsWith("$2a$") || storedPin.startsWith("$2b$") || storedPin.startsWith("$2y$")) {
+            match =
+              (await bcrypt.compare(cleanPassword, storedPin)) ||
+              (await bcrypt.compare(password, storedPin));
+          } else if (cleanPassword === storedPin || password === storedPin) {
             match = true;
-          } else if (storedPin.startsWith("$2a$") || storedPin.startsWith("$2b$")) {
-            match = await bcrypt.compare(cleanPassword, storedPin);
+            needsPinUpgrade = true;
           }
         }
 
         if (match) {
+          if (needsPinUpgrade) {
+            try {
+              const hashedPin = await bcrypt.hash(storedPin, 10);
+              await prisma.appUserAccess.update({
+                where: { id: appUser.id },
+                data: { pinCode: hashedPin },
+              });
+            } catch {}
+          }
           const roleUpper = (appUser.role || "").toUpperCase();
           const isGerente =
             roleUpper === "GERENCIA" ||
@@ -167,12 +185,21 @@ export async function POST(req: Request) {
       redirectTo,
     });
 
-    response.cookies.set("auth_session", JSON.stringify(authenticatedUser), {
-      httpOnly: false,
+    const sessionJson = JSON.stringify(authenticatedUser);
+    const cookieCommon = {
       secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
+      sameSite: "lax" as const,
       path: "/",
       maxAge: 60 * 60 * 24 * 7,
+    };
+
+    response.cookies.set(SESSION_COOKIE_NAME, sessionJson, {
+      ...cookieCommon,
+      httpOnly: false,
+    });
+    response.cookies.set(SESSION_SIG_COOKIE_NAME, signSessionCookieValue(sessionJson), {
+      ...cookieCommon,
+      httpOnly: true,
     });
 
     return response;

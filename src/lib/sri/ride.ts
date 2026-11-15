@@ -206,24 +206,32 @@ export async function generarRidePdf(data: RideData): Promise<Buffer> {
     let tableY = clientY + 54;
     const tableWidth = colWidth * 2 + 25;
 
-    // Encabezado tabla
-    doc.rect(leftColX, tableY, tableWidth, 18).fillColor("#f1f5f9").fill();
-    doc.rect(leftColX, tableY, tableWidth, 18).strokeColor("#cbd5e1").lineWidth(0.8).stroke();
+    const drawTableHeader = (headerY: number) => {
+      doc.rect(leftColX, headerY, tableWidth, 18).fillColor("#f1f5f9").fill();
+      doc.rect(leftColX, headerY, tableWidth, 18).strokeColor("#cbd5e1").lineWidth(0.8).stroke();
 
-    doc.fontSize(7.5).font("Helvetica-Bold").fillColor("#0f172a");
-    doc.text("Cod. Principal", leftColX + 6, tableY + 5, { width: 65 });
-    doc.text("Cant.", leftColX + 75, tableY + 5, { width: 35, align: "right" });
-    doc.text("Descripción", leftColX + 120, tableY + 5, { width: 230 });
-    doc.text("P. Unitario", leftColX + 355, tableY + 5, { width: 55, align: "right" });
-    doc.text("Descuento", leftColX + 415, tableY + 5, { width: 55, align: "right" });
-    doc.text("Precio Total", leftColX + 475, tableY + 5, { width: 55, align: "right" });
+      doc.fontSize(7.5).font("Helvetica-Bold").fillColor("#0f172a");
+      doc.text("Cod. Principal", leftColX + 6, headerY + 5, { width: 65 });
+      doc.text("Cant.", leftColX + 75, headerY + 5, { width: 35, align: "right" });
+      doc.text("Descripción", leftColX + 120, headerY + 5, { width: 230 });
+      doc.text("P. Unitario", leftColX + 355, headerY + 5, { width: 55, align: "right" });
+      doc.text("Descuento", leftColX + 415, headerY + 5, { width: 55, align: "right" });
+      doc.text("Precio Total", leftColX + 475, headerY + 5, { width: 55, align: "right" });
+      return headerY + 18;
+    };
 
-    tableY += 18;
+    tableY = drawTableHeader(tableY);
 
-    // Filas
+    // Filas con paginación automática A4 para facturas largas
+    const pageBottomLimit = doc.page.height - 50;
     doc.font("Helvetica").fontSize(7.5).fillColor("#1e293b");
     for (const item of data.items) {
       const rowHeight = 16;
+      if (tableY + rowHeight > pageBottomLimit) {
+        doc.addPage();
+        tableY = drawTableHeader(40);
+        doc.font("Helvetica").fontSize(7.5).fillColor("#1e293b");
+      }
       doc.rect(leftColX, tableY, tableWidth, rowHeight).strokeColor("#e2e8f0").lineWidth(0.5).stroke();
 
       doc.text(item.codigoPrincipal || "-", leftColX + 6, tableY + 4, { width: 65 });
@@ -237,7 +245,11 @@ export async function generarRidePdf(data: RideData): Promise<Buffer> {
     }
 
     // --- SECCIÓN INFERIOR: INFO ADICIONAL + TOTALES ---
-    const bottomY = tableY + 12;
+    let bottomY = tableY + 12;
+    if (bottomY + 155 > doc.page.height - 30) {
+      doc.addPage();
+      bottomY = 40;
+    }
     const infoWidth = 270;
     const totalsWidth = 250;
     const totalsX = leftColX + tableWidth - totalsWidth;

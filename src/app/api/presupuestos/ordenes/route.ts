@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma, withRetry } from "@/lib/prisma";
+import { signSupplierScope } from "@/lib/signed-tokens";
 import fs from "fs";
 import path from "path";
 
@@ -210,12 +211,16 @@ export async function GET(request: Request) {
           findings = typeof r.inspectionFindingsJson === "string" ? JSON.parse(r.inspectionFindingsJson) : (r.inspectionFindingsJson || []);
         } catch { findings = []; }
 
-        // Calcular costo total de compra y valor total de venta
+        // Calcular costo total de compra y valor total de venta con cantidades, descuento e IVA
         const totalVentaRepuestos = items.reduce((acc, it) => acc + (Number(it.price || 0) * Number(it.qty || 1)), 0);
         const totalCostoRepuestos = items.reduce((acc, it) => acc + (Number(it.costPrice || 0) * Number(it.qty || 1)), 0);
-        const totalVentaServicios = services.reduce((acc, sv) => acc + Number(sv.price || 0), 0);
+        const totalVentaServicios = services.reduce((acc, sv) => acc + (Number(sv.price || 0) * Number(sv.qty || 1)), 0);
         const rawItemsSum = totalVentaRepuestos + totalVentaServicios;
-        const totalVentaEstimada = rawItemsSum > 0 ? rawItemsSum : Number(r.totalCost || 0);
+        const discount = Number(r.quoteDiscount ?? 0);
+        const taxRate = r.quoteTaxRate !== null && r.quoteTaxRate !== undefined ? Number(r.quoteTaxRate) : 15;
+        const baseImponible = Math.max(0, rawItemsSum - (rawItemsSum * discount) / 100);
+        const totalConIva = Number((baseImponible * (1 + taxRate / 100)).toFixed(2));
+        const totalVentaEstimada = rawItemsSum > 0 ? totalConIva : Number(r.totalCost || 0);
         const totalCostoEstimado = totalCostoRepuestos;
         const utilidadEstimada = totalVentaEstimada - totalCostoEstimado;
         const margenPercent = totalVentaEstimada > 0 ? Math.round((utilidadEstimada / totalVentaEstimada) * 100) : 0;
@@ -250,6 +255,8 @@ export async function GET(request: Request) {
               : r.quoteStatus || (r.status === "EN_CAJA" ? "Aprobado" : "Pendiente"),
           quoteApprovedAt: r.quoteApprovedAt,
           posRequestId: r.posRequestId,
+          supplierSig: signSupplierScope(r.id),
+          dailySupplierSig: signSupplierScope("daily"),
           itemsCount: items.length,
           servicesCount: services.length,
           findingsCount: findings.length,
@@ -301,6 +308,8 @@ export async function GET(request: Request) {
                 quoteStatus: q.status === "Aprobada" ? "Aprobado" : (q.status || "Pendiente"),
                 quoteApprovedAt: q.status === "Aprobada" || q.status === "Aprobado" ? q.updatedAt : null,
                 posRequestId: null,
+                supplierSig: signSupplierScope(q.id),
+                dailySupplierSig: signSupplierScope("daily"),
                 itemsCount: items.length,
                 servicesCount: 0,
                 findingsCount: 0,

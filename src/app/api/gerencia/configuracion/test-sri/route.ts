@@ -1,7 +1,14 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { getVerifiedSessionFromRequest, isAdminSession } from "@/lib/signed-tokens";
 
 export async function POST(req: Request) {
+  const session = getVerifiedSessionFromRequest(req);
+  if (!session) {
+    return NextResponse.json({ success: false, error: "No autorizado." }, { status: 401 });
+  }
+  if (!isAdminSession(session)) {
+    return NextResponse.json({ success: false, error: "Requiere permisos de Gerencia." }, { status: 403 });
+  }
   try {
     const body = await req.json().catch(() => ({}));
     const ambiente = body.ambiente || "1";

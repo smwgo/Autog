@@ -224,7 +224,7 @@ export async function POST(request: Request) {
       items = [],
       paymentMethod = "Efectivo",
       discount = 0,
-      taxPercent = 0.16,
+      taxPercent = 0.15,
       vehiclePlate = null,
       vehicleModel = null,
       branch = null,
@@ -345,14 +345,16 @@ export async function POST(request: Request) {
           name = dbProduct.name;
           code = dbProduct.code;
 
-          const newStock = Math.max(0, dbProduct.stock - quantity);
-          const newStatus = calcularEstado(newStock, dbProduct.minStock);
+          const curPrincipal = Number(dbProduct.stock || 0);
+          const curSucursal = Number((dbProduct as any).stockNorte || 0);
+          const nextPrincipal = targetBranch === "SUCURSAL" ? curPrincipal : Math.max(0, curPrincipal - quantity);
+          const nextSucursal = targetBranch === "SUCURSAL" ? Math.max(0, curSucursal - quantity) : curSucursal;
+          const newStatus = calcularEstado(nextPrincipal + nextSucursal, dbProduct.minStock);
           await tx.product.update({
             where: { id: dbProduct.id },
-            data: {
-              stock: newStock,
-              status: newStatus,
-            },
+            data: targetBranch === "SUCURSAL"
+              ? { stockNorte: nextSucursal, status: newStatus }
+              : { stock: nextPrincipal, status: newStatus },
           });
         }
 
@@ -370,27 +372,36 @@ export async function POST(request: Request) {
       }
 
       const numDiscount = Math.max(0, parseFloat(discount.toString()) || 0);
-      const taxCalc = Math.max(0, (subtotalCalc - numDiscount) * (parseFloat(taxPercent.toString()) || 0));
+      const parsedTaxRate = Number.isFinite(Number(taxPercent)) ? Number(taxPercent) : 0.15;
+      const effectiveTaxRate = parsedTaxRate > 1 ? parsedTaxRate / 100 : parsedTaxRate;
+      const taxCalc = Math.max(0, (subtotalCalc - numDiscount) * effectiveTaxRate);
       const totalCalc = Math.max(0, subtotalCalc - numDiscount + taxCalc);
 
       // Numeración correlativa secuencial: VENTA-001, VENTA-002 en adelante
-      const lastVenta = await tx.sale.findFirst({
+      const allVentasNums = await tx.sale.findMany({
         where: {
           OR: [
             { saleNumber: { startsWith: "VENTA-" } },
             { saleNumber: { startsWith: "VENTA " } },
           ],
         },
-        orderBy: { createdAt: "desc" },
         select: { saleNumber: true },
       });
 
       let nextSeq = 1;
-      if (lastVenta && lastVenta.saleNumber) {
-        const match = lastVenta.saleNumber.match(/\d+/);
+      let maxSeq = 0;
+      for (const v of allVentasNums) {
+        if (!v.saleNumber) continue;
+        const match = v.saleNumber.match(/\d+/);
         if (match) {
-          nextSeq = parseInt(match[0], 10) + 1;
+          const n = parseInt(match[0], 10);
+          if (!Number.isNaN(n) && n > maxSeq) {
+            maxSeq = n;
+          }
         }
+      }
+      if (maxSeq > 0) {
+        nextSeq = maxSeq + 1;
       }
       const saleNumber = `VENTA-${String(nextSeq).padStart(3, "0")}`;
 
@@ -478,6 +489,26 @@ export async function POST(request: Request) {
         }
       }
 
+      if (sourceRequest?.id || orderNumKey) {
+        try {
+          if (sourceRequest?.id) {
+            await (tx as any).orderRequest.update({
+              where: { id: sourceRequest.id },
+              data: { status: "DESPACHADO" },
+            });
+          } else {
+            await (tx as any).orderRequest.updateMany({
+              where: {
+                requestNumber: { in: [orderNumKey, `OT-${orderNumKey}`] },
+              },
+              data: { status: "DESPACHADO" },
+            });
+          }
+        } catch (reqErr) {
+          console.warn("Aviso al marcar OrderRequest como DESPACHADO:", reqErr);
+        }
+      }
+
       if (saleVehiclePlate) {
         try {
           const histId = "hst_" + Math.random().toString(36).substring(2, 9) + Date.now().toString(36);
@@ -552,6 +583,8 @@ export async function POST(request: Request) {
     // 2. Facturación Electrónica SRI automática
     let facturaElectronicaRes: any = null;
     const debeEmitirFactura = body.emitirFacturaElectronica !== false;
+    const rawTaxRate = Number.isFinite(Number(taxPercent)) ? Number(taxPercent) : 0.15;
+    const tarifaIvaDinamica = rawTaxRate > 1 ? Math.round(rawTaxRate) : Math.round(rawTaxRate * 100);
 
     if (debeEmitirFactura) {
       try {
@@ -567,7 +600,7 @@ export async function POST(request: Request) {
             cantidad: Number(it.quantity || 1),
             precioUnitario: Number(it.price || 0),
             descuento: 0,
-            tarifaIva: 15,
+            tarifaIva: tarifaIvaDinamica,
           })),
           metodoPago: sale.paymentMethod || "Efectivo",
           observaciones: `Venta POS #${sale.saleNumber}${sale.vehiclePlate ? ` • Placa: ${sale.vehiclePlate}` : ""}`,
@@ -600,7 +633,7 @@ export async function POST(request: Request) {
   } catch (error: any) {
     console.error("Error al registrar venta en base de datos:", error);
     return NextResponse.json(
-      { success: false, error: error.message || "Error al guardar venta en base de datos", stack: error.stack },
+      { success: false, error: error.message || "Error al guardar venta en base de datos" },
       { status: 500 }
     );
   }
@@ -650,46 +683,70 @@ export async function PATCH(request: Request) {
       );
     }
 
-    // Si se anula la venta y antes estaba completada, devolver el stock a inventario
+    const saleBranch = ((saleActual as any).branch || "").toString().toUpperCase().includes("SUCURSAL")
+      ? "SUCURSAL"
+      : "PRINCIPAL";
+
+    // Si se anula la venta y antes estaba completada, devolver el stock a inventario de la sede correspondiente
     if (status === "Anulada" && saleActual.status !== "Anulada") {
       for (const item of saleActual.items) {
         if (item.productId) {
           try {
-            await prisma.product.update({
-              where: { id: item.productId },
-              data: {
-                stock: { increment: item.quantity },
-              },
-            });
+            const dbProduct = await prisma.product.findUnique({ where: { id: item.productId } });
+            if (dbProduct) {
+              const curPrincipal = Number(dbProduct.stock || 0);
+              const curSucursal = Number((dbProduct as any).stockNorte || 0);
+              const nextPrincipal = saleBranch === "SUCURSAL" ? curPrincipal : curPrincipal + item.quantity;
+              const nextSucursal = saleBranch === "SUCURSAL" ? curSucursal + item.quantity : curSucursal;
+              await prisma.product.update({
+                where: { id: item.productId },
+                data: saleBranch === "SUCURSAL"
+                  ? {
+                      stockNorte: nextSucursal,
+                      status: calcularEstado(nextPrincipal + nextSucursal, dbProduct.minStock),
+                    }
+                  : {
+                      stock: nextPrincipal,
+                      status: calcularEstado(nextPrincipal + nextSucursal, dbProduct.minStock),
+                    },
+              });
+            }
           } catch (e) {
             console.warn(`Error al reponer stock del producto ${item.productId}:`, e);
           }
         }
       }
 
-      // Si la venta anulada fue en efectivo, ajustar saldo esperado en la caja abierta
-      if (saleActual.paymentMethod === "Efectivo") {
-        try {
-          const activeSession = await prisma.cashRegister.findFirst({
-            where: { status: "ABIERTA" },
-            orderBy: { openedAt: "desc" },
-          });
-          if (activeSession) {
+      // Ajustar caja abierta SOLO si pertenece a la misma sede y al turno abierto actual
+      try {
+        const activeSession = await prisma.cashRegister.findFirst({
+          where: { status: "ABIERTA", branch: saleBranch },
+          orderBy: { openedAt: "desc" },
+        });
+        if (activeSession && new Date(saleActual.createdAt) >= new Date(activeSession.openedAt)) {
+          const amount = Number(saleActual.total || 0);
+          const cashUpdate: any = {};
+          if (saleActual.paymentMethod === "Efectivo") {
+            cashUpdate.totalSalesCash = Math.max(0, Number(activeSession.totalSalesCash || 0) - amount);
+            cashUpdate.expectedCash = Math.max(0, Number(activeSession.expectedCash || 0) - amount);
+          } else if (saleActual.paymentMethod === "Tarjeta") {
+            cashUpdate.totalSalesCard = Math.max(0, Number(activeSession.totalSalesCard || 0) - amount);
+          } else if (saleActual.paymentMethod === "Transferencia") {
+            cashUpdate.totalSalesTransfer = Math.max(0, Number(activeSession.totalSalesTransfer || 0) - amount);
+          }
+          if (Object.keys(cashUpdate).length > 0) {
             await prisma.cashRegister.update({
               where: { id: activeSession.id },
-              data: {
-                totalSalesCash: { decrement: Number(saleActual.total) },
-                expectedCash: { decrement: Number(saleActual.total) },
-              },
+              data: cashUpdate,
             });
           }
-        } catch (cErr) {
-          console.warn("Error al ajustar caja por venta anulada:", cErr);
         }
+      } catch (cErr) {
+        console.warn("Error al ajustar caja por venta anulada:", cErr);
       }
     }
 
-    // Si se reactiva una venta anulada a completada, descontar inventario
+    // Si se reactiva una venta anulada a completada, descontar inventario de la sede correspondiente
     if (status === "Completada" && saleActual.status === "Anulada") {
       const itemsToDeduct = Array.isArray(items) && items.length > 0 ? items : saleActual.items;
       for (const item of itemsToDeduct) {
@@ -699,13 +756,21 @@ export async function PATCH(request: Request) {
             const dbProduct = await prisma.product.findUnique({ where: { id: prodId } });
             if (dbProduct) {
               const qty = Math.max(1, parseInt((item.qty || item.quantity || 1).toString(), 10));
-              const newStock = Math.max(0, dbProduct.stock - qty);
+              const curPrincipal = Number(dbProduct.stock || 0);
+              const curSucursal = Number((dbProduct as any).stockNorte || 0);
+              const nextPrincipal = saleBranch === "SUCURSAL" ? curPrincipal : Math.max(0, curPrincipal - qty);
+              const nextSucursal = saleBranch === "SUCURSAL" ? Math.max(0, curSucursal - qty) : curSucursal;
               await prisma.product.update({
                 where: { id: prodId },
-                data: {
-                  stock: newStock,
-                  status: calcularEstado(newStock, dbProduct.minStock),
-                },
+                data: saleBranch === "SUCURSAL"
+                  ? {
+                      stockNorte: nextSucursal,
+                      status: calcularEstado(nextPrincipal + nextSucursal, dbProduct.minStock),
+                    }
+                  : {
+                      stock: nextPrincipal,
+                      status: calcularEstado(nextPrincipal + nextSucursal, dbProduct.minStock),
+                    },
               });
             }
           } catch (e) {
@@ -826,24 +891,58 @@ export async function DELETE(request: Request) {
 
     const saleActual = await prisma.sale.findUnique({
       where: { id },
+      include: { items: true },
     });
 
-    // Ajustar sesión de caja abierta si la venta no estaba anulada
+    // Reponer stock por sede y ajustar sesión de caja abierta si la venta no estaba anulada
     if (saleActual && saleActual.status !== "Anulada") {
+      const saleBranch = ((saleActual as any).branch || "").toString().toUpperCase().includes("SUCURSAL")
+        ? "SUCURSAL"
+        : "PRINCIPAL";
+
+      for (const item of saleActual.items || []) {
+        if (item.productId) {
+          try {
+            const dbProduct = await prisma.product.findUnique({ where: { id: item.productId } });
+            if (dbProduct) {
+              const curPrincipal = Number(dbProduct.stock || 0);
+              const curSucursal = Number((dbProduct as any).stockNorte || 0);
+              const nextPrincipal = saleBranch === "SUCURSAL" ? curPrincipal : curPrincipal + item.quantity;
+              const nextSucursal = saleBranch === "SUCURSAL" ? curSucursal + item.quantity : curSucursal;
+              await prisma.product.update({
+                where: { id: item.productId },
+                data: saleBranch === "SUCURSAL"
+                  ? {
+                      stockNorte: nextSucursal,
+                      status: calcularEstado(nextPrincipal + nextSucursal, dbProduct.minStock),
+                    }
+                  : {
+                      stock: nextPrincipal,
+                      status: calcularEstado(nextPrincipal + nextSucursal, dbProduct.minStock),
+                    },
+              });
+            }
+          } catch (sErr) {
+            console.warn(`Error al reponer stock al eliminar venta (${item.productId}):`, sErr);
+          }
+        }
+      }
+
       const amount = Number(saleActual.total || 0);
       if (amount > 0) {
         try {
           const activeSession = await prisma.cashRegister.findFirst({
             where: {
               status: "ABIERTA",
-              branch: (saleActual as any).branch || "PRINCIPAL",
+              branch: saleBranch,
             },
             orderBy: { openedAt: "desc" },
           });
-          if (activeSession) {
+          if (activeSession && new Date(saleActual.createdAt) >= new Date(activeSession.openedAt)) {
             const updateData: any = {};
             if (saleActual.paymentMethod === "Efectivo") {
               updateData.totalSalesCash = Math.max(0, Number(activeSession.totalSalesCash || 0) - amount);
+              updateData.expectedCash = Math.max(0, Number(activeSession.expectedCash || 0) - amount);
             } else if (saleActual.paymentMethod === "Tarjeta") {
               updateData.totalSalesCard = Math.max(0, Number(activeSession.totalSalesCard || 0) - amount);
             } else if (saleActual.paymentMethod === "Transferencia") {

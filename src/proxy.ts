@@ -1,8 +1,35 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import {
+  SESSION_COOKIE_NAME,
+  SESSION_SIG_COOKIE_NAME,
+  verifySignedSessionCookie,
+  isStaffSession,
+  isAdminSession,
+} from "@/lib/signed-tokens";
+
+function isPublicApiRequest(pathname: string, method: string): boolean {
+  if (
+    pathname === "/api/auth/login" ||
+    pathname === "/api/auth/logout" ||
+    pathname === "/api/auth/register" ||
+    pathname === "/api/auth/me" ||
+    pathname === "/api/presupuestos/whatsapp-catalogo" ||
+    pathname === "/api/taller/operacion"
+  ) {
+    return true;
+  }
+  if (pathname === "/api/storage/download" && method === "GET") return true;
+  if (pathname === "/api/storage/upload" && method === "POST") return true;
+  if (pathname === "/api/servicios-taller" && method === "GET") return true;
+  if (pathname === "/api/productos" && method === "GET") return true;
+  if (pathname === "/api/solicitudes" && method === "POST") return true;
+  return false;
+}
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const method = request.method.toUpperCase();
 
   // Extract client IP honoring Cloudflare WAF and Vercel reverse proxy
   const clientIp =
@@ -15,15 +42,13 @@ export function proxy(request: NextRequest) {
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set("x-client-ip", clientIp);
 
-  // Protected API routes check (e.g. /api/privado/*)
-  if (pathname.startsWith("/api/privado/")) {
-    const sessionToken =
-      request.cookies.get("next-auth.session-token")?.value ||
-      request.cookies.get("__Secure-next-auth.session-token")?.value ||
-      request.cookies.get("auth-token")?.value ||
-      request.headers.get("authorization");
+  // Centralized verification for internal & privileged API routes
+  if (pathname.startsWith("/api/") && !isPublicApiRequest(pathname, method)) {
+    const rawSession = request.cookies.get(SESSION_COOKIE_NAME)?.value;
+    const sigCookie = request.cookies.get(SESSION_SIG_COOKIE_NAME)?.value;
+    const session = verifySignedSessionCookie(rawSession, sigCookie);
 
-    if (!sessionToken) {
+    if (!session) {
       return NextResponse.json(
         {
           success: false,
@@ -31,6 +56,35 @@ export function proxy(request: NextRequest) {
         },
         { status: 401 }
       );
+    }
+
+    if (
+      pathname.startsWith("/api/gerencia/usuarios") ||
+      pathname.startsWith("/api/gerencia/configuracion")
+    ) {
+      if (!isAdminSession(session)) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: "Acceso denegado. Requiere permisos de Gerencia.",
+          },
+          { status: 403 }
+        );
+      }
+    } else if (
+      !pathname.startsWith("/api/cliente/") &&
+      pathname !== "/api/vehiculos" &&
+      pathname !== "/api/realtime/events"
+    ) {
+      if (!isStaffSession(session)) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: "Acceso denegado. Requiere permisos de personal autorizado.",
+          },
+          { status: 403 }
+        );
+      }
     }
   }
 

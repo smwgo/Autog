@@ -1,7 +1,19 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getVerifiedSessionFromRequest, isStaffSession } from "@/lib/signed-tokens";
 
 export const dynamic = "force-dynamic";
+
+async function resolveSessionCustomerScope(session: { id?: string; email?: string; name?: string }) {
+  const filters: any[] = [];
+  if (session.email) filters.push({ email: { equals: session.email.trim(), mode: "insensitive" } });
+  if (session.name) filters.push({ name: { equals: session.name.trim(), mode: "insensitive" } });
+  if (filters.length === 0) return null;
+  return prisma.customer.findFirst({
+    where: { OR: filters },
+    select: { id: true, name: true, identification: true, email: true },
+  });
+}
 
 const SEED_INVOICES = [
   {
@@ -121,10 +133,29 @@ async function ensureTableExists() {
 }
 
 export async function GET(request: Request) {
+  const session = getVerifiedSessionFromRequest(request);
+  if (!session) {
+    return NextResponse.json(
+      { success: false, error: "No autorizado. Inicia sesión para ver tus facturas." },
+      { status: 401 }
+    );
+  }
+
   try {
     const { searchParams } = new URL(request.url);
     const busqueda = searchParams.get("busqueda")?.trim() || "";
     const estado = searchParams.get("estado")?.trim() || "";
+    const staff = isStaffSession(session);
+    const customerScope = staff ? null : await resolveSessionCustomerScope(session);
+
+    if (!staff && !customerScope && !session.name && !session.email) {
+      return NextResponse.json({
+        success: true,
+        facturas: [],
+        invoices: [],
+        total: 0,
+      });
+    }
 
     return await withRetry(async () => {
       await ensureTableExists();
@@ -132,6 +163,36 @@ export async function GET(request: Request) {
       let query = 'SELECT * FROM "ClientInvoice" WHERE 1=1';
       const params: any[] = [];
       let pIdx = 1;
+
+      if (!staff) {
+        const nameCandidates = Array.from(
+          new Set(
+            [customerScope?.name, session.name]
+              .map((v) => String(v || "").trim())
+              .filter(Boolean)
+          )
+        );
+        const rfcCandidates = Array.from(
+          new Set(
+            [customerScope?.identification]
+              .map((v) => String(v || "").trim().toUpperCase())
+              .filter((v) => Boolean(v) && v !== "XAXX010101000")
+          )
+        );
+        const scopeClauses: string[] = [];
+        for (const nm of nameCandidates) {
+          scopeClauses.push(`LOWER("clientName") = LOWER($${pIdx++})`);
+          params.push(nm);
+        }
+        for (const rfc of rfcCandidates) {
+          scopeClauses.push(`UPPER("clientRfc") = UPPER($${pIdx++})`);
+          params.push(rfc);
+        }
+        if (scopeClauses.length === 0) {
+          return NextResponse.json({ success: true, facturas: [], invoices: [], total: 0 });
+        }
+        query += ` AND (${scopeClauses.join(" OR ")})`;
+      }
 
       if (estado && estado !== "Todas") {
         query += ` AND "status" = $${pIdx++}`;
@@ -189,6 +250,16 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const session = getVerifiedSessionFromRequest(request);
+  if (!session) {
+    return NextResponse.json({ success: false, error: "No autorizado." }, { status: 401 });
+  }
+  if (!isStaffSession(session)) {
+    return NextResponse.json(
+      { success: false, error: "Solo personal autorizado puede emitir facturas." },
+      { status: 403 }
+    );
+  }
   try {
     const body = await request.json();
     const { concept, vehicle, clientName, clientRfc, amount, status, paymentMethod, items } = body;
@@ -246,6 +317,11 @@ export async function POST(request: Request) {
 }
 
 export async function PUT(request: Request) {
+  const session = getVerifiedSessionFromRequest(request);
+  if (!session) {
+    return NextResponse.json({ success: false, error: "No autorizado." }, { status: 401 });
+  }
+  const staff = isStaffSession(session);
   try {
     const body = await request.json();
     const { id, status, paymentMethod, concept, amount } = body;
@@ -259,20 +335,60 @@ export async function PUT(request: Request) {
 
     return await withRetry(async () => {
       await ensureTableExists();
-      await prisma.$executeRawUnsafe(
-        `UPDATE "ClientInvoice"
-         SET "status" = COALESCE($2, "status"),
-             "paymentMethod" = COALESCE($3, "paymentMethod"),
-             "concept" = COALESCE($4, "concept"),
-             "amount" = COALESCE($5, "amount"),
-             "updatedAt" = NOW()
-         WHERE "id" = $1 OR "invoiceNumber" = $1`,
-        id,
-        status || null,
-        paymentMethod || null,
-        concept || null,
-        amount !== undefined ? parseFloat(amount.toString()) : null
-      );
+      if (!staff) {
+        const customerScope = await resolveSessionCustomerScope(session);
+        const existingRows: any[] = await prisma.$queryRawUnsafe(
+          `SELECT * FROM "ClientInvoice" WHERE "id" = $1 OR "invoiceNumber" = $1 LIMIT 1`,
+          id
+        );
+        const targetInv = existingRows[0];
+        if (!targetInv) {
+          return NextResponse.json({ success: false, error: "Factura no encontrada." }, { status: 404 });
+        }
+        const allowedNames = [customerScope?.name, session.name]
+          .filter(Boolean)
+          .map((s) => String(s).trim().toLowerCase());
+        const allowedRfc =
+          customerScope?.identification &&
+          customerScope.identification !== "XAXX010101000"
+            ? customerScope.identification.trim().toUpperCase()
+            : "";
+        const ownsInvoice =
+          allowedNames.includes(String(targetInv.clientName || "").trim().toLowerCase()) ||
+          (allowedRfc !== "" &&
+            String(targetInv.clientRfc || "").trim().toUpperCase() === allowedRfc);
+        if (!ownsInvoice) {
+          return NextResponse.json(
+            { success: false, error: "No tienes permiso para modificar esta factura." },
+            { status: 403 }
+          );
+        }
+        await prisma.$executeRawUnsafe(
+          `UPDATE "ClientInvoice"
+           SET "status" = $2,
+               "paymentMethod" = COALESCE($3, "paymentMethod"),
+               "updatedAt" = NOW()
+           WHERE "id" = $1 OR "invoiceNumber" = $1`,
+          id,
+          status === "Pagada" ? "Pagada" : targetInv.status,
+          paymentMethod || null
+        );
+      } else {
+        await prisma.$executeRawUnsafe(
+          `UPDATE "ClientInvoice"
+           SET "status" = COALESCE($2, "status"),
+               "paymentMethod" = COALESCE($3, "paymentMethod"),
+               "concept" = COALESCE($4, "concept"),
+               "amount" = COALESCE($5, "amount"),
+               "updatedAt" = NOW()
+           WHERE "id" = $1 OR "invoiceNumber" = $1`,
+          id,
+          status || null,
+          paymentMethod || null,
+          concept || null,
+          amount !== undefined ? parseFloat(amount.toString()) : null
+        );
+      }
 
       return NextResponse.json({
         success: true,
@@ -289,6 +405,16 @@ export async function PUT(request: Request) {
 }
 
 export async function DELETE(request: Request) {
+  const session = getVerifiedSessionFromRequest(request);
+  if (!session) {
+    return NextResponse.json({ success: false, error: "No autorizado." }, { status: 401 });
+  }
+  if (!isStaffSession(session)) {
+    return NextResponse.json(
+      { success: false, error: "Solo personal autorizado puede eliminar facturas." },
+      { status: 403 }
+    );
+  }
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");

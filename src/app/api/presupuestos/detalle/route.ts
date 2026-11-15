@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma, withRetry } from "@/lib/prisma";
+import { signSupplierScope } from "@/lib/signed-tokens";
 import fs from "fs";
 import path from "path";
 
@@ -75,24 +76,9 @@ export async function GET(request: Request) {
                     (cleanId && limpiarNum(mo?.orderNumber) === cleanId) ||
                     (cleanId && limpiarNum(mo?.quoteNumber) === cleanId)
                 ) || null;
-
-              // Si el ID de la URL era antiguo y no coincidió, tomar la primera orden disponible
-              if (!order) {
-                order = mirrorData.workshopOrder[0];
-              }
             }
           }
         } catch {}
-      }
-
-      // 1.0c Si aún no hay coincidencia exacta en DB, tomar la orden más reciente de WorkshopOrder
-      if (!order) {
-        const fallbackRows = (await prisma.$queryRawUnsafe(
-          `SELECT * FROM "WorkshopOrder" ORDER BY "createdAt" DESC LIMIT 1`
-        ).catch(() => [])) as any[];
-        if (fallbackRows && fallbackRows.length > 0) {
-          order = fallbackRows[0];
-        }
       }
 
       if (!order) {
@@ -348,7 +334,7 @@ export async function GET(request: Request) {
 
         // Si encontramos una foto real y hay registro de vehículo, guardar en Neon para persistencia
         if (vehiclePhoto && vehicleRecord?.id) {
-          prisma.$executeRawUnsafe(
+          await prisma.$executeRawUnsafe(
             `UPDATE "Vehicle" SET "imageUrl" = $1, "updatedAt" = CURRENT_TIMESTAMP WHERE "id" = $2`,
             vehiclePhoto,
             vehicleRecord.id
@@ -645,9 +631,11 @@ export async function GET(request: Request) {
           quoteNumber: order.quoteNumber || `COT-${order.orderNumber}`,
           quoteStatus: order.quoteStatus || (order.status === "EN_CAJA" ? "Aprobado" : "Borrador"),
           quoteApprovedAt: order.quoteApprovedAt,
-          quoteTaxRate: Number(order.quoteTaxRate || 15),
-          quoteDiscount: Number(order.quoteDiscount || 0),
+          quoteTaxRate: order.quoteTaxRate !== null && order.quoteTaxRate !== undefined ? Number(order.quoteTaxRate) : 15,
+          quoteDiscount: Number(order.quoteDiscount ?? 0),
           posRequestId: order.posRequestId,
+          supplierSig: signSupplierScope(order.id),
+          dailySupplierSig: signSupplierScope("daily"),
           items: repuestosNormalizados,
           services: serviciosNormalizados,
           inspectionFindings,

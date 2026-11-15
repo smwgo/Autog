@@ -60,16 +60,25 @@ export async function emitirFacturaElectronica(input: EmitirFacturaInput) {
     const estab = String(config.estabSecuencial || "001").padStart(3, "0");
     const ptoEmi = String(config.ptoEmiSecuencial || "001").padStart(3, "0");
 
-    // 2. Obtener y actualizar el secuencial de factura atómicamente
-    const secuencialActual = config.secuencialFactura || 1;
+    // 2. Obtener e incrementar el secuencial de factura atómicamente para evitar colisiones concurrentes
+    let secuencialActual = Number(config.secuencialFactura || 1);
+    try {
+      const updatedCfg = await prisma.companyConfig.update({
+        where: { id: config.id || "default" },
+        data: { secuencialFactura: { increment: 1 } },
+        select: { secuencialFactura: true },
+      });
+      if (updatedCfg && typeof updatedCfg.secuencialFactura === "number") {
+        secuencialActual = Math.max(1, updatedCfg.secuencialFactura - 1);
+      }
+    } catch {
+      await prisma.companyConfig.update({
+        where: { id: config.id || "default" },
+        data: { secuencialFactura: secuencialActual + 1 },
+      }).catch(() => {});
+    }
     const secuencialFormateado = String(secuencialActual).padStart(9, "0");
     const numeroFactura = `${estab}-${ptoEmi}-${secuencialFormateado}`;
-
-    // Incrementar secuencial para la próxima emisión
-    await prisma.companyConfig.update({
-      where: { id: "default" },
-      data: { secuencialFactura: secuencialActual + 1 },
-    });
 
     // 3. Normalizar datos del comprador
     const { tipo: tipoIdent, identLimpia } = determinarTipoIdentificacion(input.clienteIdentificacion);

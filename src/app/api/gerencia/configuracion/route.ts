@@ -1,9 +1,29 @@
 import { NextResponse } from "next/server";
 import { prisma, withRetry } from "@/lib/prisma";
+import { getVerifiedSessionFromRequest, isAdminSession } from "@/lib/signed-tokens";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+const MASKED_SECRET = "••••••••";
+
+function isMaskedPlaceholder(value: unknown): boolean {
+  return typeof value === "string" && /^[•*]+$/.test(value.trim());
+}
+
+function requireGerenciaAdmin(req: Request): NextResponse | null {
+  const session = getVerifiedSessionFromRequest(req);
+  if (!session) {
+    return NextResponse.json({ error: "No autorizado. Inicia sesión." }, { status: 401 });
+  }
+  if (!isAdminSession(session)) {
+    return NextResponse.json({ error: "Requiere permisos de Gerencia." }, { status: 403 });
+  }
+  return null;
+}
+
+export async function GET(req: Request) {
+  const authError = requireGerenciaAdmin(req);
+  if (authError) return authError;
   try {
     const data = await withRetry(async () => {
       // 1. Consultar configuración de empresa real desde Neon
@@ -56,7 +76,8 @@ export async function GET() {
         smtpHost: company.smtpHost || "",
         smtpPort: company.smtpPort ?? 587,
         smtpUser: company.smtpUser || "",
-        smtpPass: company.smtpPass || "",
+        smtpPass: company.smtpPass ? MASKED_SECRET : "",
+        hasSmtpPass: Boolean(company.smtpPass),
         smtpFrom: company.smtpFrom || "",
         alertasStockBajo: company.alertasStockBajo ?? true,
         umbralStockBajo: company.umbralStockBajo ?? 5,
@@ -73,7 +94,8 @@ export async function GET() {
           entidadEmisora: company.entidadEmisora || "",
           ambienteSri: company.ambienteSri || "2",
           tipoEmision: company.tipoEmision || "1",
-          claveFirma: company.firmaClave || "",
+          claveFirma: company.firmaClave ? MASKED_SECRET : "",
+          hasClaveFirma: Boolean(company.firmaClave),
           estado: company.firmaEstado || "Pendiente",
         },
       };
@@ -107,6 +129,8 @@ export async function GET() {
 }
 
 export async function PUT(req: Request) {
+  const authError = requireGerenciaAdmin(req);
+  if (authError) return authError;
   try {
     const body = await req.json();
     const { type, config: cfg, sucursal } = body;
@@ -165,6 +189,17 @@ export async function PUT(req: Request) {
       if (type === "config" || cfg) {
         const c = cfg || body;
         const firma = c.firmaElectronica || {};
+        const existingCompany = await (prisma as any).companyConfig.findUnique({
+          where: { id: "default" },
+        });
+        const nextFirmaClave =
+          firma.claveFirma !== undefined && !isMaskedPlaceholder(firma.claveFirma)
+            ? firma.claveFirma
+            : undefined;
+        const nextSmtpPass =
+          c.smtpPass !== undefined && !isMaskedPlaceholder(c.smtpPass)
+            ? c.smtpPass
+            : undefined;
 
         const updatedCompany = await (prisma as any).companyConfig.upsert({
           where: { id: "default" },
@@ -195,15 +230,18 @@ export async function PUT(req: Request) {
             entidadEmisora: firma.entidadEmisora !== undefined ? firma.entidadEmisora : undefined,
             firmaArchivoNombre: firma.archivoNombre !== undefined ? firma.archivoNombre : undefined,
             firmaArchivoTamano: firma.archivoTamano !== undefined ? firma.archivoTamano : undefined,
-            firmaArchivoBase64: firma.archivoBase64 !== undefined ? firma.archivoBase64 : undefined,
+            firmaArchivoBase64:
+              firma.archivoBase64 && String(firma.archivoBase64).trim().length > 0
+                ? firma.archivoBase64
+                : undefined,
             firmaFechaCarga: firma.fechaCarga !== undefined ? firma.fechaCarga : undefined,
             firmaFechaExpiracion: firma.fechaExpiracion !== undefined ? firma.fechaExpiracion : undefined,
-            firmaClave: firma.claveFirma !== undefined ? firma.claveFirma : undefined,
+            firmaClave: nextFirmaClave,
             firmaEstado: firma.estado !== undefined ? firma.estado : undefined,
             smtpHost: c.smtpHost !== undefined ? c.smtpHost : undefined,
             smtpPort: c.smtpPort !== undefined ? Number(c.smtpPort) : undefined,
             smtpUser: c.smtpUser !== undefined ? c.smtpUser : undefined,
-            smtpPass: c.smtpPass !== undefined ? c.smtpPass : undefined,
+            smtpPass: nextSmtpPass,
             smtpFrom: c.smtpFrom !== undefined ? c.smtpFrom : undefined,
           },
           create: {
@@ -230,12 +268,12 @@ export async function PUT(req: Request) {
             firmaArchivoBase64: firma.archivoBase64 || null,
             firmaFechaCarga: firma.fechaCarga || null,
             firmaFechaExpiracion: firma.fechaExpiracion || null,
-            firmaClave: firma.claveFirma || null,
+            firmaClave: nextFirmaClave ?? existingCompany?.firmaClave ?? null,
             firmaEstado: firma.estado || "Pendiente",
             smtpHost: c.smtpHost || null,
             smtpPort: c.smtpPort ? Number(c.smtpPort) : 587,
             smtpUser: c.smtpUser || null,
-            smtpPass: c.smtpPass || null,
+            smtpPass: nextSmtpPass ?? existingCompany?.smtpPass ?? null,
             smtpFrom: c.smtpFrom || null,
             alertasStockBajo: c.alertasStockBajo ?? true,
             umbralStockBajo: c.umbralStockBajo ? Number(c.umbralStockBajo) : 5,
@@ -246,16 +284,35 @@ export async function PUT(req: Request) {
           },
         });
 
-        // Sincronizar también SystemSetting para cualquier consumo externo legacy
+        // Sincronizar SystemSetting legacy sin exponer secretos en texto plano
         try {
+          const sanitizedLegacyConfig = {
+            ...c,
+            smtpPass: updatedCompany.smtpPass ? MASKED_SECRET : "",
+            firmaElectronica: c.firmaElectronica
+              ? {
+                  ...c.firmaElectronica,
+                  archivoBase64: undefined,
+                  claveFirma: updatedCompany.firmaClave ? MASKED_SECRET : "",
+                }
+              : undefined,
+          };
           await prisma.systemSetting.upsert({
             where: { id: "default" },
-            update: { configJson: JSON.stringify(c) },
-            create: { id: "default", configJson: JSON.stringify(c) },
+            update: { configJson: JSON.stringify(sanitizedLegacyConfig) },
+            create: { id: "default", configJson: JSON.stringify(sanitizedLegacyConfig) },
           });
         } catch {}
 
-        return { success: true, company: updatedCompany };
+        return {
+          success: true,
+          company: {
+            ...updatedCompany,
+            smtpPass: updatedCompany.smtpPass ? MASKED_SECRET : "",
+            firmaClave: updatedCompany.firmaClave ? MASKED_SECRET : "",
+            firmaArchivoBase64: undefined,
+          },
+        };
       }
 
       return { success: true };
@@ -269,6 +326,8 @@ export async function PUT(req: Request) {
 }
 
 export async function POST(req: Request) {
+  const authError = requireGerenciaAdmin(req);
+  if (authError) return authError;
   try {
     const body = await req.json();
     const created = await withRetry(async () => {
@@ -288,6 +347,8 @@ export async function POST(req: Request) {
 }
 
 export async function DELETE(req: Request) {
+  const authError = requireGerenciaAdmin(req);
+  if (authError) return authError;
   try {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");

@@ -281,7 +281,7 @@ export async function POST(request: Request) {
 
     return await withRetry(async () => {
       const id = generateId();
-      const orderNumber = `ORD-2024-${Math.floor(100 + Math.random() * 900)}`;
+      const orderNumber = `ORD-${new Date().getFullYear()}-${Date.now().toString().slice(-4)}${Math.floor(10 + Math.random() * 89)}`;
       const servicesJson = JSON.stringify(Array.isArray(services) ? services : []);
 
       await prisma.$executeRawUnsafe(
@@ -567,18 +567,33 @@ export async function DELETE(request: Request) {
 
       let ord = ordRows?.[0];
 
+      // Buscar también en ClientQuote si no está en WorkshopOrder (ej. propuestas #PRE-...)
+      if (!ord) {
+        try {
+          const cqRows = (await prisma.$queryRawUnsafe(
+            'SELECT "id", "quoteNumber" as "orderNumber", "clientName" as "client", "plate" FROM "ClientQuote" WHERE "id" = $1 OR "quoteNumber" = $1 OR ($2 != \'\' AND "quoteNumber" = $2) LIMIT 1',
+            id || orderNumberParam,
+            orderNumberParam || ""
+          ).catch(() => [])) as any[];
+          if (cqRows?.[0]) ord = cqRows[0];
+        } catch {}
+      }
+
       // Fallback: si no está en Neon, buscar datos en el mirror local
       if (!ord) {
         try {
           const mirrorPath = path.join(process.cwd(), "prisma", "neon-local-mirror.json");
           if (fs.existsSync(mirrorPath)) {
             const mirrorData = JSON.parse(fs.readFileSync(mirrorPath, "utf-8"));
-            const list = mirrorData.workshopOrder || mirrorData.WorkshopOrder || [];
+            const list = [
+              ...(mirrorData.workshopOrder || mirrorData.WorkshopOrder || []),
+              ...(mirrorData.clientQuote || mirrorData.ClientQuote || []),
+            ];
             ord = list.find(
               (o: any) =>
                 (id && o.id === id) ||
-                (id && o.orderNumber === id) ||
-                (orderNumberParam && o.orderNumber === orderNumberParam)
+                (id && (o.orderNumber === id || o.quoteNumber === id)) ||
+                (orderNumberParam && (o.orderNumber === orderNumberParam || o.quoteNumber === orderNumberParam))
             );
           }
         } catch {}
@@ -645,10 +660,13 @@ export async function DELETE(request: Request) {
           .catch(() => {});
       }
 
-      // 6. Eliminar la orden de taller en Neon PostgreSQL
+      // 6. Eliminar la orden de taller y/o propuesta (ClientQuote) en Neon PostgreSQL
       for (const num of candidateNums) {
         await prisma
           .$executeRawUnsafe('DELETE FROM "WorkshopOrder" WHERE id = $1 OR "orderNumber" = $1', num)
+          .catch(() => {});
+        await prisma
+          .$executeRawUnsafe('DELETE FROM "ClientQuote" WHERE id = $1 OR "quoteNumber" = $1', num)
           .catch(() => {});
       }
 
@@ -675,23 +693,40 @@ export async function DELETE(request: Request) {
             }
           });
 
+          ["clientQuote", "ClientQuote"].forEach((key) => {
+            if (Array.isArray(mirrorData[key])) {
+              const beforeLen = mirrorData[key].length;
+              mirrorData[key] = mirrorData[key].filter((q: any) => {
+                const qid = String(q.id || "").toLowerCase().trim();
+                const qnum = String(q.quoteNumber || "").toLowerCase().trim();
+                const qraw = qnum.replace(/^#+/g, "").trim();
+                return !matchIds.has(qid) && !matchIds.has(qnum) && !matchIds.has(qraw);
+              });
+              if (mirrorData[key].length !== beforeLen) modified = true;
+            }
+          });
+
           ["orderRequest", "OrderRequest"].forEach((key) => {
             if (Array.isArray(mirrorData[key])) {
+              const beforeLen = mirrorData[key].length;
               mirrorData[key] = mirrorData[key].filter((r: any) => {
                 const rid = String(r.id || "").toLowerCase().trim();
                 const rnum = String(r.requestNumber || "").toLowerCase().trim();
                 return !matchIds.has(rid) && !matchIds.has(rnum);
               });
+              if (mirrorData[key].length !== beforeLen) modified = true;
             }
           });
 
           ["workshopEvidence", "WorkshopEvidence"].forEach((key) => {
             if (Array.isArray(mirrorData[key])) {
+              const beforeLen = mirrorData[key].length;
               mirrorData[key] = mirrorData[key].filter((e: any) => {
                 const eoid = String(e.orderId || "").toLowerCase().trim();
                 const eonum = String(e.orderNumber || "").toLowerCase().trim();
                 return !matchIds.has(eoid) && !matchIds.has(eonum);
               });
+              if (mirrorData[key].length !== beforeLen) modified = true;
             }
           });
 

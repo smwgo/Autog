@@ -1,8 +1,31 @@
 import { NextResponse } from "next/server";
+import bcrypt from "bcryptjs";
 import { prisma, withRetry } from "@/lib/prisma";
 import { isProtectedAdminEmail, PROTECTED_ADMIN_EMAILS } from "@/lib/admin-accounts";
+import { getVerifiedSessionFromRequest, isAdminSession } from "@/lib/signed-tokens";
 
 export const dynamic = "force-dynamic";
+
+const MASKED_PIN = "••••";
+
+function requireGerenciaAdmin(req: Request): NextResponse | null {
+  const session = getVerifiedSessionFromRequest(req);
+  if (!session) {
+    return NextResponse.json({ error: "No autorizado. Inicia sesión." }, { status: 401 });
+  }
+  if (!isAdminSession(session)) {
+    return NextResponse.json({ error: "Requiere permisos de Gerencia." }, { status: 403 });
+  }
+  return null;
+}
+
+async function hashPinIfNeeded(rawPin: string): Promise<string> {
+  const clean = rawPin.trim();
+  if (clean.startsWith("$2a$") || clean.startsWith("$2b$") || clean.startsWith("$2y$")) {
+    return clean;
+  }
+  return bcrypt.hash(clean, 10);
+}
 
 async function registrarAuditoria(action: string, details: string, level: string = "INFO") {
   try {
@@ -29,7 +52,9 @@ async function registrarAuditoria(action: string, details: string, level: string
   }
 }
 
-export async function GET() {
+export async function GET(req: Request) {
+  const authError = requireGerenciaAdmin(req);
+  if (authError) return authError;
   try {
     const users = await withRetry(async () => {
       const [appUsers, adminUsers] = await Promise.all([
@@ -45,9 +70,13 @@ export async function GET() {
         }),
       ]);
 
-      const regularUsers = appUsers.filter(
-        (user) => !isProtectedAdminEmail(user.email)
-      );
+      const regularUsers = appUsers
+        .filter((user) => !isProtectedAdminEmail(user.email))
+        .map((user) => ({
+          ...user,
+          pinCode: user.pinCode ? MASKED_PIN : "",
+          pinConfigured: Boolean(user.pinCode),
+        }));
       const protectedAdmins = adminUsers.map((user) => ({
         id: `protected-root:${user.id}`,
         identification: null,
@@ -82,6 +111,8 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
+  const authError = requireGerenciaAdmin(req);
+  if (authError) return authError;
   try {
     const body = await req.json();
     const cleanName = String(body.name || "").trim();
@@ -131,7 +162,8 @@ export async function POST(req: Request) {
         String(body.username || "").trim() ||
         cleanEmail.split("@")[0] ||
         `user${Math.floor(100 + Math.random() * 900)}`;
-      const pinCode = String(body.pinCode || "1234").trim() || "1234";
+      const rawPin = String(body.pinCode || "1234").trim() || "1234";
+      const pinCode = /^[•*]+$/.test(rawPin) ? await hashPinIfNeeded("1234") : await hashPinIfNeeded(rawPin);
       const branch = String(body.branch || "Sede Principal").trim();
       let role = String(body.role || "Taller").trim();
       const isSucursal = branch.toLowerCase().includes("sucursal");
@@ -179,7 +211,12 @@ export async function POST(req: Request) {
       return user;
     });
 
-    return NextResponse.json({ success: true, ...created });
+    return NextResponse.json({
+      success: true,
+      ...created,
+      pinCode: created.pinCode ? MASKED_PIN : "",
+      pinConfigured: Boolean(created.pinCode),
+    });
   } catch (error: any) {
     return NextResponse.json(
       { error: error.message || "Error al crear usuario en base de datos" },
@@ -189,6 +226,8 @@ export async function POST(req: Request) {
 }
 
 export async function PUT(req: Request) {
+  const authError = requireGerenciaAdmin(req);
+  if (authError) return authError;
   try {
     const body = await req.json();
     const { id } = body;
@@ -224,7 +263,11 @@ export async function PUT(req: Request) {
         body.phone !== undefined ? (String(body.phone).trim() || null) : curr.phone;
       const nextUsername =
         body.username !== undefined ? String(body.username).trim() : curr.username;
-      const nextPin = body.pinCode !== undefined ? String(body.pinCode).trim() : curr.pinCode;
+      const incomingPin = body.pinCode !== undefined ? String(body.pinCode).trim() : "";
+      const nextPin =
+        incomingPin && !/^[•*]+$/.test(incomingPin)
+          ? await hashPinIfNeeded(incomingPin)
+          : curr.pinCode;
       const nextBranch = body.branch !== undefined ? String(body.branch).trim() : curr.branch;
       let nextRole = body.role !== undefined ? String(body.role).trim() : curr.role;
       const isNextSucursal = nextBranch.toLowerCase().includes("sucursal");
@@ -272,7 +315,12 @@ export async function PUT(req: Request) {
       return user;
     });
 
-    return NextResponse.json({ success: true, ...updated });
+    return NextResponse.json({
+      success: true,
+      ...updated,
+      pinCode: updated.pinCode ? MASKED_PIN : "",
+      pinConfigured: Boolean(updated.pinCode),
+    });
   } catch (error: any) {
     return NextResponse.json(
       { error: error.message || "Error al actualizar usuario en base de datos" },
@@ -282,6 +330,8 @@ export async function PUT(req: Request) {
 }
 
 export async function DELETE(req: Request) {
+  const authError = requireGerenciaAdmin(req);
+  if (authError) return authError;
   try {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");

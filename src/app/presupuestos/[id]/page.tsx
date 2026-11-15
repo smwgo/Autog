@@ -201,6 +201,8 @@ interface OrdenDetalleCompleta {
   customerType?: string | null;
   previousVisitsCount?: number;
   isFirstVisit?: boolean;
+  supplierSig?: string;
+  dailySupplierSig?: string;
   inspectionFindings?: any[];
   receptionInventory?: any[];
 }
@@ -412,6 +414,7 @@ export default function PaginaDetallePropuesta() {
   const ultimoToqueAutoRef = useRef<{ id: string; time: number }>({ id: "", time: 0 });
   const clickSimpleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const detallesCacheRef = useRef<Record<string, any>>({});
+  const latestTargetIdRef = useRef<string>(id);
   const catalogoProductosRef = useRef<any[]>([]);
   const catalogoServiciosRef = useRef<any[]>([]);
 
@@ -1105,6 +1108,9 @@ export default function PaginaDetallePropuesta() {
   const cargarDetallePorId = useCallback(
     async (targetId: string, silencioso = false) => {
       if (!targetId) return;
+      if (!silencioso) {
+        latestTargetIdRef.current = targetId;
+      }
       try {
         if (!silencioso) {
           setCargando(true);
@@ -1118,19 +1124,18 @@ export default function PaginaDetallePropuesta() {
           } catch { }
         }
 
-        // Fallback: si no se encontró por ID directo, buscar en el listado general de propuestas (pagadas o no)
+        // Fallback: si no se encontró por ID directo, buscar coincidencia exacta en el listado general de propuestas
         if (!data?.success || !data?.order) {
           try {
             const resLista = await fetch("/api/presupuestos/ordenes");
             const dataLista = resLista.ok ? await resLista.json() : null;
             if (dataLista?.success && Array.isArray(dataLista.ordenes) && dataLista.ordenes.length > 0) {
-              const match =
-                dataLista.ordenes.find(
-                  (o: any) =>
-                    o.id === targetId ||
-                    o.orderNumber === targetId ||
-                    o.quoteNumber === targetId
-                ) || dataLista.ordenes[0];
+              const match = dataLista.ordenes.find(
+                (o: any) =>
+                  o.id === targetId ||
+                  o.orderNumber === targetId ||
+                  o.quoteNumber === targetId
+              );
               if (match) {
                 data = {
                   success: true,
@@ -1146,6 +1151,10 @@ export default function PaginaDetallePropuesta() {
               }
             }
           } catch { }
+        }
+
+        if (latestTargetIdRef.current && latestTargetIdRef.current !== targetId) {
+          return;
         }
 
         if (!data?.success || !data?.order) {
@@ -1189,22 +1198,24 @@ export default function PaginaDetallePropuesta() {
       }
     },
     onRefresh: () => {
-      if (!guardando && estadoSync !== "guardando" && id) {
-        void cargarDetallePorId(id, true);
+      const activeOrderId = orden?.id || id;
+      if (!guardando && estadoSync !== "guardando" && activeOrderId) {
+        void cargarDetallePorId(activeOrderId, true);
       }
     },
   });
 
   // Sincronización automática en tiempo real de respuestas del proveedor (Sí hay / No hay, Costo, Tiempo, Envío)
   useEffect(() => {
-    if (!id || !orden) return;
+    const activeOrderId = orden?.id || id;
+    if (!activeOrderId || !orden) return;
     const syncRespuestasProveedor = async () => {
       if (guardando || estadoSync === "guardando") return;
       try {
-        const res = await fetch(`/api/presupuestos/detalle?id=${encodeURIComponent(id)}`, { cache: "no-store" });
+        const res = await fetch(`/api/presupuestos/detalle?id=${encodeURIComponent(activeOrderId)}`, { cache: "no-store" });
         if (!res.ok) return;
         const data = await res.json();
-        if (!data?.success || !data?.order) return;
+        if (!data?.success || !data?.order || data.order.id !== activeOrderId) return;
         const ordServer = data.order;
 
         setRepuestos((prev) =>
@@ -1352,7 +1363,7 @@ export default function PaginaDetallePropuesta() {
     setEstadoSync("guardando");
     if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
     debounceTimerRef.current = setTimeout(() => {
-      sincronizarConNeon(nuevosRep, nuevosSrv, nuevosFind, nuevasNotas);
+      void sincronizarConNeon(nuevosRep, nuevosSrv, nuevosFind, nuevasNotas).catch(() => {});
     }, 600);
   };
 
@@ -2488,6 +2499,10 @@ export default function PaginaDetallePropuesta() {
       );
     }
 
+    if (orden?.supplierSig) {
+      query.set("sig", orden.supplierSig);
+    }
+
     const qs = query.toString();
     return qs ? `${baseUrl}?${qs}` : baseUrl;
   };
@@ -2786,6 +2801,8 @@ export default function PaginaDetallePropuesta() {
           items: repuestos,
           services: servicios,
           notes: notasFactura,
+          quoteTaxRate: porcentajeIva,
+          quoteDiscount: porcentajeDescuento,
         }),
       });
       if (!res.ok) {
@@ -3028,6 +3045,7 @@ export default function PaginaDetallePropuesta() {
   const handleIrAOtraPropuesta = useCallback(
     (targetAuto: any) => {
       if (!targetAuto?.id || targetAuto.id === orden?.id) return;
+      latestTargetIdRef.current = targetAuto.id;
       try {
         if (typeof window !== "undefined") {
           window.history.replaceState(
@@ -3895,8 +3913,8 @@ export default function PaginaDetallePropuesta() {
       <div className="print:hidden">
         <Header />
 
-        {/* Encabezado muy suave estilo Taller con acento Morado + Azul Zafiro */}
-        <section className="border-b border-zinc-200/70 dark:border-white/10 bg-white/60 dark:bg-transparent">
+        {/* Encabezado visible pero muy suave en Morado + Azul Zafiro */}
+        <section className="border-b border-purple-200/50 dark:border-purple-400/15 bg-gradient-to-r from-purple-50/65 via-purple-50/45 to-blue-50/55 dark:from-purple-500/[0.06] dark:via-purple-500/[0.04] dark:to-blue-500/[0.05]">
           <div className="w-full max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 py-2.5 flex flex-col items-stretch gap-2.5 sm:gap-3">
             {/* FILA 1: FLECHA VOLVER (←) + ORDEN DE SERVICIO #00001 + ACCIONES */}
             <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
@@ -4133,7 +4151,7 @@ export default function PaginaDetallePropuesta() {
                       }}
                       aria-pressed={esActivo}
                       className={`snap-start shrink-0 w-full min-h-[76px] sm:min-h-[68px] px-3.5 py-2.5 sm:px-3 sm:py-2 rounded-2xl sm:rounded-xl border text-left flex items-center justify-between gap-3 transition-colors cursor-pointer ${esActivo
-                        ? "bg-gradient-to-r from-purple-50/80 via-purple-50/60 to-blue-50/70 dark:from-purple-500/10 dark:via-purple-500/[0.08] dark:to-blue-500/10 border-purple-300/70 dark:border-purple-400/25 shadow-sm"
+                        ? "bg-gradient-to-r from-purple-50/90 via-purple-50/75 to-blue-50/80 dark:from-purple-500/[0.14] dark:via-purple-500/[0.11] dark:to-blue-500/[0.12] border-purple-300/75 dark:border-purple-400/30 shadow-sm"
                         : "bg-white dark:bg-[#111113] border-zinc-200 dark:border-white/10"
                         }`}
                     >
@@ -5038,7 +5056,7 @@ export default function PaginaDetallePropuesta() {
                 <div className="pt-2 flex items-center gap-2">
                   <a
                     href={`https://wa.me/?text=${encodeURIComponent(
-                      `Hola, te comparto el pedido de repuestos para el vehículo ${orden.vehicle} (Placa: ${orden.plate}). Puedes revisar fotos grandes y especificaciones aquí: ${window.location.origin}/pedidos-proveedor/${orden.id}`
+                      `Hola, te comparto el pedido de repuestos para el vehículo ${orden.vehicle} (Placa: ${orden.plate}). Puedes revisar fotos grandes y especificaciones aquí: ${window.location.origin}/pedidos-proveedor/${orden.id}${orden.supplierSig ? `?sig=${encodeURIComponent(orden.supplierSig)}` : ""}`
                     )}`}
                     target="_blank"
                     rel="noreferrer"
@@ -5048,7 +5066,7 @@ export default function PaginaDetallePropuesta() {
                   </a>
                   <button
                     type="button"
-                    onClick={() => copiarAlPortapapeles(`${window.location.origin}/pedidos-proveedor/${orden.id}`, "Enlace copiado al portapapeles.")}
+                    onClick={() => copiarAlPortapapeles(`${window.location.origin}/pedidos-proveedor/${orden.id}${orden.supplierSig ? `?sig=${encodeURIComponent(orden.supplierSig)}` : ""}`, "Enlace copiado al portapapeles.")}
                     className="h-9 px-3 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/10 dark:hover:bg-white/15 text-zinc-700 dark:text-white text-xs font-semibold cursor-pointer transition-colors"
                   >
                     Copiar Link
@@ -5069,7 +5087,7 @@ export default function PaginaDetallePropuesta() {
                 <div className="pt-2 flex items-center gap-2">
                   <a
                     href={`https://wa.me/?text=${encodeURIComponent(
-                      `Hola, te comparto el consolidado general de repuestos requeridos para el taller hoy. Puedes revisar fotos y lista completa aquí: ${window.location.origin}/pedidos-proveedor/diario`
+                      `Hola, te comparto el consolidado general de repuestos requeridos para el taller hoy. Puedes revisar fotos y lista completa aquí: ${window.location.origin}/pedidos-proveedor/diario${orden.dailySupplierSig ? `?sig=${encodeURIComponent(orden.dailySupplierSig)}` : ""}`
                     )}`}
                     target="_blank"
                     rel="noreferrer"
@@ -5079,7 +5097,7 @@ export default function PaginaDetallePropuesta() {
                   </a>
                   <button
                     type="button"
-                    onClick={() => copiarAlPortapapeles(`${window.location.origin}/pedidos-proveedor/diario`, "Enlace del día copiado.")}
+                    onClick={() => copiarAlPortapapeles(`${window.location.origin}/pedidos-proveedor/diario${orden.dailySupplierSig ? `?sig=${encodeURIComponent(orden.dailySupplierSig)}` : ""}`, "Enlace del día copiado.")}
                     className="h-9 px-3 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/10 dark:hover:bg-white/15 text-zinc-700 dark:text-white text-xs font-semibold cursor-pointer transition-colors"
                   >
                     Copiar Link

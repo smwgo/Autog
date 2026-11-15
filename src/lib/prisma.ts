@@ -1,15 +1,12 @@
-import "server-only";
+﻿import "server-only";
 import { PrismaClient } from "@prisma/client";
 import fs from "fs";
 import path from "path";
 
 // Asegurar conexión a la base de datos real Neon en toda la aplicación
-if (!process.env.DATABASE_URL) {
-  process.env.DATABASE_URL = "postgresql://neondb_owner:npg_ltX2Thvi3OCa@ep-autumn-math-bd8lw08r-pooler.c-8.us-east-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require";
-}
-if (!process.env.DIRECT_URL) {
-  process.env.DIRECT_URL = "postgresql://neondb_owner:npg_ltX2Thvi3OCa@ep-autumn-math-bd8lw08r.c-8.us-east-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require";
-}
+// Validar variables DATABASE_URL / DIRECT_URL desde entorno sin credenciales embebidas
+if (!process.env.DATABASE_URL && process.env.DIRECT_URL) { process.env.DATABASE_URL = process.env.DIRECT_URL; }
+if (!process.env.DIRECT_URL && process.env.DATABASE_URL) { process.env.DIRECT_URL = process.env.DATABASE_URL; }
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
@@ -532,7 +529,25 @@ function executeMirrorRawQuery(queryOrStrings: any, params: any[] = []): any[] {
   const fromMatch = sql.match(/FROM\s+"?([A-Za-z0-9_]+)"?/i);
   if (!fromMatch) return [];
   const modelName = sqlTableToModelName(fromMatch[1]);
-  const rows = [...(db[modelName] || [])];
+  let rows = [...(db[modelName] || [])];
+
+  // Soporte COUNT(*) básico en espejo local
+  const countMatch = sql.match(/SELECT\s+COUNT\(\*\)\s*(?:AS\s+"?([A-Za-z0-9_]+)"?)?\s+FROM/i);
+  if (countMatch) {
+    if (params.length > 0 && params[0] !== undefined) {
+      const p1 = String(params[0]);
+      if (/WHERE\s+[\s\S]*?(?:"?id"?|"?orderNumber"?|"?plate"?)\s*=\s*\$1/i.test(sql)) {
+        rows = rows.filter(
+          (r) =>
+            String(r.id) === p1 ||
+            String(r.orderNumber || "") === p1 ||
+            String(r.plate || "").toUpperCase() === p1.toUpperCase()
+        );
+      }
+    }
+    const alias = countMatch[1] || "count";
+    return [{ [alias]: rows.length, count: rows.length }];
+  }
 
   const distinctMatch = sql.match(/SELECT\s+DISTINCT\s+"?([A-Za-z0-9_]+)"?/i);
   if (distinctMatch) {
@@ -621,156 +636,121 @@ function executeMirrorRawQuery(queryOrStrings: any, params: any[] = []): any[] {
   return rows;
 }
 
+function splitSqlTopLevel(expr: string): string[] {
+  const parts: string[] = [];
+  let cur = "";
+  let depth = 0;
+  let inSingle = false;
+  let inDouble = false;
+  for (let i = 0; i < expr.length; i++) {
+    const ch = expr[i];
+    if (ch === "'" && !inDouble) {
+      inSingle = !inSingle;
+      cur += ch;
+      continue;
+    }
+    if (ch === '"' && !inSingle) {
+      inDouble = !inDouble;
+      cur += ch;
+      continue;
+    }
+    if (!inSingle && !inDouble) {
+      if (ch === "(") depth++;
+      else if (ch === ")" && depth > 0) depth--;
+      else if (ch === "," && depth === 0) {
+        parts.push(cur.trim());
+        cur = "";
+        continue;
+      }
+    }
+    cur += ch;
+  }
+  if (cur.trim()) parts.push(cur.trim());
+  return parts;
+}
+
+function resolveSqlToken(tok: string, params: any[], nowIso: string): any {
+  const clean = tok.trim();
+  const pMatch = clean.match(/^\$(\d+)(?:::[a-z0-9_]+)?$/i);
+  if (pMatch) {
+    return params[parseInt(pMatch[1], 10) - 1];
+  }
+  if (/^(NOW\(\)|CURRENT_TIMESTAMP)$/i.test(clean)) return nowIso;
+  if (/^true$/i.test(clean)) return true;
+  if (/^false$/i.test(clean)) return false;
+  if (/^null$/i.test(clean)) return null;
+  if (/^'[\s\S]*'$/.test(clean)) return clean.slice(1, -1);
+  if (clean !== "" && !isNaN(Number(clean))) return Number(clean);
+  return undefined;
+}
+
 function executeMirrorRawExecute(queryOrStrings: any, params: any[] = []): number {
   const sql = typeof queryOrStrings === "string" ? queryOrStrings : Array.isArray(queryOrStrings) ? queryOrStrings.join("?") : "";
   if (!sql) return 0;
   const db = loadMirrorDb();
+  const nowIso = new Date().toISOString();
 
-  // Handle INSERT INTO "Customer" (...) VALUES ($1, $2, ...)
-  if (/INSERT\s+INTO\s+"?Customer"?/i.test(sql)) {
-    const colsMatch = sql.match(/INSERT\s+INTO\s+"?Customer"?\s*\(([\s\S]*?)\)\s*VALUES\s*\(([\s\S]*?)\)/i);
-    if (colsMatch) {
-      const cols = colsMatch[1]
-        .split(",")
-        .map((c) => c.replace(/["\s\r\n]/g, ""))
-        .filter(Boolean);
-      const valTokens = colsMatch[2]
-        .split(",")
-        .map((v) => v.trim())
-        .filter(Boolean);
-
-      const nowIso = new Date().toISOString();
-      const record: Record<string, any> = {
-        ...MODEL_DEFAULTS.customer(),
-        createdAt: nowIso,
-        updatedAt: nowIso,
-      };
-
-      cols.forEach((col, i) => {
-        const tok = valTokens[i] || "";
-        const pMatch = tok.match(/^\$(\d+)$/);
-        if (pMatch) {
-          const pIdx = parseInt(pMatch[1], 10) - 1;
-          record[col] = params[pIdx];
-        } else if (/^NOW\(\)$/i.test(tok)) {
-          record[col] = nowIso;
-        } else if (/^'[\s\S]*'$/.test(tok)) {
-          record[col] = tok.slice(1, -1);
-        } else if (!isNaN(Number(tok))) {
-          record[col] = Number(tok);
-        }
-      });
-
-      if (!db.customer) db.customer = [];
-      const existingIdx = db.customer.findIndex(
-        (c: any) =>
-          (record.id && c.id === record.id) ||
-          (record.identification && c.identification === record.identification)
+  // DELETE FROM "Table" WHERE ...
+  const deleteMatch = sql.match(/DELETE\s+FROM\s+"?([A-Za-z0-9_]+)"?\s+WHERE\s+([\s\S]+)$/i);
+  if (deleteMatch) {
+    const modelName = sqlTableToModelName(deleteMatch[1]);
+    const wherePart = deleteMatch[2];
+    const whereParamMatch = wherePart.match(/\$(\d+)/);
+    if (whereParamMatch && Array.isArray(db[modelName])) {
+      const targetVal = String(params[parseInt(whereParamMatch[1], 10) - 1] ?? "");
+      const before = db[modelName].length;
+      db[modelName] = db[modelName].filter(
+        (r) =>
+          String(r.id) !== targetVal &&
+          String(r.orderId || "") !== targetVal &&
+          String(r.orderNumber || "") !== targetVal
       );
-      if (existingIdx !== -1) {
-        db.customer[existingIdx] = { ...db.customer[existingIdx], ...record, updatedAt: nowIso };
-      } else {
-        db.customer.unshift(record);
+      const removed = before - db[modelName].length;
+      if (removed > 0) saveMirrorDb(db);
+      return removed;
+    }
+    return 0;
+  }
+
+  // INSERT INTO "Table" (...) VALUES (...) (unificado para Customer, Vehicle, WorkshopOrder, WorkshopHistory, WorkshopEvidence, WorkshopTask, OrderRequest, ClientQuote, PurchaseOrder)
+  const insertMatch = sql.match(/INSERT\s+INTO\s+"?([A-Za-z0-9_]+)"?\s*\(([\s\S]*?)\)\s*VALUES\s*\(([\s\S]*?)\)(?:\s+ON\s+CONFLICT[\s\S]*)?$/i);
+  if (insertMatch) {
+    const modelName = sqlTableToModelName(insertMatch[1]);
+    const cols = splitSqlTopLevel(insertMatch[2]).map((c) => c.replace(/["\s\r\n]/g, "")).filter(Boolean);
+    const valTokens = splitSqlTopLevel(insertMatch[3]);
+    const defaultsFn = MODEL_DEFAULTS[modelName];
+    const record: Record<string, any> = {
+      ...(defaultsFn ? defaultsFn() : {}),
+      createdAt: nowIso,
+      updatedAt: nowIso,
+    };
+
+    cols.forEach((col, i) => {
+      const val = resolveSqlToken(valTokens[i] || "", params, nowIso);
+      if (val !== undefined) record[col] = val;
+    });
+
+    if (!db[modelName]) db[modelName] = [];
+    const table = db[modelName];
+    const existingIdx = table.findIndex(
+      (r: any) =>
+        (record.id && r.id === record.id) ||
+        (modelName === "customer" && record.identification && r.identification === record.identification) ||
+        (modelName === "vehicle" && record.plate && r.plate === record.plate) ||
+        (modelName === "purchaseOrder" && record.orderNumber && r.orderNumber === record.orderNumber)
+    );
+    if (existingIdx !== -1) {
+      if (!/ON\s+CONFLICT[\s\S]*DO\s+NOTHING/i.test(sql)) {
+        table[existingIdx] = { ...table[existingIdx], ...record, updatedAt: nowIso };
       }
-      saveMirrorDb(db);
-      return 1;
+    } else {
+      table.unshift(record);
     }
+    saveMirrorDb(db);
+    return 1;
   }
 
-  // Handle INSERT INTO "Vehicle" (...) VALUES ($1, $2, ...)
-  if (/INSERT\s+INTO\s+"?Vehicle"?/i.test(sql)) {
-    const colsMatch = sql.match(/INSERT\s+INTO\s+"?Vehicle"?\s*\(([\s\S]*?)\)\s*VALUES\s*\(([\s\S]*?)\)/i);
-    if (colsMatch) {
-      const cols = colsMatch[1]
-        .split(",")
-        .map((c) => c.replace(/["\s\r\n]/g, ""))
-        .filter(Boolean);
-      const valTokens = colsMatch[2]
-        .split(",")
-        .map((v) => v.trim())
-        .filter(Boolean);
-
-      const nowIso = new Date().toISOString();
-      const record: Record<string, any> = {
-        ...MODEL_DEFAULTS.vehicle(),
-        createdAt: nowIso,
-        updatedAt: nowIso,
-      };
-
-      cols.forEach((col, i) => {
-        const tok = valTokens[i] || "";
-        const pMatch = tok.match(/^\$(\d+)$/);
-        if (pMatch) {
-          const pIdx = parseInt(pMatch[1], 10) - 1;
-          record[col] = params[pIdx];
-        } else if (/^NOW\(\)$/i.test(tok)) {
-          record[col] = nowIso;
-        } else if (/^'[\s\S]*'$/.test(tok)) {
-          record[col] = tok.slice(1, -1);
-        } else if (!isNaN(Number(tok))) {
-          record[col] = Number(tok);
-        }
-      });
-
-      if (!db.vehicle) db.vehicle = [];
-      const existingIdx = db.vehicle.findIndex(
-        (v: any) =>
-          (record.id && v.id === record.id) ||
-          (record.plate && v.plate === record.plate)
-      );
-      if (existingIdx !== -1) {
-        db.vehicle[existingIdx] = { ...db.vehicle[existingIdx], ...record, updatedAt: nowIso };
-      } else {
-        db.vehicle.unshift(record);
-      }
-      saveMirrorDb(db);
-      return 1;
-    }
-  }
-
-  // Handle INSERT INTO "WorkshopOrder" (...) VALUES ($1, $2, ...)
-  if (/INSERT\s+INTO\s+"?WorkshopOrder"?/i.test(sql)) {
-    const colsMatch = sql.match(/INSERT\s+INTO\s+"?WorkshopOrder"?\s*\(([\s\S]*?)\)\s*VALUES\s*\(([\s\S]*?)\)/i);
-    if (colsMatch) {
-      const cols = colsMatch[1]
-        .split(",")
-        .map((c) => c.replace(/["\s\r\n]/g, ""))
-        .filter(Boolean);
-      const valTokens = colsMatch[2]
-        .split(",")
-        .map((v) => v.trim())
-        .filter(Boolean);
-
-      const nowIso = new Date().toISOString();
-      const record: Record<string, any> = {
-        ...MODEL_DEFAULTS.workshopOrder(),
-        createdAt: nowIso,
-        updatedAt: nowIso,
-      };
-
-      cols.forEach((col, i) => {
-        const tok = valTokens[i] || "";
-        const pMatch = tok.match(/^\$(\d+)$/);
-        if (pMatch) {
-          const pIdx = parseInt(pMatch[1], 10) - 1;
-          record[col] = params[pIdx];
-        } else if (/^NOW\(\)$/i.test(tok)) {
-          record[col] = nowIso;
-        } else if (/^'[\s\S]*'$/.test(tok)) {
-          record[col] = tok.slice(1, -1);
-        } else if (!isNaN(Number(tok))) {
-          record[col] = Number(tok);
-        }
-      });
-
-      if (!db.workshopOrder) db.workshopOrder = [];
-      db.workshopOrder.unshift(record);
-      saveMirrorDb(db);
-      return 1;
-    }
-  }
-
-  // Handle UPDATE "Table" SET ... WHERE "id" = $N
+  // UPDATE "Table" SET ... WHERE ... (soporta COALESCE($N, "col"), COALESCE("col", $N), literales y CURRENT_TIMESTAMP)
   const updateMatch = sql.match(/UPDATE\s+"?([A-Za-z0-9_]+)"?\s+SET\s+([\s\S]*?)\s+WHERE\s+([\s\S]+)$/i);
   if (updateMatch) {
     const modelName = sqlTableToModelName(updateMatch[1]);
@@ -778,19 +758,46 @@ function executeMirrorRawExecute(queryOrStrings: any, params: any[] = []): numbe
     const wherePart = updateMatch[3];
     const table = db[modelName] || [];
 
-    const whereParamMatch = wherePart.match(/\$(\d+)/);
-    if (whereParamMatch) {
-      const targetVal = params[parseInt(whereParamMatch[1], 10) - 1];
-      const idx = table.findIndex((r) => r.id === targetVal || r.orderNumber === targetVal || r.plate === targetVal);
+    const whereParams = Array.from(wherePart.matchAll(/\$(\d+)/g)).map((m) =>
+      params[parseInt(m[1], 10) - 1]
+    );
+    if (whereParams.length > 0) {
+      const targets = new Set(whereParams.filter((v) => v !== undefined && v !== null).map((v) => String(v)));
+      const idx = table.findIndex(
+        (r) =>
+          targets.has(String(r.id)) ||
+          targets.has(String(r.orderNumber || "")) ||
+          targets.has(String(r.quoteNumber || "")) ||
+          targets.has(String(r.requestNumber || "")) ||
+          targets.has(String(r.plate || ""))
+      );
       if (idx !== -1) {
-        const updated = { ...table[idx], updatedAt: new Date().toISOString() };
-        const assignments = setPart.split(",");
+        const updated = { ...table[idx], updatedAt: nowIso };
+        const assignments = splitSqlTopLevel(setPart);
         for (const assign of assignments) {
-          const m = assign.match(/"?([A-Za-z0-9_]+)"?\s*=\s*(?:COALESCE\([^,]+,\s*)?\$(\d+)/i);
-          if (m) {
-            const col = m[1];
-            const val = params[parseInt(m[2], 10) - 1];
-            if (val !== undefined) updated[col] = val;
+          const eqIdx = assign.indexOf("=");
+          if (eqIdx <= 0) continue;
+          const col = assign.slice(0, eqIdx).replace(/["\s\r\n]/g, "");
+          const rhs = assign.slice(eqIdx + 1).trim();
+          if (!col || !rhs) continue;
+
+          // COALESCE($N, "col")
+          const coalLeft = rhs.match(/^COALESCE\(\s*\$(\d+)\s*,\s*[^)]+\)$/i);
+          if (coalLeft) {
+            const v = params[parseInt(coalLeft[1], 10) - 1];
+            if (v !== undefined && v !== null) updated[col] = v;
+            continue;
+          }
+          // COALESCE("col", $N)
+          const coalRight = rhs.match(/^COALESCE\(\s*"?[A-Za-z0-9_]+"?\s*,\s*\$(\d+)(?:::[a-z0-9_]+)?\s*\)$/i);
+          if (coalRight) {
+            const v = params[parseInt(coalRight[1], 10) - 1];
+            if (updated[col] === undefined || updated[col] === null) updated[col] = v;
+            continue;
+          }
+          const resolved = resolveSqlToken(rhs, params, nowIso);
+          if (resolved !== undefined) {
+            updated[col] = resolved;
           }
         }
         table[idx] = updated;
@@ -903,21 +910,6 @@ function createModelProxy(modelName: string) {
               const rawClient = getRawPrisma() as any;
               if (rawClient[modelName] && typeof rawClient[modelName][method] === "function") {
                 const res = await rawClient[modelName][method](args);
-                if ((method === "findFirst" || method === "findUnique") && res == null) {
-                  const mirrorRes = executeMirrorOperation(modelName, method, args);
-                  if (mirrorRes != null) return mirrorRes;
-                }
-                if (method === "findMany" && Array.isArray(res)) {
-                  const mirrorList = executeMirrorOperation(modelName, method, args);
-                  if (Array.isArray(mirrorList) && mirrorList.length > 0) {
-                    const existingIds = new Set(res.map((r: any) => r?.id).filter(Boolean));
-                    for (const item of mirrorList) {
-                      if (item?.id && !existingIds.has(item.id)) {
-                        res.push(item);
-                      }
-                    }
-                  }
-                }
                 if (method === "delete" || method === "deleteMany") {
                   const mirrorRes = executeMirrorOperation(modelName, method, args);
                   if (method === "deleteMany" && res && typeof res === "object") {
@@ -949,6 +941,21 @@ export const prisma: PrismaClient = new Proxy({} as PrismaClient, {
     if (key === "$transaction") {
       return async (fnOrArray: any, options?: any) => {
         if (Array.isArray(fnOrArray)) {
+          const now = Date.now();
+          const circuitOpen =
+            globalForPrisma.neonCircuitOpenUntil && now < globalForPrisma.neonCircuitOpenUntil;
+          if (!circuitOpen) {
+            try {
+              const rawClient = getRawPrisma();
+              return await rawClient.$transaction(fnOrArray, options);
+            } catch (err: any) {
+              if (isNeonConnectionOrQuotaError(err)) {
+                globalForPrisma.neonCircuitOpenUntil = Date.now() + CIRCUIT_BREAKER_TTL_MS;
+                return Promise.all(fnOrArray);
+              }
+              throw err;
+            }
+          }
           return Promise.all(fnOrArray);
         }
         if (typeof fnOrArray === "function") {
@@ -982,20 +989,13 @@ export const prisma: PrismaClient = new Proxy({} as PrismaClient, {
         try {
           const rawClient = getRawPrisma() as any;
           const res = await rawClient[key](...args);
-          try {
-            executeMirrorRawExecute(args[0], args.slice(1));
-          } catch {}
           return res;
         } catch (err: any) {
           if (isNeonConnectionOrQuotaError(err)) {
             globalForPrisma.neonCircuitOpenUntil = Date.now() + CIRCUIT_BREAKER_TTL_MS;
             return executeMirrorRawExecute(args[0], args.slice(1));
           }
-          try {
-            return executeMirrorRawExecute(args[0], args.slice(1));
-          } catch {
-            throw err;
-          }
+          throw err;
         }
       };
     }
@@ -1008,20 +1008,13 @@ export const prisma: PrismaClient = new Proxy({} as PrismaClient, {
         }
         try {
           const rawClient = getRawPrisma() as any;
-          const res = await rawClient[key](...args);
-          if (Array.isArray(res) && res.length === 0) {
-            const mirrorRes = executeMirrorRawQuery(args[0], args.slice(1));
-            if (Array.isArray(mirrorRes) && mirrorRes.length > 0) {
-              return mirrorRes;
-            }
-          }
-          return res;
+          return await rawClient[key](...args);
         } catch (err: any) {
           if (isNeonConnectionOrQuotaError(err)) {
             globalForPrisma.neonCircuitOpenUntil = Date.now() + CIRCUIT_BREAKER_TTL_MS;
             return executeMirrorRawQuery(args[0], args.slice(1));
           }
-          return executeMirrorRawQuery(args[0], args.slice(1));
+          throw err;
         }
       };
     }

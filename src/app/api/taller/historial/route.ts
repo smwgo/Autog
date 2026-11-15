@@ -35,6 +35,8 @@ async function ensureTableExists() {
       "cost" DECIMAL(12,2) NOT NULL DEFAULT 0,
       "mechanic" TEXT NOT NULL DEFAULT 'Carlos Rodríguez',
       "mileage" TEXT DEFAULT 'N/A',
+      "nextOilChangeKm" INTEGER,
+      "photosJson" TEXT DEFAULT '[]',
       "notes" TEXT,
       "orderNumber" TEXT,
       "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -42,6 +44,12 @@ async function ensureTableExists() {
       CONSTRAINT "WorkshopHistory_pkey" PRIMARY KEY ("id")
     );
   `);
+  await prisma.$executeRawUnsafe(
+    `ALTER TABLE "WorkshopHistory" ADD COLUMN IF NOT EXISTS "nextOilChangeKm" INTEGER`
+  ).catch(() => {});
+  await prisma.$executeRawUnsafe(
+    `ALTER TABLE "WorkshopHistory" ADD COLUMN IF NOT EXISTS "photosJson" TEXT DEFAULT '[]'`
+  ).catch(() => {});
 }
 
 export async function GET(request: Request) {

@@ -46,24 +46,46 @@ export interface ClaveAccesoParams {
   tipoEmision?: string;        // "1" para Emisión Normal (default: "1")
 }
 
-export function formatFechaSri(fecha: Date | string): string {
-  let d: Date;
-  if (typeof fecha === "string") {
-    if (fecha.includes("/")) {
-      const parts = fecha.split("/");
-      if (parts[0].length === 2 && parts[2].length === 4) {
-        // "DD/MM/YYYY" -> "DDMMYYYY"
-        return `${parts[0]}${parts[1]}${parts[2]}`;
-      }
+function getEcuadorDateParts(d: Date): { dia: string; mes: string; anio: string } {
+  try {
+    const parts = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "America/Guayaquil",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).formatToParts(d);
+    const map: Record<string, string> = {};
+    parts.forEach((p) => {
+      map[p.type] = p.value;
+    });
+    if (map.day && map.month && map.year) {
+      return { dia: map.day, mes: map.month, anio: map.year };
     }
-    d = new Date(fecha);
-  } else {
-    d = fecha;
+  } catch {}
+  return {
+    dia: String(d.getDate()).padStart(2, "0"),
+    mes: String(d.getMonth() + 1).padStart(2, "0"),
+    anio: String(d.getFullYear()),
+  };
+}
+
+export function formatFechaSri(fecha: Date | string): string {
+  if (typeof fecha === "string") {
+    const clean = fecha.trim();
+    const slashMatch = clean.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+    if (slashMatch) {
+      return `${slashMatch[1]}${slashMatch[2]}${slashMatch[3]}`;
+    }
+    const isoDateOnly = clean.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (isoDateOnly) {
+      return `${isoDateOnly[3]}${isoDateOnly[2]}${isoDateOnly[1]}`;
+    }
+    const parsed = new Date(clean);
+    const { dia, mes, anio } = getEcuadorDateParts(parsed);
+    return `${dia}${mes}${anio}`;
   }
 
-  const dia = String(d.getDate()).padStart(2, "0");
-  const mes = String(d.getMonth() + 1).padStart(2, "0");
-  const anio = String(d.getFullYear());
+  const { dia, mes, anio } = getEcuadorDateParts(fecha);
   return `${dia}${mes}${anio}`;
 }
 

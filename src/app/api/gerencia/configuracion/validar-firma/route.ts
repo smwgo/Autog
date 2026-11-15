@@ -1,11 +1,38 @@
 import { NextResponse } from "next/server";
 import forge from "node-forge";
+import { prisma } from "@/lib/prisma";
+import { getVerifiedSessionFromRequest, isAdminSession } from "@/lib/signed-tokens";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
+  const session = getVerifiedSessionFromRequest(req);
+  if (!session) {
+    return NextResponse.json({ error: "No autorizado." }, { status: 401 });
+  }
+  if (!isAdminSession(session)) {
+    return NextResponse.json({ error: "Requiere permisos de Gerencia." }, { status: 403 });
+  }
+
   try {
-    const { p12Base64, password } = await req.json();
+    const body = await req.json();
+    let p12Base64 = String(body.p12Base64 || "");
+    let password = String(body.password || "");
+
+    if (!p12Base64 || /^[•*]+$/.test(password.trim())) {
+      const savedConfig = await (prisma as any).companyConfig
+        .findUnique({
+          where: { id: "default" },
+          select: { firmaArchivoBase64: true, firmaClave: true },
+        })
+        .catch(() => null);
+      if (!p12Base64 && savedConfig?.firmaArchivoBase64) {
+        p12Base64 = savedConfig.firmaArchivoBase64;
+      }
+      if (/^[•*]+$/.test(password.trim()) && savedConfig?.firmaClave) {
+        password = savedConfig.firmaClave;
+      }
+    }
 
     if (!p12Base64) {
       return NextResponse.json({ error: "Archivo de firma requerido" }, { status: 400 });

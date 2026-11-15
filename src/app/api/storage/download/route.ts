@@ -14,6 +14,28 @@ export const dynamic = "force-dynamic";
  * - Genera URLs firmadas de corta duración por solicitud sin almacenar tokens temporales en base de datos.
  * - Soporta fallback inline local si R2 no está activo.
  */
+function buildDataUriResponse(dataUri: string, isInline: boolean, safeKey: string) {
+  const match = dataUri.match(/^data:([^;]+);base64,([\s\S]+)$/);
+  if (!match) {
+    return NextResponse.json(
+      { success: false, error: "Formato data URI inválido." },
+      { status: 400 }
+    );
+  }
+  const mimeType = match[1] || "application/octet-stream";
+  const buffer = Buffer.from(match[2], "base64");
+  const baseName = safeKey.split("/").pop() || "archivo";
+  return new NextResponse(buffer, {
+    status: 200,
+    headers: {
+      "Content-Type": mimeType,
+      "Content-Length": String(buffer.length),
+      "Content-Disposition": `${isInline ? "inline" : "attachment"}; filename="${baseName.replace(/"/g, "")}"`,
+      "Cache-Control": "public, max-age=3600",
+    },
+  });
+}
+
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
@@ -30,7 +52,12 @@ export async function GET(req: Request) {
     // Sanitización contra path traversal
     const safeKey = key.replace(/\.\./g, "").trim();
 
-    if (inline && !safeKey.startsWith("taller_notas_voz/")) {
+    if (
+      inline &&
+      !safeKey.startsWith("taller_notas_voz/") &&
+      !safeKey.startsWith("taller_audio/") &&
+      !safeKey.startsWith("data:audio/")
+    ) {
       return NextResponse.json(
         { success: false, error: "Solo se permite obtener audio de notas de voz." },
         { status: 400 }
@@ -38,7 +65,7 @@ export async function GET(req: Request) {
     }
 
     if (safeKey.startsWith("data:")) {
-      return NextResponse.redirect(safeKey);
+      return buildDataUriResponse(safeKey, inline, "evidencia");
     }
 
     if (!isR2Configured()) {
@@ -52,7 +79,7 @@ export async function GET(req: Request) {
           const rawMeta = rows[0].metadataJson;
           const meta = rawMeta ? (typeof rawMeta === "string" ? JSON.parse(rawMeta) : rawMeta) : {};
           if (meta.inline && meta.dataUrl) {
-            return NextResponse.redirect(new URL(meta.dataUrl), 307);
+            return buildDataUriResponse(String(meta.dataUrl), inline, safeKey);
           }
         }
       } catch {}

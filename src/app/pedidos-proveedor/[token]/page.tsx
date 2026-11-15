@@ -197,6 +197,7 @@ export default function PaginaCatalogoProveedor() {
   const paramSupplier = searchParams?.get("supplier") || searchParams?.get("prov") || "";
   const paramPhone = searchParams?.get("phone") || searchParams?.get("tel") || "";
   const paramSuppliersJson = searchParams?.get("suppliers") || "";
+  const paramSig = searchParams?.get("sig") || "";
 
   const proveedoresUrl = useMemo(() => {
     if (!paramSuppliersJson) return [];
@@ -263,6 +264,9 @@ export default function PaginaCatalogoProveedor() {
           if (paramItemName) endpoint += `&item=${encodeURIComponent(paramItemName)}`;
           if (paramPinId) endpoint += `&pinId=${encodeURIComponent(paramPinId)}`;
         }
+        if (paramSig) {
+          endpoint += `&sig=${encodeURIComponent(paramSig)}`;
+        }
 
         const res = await fetch(endpoint);
         if (!res.ok) {
@@ -321,7 +325,7 @@ export default function PaginaCatalogoProveedor() {
     if (token) {
       void cargarCatalogo();
     }
-  }, [token, isDaily, paramItemId, paramItemsList, paramItemName, paramPinId, paramSupplier, verTodos]);
+  }, [token, isDaily, paramItemId, paramItemsList, paramItemName, paramPinId, paramSupplier, paramSig, verTodos]);
 
   const actualizarCampoItem = (itemId: string, cambios: Partial<PedidoItem>) => {
     setItems((prev) =>
@@ -345,6 +349,7 @@ export default function PaginaCatalogoProveedor() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           orderId: targetOrderId,
+          sig: paramSig || undefined,
           supplierName: nombreProveedor.trim() || "Proveedor",
           supplierPhone: telefonoProveedor.trim() || "",
           responses: listaEnviar.map((it) => ({

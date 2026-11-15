@@ -112,6 +112,38 @@ export async function POST(request: Request) {
           orderId
         );
       } else {
+        // Si existe registro previo en Pagado/Facturado sin venta completada en caja, revertir OrderRequest huérfano de DESPACHADO a PENDIENTE
+        try {
+          const prevRows: any[] = await prisma.$queryRawUnsafe(
+            `SELECT "id", "orderNumber", "quoteStatus", "status", "posRequestId" FROM "WorkshopOrder" WHERE "id" = $1 OR "orderNumber" = $1 LIMIT 1`,
+            orderId
+          );
+          const prevOrd = prevRows?.[0];
+          const eraPagado =
+            prevOrd &&
+            ["PAGADO", "FACTURADO"].includes(
+              String(prevOrd.quoteStatus || prevOrd.status || "").toUpperCase()
+            );
+          if (eraPagado) {
+            const normNum = String(prevOrd.orderNumber || "").trim().replace(/^OT-/i, "");
+            if (normNum || prevOrd.posRequestId) {
+              const activeSaleRows = (await prisma.$queryRawUnsafe(
+                `SELECT "id" FROM "Sale" WHERE "status" NOT IN ('ANULADA', 'Anulada', 'CANCELADA') AND ("notes" LIKE $1 OR "notes" LIKE $2) LIMIT 1`,
+                `%${normNum}%`,
+                `%${prevOrd.posRequestId || normNum}%`
+              ).catch(() => [])) as any[];
+              if (!activeSaleRows || activeSaleRows.length === 0) {
+                await prisma.$executeRawUnsafe(
+                  `UPDATE "OrderRequest" SET "status" = 'PENDIENTE', "updatedAt" = CURRENT_TIMESTAMP WHERE "status" = 'DESPACHADO' AND ("requestNumber" = $1 OR "requestNumber" = $2 OR "id" = $3)`,
+                  normNum,
+                  `OT-${normNum}`,
+                  prevOrd.posRequestId || ""
+                ).catch(() => {});
+              }
+            }
+          }
+        } catch {}
+
         // Actualizar Aprobado (pasa a Trabajando / Reparación) o Pendiente (En espera / Diagnóstico)
         const targetStatus = body.status
           ? String(body.status).trim()
@@ -121,12 +153,7 @@ export async function POST(request: Request) {
           `UPDATE "WorkshopOrder"
            SET "quoteStatus" = $2,
                "quoteApprovedAt" = $3::timestamp,
-               "status" = CASE
-                 WHEN $2 = 'Aprobado' THEN 'Reparación'
-                 WHEN $2 = 'Pendiente' THEN 'Diagnóstico'
-                 WHEN "status" IN ('Pagado', 'PAGADO', 'Facturado', 'FACTURADO', 'Pausada', 'PAUSADA') THEN $4
-                 ELSE $4
-               END,
+               "status" = $4,
                "deliveryStatus" = CASE WHEN "deliveryStatus" IN ('Facturado', 'FACTURADO', 'Pagado', 'PAGADO') THEN 'Pendiente' ELSE "deliveryStatus" END,
                "updatedAt" = CURRENT_TIMESTAMP
            WHERE "id" = $1 OR "orderNumber" = $1`,
@@ -137,9 +164,9 @@ export async function POST(request: Request) {
         );
       }
 
-      // Si existe registro en clientQuote / ClientQuote, sincronizar también
+      // Si existe registro en ClientQuote, sincronizar también
       await prisma.$executeRawUnsafe(
-        `UPDATE "clientQuote"
+        `UPDATE "ClientQuote"
          SET "status" = $2,
              "updatedAt" = CURRENT_TIMESTAMP
          WHERE "id" = $1 OR "quoteNumber" = $1`,

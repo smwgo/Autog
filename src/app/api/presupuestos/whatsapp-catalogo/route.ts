@@ -1,5 +1,11 @@
 import { NextResponse } from "next/server";
 import { prisma, withRetry } from "@/lib/prisma";
+import { emitRealtimeEvent } from "@/lib/realtime";
+import {
+  getVerifiedSessionFromRequest,
+  isStaffSession,
+  verifySupplierScope,
+} from "@/lib/signed-tokens";
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +36,7 @@ export async function GET(request: Request) {
     const orderId = searchParams.get("orderId") || searchParams.get("token");
     const mode = searchParams.get("mode"); // "daily" | "individual"
     const dateParam = searchParams.get("date"); // YYYY-MM-DD opcional
+    const sig = searchParams.get("sig");
     const targetItemId = searchParams.get("itemId") || "";
     const targetItemsList = (searchParams.get("items") || "")
       .split(",")
@@ -38,13 +45,21 @@ export async function GET(request: Request) {
     const targetItemName = searchParams.get("item") || "";
     const targetPinId = searchParams.get("pinId") || "";
 
+    const hasStaffAuth = isStaffSession(getVerifiedSessionFromRequest(request));
+
     return await withRetry(async () => {
       // MODO 1: Consolidado de pedidos del día
       if (mode === "daily") {
+        if (!hasStaffAuth && !verifySupplierScope("daily", sig)) {
+          return NextResponse.json(
+            { success: false, error: "Enlace de consolidado no autorizado o firma inválida." },
+            { status: 401 }
+          );
+        }
         const todayStr = dateParam || new Date().toISOString().slice(0, 10);
 
         const orders: any[] = await prisma.$queryRawUnsafe(
-          `SELECT "id", "orderNumber", "vehicle", "plate", "client", "clientPhone", "mechanic", "itemsJson", "servicesJson", "createdAt", "updatedAt"
+          `SELECT "id", "orderNumber", "vehicle", "plate", "mechanic", "itemsJson", "servicesJson", "createdAt", "updatedAt"
            FROM "WorkshopOrder"
            WHERE CAST("updatedAt" AS TEXT) LIKE $1 OR CAST("createdAt" AS TEXT) LIKE $1
            ORDER BY "updatedAt" DESC LIMIT 50`,
@@ -104,7 +119,6 @@ export async function GET(request: Request) {
                 orderNumber: ord.orderNumber,
                 vehicle: ord.vehicle,
                 plate: ord.plate,
-                client: ord.client,
                 name: it.name || it.description || "Repuesto / Servicio",
                 code: it.code || "",
                 qty: Number(it.qty || 1),
@@ -165,6 +179,18 @@ export async function GET(request: Request) {
         return NextResponse.json(
           { success: false, error: "Orden de pedido no encontrada" },
           { status: 404 }
+        );
+      }
+
+      const tokenValid =
+        hasStaffAuth ||
+        verifySupplierScope(order.id, sig) ||
+        verifySupplierScope(orderId, sig) ||
+        verifySupplierScope("daily", sig);
+      if (!tokenValid) {
+        return NextResponse.json(
+          { success: false, error: "Enlace de pedido no autorizado o firma inválida." },
+          { status: 401 }
         );
       }
 
@@ -574,11 +600,8 @@ export async function GET(request: Request) {
           orderNumber: order.orderNumber,
           vehicle: order.vehicle,
           plate: order.plate,
-          client: order.client,
-          clientPhone: order.clientPhone,
           dateIn: order.dateIn,
           createdAt: order.createdAt,
-          notes: order.notes,
         },
         items: itemsParaMostrar,
         allItemsCount: todosNormalizados.length,
@@ -603,7 +626,8 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { orderId, supplierName, supplierPhone, responses = [] } = body;
+    const { orderId, supplierName, supplierPhone, responses = [], sig } = body;
+    const hasStaffAuth = isStaffSession(getVerifiedSessionFromRequest(request));
 
     if (!orderId || !Array.isArray(responses) || responses.length === 0) {
       return NextResponse.json(
@@ -636,6 +660,18 @@ export async function POST(request: Request) {
         return NextResponse.json(
           { success: false, error: "Orden no encontrada." },
           { status: 404 }
+        );
+      }
+
+      const tokenValid =
+        hasStaffAuth ||
+        verifySupplierScope(order.id, sig) ||
+        verifySupplierScope(orderId, sig) ||
+        verifySupplierScope("daily", sig);
+      if (!tokenValid) {
+        return NextResponse.json(
+          { success: false, error: "No autorizado para confirmar cotización de esta orden." },
+          { status: 401 }
         );
       }
 
@@ -801,6 +837,9 @@ export async function POST(request: Request) {
         JSON.stringify(nuevosFindings),
         totalCalculado
       );
+
+      emitRealtimeEvent({ channel: "presupuestos", action: "updated", entityId: order.id });
+      emitRealtimeEvent({ channel: "taller", action: "updated", entityId: order.id });
 
       return NextResponse.json({
         success: true,

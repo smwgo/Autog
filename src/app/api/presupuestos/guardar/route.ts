@@ -32,7 +32,7 @@ export async function POST(request: Request) {
     return await withRetry(async () => {
       // Calcular total de la orden con impuestos y descuentos
       const totalRepuestos = items.reduce((acc: number, it: any) => acc + (Number(it.price || 0) * Number(it.qty || 1)), 0);
-      const totalServicios = services.reduce((acc: number, sv: any) => acc + Number(sv.price || 0), 0);
+      const totalServicios = services.reduce((acc: number, sv: any) => acc + (Number(sv.price || 0) * Number(sv.qty || 1)), 0);
       const subtotalCalculado = Number((totalRepuestos + totalServicios).toFixed(2));
 
       const taxRate = Number(quoteTaxRate !== undefined ? quoteTaxRate : 15);
@@ -51,6 +51,7 @@ export async function POST(request: Request) {
              "quoteStatus" = COALESCE($6, "quoteStatus"),
              "quoteTaxRate" = COALESCE($7, "quoteTaxRate"),
              "quoteDiscount" = COALESCE($8, "quoteDiscount"),
+             "inspectionFindingsJson" = COALESCE($9, "inspectionFindingsJson"),
              "updatedAt" = CURRENT_TIMESTAMP
          WHERE "id" = $1 OR "orderNumber" = $1`,
         orderId,
@@ -60,18 +61,9 @@ export async function POST(request: Request) {
         notes !== undefined ? notes : null,
         quoteStatus || "Cotizando",
         quoteTaxRate !== undefined ? Number(quoteTaxRate) : null,
-        quoteDiscount !== undefined ? Number(quoteDiscount) : null
+        quoteDiscount !== undefined ? Number(quoteDiscount) : null,
+        inspectionFindings !== undefined ? JSON.stringify(inspectionFindings) : null
       );
-
-      if (inspectionFindings !== undefined) {
-        await prisma.$executeRawUnsafe(
-          `UPDATE "WorkshopOrder"
-           SET "inspectionFindingsJson" = $2
-           WHERE "id" = $1 OR "orderNumber" = $1`,
-          orderId,
-          JSON.stringify(inspectionFindings)
-        );
-      }
 
       emitRealtimeEvent({ channel: "presupuestos", action: "updated", entityId: orderId });
       emitRealtimeEvent({ channel: "taller", action: "updated", entityId: orderId });

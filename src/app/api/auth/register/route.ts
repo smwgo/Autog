@@ -2,6 +2,11 @@ import { NextResponse } from "next/server";
 import { prisma, withRetry } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
+import {
+  SESSION_COOKIE_NAME,
+  SESSION_SIG_COOKIE_NAME,
+  signSessionCookieValue,
+} from "@/lib/signed-tokens";
 
 export const dynamic = "force-dynamic";
 
@@ -56,41 +61,91 @@ export async function POST(req: Request) {
           },
         });
 
-        // Crear o actualizar Customer asociado
+        // Asociar o crear Customer sin sobrescribir cuentas de otros correos
         const ident = whatsapp?.trim() || cleanEmail;
-        const customer = await tx.customer.upsert({
+        const existingCustomer = await tx.customer.findUnique({
           where: { identification: ident },
-          update: {
-            name: nombre.trim(),
-            phone: whatsapp?.trim() || "N/A",
-            email: cleanEmail,
-            type: tipoFactura === "empresa" ? "Empresa" : "Personal",
-            address: direccion?.trim() || null,
-          },
-          create: {
-            identification: ident,
-            name: nombre.trim(),
-            phone: whatsapp?.trim() || "N/A",
-            email: cleanEmail,
-            type: tipoFactura === "empresa" ? "Empresa" : "Personal",
-            address: direccion?.trim() || null,
-          },
         });
+
+        if (
+          existingCustomer &&
+          existingCustomer.email &&
+          existingCustomer.email.toLowerCase() !== cleanEmail
+        ) {
+          throw new Error(
+            "CONFLICT_IDENT:Este número de WhatsApp o identificación ya pertenece a otra cuenta registrada."
+          );
+        }
+
+        const customer = existingCustomer
+          ? await tx.customer.update({
+              where: { id: existingCustomer.id },
+              data: {
+                name: existingCustomer.name || nombre.trim(),
+                phone: existingCustomer.phone && existingCustomer.phone !== "N/A"
+                  ? existingCustomer.phone
+                  : whatsapp?.trim() || "N/A",
+                email: existingCustomer.email || cleanEmail,
+                type: existingCustomer.type || (tipoFactura === "empresa" ? "Empresa" : "Personal"),
+                address: existingCustomer.address || direccion?.trim() || null,
+              },
+            })
+          : await tx.customer.create({
+              data: {
+                identification: ident,
+                name: nombre.trim(),
+                phone: whatsapp?.trim() || "N/A",
+                email: cleanEmail,
+                type: tipoFactura === "empresa" ? "Empresa" : "Personal",
+                address: direccion?.trim() || null,
+              },
+            });
 
         return { user, customer };
       })
     );
 
-    return NextResponse.json({
+    const sessionUser = {
+      id: result.user.id,
+      name: result.user.name,
+      email: result.user.email,
+      role: result.user.role,
+      branch: "Principal",
+      isSuperAdmin: false,
+      accessOficina: false,
+      accessPos: false,
+      accessTaller: false,
+    };
+
+    const response = NextResponse.json({
       success: true,
-      user: {
-        id: result.user.id,
-        name: result.user.name,
-        email: result.user.email,
-        role: result.user.role,
-      },
+      user: sessionUser,
     });
+
+    const sessionJson = JSON.stringify(sessionUser);
+    const cookieCommon = {
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax" as const,
+      path: "/",
+      maxAge: 60 * 60 * 24 * 7,
+    };
+    response.cookies.set(SESSION_COOKIE_NAME, sessionJson, {
+      ...cookieCommon,
+      httpOnly: false,
+    });
+    response.cookies.set(SESSION_SIG_COOKIE_NAME, signSessionCookieValue(sessionJson), {
+      ...cookieCommon,
+      httpOnly: true,
+    });
+
+    return response;
   } catch (error: any) {
+    if (String(error?.message || "").startsWith("CONFLICT_IDENT:")) {
+      return NextResponse.json(
+        { success: false, error: String(error.message).replace("CONFLICT_IDENT:", "") },
+        { status: 409 }
+      );
+    }
     console.error("Error en registro:", error);
     return NextResponse.json(
       { success: false, error: error.message || "Error al crear la cuenta en base de datos." },

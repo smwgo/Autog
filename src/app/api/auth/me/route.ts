@@ -1,24 +1,21 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import {
+  SESSION_COOKIE_NAME,
+  SESSION_SIG_COOKIE_NAME,
+  verifySignedSessionCookie,
+} from "@/lib/signed-tokens";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
     const cookieStore = await cookies();
-    const sessionCookie = cookieStore.get("auth_session")?.value;
+    const sessionCookie = cookieStore.get(SESSION_COOKIE_NAME)?.value;
+    const sigCookie = cookieStore.get(SESSION_SIG_COOKIE_NAME)?.value;
 
-    if (sessionCookie) {
-      let parsed: any = null;
-      try {
-        parsed = JSON.parse(decodeURIComponent(sessionCookie));
-      } catch {
-        try {
-          parsed = JSON.parse(sessionCookie);
-        } catch {}
-      }
-
-      if (parsed && (parsed.email || parsed.id || parsed.role)) {
+    const parsed = verifySignedSessionCookie(sessionCookie, sigCookie);
+    if (parsed && (parsed.email || parsed.id || parsed.role)) {
         const roleUpper = (parsed.role || "").toUpperCase();
         const branchUpper = String(parsed.branch || "").toUpperCase();
         const isSucursal = branchUpper.includes("SUCURSAL");
@@ -56,7 +53,6 @@ export async function GET() {
             branch: branchFormatted,
           },
         });
-      }
     }
 
     return NextResponse.json({ success: false, user: null });

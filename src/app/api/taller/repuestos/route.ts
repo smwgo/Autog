@@ -288,10 +288,16 @@ export async function PUT(request: Request) {
               : status === "Rechazado"
               ? "CANCELADO"
               : "PENDIENTE";
+          const partRows = (await prisma.$queryRawUnsafe(
+            `SELECT "requestNumber" FROM "WorkshopPartRequest" WHERE "id" = $1 OR "requestNumber" = $1 LIMIT 1`,
+            id
+          ).catch(() => [])) as any[];
+          const reqNumber = partRows?.[0]?.requestNumber || id;
           await prisma.$executeRawUnsafe(
-            `UPDATE "OrderRequest" SET "status" = $2, "updatedAt" = NOW() WHERE "requestNumber" = $1`,
+            `UPDATE "OrderRequest" SET "status" = $2, "updatedAt" = NOW() WHERE "requestNumber" = $1 OR "requestNumber" = $3 OR "id" = $1`,
             id,
-            mappedStatus
+            mappedStatus,
+            reqNumber
           );
         } catch {}
       }

@@ -26,23 +26,38 @@ export async function POST(req: Request) {
       if (action === "transfer") {
         const { productId, fromBranch, quantity } = body;
         const qty = Math.max(1, Number(quantity || 1));
-        const prod = await prisma.product.findUnique({ where: { id: productId } });
-        if (!prod) throw new Error("Producto no encontrado");
+        if (!productId) throw new Error("ID de producto requerido para transferencia");
 
-        let s1 = Number(prod.stock || 0);
-        let s2 = Number(prod.stockNorte || 0);
+        return await prisma.$transaction(async (tx) => {
+          const isFromPrincipal =
+            String(fromBranch || "").trim().toUpperCase() === "PRINCIPAL";
+          const sourceField = isFromPrincipal ? "stock" : "stockNorte";
 
-        if (fromBranch === "Principal") {
-          s1 = Math.max(0, s1 - qty);
-          s2 = s2 + qty;
-        } else {
-          s2 = Math.max(0, s2 - qty);
-          s1 = s1 + qty;
-        }
+          const prod = await tx.product.findUnique({ where: { id: productId } });
+          if (!prod) throw new Error("Producto no encontrado");
 
-        return await prisma.product.update({
-          where: { id: productId },
-          data: { stock: s1, stockNorte: s2 },
+          const currentSource = Number((prod as any)[sourceField] || 0);
+          if (currentSource < qty) {
+            throw new Error(
+              `Stock insuficiente en ${isFromPrincipal ? "Principal" : "Sucursal"} (disponible: ${currentSource}, solicitado: ${qty})`
+            );
+          }
+
+          const updatedRes = await tx.product.updateMany({
+            where: {
+              id: productId,
+              [sourceField]: { gte: qty },
+            } as any,
+            data: isFromPrincipal
+              ? { stock: { decrement: qty }, stockNorte: { increment: qty } }
+              : { stockNorte: { decrement: qty }, stock: { increment: qty } },
+          });
+
+          if (!updatedRes || updatedRes.count === 0) {
+            throw new Error("Stock insuficiente o actualizado concurrentemente en sede origen.");
+          }
+
+          return await tx.product.findUnique({ where: { id: productId } });
         });
       }
 

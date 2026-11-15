@@ -242,6 +242,45 @@ export async function PUT(req: Request) {
           nextNotes,
           curr.id
         );
+
+        // Registrar ingreso en sesión de caja abierta para trazabilidad contable
+        try {
+          const targetBranch =
+            String(body.branch || curr.branch || "PRINCIPAL").toUpperCase().includes("SUCURSAL")
+              ? "SUCURSAL"
+              : "PRINCIPAL";
+          const activeSession = await prisma.cashRegister.findFirst({
+            where: { status: "ABIERTA", branch: targetBranch },
+            orderBy: { openedAt: "desc" },
+          });
+          if (activeSession) {
+            const metodo = String(body.paymentMethod || "Efectivo");
+            const metodoLower = metodo.toLowerCase();
+            await prisma.cashMovement.create({
+              data: {
+                cashRegisterId: activeSession.id,
+                type: "INGRESO",
+                amount: abono,
+                reason: `Abono crédito ${curr.customerName} (${metodo})${body.paymentNote ? ` - ${body.paymentNote}` : ""}`,
+              },
+            });
+            const updateCashData: any = {};
+            if (metodoLower.includes("tarjet")) {
+              updateCashData.totalSalesCard = { increment: abono };
+            } else if (metodoLower.includes("transfer")) {
+              updateCashData.totalSalesTransfer = { increment: abono };
+            } else {
+              updateCashData.totalSalesCash = { increment: abono };
+              updateCashData.expectedCash = { increment: abono };
+            }
+            await prisma.cashRegister.update({
+              where: { id: activeSession.id },
+              data: updateCashData,
+            });
+          }
+        } catch (cashErr) {
+          console.warn("Aviso al registrar abono de crédito en caja:", cashErr);
+        }
       } else {
         // Edición general de la cuenta de crédito
         const nextName =

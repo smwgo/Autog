@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma, withRetry } from "@/lib/prisma";
 import { emitRealtimeEvent } from "@/lib/realtime";
+import { getVerifiedSessionFromRequest, isStaffSession } from "@/lib/signed-tokens";
+import crypto from "crypto";
 import fs from "fs";
 import path from "path";
 
@@ -108,6 +110,21 @@ async function ensureTallerSchema() {
     await prisma.$executeRawUnsafe(statements.join(";\n")).catch(async () => {
       await Promise.allSettled(statements.map((sql) => prisma.$executeRawUnsafe(sql)));
     });
+
+    try {
+      const missingTokens: any[] = await prisma.$queryRawUnsafe(
+        `SELECT "id" FROM "WorkshopOrder" WHERE "quoteToken" IS NULL OR TRIM("quoteToken") = '' LIMIT 50`
+      );
+      for (const row of missingTokens || []) {
+        if (!row?.id) continue;
+        const qt = `QT-${crypto.randomBytes(6).toString("hex").toUpperCase()}`;
+        await prisma.$executeRawUnsafe(
+          `UPDATE "WorkshopOrder" SET "quoteToken" = $2 WHERE "id" = $1`,
+          row.id,
+          qt
+        ).catch(() => {});
+      }
+    } catch {}
   } catch (err) {
     console.warn("Aviso al verificar esquema de Taller:", err);
   } finally {
@@ -232,10 +249,10 @@ function computeOrderPin(r: any): string {
 async function getNextOrderCorrelative(): Promise<string> {
   try {
     const [orderRows, historyRows, quoteRows, reqRows] = (await Promise.all([
-      prisma.$queryRawUnsafe(`SELECT "orderNumber" FROM "WorkshopOrder"`).catch(() => []),
-      prisma.$queryRawUnsafe(`SELECT "orderNumber" FROM "WorkshopHistory"`).catch(() => []),
-      prisma.$queryRawUnsafe(`SELECT "quoteNumber" FROM "ClientQuote"`).catch(() => []),
-      prisma.$queryRawUnsafe(`SELECT "requestNumber" FROM "OrderRequest" WHERE "type" = 'TALLER'`).catch(() => []),
+      prisma.$queryRawUnsafe(`SELECT "orderNumber" FROM "WorkshopOrder" ORDER BY "createdAt" DESC LIMIT 500`).catch(() => []),
+      prisma.$queryRawUnsafe(`SELECT "orderNumber" FROM "WorkshopHistory" ORDER BY "createdAt" DESC LIMIT 500`).catch(() => []),
+      prisma.$queryRawUnsafe(`SELECT "quoteNumber" FROM "ClientQuote" ORDER BY "createdAt" DESC LIMIT 500`).catch(() => []),
+      prisma.$queryRawUnsafe(`SELECT "requestNumber" FROM "OrderRequest" WHERE "type" = 'TALLER' ORDER BY "createdAt" DESC LIMIT 500`).catch(() => []),
     ])) as [any[], any[], any[], any[]];
 
     const usedNumbers = new Set<number>();
@@ -244,13 +261,14 @@ async function getNextOrderCorrelative(): Promise<string> {
     const extractNum = (raw: any) => {
       const s = String(raw || "").trim();
       if (!s) return;
-      // Extrae correlativos como "OT #00003", "#00003", "OT-00003", "COT-OT #00003", "00003" (ignora años/timestamps largos)
-      const m = s.match(/(?:^|#|-)0*(\d{1,5})(?:-\d+)?$/);
+      // Ignorar códigos de fecha/año puros (ej. 2024..2035 al inicio sin sufijo correlativo)
+      if (/^(?:ORD|COT|OT|LUB)[-\s#]*20[23]\d$/i.test(s)) return;
+      const m = s.match(/(?:^|#|(?:OT|COT|ORD|LUB)[-\s#]*)0*(\d{1,6})(?:-\d+)?$/i);
       if (m) {
         const n = parseInt(m[1], 10);
-        if (!isNaN(n) && n > 0 && n < 99999) {
+        if (!isNaN(n) && n > 0 && n < 999999) {
           usedNumbers.add(n);
-          if (n < 10000 && n > maxCorrelativo) {
+          if (n > maxCorrelativo) {
             maxCorrelativo = n;
           }
         }
@@ -489,13 +507,42 @@ export async function GET(request: Request) {
       // 0.A Consulta pública de Seguimiento en Línea con Número de Orden y PIN (Etapa 6)
       if (trackingOrderParam || searchParams.get("trackingLatest") === "true") {
         if (!trackingOrderParam) {
+          const isStaff = isStaffSession(getVerifiedSessionFromRequest(request));
           const rows: any[] = await prisma.$queryRawUnsafe(
             `SELECT * FROM "WorkshopOrder" ORDER BY "updatedAt" DESC LIMIT 1`
           );
           if (rows.length === 0) {
             return NextResponse.json({ success: false, error: "No hay órdenes en base de datos." }, { status: 404 });
           }
-          return NextResponse.json({ success: true, order: mapOrderRow(rows[0]) });
+          const mappedDemo = mapOrderRow(rows[0]);
+          if (!isStaff) {
+            return NextResponse.json({
+              success: true,
+              order: {
+                id: mappedDemo.id,
+                orderNumber: mappedDemo.orderNumber,
+                vehicle: mappedDemo.vehicle,
+                plate: "DEMO-001",
+                client: "Cliente Demo",
+                clientPhone: "",
+                clientEmail: null,
+                clientIdDoc: null,
+                mechanic: mappedDemo.mechanic,
+                status: mappedDemo.status,
+                progress: mappedDemo.progress,
+                dateIn: mappedDemo.dateIn,
+                estimatedOut: (rows[0] as any)?.estimatedOut || null,
+                services: mappedDemo.services,
+                items: [],
+                internalChat: [],
+                inspectionFindings: [],
+                receptionInventory: [],
+                receptionPhotos: [],
+                evidencePhotos: [],
+              },
+            });
+          }
+          return NextResponse.json({ success: true, order: mappedDemo });
         }
         const cleanOrder = trackingOrderParam.replace(/^#/, "").trim();
         const rows: any[] = await prisma.$queryRawUnsafe(
@@ -524,8 +571,7 @@ export async function GET(request: Request) {
         if (
           !trackingPinParam ||
           (trackingPinParam !== expectedPin &&
-            trackingPinParam !== storedPin &&
-            trackingPinParam !== "1234")
+            (!storedPin || trackingPinParam !== storedPin))
         ) {
           return NextResponse.json(
             {
@@ -543,14 +589,22 @@ export async function GET(request: Request) {
         });
       }
 
-      // 0.B Consulta pública / directa de Presupuesto por Link del Cliente (Etapa 4)
+      // 0.B Consulta pública / directa de Presupuesto o Entrega por Token del Cliente (Etapas 4 y 7)
       if (quoteTokenParam) {
-        const rows: any[] = await prisma.$queryRawUnsafe(
-          `SELECT * FROM "WorkshopOrder"
-           WHERE "quoteToken" = $1 OR "orderNumber" = $1 OR "id" = $1
-           ORDER BY "updatedAt" DESC LIMIT 1`,
-          quoteTokenParam
-        );
+        const isStaff = isStaffSession(getVerifiedSessionFromRequest(request));
+        const rows: any[] = isStaff
+          ? await prisma.$queryRawUnsafe(
+              `SELECT * FROM "WorkshopOrder"
+               WHERE "quoteToken" = $1 OR "orderNumber" = $1 OR "id" = $1
+               ORDER BY "updatedAt" DESC LIMIT 1`,
+              quoteTokenParam
+            )
+          : await prisma.$queryRawUnsafe(
+              `SELECT * FROM "WorkshopOrder"
+               WHERE "quoteToken" = $1
+               ORDER BY "updatedAt" DESC LIMIT 1`,
+              quoteTokenParam
+            );
 
         if (rows.length === 0) {
           return NextResponse.json(
@@ -562,7 +616,7 @@ export async function GET(request: Request) {
         const ordRow = rows[0];
         let [customer, vehicle] = await Promise.all([
           ordRow.customerId
-            ? prisma.customer.findUnique({ where: { id: ordRow.customerId }, include: { vehicles: true } }).catch(() => null)
+            ? prisma.customer.findUnique({ where: { id: ordRow.customerId }, include: { vehicles: isStaff } }).catch(() => null)
             : null,
           ordRow.vehicleId
             ? prisma.vehicle.findUnique({ where: { id: ordRow.vehicleId } }).catch(() => null)
@@ -572,25 +626,38 @@ export async function GET(request: Request) {
         ]);
         if (!customer && ordRow.clientIdDoc) {
           customer = await prisma.customer
-            .findUnique({ where: { identification: String(ordRow.clientIdDoc).trim() }, include: { vehicles: true } })
+            .findUnique({ where: { identification: String(ordRow.clientIdDoc).trim() }, include: { vehicles: isStaff } })
             .catch(() => null);
         }
         if (!customer && vehicle?.customerId) {
           customer = await prisma.customer
-            .findUnique({ where: { id: vehicle.customerId }, include: { vehicles: true } })
+            .findUnique({ where: { id: vehicle.customerId }, include: { vehicles: isStaff } })
             .catch(() => null);
         }
         if (!customer && ordRow.client) {
           customer = await prisma.customer
-            .findFirst({ where: { name: { equals: String(ordRow.client).trim(), mode: "insensitive" } }, include: { vehicles: true } })
+            .findFirst({ where: { name: { equals: String(ordRow.client).trim(), mode: "insensitive" } }, include: { vehicles: isStaff } })
             .catch(() => null);
         }
+        const safeCustomer = isStaff
+          ? customer
+          : customer
+          ? { id: customer.id, name: customer.name, phone: customer.phone, email: customer.email }
+          : null;
         return NextResponse.json({
           success: true,
           order: mapOrderRow(ordRow),
-          customer,
+          customer: safeCustomer,
           vehicle,
         });
+      }
+
+      const staffSession = getVerifiedSessionFromRequest(request);
+      if (!isStaffSession(staffSession)) {
+        return NextResponse.json(
+          { success: false, error: "No autorizado para consultar la operación del taller." },
+          { status: staffSession ? 403 : 401 }
+        );
       }
 
       // 0.9 Consulta de código correlativo siguiente para nueva OT
@@ -1204,6 +1271,20 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     const { action } = body;
+    const session = getVerifiedSessionFromRequest(request);
+    const isStaff = isStaffSession(session);
+    const publicCustomerActions = new Set([
+      "RESPONDER_PRESUPUESTO_CLIENTE",
+      "ENVIAR_MENSAJE_SEGUIMIENTO",
+      "GUARDAR_ETAPA_7_ENTREGA_FIRMA",
+    ]);
+
+    if (!publicCustomerActions.has(String(action || "")) && !isStaff) {
+      return NextResponse.json(
+        { success: false, error: "No autorizado para ejecutar esta acción." },
+        { status: session ? 403 : 401 }
+      );
+    }
 
     const response = await withRetry(async () => {
       await ensureTallerSchema();
@@ -1225,7 +1306,13 @@ export async function POST(request: Request) {
           serviciosExpress = [],
           fotoBateriaUrl = null,
           crearSolicitudPos = true,
+          branch: branchExpress = "PRINCIPAL",
         } = body;
+
+        const targetBranchExpress =
+          String(branchExpress || "PRINCIPAL").trim().toUpperCase() === "SUCURSAL"
+            ? "SUCURSAL"
+            : "PRINCIPAL";
 
         const cleanPlate = String(placa || "").trim().toUpperCase();
         if (!cleanPlate) {
@@ -1314,18 +1401,80 @@ export async function POST(request: Request) {
         const orderNumber = `LUB-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
         const finalTitle = `${vehicle.brand} ${vehicle.model} (${cleanPlate})`;
 
-        const itemsCompilados = serviciosExpress.map((s: any, idx: number) => ({
-          id: s.id || `srv-${idx + 1}`,
-          name: s.name || s.servicio || "Servicio Express",
-          category: s.category || s.estacion || "Lubricentro",
-          price: 0,
-          qty: 1,
-          completed: true,
-          status: "Listo",
-          empleado_id: s.empleado_id || null,
-          empleado_nombre: s.empleado_nombre || "Técnico Express",
-        }));
+        const [catalogServicesExpress, catalogProductsExpress] = await Promise.all([
+          prisma.workshopService.findMany().catch(() => []),
+          prisma.product.findMany().catch(() => []),
+        ]);
 
+        let stockExpressDeducted = false;
+        const itemsCompilados: any[] = [];
+        for (let idx = 0; idx < serviciosExpress.length; idx++) {
+          const s: any = serviciosExpress[idx];
+          const itemName = String(s.name || s.servicio || "Servicio Express").trim();
+          const itemQty = Math.max(1, Number(s.qty) || 1);
+          const matchedProd = (catalogProductsExpress as any[]).find(
+            (p) =>
+              (s.productId && p.id === s.productId) ||
+              (s.id && p.id === s.id) ||
+              (p.name && p.name.trim().toLowerCase() === itemName.toLowerCase())
+          );
+          const matchedSrv = !matchedProd
+            ? (catalogServicesExpress as any[]).find(
+                (srv) =>
+                  (s.serviceId && srv.id === s.serviceId) ||
+                  (s.id && srv.id === s.id) ||
+                  (srv.name && srv.name.trim().toLowerCase() === itemName.toLowerCase())
+              )
+            : null;
+          const resolvedPrice =
+            Number(s.price) > 0
+              ? Number(s.price)
+              : Number(matchedProd?.price ?? matchedSrv?.price ?? 0);
+
+          if (matchedProd) {
+            const stockCol = targetBranchExpress === "SUCURSAL" ? "stockNorte" : "stock";
+            const currentBranchStock = Number(matchedProd[stockCol] || 0);
+            const nextBranchStock = Math.max(0, currentBranchStock - itemQty);
+            const minStock = Number(matchedProd.minStock || 5);
+            const nextStatus =
+              nextBranchStock <= 0
+                ? "Agotado"
+                : nextBranchStock <= minStock
+                ? "Bajo Stock"
+                : "En Stock";
+            await prisma.$executeRawUnsafe(
+              `UPDATE "Product"
+               SET "${stockCol}" = GREATEST(0, COALESCE("${stockCol}", 0) - $2),
+                   "status" = $3,
+                   "updatedAt" = CURRENT_TIMESTAMP
+               WHERE "id" = $1`,
+              matchedProd.id,
+              itemQty,
+              nextStatus
+            ).catch(() => {});
+            stockExpressDeducted = true;
+          }
+
+          itemsCompilados.push({
+            id: s.id || `srv-${idx + 1}`,
+            productId: matchedProd?.id || s.productId || null,
+            type: matchedProd ? "PART" : "SERVICE",
+            name: itemName,
+            category: s.category || s.estacion || (matchedProd ? "Repuestos" : "Lubricentro"),
+            price: Number(resolvedPrice.toFixed(2)),
+            qty: itemQty,
+            completed: true,
+            status: "Listo",
+            empleado_id: s.empleado_id || null,
+            empleado_nombre: s.empleado_nombre || "Técnico Express",
+          });
+        }
+
+        const totalExpressCalculado = Number(
+          itemsCompilados
+            .reduce((acc, it) => acc + Number(it.price || 0) * Number(it.qty || 1), 0)
+            .toFixed(2)
+        );
         const itemsJsonStr = JSON.stringify(itemsCompilados);
         const notesExpress = `[Lubricentro Express] ${itemsCompilados.map((it: any) => it.name).join(", ")} | Km Actual: ${kmNum} | Próximo: ${nextKmNum} | Aceite: ${viscosidad} ${tipoBase}`.trim();
 
@@ -1336,13 +1485,13 @@ export async function POST(request: Request) {
             "client", "clientPhone", "clientIdDoc", "clientEmail", "mechanic", "status", "progress",
             "mileage", "nextOilChangeKm", "servicesJson", "itemsJson",
             "receptionPhotosJson", "evidencePhotosJson", "notes", "estimatedOut",
-            "totalCost", "dateIn", "completedAt", "createdAt", "updatedAt"
+            "totalCost", "branch", "stockDeducted", "dateIn", "completedAt", "createdAt", "updatedAt"
           ) VALUES (
             $1, $2, $3, $4, $5, $6,
             $7, $8, $9, $10, $11, 'Listo', 100,
             $12, $13, '[]', $14,
             $15, '[]', $16, 'Completado',
-            0, NOW(), NOW(), NOW(), NOW()
+            $17, $18, $19, NOW(), NOW(), NOW(), NOW()
           )`,
           orderId,
           orderNumber,
@@ -1359,7 +1508,10 @@ export async function POST(request: Request) {
           nextKmNum,
           itemsJsonStr,
           fotoBateriaUrl ? JSON.stringify([fotoBateriaUrl]) : "[]",
-          notesExpress
+          notesExpress,
+          totalExpressCalculado,
+          targetBranchExpress,
+          stockExpressDeducted
         );
 
         // 4. Crear solicitud pendiente para el módulo POS de Oficina (/pos/venta)
@@ -1370,24 +1522,28 @@ export async function POST(request: Request) {
             data: {
               requestNumber: reqNum,
               type: "TALLER",
+              customerId: customer.id,
               customerName: customer.name,
               customerPhone: customer.phone || null,
               customerEmail: customer.email || null,
+              customerIdentification: customer.identification || null,
+              vehiclePlate: cleanPlate,
+              vehicleModel: `${vehicle.brand} ${vehicle.model}`,
               vehicleInfo: `${cleanPlate} - ${vehicle.brand} ${vehicle.model}`,
               itemsSummary: `Lubricentro Express: ${itemsCompilados.map((i: any) => i.name).slice(0, 3).join(", ")} (${cleanPlate})`,
               itemsJson: JSON.stringify(
                 itemsCompilados.map((it: any) => ({
-                  id: it.id,
+                  id: it.productId || it.id,
                   name: it.name,
                   category: it.category,
-                  price: 0,
-                  qty: 1,
-                  isService: true,
+                  price: it.price,
+                  qty: it.qty,
+                  isService: it.type !== "PART",
                   empleado_id: it.empleado_id,
                   empleado_nombre: it.empleado_nombre,
                 }))
               ),
-              totalEstimated: 0,
+              totalEstimated: totalExpressCalculado,
               notes: notesExpress,
               status: "PENDIENTE",
             },
@@ -2445,16 +2601,27 @@ export async function POST(request: Request) {
         }
 
         if (!targetCustomerId) {
-          const anyCust = await prisma.customer.findFirst({
-            orderBy: { updatedAt: "desc" },
-          });
-          if (anyCust) {
-            targetCustomerId = anyCust.id;
+          const fallbackName = String(currentOrder?.client || "Cliente Taller").trim();
+          const matchedCust = await prisma.customer
+            .findFirst({
+              where: {
+                OR: [
+                  ...(currentOrder?.clientIdDoc ? [{ identification: currentOrder.clientIdDoc }] : []),
+                  ...(currentOrder?.clientPhone && currentOrder.clientPhone !== "S/N"
+                    ? [{ phone: currentOrder.clientPhone }]
+                    : []),
+                  { name: { equals: fallbackName, mode: "insensitive" } },
+                ],
+              },
+            })
+            .catch(() => null);
+          if (matchedCust) {
+            targetCustomerId = matchedCust.id;
           } else {
             const createdCust = await prisma.customer.create({
               data: {
-                identification: `CLI-${Date.now().toString().slice(-6)}`,
-                name: currentOrder?.client || "Cliente Taller",
+                identification: currentOrder?.clientIdDoc || `CLI-${Date.now().toString().slice(-6)}`,
+                name: fallbackName,
                 phone: currentOrder?.clientPhone || "S/N",
                 type: "Personal",
               },
@@ -2950,14 +3117,29 @@ export async function POST(request: Request) {
       // =========================================================================
       if (action === "RESPONDER_PRESUPUESTO_CLIENTE") {
         const { quoteToken, orderId, decision = "APROBAR", clientComment = "" } = body;
+        const cleanToken = typeof quoteToken === "string" ? quoteToken.trim() : "";
 
-        const rows: any[] = await prisma.$queryRawUnsafe(
-          `SELECT * FROM "WorkshopOrder"
-           WHERE "quoteToken" = $1 OR "id" = $2 OR "orderNumber" = $1
-           ORDER BY "updatedAt" DESC LIMIT 1`,
-          quoteToken || "",
-          orderId || ""
-        );
+        if (!isStaff && !cleanToken) {
+          return NextResponse.json(
+            { success: false, error: "Token de presupuesto requerido." },
+            { status: 401 }
+          );
+        }
+
+        const rows: any[] = isStaff
+          ? await prisma.$queryRawUnsafe(
+              `SELECT * FROM "WorkshopOrder"
+               WHERE "quoteToken" = $1 OR "id" = $2 OR "orderNumber" = $1
+               ORDER BY "updatedAt" DESC LIMIT 1`,
+              cleanToken,
+              orderId || ""
+            )
+          : await prisma.$queryRawUnsafe(
+              `SELECT * FROM "WorkshopOrder"
+               WHERE "quoteToken" = $1
+               ORDER BY "updatedAt" DESC LIMIT 1`,
+              cleanToken
+            );
 
         if (rows.length === 0) {
           return NextResponse.json(
@@ -3243,8 +3425,9 @@ export async function POST(request: Request) {
         const current = existingRows[0];
         const expectedPin = computeOrderPin(current);
         const storedPin = current.trackingPin ? String(current.trackingPin).trim() : "";
+        const cleanPin = String(pin || "").trim();
 
-        if (pin && pin !== expectedPin && pin !== storedPin && pin !== "1234") {
+        if (!isStaff && (!cleanPin || (cleanPin !== expectedPin && (!storedPin || cleanPin !== storedPin)))) {
           return NextResponse.json(
             { success: false, error: "PIN no autorizado." },
             { status: 401 }
@@ -3445,13 +3628,28 @@ export async function POST(request: Request) {
           nextOilChangeKm,
         } = body;
 
-        const existingRows: any[] = await prisma.$queryRawUnsafe(
-          `SELECT * FROM "WorkshopOrder"
-           WHERE "id" = $1 OR "orderNumber" = $1 OR "quoteToken" = $2
-           ORDER BY "updatedAt" DESC LIMIT 1`,
-          orderId || "",
-          quoteToken || orderId || ""
-        );
+        const cleanToken = typeof quoteToken === "string" ? quoteToken.trim() : "";
+        if (!isStaff && !cleanToken) {
+          return NextResponse.json(
+            { success: false, error: "Token de entrega requerido." },
+            { status: 401 }
+          );
+        }
+
+        const existingRows: any[] = isStaff
+          ? await prisma.$queryRawUnsafe(
+              `SELECT * FROM "WorkshopOrder"
+               WHERE "id" = $1 OR "orderNumber" = $1 OR "quoteToken" = $2
+               ORDER BY "updatedAt" DESC LIMIT 1`,
+              orderId || "",
+              cleanToken || orderId || ""
+            )
+          : await prisma.$queryRawUnsafe(
+              `SELECT * FROM "WorkshopOrder"
+               WHERE "quoteToken" = $1
+               ORDER BY "updatedAt" DESC LIMIT 1`,
+              cleanToken
+            );
 
         if (existingRows.length === 0) {
           return NextResponse.json(
@@ -4427,8 +4625,10 @@ export async function POST(request: Request) {
           Math.round((now.getTime() - startMs) / 60000)
         );
 
-        // 1. OFICINA / INVENTARIO: Descontar stock de los repuestos/insumos usados (una sola vez)
+        // 1. OFICINA / INVENTARIO: Descontar stock de la sede correcta (PRINCIPAL vs SUCURSAL) de forma atómica (una sola vez)
         if (!order.stockDeducted) {
+          const isSucursalOrder = String(order.branch || "PRINCIPAL").trim().toUpperCase() === "SUCURSAL";
+          const stockColumn = isSucursalOrder ? "stockNorte" : "stock";
           for (const item of completedItems) {
             if (item.type === "PART" && item.productId) {
               const prod = await prisma.product
@@ -4436,22 +4636,29 @@ export async function POST(request: Request) {
                 .catch(() => null);
               if (prod) {
                 const usedQty = Math.max(1, Number(item.qty) || 1);
-                const newStock = Math.max(0, Number(prod.stock || 0) - usedQty);
+                const currentBranchStock = Number((prod as any)[stockColumn] || 0);
+                const newBranchStock = Math.max(0, currentBranchStock - usedQty);
+                const totalAfter = isSucursalOrder
+                  ? Number(prod.stock || 0) + newBranchStock
+                  : newBranchStock + Number((prod as any).stockNorte || 0);
                 const minStock = Number(prod.minStock || 5);
                 const newStatus =
-                  newStock <= 0
+                  totalAfter <= 0
                     ? "Agotado"
-                    : newStock <= minStock
+                    : totalAfter <= minStock
                     ? "Bajo Stock"
                     : "En Stock";
 
-                await prisma.product.update({
-                  where: { id: prod.id },
-                  data: {
-                    stock: newStock,
-                    status: newStatus,
-                  },
-                });
+                await prisma.$executeRawUnsafe(
+                  `UPDATE "Product"
+                   SET "${stockColumn}" = GREATEST(0, COALESCE("${stockColumn}", 0) - $2),
+                       "status" = $3,
+                       "updatedAt" = CURRENT_TIMESTAMP
+                   WHERE "id" = $1`,
+                  prod.id,
+                  usedQty,
+                  newStatus
+                ).catch(() => {});
               }
             }
           }

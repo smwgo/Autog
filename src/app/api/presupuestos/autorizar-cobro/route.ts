@@ -13,7 +13,15 @@ export const dynamic = "force-dynamic";
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { orderId, items = [], services = [], notes, registrarOrdenesCompra = true } = body;
+    const {
+      orderId,
+      items = [],
+      services = [],
+      notes,
+      quoteTaxRate,
+      quoteDiscount,
+      registrarOrdenesCompra = true,
+    } = body;
 
     if (!orderId) {
       return NextResponse.json(
@@ -38,10 +46,26 @@ export async function POST(request: Request) {
 
       const order = rows[0];
 
-      // 2. Consolidar ítems para POS
-      const totalRepuestos = items.reduce((acc: number, it: any) => acc + (Number(it.price || 0) * Number(it.qty || 1)), 0);
-      const totalServicios = services.reduce((acc: number, sv: any) => acc + Number(sv.price || 0), 0);
-      const totalCalculado = Number((totalRepuestos + totalServicios).toFixed(2));
+      // 2. Consolidar ítems para POS aplicando cantidades, descuento e IVA de forma consistente
+      const totalRepuestos = items.reduce(
+        (acc: number, it: any) => acc + Number(it.price || 0) * Number(it.qty || 1),
+        0
+      );
+      const totalServicios = services.reduce(
+        (acc: number, sv: any) => acc + Number(sv.price || 0) * Number(sv.qty || 1),
+        0
+      );
+      const subtotalCalculado = Number((totalRepuestos + totalServicios).toFixed(2));
+      const taxRate = Number(
+        quoteTaxRate !== undefined ? quoteTaxRate : (order.quoteTaxRate ?? 15)
+      );
+      const discount = Number(
+        quoteDiscount !== undefined ? quoteDiscount : (order.quoteDiscount ?? 0)
+      );
+      const valorDescuento = Number(((subtotalCalculado * discount) / 100).toFixed(2));
+      const baseImponible = Math.max(0, subtotalCalculado - valorDescuento);
+      const valorIva = Number(((baseImponible * taxRate) / 100).toFixed(2));
+      const totalCalculado = Number((baseImponible + valorIva).toFixed(2));
 
       if (items.length === 0 && services.length === 0) {
         return NextResponse.json(
@@ -76,15 +100,15 @@ export async function POST(request: Request) {
           brand: `👤 ${sv.mechanic || order.mechanic || "Taller"} • ${order.plate}`,
           category: sv.category || "Servicio Taller",
           price: Number(sv.price) || 0,
-          qty: 1,
+          qty: Number(sv.qty) || 1,
           isService: true,
           empleado_nombre: sv.mechanic || order.mechanic || "Taller",
         });
       });
 
       const itemsSummary = [
-        ...items.map((i: any) => `${i.qty || 1}x ${i.name}`),
-        ...services.map((s: any) => `1x ${s.name}`),
+        ...items.map((i: any) => `${Number(i.qty) || 1}x ${i.name}`),
+        ...services.map((s: any) => `${Number(s.qty) || 1}x ${s.name}`),
       ].join(", ");
 
       const requestNumber = order.orderNumber.startsWith("OT-")
@@ -208,6 +232,8 @@ export async function POST(request: Request) {
          SET "status" = 'EN_CAJA',
              "quoteStatus" = 'Aprobado',
              "quoteApprovedAt" = CURRENT_TIMESTAMP,
+             "quoteTaxRate" = $6,
+             "quoteDiscount" = $7,
              "totalCost" = $2,
              "itemsJson" = $3,
              "servicesJson" = $4,
@@ -218,7 +244,9 @@ export async function POST(request: Request) {
         totalCalculado,
         JSON.stringify(items),
         JSON.stringify(services),
-        posRequest.id
+        posRequest.id,
+        taxRate,
+        discount
       );
 
       // 5. Opcional: Registrar órdenes de compra en PurchaseOrder agrupadas por proveedor
@@ -232,16 +260,26 @@ export async function POST(request: Request) {
           gruposPorProveedor[sup].push(it);
         });
 
+        const normOrderNum = String(order.orderNumber || order.id).replace(/^OT-/i, "");
         for (const [supName, repuestos] of Object.entries(gruposPorProveedor)) {
           const totalCompra = repuestos.reduce((acc, it) => acc + (Number(it.costPrice || 0) * Number(it.qty || 1)), 0);
-          const poNumber = `OC-${order.orderNumber}-${Date.now().toString().slice(-4)}`;
+          const supSlug = supName
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, "-")
+            .replace(/^-|-$/g, "")
+            .slice(0, 24) || "prov";
+          const poNumber = `OC-${normOrderNum}-${supSlug}`;
 
           await prisma.$executeRawUnsafe(
             `INSERT INTO "PurchaseOrder" 
               ("id", "orderNumber", "supplierName", "expectedDate", "itemsJson", "total", "status", "notes", "createdAt", "updatedAt")
              VALUES ($1, $2, $3, 'Inmediato', $4, $5, 'Solicitado', $6, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-             ON CONFLICT ("orderNumber") DO NOTHING`,
-            `po_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+             ON CONFLICT ("orderNumber") DO UPDATE SET
+               "itemsJson" = EXCLUDED."itemsJson",
+               "total" = EXCLUDED."total",
+               "notes" = EXCLUDED."notes",
+               "updatedAt" = CURRENT_TIMESTAMP`,
+            `po_${normOrderNum}_${supSlug}`,
             poNumber,
             supName,
             JSON.stringify(repuestos),

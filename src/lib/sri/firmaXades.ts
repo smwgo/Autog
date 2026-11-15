@@ -112,12 +112,69 @@ function sha1B64(text: string): string {
 /**
  * Canonicalización XML C14N básica para nodos independientes
  */
-function c14n(xml: string): string {
-  return xml
-    .replace(/<\?xml.*?\?>/g, "")
+function canonicalizeAttributes(attrStr: string, inheritedNamespaces: Record<string, string> = {}): string {
+  const nsAttrs: Record<string, string> = { ...inheritedNamespaces };
+  const regularAttrs: Record<string, string> = {};
+  const attrRegex = /([^\s=]+)\s*=\s*(?:"([^"]*)"|'([^']*)')/g;
+  let match: RegExpExecArray | null;
+  while ((match = attrRegex.exec(attrStr)) !== null) {
+    const name = match[1];
+    const value = match[2] !== undefined ? match[2] : (match[3] || "");
+    if (name === "xmlns" || name.startsWith("xmlns:")) {
+      nsAttrs[name] = value;
+    } else {
+      regularAttrs[name] = value;
+    }
+  }
+
+  const orderedNs = Object.keys(nsAttrs).sort((a, b) => {
+    if (a === "xmlns") return -1;
+    if (b === "xmlns") return 1;
+    return a.localeCompare(b);
+  });
+  const orderedRegular = Object.keys(regularAttrs).sort((a, b) => a.localeCompare(b));
+
+  const rendered = [
+    ...orderedNs.map((k) => `${k}="${nsAttrs[k]}"`),
+    ...orderedRegular.map((k) => `${k}="${regularAttrs[k]}"`),
+  ];
+  return rendered.length > 0 ? " " + rendered.join(" ") : "";
+}
+
+/**
+ * Canonicalización W3C XML C14N 1.0 (REC-xml-c14n-20010315):
+ * - Elimina declaración <?xml ...?>
+ * - Normaliza saltos de línea a \n
+ * - Expande etiquetas auto-cerradas <tag .../> a <tag ...></tag>
+ * - Ordena declaraciones de namespace (xmlns primero) y atributos alfabéticamente
+ * - Propaga namespaces heredados del ancestro (ej. ds/etsi desde ds:Signature) al subárbol raíz
+ */
+function c14n(xml: string, inheritedNamespaces: Record<string, string> = {}): string {
+  let clean = xml
+    .replace(/<\?xml[\s\S]*?\?>/g, "")
     .replace(/\r\n/g, "\n")
     .replace(/\r/g, "\n")
     .trim();
+
+  // Expandir self-closing tags a apertura+cierre
+  clean = clean.replace(/<([A-Za-z_][\w:.-]*)(\s[^>]*?)?\/>/g, (_m, tag, attrs) => {
+    const normalizedAttrs = attrs ? canonicalizeAttributes(attrs) : "";
+    return `<${tag}${normalizedAttrs}></${tag}>`;
+  });
+
+  // Ordenar atributos e inyectar namespaces heredados únicamente en el elemento raíz del fragmento
+  let isRoot = true;
+  clean = clean.replace(/<([A-Za-z_][\w:.-]*)(\s[^>]*?)?>/g, (full, tag, attrs) => {
+    if (isRoot) {
+      isRoot = false;
+      const normalized = canonicalizeAttributes(attrs || "", inheritedNamespaces);
+      return `<${tag}${normalized}>`;
+    }
+    if (!attrs) return `<${tag}>`;
+    return `<${tag}${canonicalizeAttributes(attrs)}>`;
+  });
+
+  return clean;
 }
 
 /**
@@ -159,10 +216,13 @@ export async function firmarXmlXadesBes(
   const signatureValueId = `SignatureValue${rnd()}-${rnd()}`;
   const objectId = `${signatureId}-Object${rnd()}`;
 
-  // 1. Obtener Digest del comprobante principal (#comprobante)
-  const comprobanteClean = xmlSinFirmar
-    .replace(/<\?xml.*?\?>/g, "")
-    .trim();
+  const SIG_NS = {
+    "xmlns:ds": "http://www.w3.org/2000/09/xmldsig#",
+    "xmlns:etsi": "http://uri.etsi.org/01903/v1.3.2#",
+  };
+
+  // 1. Obtener Digest del comprobante principal (#comprobante) canonicalizado
+  const comprobanteClean = c14n(xmlSinFirmar);
   const digestComprobante = sha1B64(comprobanteClean);
 
   // 2. Obtener Digest del Certificado X509
@@ -195,13 +255,13 @@ ${modulusClean}
 </ds:KeyValue>
 </ds:KeyInfo>`;
 
-  const digestKeyInfo = sha1B64(c14n(keyInfoXml));
+  const digestKeyInfo = sha1B64(c14n(keyInfoXml, SIG_NS));
 
   // 5. Construir SignedProperties (XAdES-BES)
   const signingTime = getSigningTimeIso();
   const signedPropertiesXml = `<etsi:SignedProperties Id="${signedPropertiesId}"><etsi:SignedSignatureProperties><etsi:SigningTime>${signingTime}</etsi:SigningTime><etsi:SigningCertificate><etsi:Cert><etsi:CertDigest><ds:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1"></ds:DigestMethod><ds:DigestValue>${digestCertificado}</ds:DigestValue></etsi:CertDigest><etsi:IssuerSerial><ds:X509IssuerName>${info.issuer}</ds:X509IssuerName><ds:X509SerialNumber>${info.serialNumber}</ds:X509SerialNumber></etsi:IssuerSerial></etsi:Cert></etsi:SigningCertificate></etsi:SignedSignatureProperties><etsi:SignedDataObjectProperties><etsi:DataObjectFormat ObjectReference="#${referenceComprobanteId}"><etsi:Description>contenido comprobante</etsi:Description><etsi:MimeType>text/xml</etsi:MimeType></etsi:DataObjectFormat></etsi:SignedDataObjectProperties></etsi:SignedProperties>`;
 
-  const digestSignedProperties = sha1B64(c14n(signedPropertiesXml));
+  const digestSignedProperties = sha1B64(c14n(signedPropertiesXml, SIG_NS));
 
   // 6. Construir SignedInfo
   const signedInfoXml = `<ds:SignedInfo Id="${signedInfoId}">
@@ -224,8 +284,8 @@ ${modulusClean}
 </ds:Reference>
 </ds:SignedInfo>`;
 
-  // 7. Firmar SignedInfo con la Clave Privada RSA-SHA1
-  const signedInfoC14n = c14n(signedInfoXml);
+  // 7. Firmar SignedInfo con la Clave Privada RSA-SHA1 (incluyendo namespaces C14N heredados)
+  const signedInfoC14n = c14n(signedInfoXml, SIG_NS);
   const md = forge.md.sha1.create();
   md.update(signedInfoC14n, "utf8");
   const rawSignature = key.sign(md);

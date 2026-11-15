@@ -1,10 +1,28 @@
 import { NextResponse } from "next/server";
 import nodemailer from "nodemailer";
+import { prisma } from "@/lib/prisma";
+import { getVerifiedSessionFromRequest, isAdminSession } from "@/lib/signed-tokens";
 
 export async function POST(req: Request) {
+  const session = getVerifiedSessionFromRequest(req);
+  if (!session) {
+    return NextResponse.json({ error: "No autorizado." }, { status: 401 });
+  }
+  if (!isAdminSession(session)) {
+    return NextResponse.json({ error: "Requiere permisos de Gerencia." }, { status: 403 });
+  }
+
   try {
     const body = await req.json();
-    const { host, port, user, pass, to, from } = body;
+    const { host, port, user, to, from } = body;
+    let pass = String(body.pass || "");
+
+    if (/^[•*]+$/.test(pass.trim())) {
+      const savedConfig = await (prisma as any).companyConfig
+        .findUnique({ where: { id: "default" }, select: { smtpPass: true } })
+        .catch(() => null);
+      pass = savedConfig?.smtpPass || "";
+    }
 
     if (!host || !user || !pass) {
       return NextResponse.json(

@@ -109,17 +109,45 @@ export default function ModalPresupuestoPdf({
     return "bg-blue-50 text-blue-700 border-blue-200";
   };
 
-  // Totales
+  // Totales (evitar doble IVA cuando totalCost ya incluye IVA o cuando IVA es 0%)
   const subtotalCalculado = items.reduce(
     (sum, it) => sum + (Number(it.price) || 0) * (Number(it.qty) || 1),
     0
   );
+  const taxRate =
+    (orden as any).quoteTaxRate !== undefined && (orden as any).quoteTaxRate !== null
+      ? Number((orden as any).quoteTaxRate)
+      : 15;
+  const taxFactor = 1 + taxRate / 100;
+  const pricesIncludeTax = Boolean((orden as any).pricesIncludeTax);
   const totalBase = subtotalCalculado > 0 ? subtotalCalculado : Number(orden.totalCost) || 0;
-  const descuento = Number(orden.discountAmount) || 0;
-  const subtotal = subtotalCalculado > 0 ? subtotalCalculado : Math.max(0, totalBase / 1.15);
+  const descuento =
+    orden.discountAmount !== undefined && orden.discountAmount !== null
+      ? Number(orden.discountAmount)
+      : 0;
+  const subtotal =
+    subtotalCalculado > 0
+      ? pricesIncludeTax && taxFactor > 0
+        ? subtotalCalculado / taxFactor
+        : subtotalCalculado
+      : taxFactor > 0
+      ? Math.max(0, totalBase / taxFactor)
+      : totalBase;
   const subtotalConDescuento = Math.max(0, subtotal - descuento);
-  const iva = Number(orden.taxAmount) || (subtotalCalculado > 0 ? subtotalConDescuento * 0.15 : Math.max(0, totalBase - subtotal));
-  const total = subtotalCalculado > 0 ? subtotalConDescuento + iva : totalBase;
+  const iva =
+    orden.taxAmount !== undefined && orden.taxAmount !== null
+      ? Number(orden.taxAmount)
+      : subtotalCalculado > 0
+      ? pricesIncludeTax
+        ? Math.max(0, subtotalCalculado - subtotal)
+        : subtotalConDescuento * (taxRate / 100)
+      : Math.max(0, totalBase - subtotal);
+  const total =
+    subtotalCalculado > 0
+      ? pricesIncludeTax
+        ? Math.max(0, subtotalCalculado - descuento)
+        : subtotalConDescuento + iva
+      : totalBase;
 
   const formatearFechaPropuesta = (f: Date = new Date()) => {
     const dias = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];

@@ -114,21 +114,38 @@ export function determinarFormaPagoSri(metodo: string): string {
 }
 
 export function formatFechaSlash(fecha: Date | string): string {
-  let d: Date;
   if (typeof fecha === "string") {
-    if (fecha.includes("/")) {
-      const parts = fecha.split("/");
-      if (parts[0].length === 2 && parts[1].length === 2 && parts[2].length === 4) {
-        return fecha;
-      }
+    const clean = fecha.trim();
+    const slashMatch = clean.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+    if (slashMatch) {
+      return `${slashMatch[1]}/${slashMatch[2]}/${slashMatch[3]}`;
     }
-    d = new Date(fecha);
-  } else {
-    d = fecha;
+    const isoDateOnly = clean.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (isoDateOnly) {
+      return `${isoDateOnly[3]}/${isoDateOnly[2]}/${isoDateOnly[1]}`;
+    }
+    fecha = new Date(clean);
   }
-  const dia = String(d.getDate()).padStart(2, "0");
-  const mes = String(d.getMonth() + 1).padStart(2, "0");
-  const anio = String(d.getFullYear());
+
+  try {
+    const parts = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "America/Guayaquil",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).formatToParts(fecha);
+    const map: Record<string, string> = {};
+    parts.forEach((p) => {
+      map[p.type] = p.value;
+    });
+    if (map.day && map.month && map.year) {
+      return `${map.day}/${map.month}/${map.year}`;
+    }
+  } catch {}
+
+  const dia = String(fecha.getDate()).padStart(2, "0");
+  const mes = String(fecha.getMonth() + 1).padStart(2, "0");
+  const anio = String(fecha.getFullYear());
   return `${dia}/${mes}/${anio}`;
 }
 
