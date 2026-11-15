@@ -173,3 +173,30 @@ export function isStaffRole(role?: string | null): boolean {
     normalized === "OPERADOR"
   );
 }
+
+/**
+ * Empaqueta una sesión JSON y su firma HMAC en un token Bearer compacto
+ * como respaldo para contextos donde las cookies SameSite=Lax estén bloqueadas (ej. iframes).
+ */
+export function createSignedSessionToken(sessionJson: string): string {
+  const encoded = Buffer.from(sessionJson, "utf8").toString("base64url");
+  const sig = signSessionCookieValue(sessionJson);
+  return `${encoded}.${sig}`;
+}
+
+export function verifySignedSessionToken(
+  token?: string | null
+): SignedSessionPayload | null {
+  if (!token || typeof token !== "string") return null;
+  const dotIdx = token.indexOf(".");
+  if (dotIdx <= 0) return null;
+  const encoded = token.slice(0, dotIdx).trim();
+  const sig = token.slice(dotIdx + 1).trim();
+  if (!encoded || !sig) return null;
+  try {
+    const rawJson = Buffer.from(encoded, "base64url").toString("utf8");
+    return verifySignedSessionCookie(rawJson, sig);
+  } catch {
+    return null;
+  }
+}

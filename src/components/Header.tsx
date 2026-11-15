@@ -6,6 +6,7 @@ import { useState, useEffect, useRef } from "react";
 import { getClientUserBranch, normalizeSede, setClientUserBranch } from "@/lib/branch";
 import { BranchTabs } from "@/components/pos/BranchTabs";
 import { isProtectedAdminEmail } from "@/lib/admin-accounts";
+import { getAuthHeaders } from "@/lib/auth-headers";
 
 interface CurrentUser {
   id?: string;
@@ -42,7 +43,10 @@ export function Header() {
   };
 
   useEffect(() => {
-    fetch("/api/notificaciones")
+    fetch("/api/notificaciones", {
+      headers: getAuthHeaders(),
+      credentials: "include",
+    })
       .then((res) => res.json())
       .then((data) => {
         if (data?.success && Array.isArray(data.notificaciones)) {
@@ -102,7 +106,10 @@ export function Header() {
     }
 
     // 2. Sincronizar con /api/auth/me
-    fetch("/api/auth/me")
+    fetch("/api/auth/me", {
+      headers: getAuthHeaders(),
+      credentials: "include",
+    })
       .then((res) => res.json())
       .then((data) => {
         if (data?.success && data?.user) {
@@ -116,6 +123,9 @@ export function Header() {
           if (typeof window !== "undefined") {
             try {
               localStorage.setItem("currentUser", JSON.stringify(data.user));
+              if (data.sessionToken) {
+                localStorage.setItem("autog_session_token", data.sessionToken);
+              }
             } catch {}
           }
         }
@@ -140,6 +150,7 @@ export function Header() {
     if (typeof window !== "undefined") {
       try {
         localStorage.removeItem("currentUser");
+        localStorage.removeItem("autog_session_token");
         localStorage.removeItem("user_profile");
         localStorage.removeItem("autog_user_branch");
         localStorage.removeItem("autog_active_branch");

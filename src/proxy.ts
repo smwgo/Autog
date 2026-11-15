@@ -4,6 +4,7 @@ import {
   SESSION_COOKIE_NAME,
   SESSION_SIG_COOKIE_NAME,
   verifySignedSessionCookie,
+  verifySignedSessionToken,
   isStaffSession,
   isAdminSession,
 } from "@/lib/signed-tokens";
@@ -46,13 +47,27 @@ export function proxy(request: NextRequest) {
   if (pathname.startsWith("/api/") && !isPublicApiRequest(pathname, method)) {
     const rawSession = request.cookies.get(SESSION_COOKIE_NAME)?.value;
     const sigCookie = request.cookies.get(SESSION_SIG_COOKIE_NAME)?.value;
-    const session = verifySignedSessionCookie(rawSession, sigCookie);
+    let session = verifySignedSessionCookie(rawSession, sigCookie);
 
     if (!session) {
+      const authHeader = request.headers.get("authorization") || "";
+      if (authHeader.startsWith("Bearer ")) {
+        session = verifySignedSessionToken(authHeader.slice(7).trim());
+      }
+    }
+
+    if (!session) {
+      const reason = !rawSession
+        ? "missing_session"
+        : !sigCookie
+          ? "missing_sig"
+          : "invalid_sig";
+      console.warn(`[proxy 401] ${method} ${pathname} -> ${reason}`);
       return NextResponse.json(
         {
           success: false,
           error: "No autorizado. Sesión inválida o expirada.",
+          reason,
         },
         { status: 401 }
       );

@@ -6,6 +6,7 @@ import { Header } from "@/components/Header";
 import { PosMobileNav } from "@/components/PosMobileNav";
 import { getClientUserBranch, getClientActiveBranch } from "@/lib/branch";
 import { BranchTabs } from "@/components/pos/BranchTabs";
+import { getAuthHeaders } from "@/lib/auth-headers";
 
 const modules = [
   {
@@ -172,7 +173,10 @@ export default function PosPanel() {
     try {
       const activeBr = getClientActiveBranch();
       const uBr = getClientUserBranch();
-      const res = await fetch(`/api/caja?sede=${encodeURIComponent(activeBr)}&userBranch=${encodeURIComponent(uBr)}`);
+      const res = await fetch(`/api/caja?sede=${encodeURIComponent(activeBr)}&userBranch=${encodeURIComponent(uBr)}`, {
+        headers: getAuthHeaders(),
+        credentials: "include",
+      });
       const json = await res.json();
       if (res.ok && json.success) {
         const active = json.activeSession || null;

@@ -1,5 +1,44 @@
 {
-  "customer": [],
+  "customer": [
+    {
+      "id": "cmwi4rl1c0000muq8ja7ufin9",
+      "identification": "CLI-041441",
+      "name": "Nsjdkdj",
+      "type": "Personal",
+      "phone": "S/N",
+      "email": null,
+      "address": null,
+      "avatar": null,
+      "imageUrl": null,
+      "vip": false,
+      "notes": null,
+      "branch": "PRINCIPAL",
+      "assignedToSucursal": false,
+      "lastVisit": "2026-11-15T17:50:41.472Z",
+      "createdAt": "2026-11-15T17:50:41.472Z",
+      "updatedAt": "2026-11-15T17:50:41.735Z",
+      "vehicles": [
+        {
+          "id": "cmwi4rl6g0002muq8xittqc8y",
+          "customerId": "cmwi4rl1c0000muq8ja7ufin9",
+          "plate": "ABC-1223",
+          "vehicleType": "Camioneta",
+          "brand": "Ford",
+          "model": "F-150",
+          "year": 2026,
+          "color": null,
+          "mileage": 0,
+          "nextOilChangeMileage": null,
+          "imageUrl": "/api/storage/download?key=taller_evidencia%2F527e1827-3ff4-4010-9b99-048a9f4842a0.jpg",
+          "photosJson": "[]",
+          "vin": null,
+          "fuelType": "Gasolina",
+          "createdAt": "2026-11-15T17:50:41.656Z",
+          "updatedAt": "2026-11-15T17:52:37.844Z"
+        }
+      ]
+    }
+  ],
   "vehicle": [],
   "workshopOrder": [],
   "employee": [
@@ -539,9 +578,42 @@
       "branch": null,
       "createdAt": "2026-11-14T20:45:58.103Z",
       "updatedAt": "2026-11-14T20:45:58.103Z"
+    },
+    {
+      "id": "cmwi4yx090000yc63ug2f6yia",
+      "requestNumber": "OT-OT #00005",
+      "type": "TALLER",
+      "customerName": "Nsjdkdj",
+      "customerId": "cmwi4rl1c0000muq8ja7ufin9",
+      "customerIdentification": "CLI-041441",
+      "customerPhone": "S/N",
+      "customerEmail": null,
+      "customerAddress": null,
+      "vehicleInfo": "Ford F-150 2026 [ABC-1223]",
+      "vehiclePlate": "ABC-1223",
+      "vehicleModel": "Ford F-150 2026",
+      "itemsSummary": "1x AMALIE PRO 10W30, 1x Lavado completo mas grafito",
+      "itemsJson": "[{\"id\":\"cmw0413d5zrcr3qhe\",\"code\":\"AM-75677-36\",\"name\":\"AMALIE PRO 10W30\",\"brand\":\"⚙️ Repuesto • Proveedor General • ABC-1223\",\"category\":\"Repuestos\",\"price\":1,\"costPrice\":0,\"qty\":1,\"isService\":false,\"empleado_nombre\":\"Sin asignar\"},{\"id\":\"srv-1794765319066-dmvg\",\"code\":\"RAP-5\",\"name\":\"Lavado completo mas grafito\",\"brand\":\"👤 Sin asignar • ABC-1223\",\"category\":\"Lubricentro\",\"price\":15,\"qty\":1,\"isService\":true,\"empleado_nombre\":\"Sin asignar\"}]",
+      "totalEstimated": "18.4",
+      "notes": "[PRESUPUESTO AUTORIZADO] Orden #OT #00005 | Placa: ABC-1223 | Vehículo: Ford F-150 2026 | Mecánico: Sin asignar | Tel: S/N | Nota: Ingreso a taller",
+      "status": "PENDIENTE",
+      "branch": null,
+      "createdAt": "2026-11-15T17:56:23.577Z",
+      "updatedAt": "2026-11-15T17:56:23.577Z"
     }
   ],
-  "user": [],
+  "user": [
+    {
+      "id": "cmw2pjx2g000011wsv7p5rizg",
+      "email": "tiendaautoggerencia@gmail.com",
+      "createdAt": "2026-11-04T22:48:16.934Z",
+      "updatedAt": "2026-11-04T22:48:16.934Z",
+      "name": "Administrador",
+      "avatar": null,
+      "role": "ROOT",
+      "passwordHash": "$2b$12$Dc2eT3/zOj4vFKi9eKGKeuDEIPg28NVyze4riH5F1qokC9AYjziNe"
+    }
+  ],
   "cashRegister": [],
   "sale": [],
   "clientInvoice": [],

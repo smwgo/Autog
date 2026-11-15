@@ -8,6 +8,7 @@ import { PosMobileNav } from "@/components/PosMobileNav";
 import { CollapsibleMetrics } from "@/components/CollapsibleMetrics";
 import { BranchTabs } from "@/components/pos/BranchTabs";
 import { useRealtimeSync } from "@/hooks/useRealtimeSync";
+import { getAuthHeaders } from "@/lib/auth-headers";
 
 interface VehicleItem {
   id: string;
@@ -91,8 +92,18 @@ export default function PosVehiculosPage() {
       const url = busqueda.trim()
         ? `/api/pos/vehiculos?busqueda=${encodeURIComponent(busqueda.trim())}`
         : "/api/pos/vehiculos";
-      const res = await fetch(url);
-      const data = await res.json();
+      const res = await fetch(url, {
+        headers: getAuthHeaders(),
+        credentials: "include",
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.status === 401) {
+        if (typeof window !== "undefined") {
+          const reason = encodeURIComponent(data?.reason || "unknown");
+          window.location.replace(`/login?expired=1&reason=${reason}`);
+        }
+        return;
+      }
       if (res.ok && data.success) {
         setVehicles(data.vehicles || []);
       } else {
@@ -191,13 +202,13 @@ export default function PosVehiculosPage() {
         payload.id = vehiculoAEditar.id;
         res = await fetch("/api/pos/vehiculos", {
           method: "PUT",
-          headers: { "Content-Type": "application/json" },
+          headers: getAuthHeaders({ "Content-Type": "application/json" }),
           body: JSON.stringify(payload),
         });
       } else {
         res = await fetch("/api/pos/vehiculos", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: getAuthHeaders({ "Content-Type": "application/json" }),
           body: JSON.stringify(payload),
         });
       }
@@ -232,6 +243,7 @@ export default function PosVehiculosPage() {
         `/api/pos/vehiculos?id=${encodeURIComponent(vehiculoAEliminar.id)}&plate=${encodeURIComponent(vehiculoAEliminar.plate)}`,
         {
           method: "DELETE",
+          headers: getAuthHeaders(),
         }
       );
       const data = await res.json();

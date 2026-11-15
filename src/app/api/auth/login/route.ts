@@ -7,6 +7,7 @@ import {
   SESSION_COOKIE_NAME,
   SESSION_SIG_COOKIE_NAME,
   signSessionCookieValue,
+  createSignedSessionToken,
 } from "@/lib/signed-tokens";
 
 export const dynamic = "force-dynamic";
@@ -178,17 +179,22 @@ export async function POST(req: Request) {
       );
     }
 
+    const sessionJson = JSON.stringify(authenticatedUser);
+    const sessionToken = createSignedSessionToken(sessionJson);
+
     const response = NextResponse.json({
       success: true,
       message: "Inicio de sesión exitoso",
       user: authenticatedUser,
+      sessionToken,
       redirectTo,
     });
 
-    const sessionJson = JSON.stringify(authenticatedUser);
+    const forwardedProto = req.headers.get("x-forwarded-proto") || "";
+    const isHttps = forwardedProto.includes("https") || req.url.startsWith("https://");
     const cookieCommon = {
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax" as const,
+      secure: isHttps,
+      sameSite: (isHttps ? "none" : "lax") as "none" | "lax",
       path: "/",
       maxAge: 60 * 60 * 24 * 7,
     };

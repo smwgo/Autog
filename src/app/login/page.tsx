@@ -60,6 +60,20 @@ export default function LoginPage() {
     setRemember(savedRemember);
     setEmail(savedRemember ? savedEmail || "" : "");
     setPassword(savedRemember ? savedPassword || "" : "");
+
+    if (typeof window !== "undefined") {
+      const sp = new URLSearchParams(window.location.search);
+      if (sp.get("expired") === "1") {
+        localStorage.removeItem("currentUser");
+        localStorage.removeItem("autog_session_token");
+        const reason = sp.get("reason");
+        setError(
+          reason
+            ? `Sesión expirada o no válida (${reason}). Inicia sesión nuevamente.`
+            : "Tu sesión expiró. Inicia sesión nuevamente."
+        );
+      }
+    }
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -94,11 +108,11 @@ export default function LoginPage() {
           localStorage.removeItem("autog_remember_login");
         }
 
-        // Guardar usuario en localStorage para el cliente
+        // Guardar usuario y token firmado en localStorage para el cliente (además de cookies HttpOnly)
         localStorage.setItem("currentUser", JSON.stringify(data.user));
-        try {
-          document.cookie = `auth_session=${encodeURIComponent(JSON.stringify(data.user))}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
-        } catch {}
+        if (data.sessionToken) {
+          localStorage.setItem("autog_session_token", data.sessionToken);
+        }
 
         // Configurar la sede del usuario según su correo y asignación de sede
         const userBranch = normalizeSede(data.user?.branch);

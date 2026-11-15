@@ -4,18 +4,28 @@ import {
   SESSION_COOKIE_NAME,
   SESSION_SIG_COOKIE_NAME,
   verifySignedSessionCookie,
+  verifySignedSessionToken,
+  createSignedSessionToken,
 } from "@/lib/signed-tokens";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
     const cookieStore = await cookies();
     const sessionCookie = cookieStore.get(SESSION_COOKIE_NAME)?.value;
     const sigCookie = cookieStore.get(SESSION_SIG_COOKIE_NAME)?.value;
 
-    const parsed = verifySignedSessionCookie(sessionCookie, sigCookie);
+    let parsed = verifySignedSessionCookie(sessionCookie, sigCookie);
+    if (!parsed) {
+      const authHeader = req.headers.get("authorization") || "";
+      if (authHeader.startsWith("Bearer ")) {
+        parsed = verifySignedSessionToken(authHeader.slice(7).trim());
+      }
+    }
+
     if (parsed && (parsed.email || parsed.id || parsed.role)) {
+        const sessionToken = createSignedSessionToken(JSON.stringify(parsed));
         const roleUpper = (parsed.role || "").toUpperCase();
         const branchUpper = String(parsed.branch || "").toUpperCase();
         const isSucursal = branchUpper.includes("SUCURSAL");
@@ -46,6 +56,7 @@ export async function GET() {
 
         return NextResponse.json({
           success: true,
+          sessionToken,
           user: {
             ...parsed,
             name: singleWord,
