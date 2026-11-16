@@ -421,13 +421,14 @@ export default function PaginaCatalogoProveedor() {
   const numeroOrdenFormateado = useMemo(() => {
     const raw = String(order?.orderNumber || "00001")
       .replace(/^ORD-/i, "")
-      .replace(/^#/i, "")
+      .replace(/^OT\s*#?/i, "")
+      .replace(/#/g, "")
       .trim();
     return raw.padStart(5, "0");
   }, [order]);
 
   return (
-    <div className="min-h-screen bg-[#070b14] text-white font-sans selection:bg-blue-500/30 pb-28">
+    <div className="min-h-screen bg-[#09090b] text-zinc-100 font-sans selection:bg-purple-500/30 pb-24">
       {/* Toast Flotante */}
       {toast && (
         <div
@@ -442,93 +443,57 @@ export default function PaginaCatalogoProveedor() {
         </div>
       )}
 
-      {/* Contenido Principal Estilo Catálogo Solicitud de Cotización */}
-      <main className="max-w-5xl mx-auto p-3 sm:p-6 space-y-4">
+      {/* Contenido Principal Estilo Propuesta Limpio */}
+      <main className="max-w-4xl mx-auto px-3 sm:px-6 py-4 sm:py-6 space-y-3.5">
         {cargando ? (
-          <div className="p-16 text-center space-y-3 bg-[#111827] rounded-3xl border border-slate-800">
-            <div className="w-9 h-9 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto" />
-            <p className="text-xs text-slate-400">Cargando solicitud de cotización...</p>
+          <div className="p-14 text-center space-y-3 bg-[#111114] rounded-2xl border border-white/10">
+            <div className="w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto" />
+            <p className="text-xs text-zinc-400">Cargando...</p>
           </div>
         ) : error ? (
-          <div className="p-12 text-center bg-[#111827] rounded-3xl border border-rose-500/30 space-y-3">
-            <div className="text-2xl">⚠️</div>
+          <div className="p-10 text-center bg-[#111114] rounded-2xl border border-rose-500/30 space-y-2">
+            <div className="text-xl">⚠️</div>
             <h2 className="text-sm font-bold text-white">{error}</h2>
           </div>
         ) : (
           <>
-            {/* =================================================================
-                CABECERA DE SOLICITUD DE COTIZACIÓN • OFICINA (DISEÑO IMAGEN 1)
-               ================================================================= */}
-            <div className="p-5 sm:p-6 rounded-3xl bg-[#111827] border border-slate-800/90 shadow-2xl flex flex-col md:flex-row md:items-center justify-between gap-5">
-              <div className="flex items-start sm:items-center gap-4">
-                {/* Icono Camión Azul */}
-                <div className="w-13 h-13 sm:w-14 sm:h-14 rounded-2xl bg-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-600/30 shrink-0">
-                  <svg
-                    className="w-7 h-7"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                    strokeWidth={1.9}
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M8.25 18.75a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 0 1-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 0 0-3.213-9.193 2.056 2.056 0 0 0-1.58-.86H14.25M16.5 18.75h-2.25m0-11.175V14.25m0 0H2.25m12 0v4.5m0-4.5H16.5"
-                    />
-                  </svg>
+            {/* CABECERA LIMPIA ESTILO PROPUESTA (TÍTULO UNA SOLA PALABRA) */}
+            <header className="rounded-2xl bg-gradient-to-r from-purple-500/[0.08] via-[#111114] to-blue-500/[0.07] border border-white/10 p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="space-y-1.5 min-w-0">
+                <div className="flex items-center gap-2.5 flex-wrap">
+                  <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
+                    Cotización
+                  </h1>
+                  <span className="font-mono text-xs sm:text-sm font-bold text-zinc-300 bg-white/[0.06] border border-white/10 px-2 py-0.5 rounded-lg">
+                    #{numeroOrdenFormateado}
+                  </span>
+                  {isSingleView && allItemsCount > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => setVerTodos((v) => !v)}
+                      className="px-2.5 py-0.5 rounded-lg bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 text-[11px] font-medium text-zinc-200 cursor-pointer transition-colors"
+                    >
+                      {verTodos ? "Filtrados" : `Ver todos (${allItemsCount})`}
+                    </button>
+                  )}
                 </div>
 
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2.5 flex-wrap">
-                    <span className="text-xs font-extrabold uppercase tracking-wider text-blue-400">
-                      SOLICITUD DE COTIZACIÓN • OFICINA
-                    </span>
-                    {order?.plate && (
-                      <span className="px-2.5 py-0.5 rounded-md bg-amber-400 text-black font-extrabold text-xs uppercase tracking-wide shadow-xs">
-                        PLACA: {order.plate}
+                {order && (
+                  <div className="flex items-center gap-2 flex-wrap text-xs sm:text-sm text-zinc-300">
+                    <span className="font-semibold text-white">{order.vehicle}</span>
+                    {order.plate && (
+                      <span className="font-mono font-bold text-blue-400 bg-blue-500/10 border border-blue-500/25 px-2 py-0.5 rounded-md text-xs">
+                        {order.plate}
                       </span>
                     )}
-                    {isSingleView && allItemsCount > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => setVerTodos((v) => !v)}
-                        className="px-2.5 py-0.5 rounded-md bg-slate-800 hover:bg-slate-700 border border-slate-700 text-[11px] font-semibold text-slate-200 cursor-pointer transition-colors"
-                      >
-                        {verTodos ? "Ver filtrados" : `Ver todos (${allItemsCount})`}
-                      </button>
-                    )}
                   </div>
-
-                  <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">
-                    {order
-                      ? `${order.vehicle} — Orden #${numeroOrdenFormateado}`
-                      : "Consolidado de Pedidos — Taller"}
-                  </h1>
-
-                  <p className="text-xs sm:text-sm text-slate-400">
-                    Centro Automotriz • Marque si dispone del repuesto, su precio de venta y tiempo de envío a Oficina.
-                  </p>
-                </div>
+                )}
               </div>
 
-              {/* Tarjeta Derecha: Proveedor Conectado */}
-              <div className="rounded-2xl bg-[#0b111e] border border-slate-800 px-5 py-3.5 text-center md:text-right min-w-[230px] shrink-0 space-y-0.5">
-                <div className="flex items-center justify-center md:justify-end gap-1.5">
-                  <span className="text-[11px] text-slate-400 font-medium">
-                    Proveedor Conectado
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setEditandoProveedor((v) => !v)}
-                    className="text-[10px] text-slate-500 hover:text-slate-300 cursor-pointer"
-                    title="Cambiar o editar proveedor"
-                  >
-                    ✎
-                  </button>
-                </div>
-
+              {/* Proveedor Compacto */}
+              <div className="rounded-xl bg-black/30 border border-white/10 px-3.5 py-2.5 sm:text-right shrink-0">
                 {proveedoresUrl.length > 1 && !editandoProveedor ? (
-                  <div className="pt-0.5">
+                  <div className="flex items-center sm:justify-end gap-1.5">
                     <select
                       value={nombreProveedor}
                       onChange={(e) => {
@@ -536,58 +501,85 @@ export default function PaginaCatalogoProveedor() {
                         setNombreProveedor(e.target.value);
                         if (sel?.phone) setTelefonoProveedor(sel.phone);
                       }}
-                      className="bg-transparent text-emerald-400 font-extrabold text-sm sm:text-base focus:outline-none cursor-pointer text-center md:text-right"
+                      className="bg-transparent text-emerald-400 font-bold text-sm focus:outline-none cursor-pointer"
                     >
                       {proveedoresUrl.map((p: any, idx: number) => (
-                        <option key={idx} value={p.name} className="bg-[#0b111e] text-white">
+                        <option key={idx} value={p.name} className="bg-[#111114] text-white">
                           {p.name}
                         </option>
                       ))}
                     </select>
+                    <button
+                      type="button"
+                      onClick={() => setEditandoProveedor(true)}
+                      className="text-[11px] text-zinc-500 hover:text-zinc-300 cursor-pointer"
+                      title="Editar proveedor"
+                    >
+                      ✎
+                    </button>
                   </div>
                 ) : editandoProveedor ? (
-                  <div className="space-y-1.5 pt-1">
-                    <input
-                      type="text"
-                      value={nombreProveedor}
-                      onChange={(e) => setNombreProveedor(e.target.value)}
-                      placeholder="Nombre del proveedor"
-                      className="w-full h-7 px-2 rounded-lg bg-[#111827] border border-slate-700 text-xs font-bold text-emerald-400 focus:outline-none focus:border-emerald-500"
-                    />
+                  <div className="space-y-1.5 min-w-[180px]">
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="text"
+                        value={nombreProveedor}
+                        onChange={(e) => setNombreProveedor(e.target.value)}
+                        placeholder="Proveedor"
+                        className="w-full h-7 px-2 rounded-lg bg-zinc-900 border border-white/15 text-xs font-bold text-emerald-400 focus:outline-none focus:border-emerald-500"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setEditandoProveedor(false)}
+                        className="h-7 px-2 rounded-lg bg-white/10 text-[11px] text-zinc-300 hover:text-white cursor-pointer"
+                      >
+                        ✓
+                      </button>
+                    </div>
                     <input
                       type="text"
                       value={telefonoProveedor}
                       onChange={(e) => setTelefonoProveedor(e.target.value)}
                       placeholder="WhatsApp"
-                      className="w-full h-7 px-2 rounded-lg bg-[#111827] border border-slate-700 text-xs text-slate-300 focus:outline-none focus:border-blue-500"
+                      className="w-full h-7 px-2 rounded-lg bg-zinc-900 border border-white/15 text-xs text-zinc-300 focus:outline-none focus:border-blue-500"
                     />
                   </div>
                 ) : (
-                  <>
-                    <div
+                  <div className="flex items-center sm:justify-end gap-2">
+                    <div>
+                      <div
+                        onClick={() => setEditandoProveedor(true)}
+                        className="text-sm font-bold text-emerald-400 cursor-pointer hover:underline"
+                        title="Clic para editar proveedor"
+                      >
+                        {nombreProveedor || "Proveedor"}
+                      </div>
+                      {telefonoProveedor && (
+                        <div className="text-[11px] font-mono text-zinc-400">
+                          {telefonoProveedor}
+                        </div>
+                      )}
+                    </div>
+                    <button
+                      type="button"
                       onClick={() => setEditandoProveedor(true)}
-                      className="text-sm sm:text-base font-extrabold text-emerald-400 cursor-pointer hover:underline"
-                      title="Clic para editar nombre"
+                      className="text-xs text-zinc-500 hover:text-zinc-300 cursor-pointer"
+                      title="Editar proveedor"
                     >
-                      {nombreProveedor || "Repuestos Japón Express"}
-                    </div>
-                    <div className="text-xs text-slate-400">
-                      WhatsApp: {telefonoProveedor || "0987654321"}
-                    </div>
-                  </>
+                      ✎
+                    </button>
+                  </div>
                 )}
               </div>
-            </div>
+            </header>
 
-            {/* =================================================================
-                LISTADO DE REPUESTOS / SERVICIOS SOLICITADOS (DISEÑO IMAGEN 1)
-               ================================================================= */}
+            {/* LISTADO LIMPIO DE ÍTEMS ESTILO PROPUESTA */}
             {items.length === 0 ? (
-              <div className="p-12 text-center bg-[#111827] rounded-3xl border border-slate-800 text-slate-400 text-xs">
-                Sin ítems pendientes en este pedido.
+              <div className="p-10 text-center bg-[#111114] rounded-2xl border border-white/10 text-zinc-400 text-xs">
+                Sin ítems pendientes en esta solicitud.
               </div>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-2.5">
                 {items.map((item, idx) => {
                   const fotosList =
                     Array.isArray(item.fotos) && item.fotos.length > 0
@@ -605,270 +597,189 @@ export default function PaginaCatalogoProveedor() {
                       ? `${item.danio} — ${item.descripcion}`
                       : item.descripcion ||
                         item.danio ||
-                        (item.notes && !item.notes.startsWith("[Evidencia")
-                          ? item.notes
-                          : "Requerimiento registrado en orden de trabajo");
+                        (item.notes && !item.notes.startsWith("[Evidencia") ? item.notes : "");
+
+                  const tieneEvidencia = fotosList.length > 0 || videosList.length > 0 || audiosList.length > 0;
 
                   return (
                     <div
                       key={item.id || idx}
-                      className={`rounded-3xl bg-[#111827] border p-5 sm:p-6 shadow-xl transition-all space-y-4 ${
+                      className={`rounded-2xl bg-[#111114] border p-4 transition-all space-y-3 ${
                         confirmado
                           ? "border-emerald-500/40"
                           : disp === "NO_HAY"
                           ? "border-rose-500/30"
-                          : "border-slate-800/90"
+                          : "border-white/10"
                       }`}
                     >
-                      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5">
-                        {/* Columna Izquierda: Detalles del Repuesto y Evidencia Adjunta */}
-                        <div className="space-y-2.5 flex-1 min-w-0">
-                          {/* Badges Superiores: #1 • Cant: 1 | Pin #1 • Frente Der. */}
+                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3.5">
+                        {/* Izquierda: Cantidad + Nombre + Detalle + Evidencia */}
+                        <div className="space-y-1.5 flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="px-2.5 py-1 rounded-lg bg-slate-800/90 border border-slate-700 text-slate-200 text-xs font-bold">
-                              #{idx + 1} • Cant: {item.qty || 1}
+                            <span className="px-2 py-0.5 rounded-md bg-white/[0.06] border border-white/10 text-zinc-200 text-xs font-bold tabular-nums">
+                              {item.qty || 1}x
                             </span>
-
-                            <span className="px-3 py-1 rounded-full bg-blue-500/15 border border-blue-500/30 text-blue-400 text-xs font-semibold">
-                              {item.pinNumber
-                                ? `Pin #${item.pinNumber} • ${item.vistaLabel || "Frente Der."}`
-                                : `Pin #${idx + 1} • ${item.vistaLabel || item.category || "Taller"}`}
-                            </span>
-
+                            <h3 className="text-sm sm:text-base font-bold text-white leading-snug truncate">
+                              {item.name}
+                            </h3>
+                            {item.vistaLabel && (
+                              <span className="px-2 py-0.5 rounded-md bg-blue-500/10 border border-blue-500/25 text-blue-300 text-[11px] font-medium">
+                                {item.vistaLabel}
+                              </span>
+                            )}
                             {confirmado && (
-                              <span className="px-2.5 py-1 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-bold">
+                              <span className="px-2 py-0.5 rounded-md bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-[11px] font-bold">
                                 ✓ Confirmado
                               </span>
                             )}
                           </div>
 
-                          {/* Daño / Detalle */}
-                          <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
-                            <span>Daño/Detalle: </span>
-                            <strong className="text-slate-100 font-bold">
+                          {detalleTexto && (
+                            <p className="text-xs text-zinc-400 leading-relaxed">
                               {detalleTexto}
-                            </strong>
-                          </p>
+                            </p>
+                          )}
 
-                          {/* Nombre del Repuesto / Servicio */}
-                          <h3 className="text-lg sm:text-xl font-extrabold text-white leading-snug">
-                            {item.name}
-                          </h3>
+                          {tieneEvidencia && (
+                            <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+                              {fotosList.length > 0 && (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setFotoModal({
+                                      fotos: fotosList,
+                                      idx: 0,
+                                      titulo: item.name,
+                                    })
+                                  }
+                                  className="px-2.5 py-1 rounded-lg bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/25 text-sky-300 text-[11px] font-semibold inline-flex items-center gap-1 cursor-pointer transition-colors"
+                                >
+                                  <span>📷</span>
+                                  <span>Foto{fotosList.length > 1 ? ` (${fotosList.length})` : ""}</span>
+                                </button>
+                              )}
 
-                          {/* Evidencia adjunta: Foto, Video, Audio */}
-                          <div className="flex items-center gap-2 flex-wrap pt-1">
-                            <span className="text-xs text-slate-400 mr-1">
-                              Evidencia adjunta:
-                            </span>
+                              {videosList.length > 0 && (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setVideoModal({
+                                      videos: videosList,
+                                      titulo: item.name,
+                                    })
+                                  }
+                                  className="px-2.5 py-1 rounded-lg bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/25 text-purple-300 text-[11px] font-semibold inline-flex items-center gap-1 cursor-pointer transition-colors"
+                                >
+                                  <span>🎥</span>
+                                  <span>Video{videosList.length > 1 ? ` (${videosList.length})` : ""}</span>
+                                </button>
+                              )}
 
-                            <button
-                              type="button"
-                              onClick={() => {
-                                if (fotosList.length > 0) {
-                                  setFotoModal({
-                                    fotos: fotosList,
-                                    idx: 0,
-                                    titulo: item.name,
-                                  });
-                                } else {
-                                  mostrarToast("Sin foto adjunta en este ítem", "err");
-                                }
-                              }}
-                              className="px-3 py-1.5 rounded-lg bg-sky-500/15 hover:bg-sky-500/25 border border-sky-500/35 text-sky-400 text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer transition-all active:scale-95"
-                            >
-                              <svg
-                                className="w-3.5 h-3.5"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                                strokeWidth={2}
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z"
-                                />
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  d="M16.5 12.75a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0Z"
-                                />
-                              </svg>
-                              <span>Foto{fotosList.length > 1 ? ` (${fotosList.length})` : ""}</span>
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={() => {
-                                if (videosList.length > 0) {
-                                  setVideoModal({
-                                    videos: videosList,
-                                    titulo: item.name,
-                                  });
-                                } else if (fotosList.length > 0) {
-                                  setFotoModal({
-                                    fotos: fotosList,
-                                    idx: 0,
-                                    titulo: item.name,
-                                  });
-                                } else {
-                                  mostrarToast("Sin video adjunto en este ítem", "err");
-                                }
-                              }}
-                              className="px-3 py-1.5 rounded-lg bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/35 text-purple-400 text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer transition-all active:scale-95"
-                            >
-                              <svg
-                                className="w-3.5 h-3.5"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                                strokeWidth={2}
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  d="m15.75 10.5 4.72-4.72a.75.75 0 0 1 1.28.53v11.38a.75.75 0 0 1-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 0 0 2.25-2.25v-9a2.25 2.25 0 0 0-2.25-2.25h-9A2.25 2.25 0 0 0 2.25 7.5v9a2.25 2.25 0 0 0 2.25 2.25Z"
-                                />
-                              </svg>
-                              <span>Video{videosList.length > 1 ? ` (${videosList.length})` : ""}</span>
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={() => {
-                                if (audiosList.length > 0) {
-                                  setAudioAbiertoPorItem((prev) => ({
-                                    ...prev,
-                                    [item.id]: !prev[item.id],
-                                  }));
-                                } else {
-                                  mostrarToast("Sin nota de audio en este ítem", "err");
-                                }
-                              }}
-                              className={`px-3 py-1.5 rounded-lg border text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer transition-all active:scale-95 ${
-                                audioAbierto
-                                  ? "bg-amber-500 text-black border-amber-400"
-                                  : "bg-amber-500/15 hover:bg-amber-500/25 border-amber-500/35 text-amber-400"
-                              }`}
-                            >
-                              <svg
-                                className="w-3.5 h-3.5"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                                strokeWidth={2}
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  d="M12 18.75a6 6 0 0 0 6-6v-1.5m-6 7.5a6 6 0 0 1-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 0 1-3-3V4.5a3 3 0 1 1 6 0v8.25a3 3 0 0 1-3 3Z"
-                                />
-                              </svg>
-                              <span>Audio{audiosList.length > 1 ? ` (${audiosList.length})` : ""}</span>
-                            </button>
-                          </div>
+                              {audiosList.length > 0 && (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setAudioAbiertoPorItem((prev) => ({
+                                      ...prev,
+                                      [item.id]: !prev[item.id],
+                                    }))
+                                  }
+                                  className={`px-2.5 py-1 rounded-lg border text-[11px] font-semibold inline-flex items-center gap-1 cursor-pointer transition-colors ${
+                                    audioAbierto
+                                      ? "bg-amber-500 text-black border-amber-400"
+                                      : "bg-amber-500/10 hover:bg-amber-500/20 border-amber-500/25 text-amber-300"
+                                  }`}
+                                >
+                                  <span>🎙️</span>
+                                  <span>Audio{audiosList.length > 1 ? ` (${audiosList.length})` : ""}</span>
+                                </button>
+                              )}
+                            </div>
+                          )}
                         </div>
 
-                        {/* Columna Derecha: Caja de Cotización (1. ¿LO TIENE? | 2. PRECIO ($) | 3. TIEMPO ENVÍO) */}
-                        <div className="rounded-2xl bg-[#0b111e] border border-slate-800/90 p-4 flex flex-wrap sm:flex-nowrap items-end gap-3.5 sm:gap-4 shrink-0">
-                          {/* 1. ¿LO TIENE? */}
-                          <div className="space-y-1.5">
-                            <span className="block text-[11px] font-bold uppercase tracking-wider text-slate-400">
-                              1. ¿LO TIENE?
-                            </span>
-                            <div className="inline-flex rounded-xl bg-[#111827] border border-slate-700/80 p-0.5">
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  actualizarCampoItem(item.id, {
-                                    supplierAvailability: "SI_HAY",
-                                  })
-                                }
-                                className={`h-9 px-3.5 rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-all ${
-                                  disp === "SI_HAY"
-                                    ? "bg-emerald-600 text-white shadow-sm"
-                                    : "text-slate-400 hover:text-white"
-                                }`}
-                              >
-                                <span>✓</span>
-                                <span>Sí</span>
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  actualizarCampoItem(item.id, {
-                                    supplierAvailability: "NO_HAY",
-                                    supplierPrice: 0,
-                                  })
-                                }
-                                className={`h-9 px-3.5 rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-all ${
-                                  disp === "NO_HAY"
-                                    ? "bg-rose-600 text-white shadow-sm"
-                                    : "text-slate-400 hover:text-white"
-                                }`}
-                              >
-                                <span>✕</span>
-                                <span>No</span>
-                              </button>
-                            </div>
+                        {/* Derecha: Controles limpios en una fila */}
+                        <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 shrink-0">
+                          <div className="inline-flex rounded-xl bg-black/40 border border-white/10 p-0.5">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                actualizarCampoItem(item.id, {
+                                  supplierAvailability: "SI_HAY",
+                                })
+                              }
+                              className={`h-8 px-3 rounded-lg text-xs font-bold cursor-pointer transition-all ${
+                                disp === "SI_HAY"
+                                  ? "bg-emerald-600 text-white"
+                                  : "text-zinc-400 hover:text-white"
+                              }`}
+                            >
+                              Sí
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                actualizarCampoItem(item.id, {
+                                  supplierAvailability: "NO_HAY",
+                                  supplierPrice: 0,
+                                })
+                              }
+                              className={`h-8 px-3 rounded-lg text-xs font-bold cursor-pointer transition-all ${
+                                disp === "NO_HAY"
+                                  ? "bg-rose-600 text-white"
+                                  : "text-zinc-400 hover:text-white"
+                              }`}
+                            >
+                              No
+                            </button>
                           </div>
 
-                          {/* 2. PRECIO ($) */}
-                          <div className="space-y-1.5">
-                            <span className="block text-[11px] font-bold uppercase tracking-wider text-slate-400">
-                              2. PRECIO ($)
+                          <div className="relative">
+                            <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-emerald-400">
+                              $
                             </span>
-                            <div className="relative">
-                              <span className="absolute left-3 top-2.5 text-xs font-extrabold text-emerald-400">
-                                $
-                              </span>
-                              <input
-                                type="number"
-                                step="0.01"
-                                min="0"
-                                disabled={disp === "NO_HAY"}
-                                value={item.supplierPrice || ""}
-                                onChange={(e) =>
-                                  actualizarCampoItem(item.id, {
-                                    supplierAvailability: "SI_HAY",
-                                    supplierPrice: parseFloat(e.target.value) || 0,
-                                  })
-                                }
-                                placeholder="0,00"
-                                className="w-28 sm:w-32 h-10 pl-7 pr-3 rounded-xl bg-[#111827] border border-slate-700/80 focus:border-emerald-500 text-sm font-extrabold text-white placeholder:text-slate-500 focus:outline-none disabled:opacity-40"
-                              />
-                            </div>
-                          </div>
-
-                          {/* 3. TIEMPO ENVÍO */}
-                          <div className="space-y-1.5">
-                            <span className="block text-[11px] font-bold uppercase tracking-wider text-slate-400">
-                              3. TIEMPO ENVÍO
-                            </span>
-                            <select
+                            <input
+                              type="number"
+                              step="0.01"
+                              min="0"
                               disabled={disp === "NO_HAY"}
-                              value={item.deliveryTime || "30 min"}
+                              value={item.supplierPrice || ""}
                               onChange={(e) =>
                                 actualizarCampoItem(item.id, {
                                   supplierAvailability: "SI_HAY",
-                                  deliveryTime: e.target.value,
+                                  supplierPrice: parseFloat(e.target.value) || 0,
                                 })
                               }
-                              className="h-10 px-3 rounded-xl bg-[#111827] border border-slate-700/80 focus:border-amber-500 text-amber-400 font-extrabold text-sm focus:outline-none cursor-pointer disabled:opacity-40"
-                            >
-                              {OPCIONES_TIEMPO.map((t) => (
-                                <option key={t} value={t} className="bg-[#111827] text-white">
-                                  {t}
-                                </option>
-                              ))}
-                            </select>
+                              placeholder="0.00"
+                              aria-label="Precio"
+                              className="w-24 sm:w-28 h-9 pl-6 pr-2.5 rounded-xl bg-black/40 border border-white/10 focus:border-emerald-500 text-sm font-bold text-white placeholder:text-zinc-500 focus:outline-none disabled:opacity-40 tabular-nums"
+                            />
                           </div>
+
+                          <select
+                            disabled={disp === "NO_HAY"}
+                            value={item.deliveryTime || "30 min"}
+                            aria-label="Tiempo de envío"
+                            onChange={(e) =>
+                              actualizarCampoItem(item.id, {
+                                supplierAvailability: "SI_HAY",
+                                deliveryTime: e.target.value,
+                              })
+                            }
+                            className="h-9 px-2.5 rounded-xl bg-black/40 border border-white/10 focus:border-amber-500 text-amber-400 font-bold text-xs focus:outline-none cursor-pointer disabled:opacity-40"
+                          >
+                            {OPCIONES_TIEMPO.map((t) => (
+                              <option key={t} value={t} className="bg-[#111114] text-white">
+                                {t}
+                              </option>
+                            ))}
+                          </select>
                         </div>
                       </div>
 
-                      {/* Reproductor de Audio Desplegable al pulsar "Audio" */}
+                      {/* Reproductor de Audio Desplegable */}
                       {audioAbierto && audiosList.length > 0 && (
-                        <div className="pt-2 border-t border-slate-800 space-y-2 animate-fade-in">
+                        <div className="pt-2 border-t border-white/10 space-y-2 animate-fade-in">
                           {audiosList.map((aud, aIdx) => (
                             <MiniAudioPlayerProveedor
                               key={aud.id || `aud-${aIdx}`}
@@ -888,16 +799,16 @@ export default function PaginaCatalogoProveedor() {
         )}
       </main>
 
-      {/* Barra Inferior Fija de Confirmación Rápida */}
+      {/* Barra Inferior Fija Limpia */}
       {!cargando && !error && items.length > 0 && (
-        <div className="fixed bottom-0 inset-x-0 z-30 bg-[#0b111e]/95 backdrop-blur-xl border-t border-slate-800 px-4 py-3.5">
-          <div className="max-w-5xl mx-auto flex items-center justify-between gap-3">
-            <div>
-              <span className="text-[11px] text-slate-400 block">
-                Disponibles: {resumenTotal.disponiblesCount} de {items.length} repuesto(s)
-              </span>
+        <div className="fixed bottom-0 inset-x-0 z-30 bg-[#09090b]/95 backdrop-blur-xl border-t border-white/10 px-4 py-3">
+          <div className="max-w-4xl mx-auto flex items-center justify-between gap-3">
+            <div className="flex items-baseline gap-3">
               <span className="text-base sm:text-lg font-black text-emerald-400 font-mono">
-                Total Cotizado: ${resumenTotal.totalValor.toFixed(2)}
+                ${resumenTotal.totalValor.toFixed(2)}
+              </span>
+              <span className="text-xs text-zinc-400">
+                {resumenTotal.disponiblesCount}/{items.length} disponibles
               </span>
             </div>
 
@@ -905,10 +816,10 @@ export default function PaginaCatalogoProveedor() {
               type="button"
               disabled={guardandoTodo}
               onClick={() => void handleGuardarRespuesta()}
-              className="h-11 px-6 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs sm:text-sm font-extrabold flex items-center gap-2 cursor-pointer shadow-lg shadow-emerald-600/25 transition-all active:scale-95 disabled:opacity-50"
+              className="h-10 px-5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs sm:text-sm font-bold flex items-center gap-1.5 cursor-pointer shadow-lg shadow-emerald-600/20 transition-all active:scale-95 disabled:opacity-50"
             >
               <span>✓</span>
-              <span>{guardandoTodo ? "Enviando a Oficina..." : "Enviar Cotización a Oficina"}</span>
+              <span>{guardandoTodo ? "Enviando..." : "Enviar Cotización"}</span>
             </button>
           </div>
         </div>

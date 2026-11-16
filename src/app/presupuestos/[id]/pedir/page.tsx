@@ -573,8 +573,8 @@ export default function PedirProveedoresPage() {
     await guardarCambiosEnServidor(nuevosRep, nuevosSrv);
   };
 
-  const construirLinkCatalogo = (itemsGrupo: PedidoItem[], prov?: Proveedor) => {
-    if (!orden || typeof window === "undefined") return "";
+  const construirRutaCatalogo = (itemsGrupo: PedidoItem[], prov?: Proveedor) => {
+    if (!orden) return "";
     const query = new URLSearchParams();
     if (itemsGrupo.length > 0) {
       query.set("items", itemsGrupo.map((i) => String(i.id)).join(","));
@@ -582,11 +582,47 @@ export default function PedirProveedoresPage() {
     if (prov?.name) query.set("supplier", prov.name);
     if (prov?.phone) query.set("phone", prov.phone);
     if (orden?.supplierSig) query.set("sig", orden.supplierSig);
-    return `${window.location.origin}/pedidos-proveedor/${orden.id}?${query.toString()}`;
+    return `/pedidos-proveedor/${orden.id}?${query.toString()}`;
   };
 
-  const enviarWhatsAppGrupo = (itemsGrupo: PedidoItem[], prov?: Proveedor) => {
-    if (!orden || itemsGrupo.length === 0) return;
+  const construirLinkCorto = async (itemsGrupo: PedidoItem[], prov?: Proveedor) => {
+    if (!orden || typeof window === "undefined") return "";
+    const rutaRelativa = construirRutaCatalogo(itemsGrupo, prov);
+    if (!rutaRelativa) return "";
+    try {
+      const res = await fetch("/api/short-link", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: rutaRelativa }),
+      });
+      const data = await res.json().catch(() => null);
+      if (res.ok && data?.success && data?.shortPath) {
+        return `${window.location.origin}${data.shortPath}`;
+      }
+    } catch {
+      // Fallback a la ruta completa si falla el acortador
+    }
+    return `${window.location.origin}${rutaRelativa}`;
+  };
+
+  const abrirLinkCatalogo = async (itemsGrupo: PedidoItem[], prov?: Proveedor) => {
+    if (typeof window === "undefined") return;
+    const win = window.open("about:blank", "_blank");
+    const link = await construirLinkCorto(itemsGrupo, prov);
+    if (!link) {
+      if (win) win.close();
+      return;
+    }
+    if (win) {
+      win.location.href = link;
+    } else {
+      window.open(link, "_blank");
+    }
+  };
+
+  const enviarWhatsAppGrupo = async (itemsGrupo: PedidoItem[], prov?: Proveedor) => {
+    if (!orden || itemsGrupo.length === 0 || typeof window === "undefined") return;
+    const win = window.open("about:blank", "_blank");
     const ahora = new Date();
     const fechaHora = ahora.toLocaleString("es-EC", {
       day: "2-digit",
@@ -595,7 +631,7 @@ export default function PedirProveedoresPage() {
       hour: "2-digit",
       minute: "2-digit",
     });
-    const link = construirLinkCatalogo(itemsGrupo, prov);
+    const link = await construirLinkCorto(itemsGrupo, prov);
     const vehiculoInfo = `${orden.vehicle || "Vehículo"} (Placa: ${orden.plate || "N/A"})`;
     const detalle = itemsGrupo.map((it) => `• ${it.qty || 1}x ${it.name}`).join("\n");
     const mensaje = encodeURIComponent(
@@ -605,7 +641,11 @@ export default function PedirProveedoresPage() {
     const url = phoneClean
       ? `https://wa.me/${phoneClean}?text=${mensaje}`
       : `https://wa.me/?text=${mensaje}`;
-    window.open(url, "_blank");
+    if (win) {
+      win.location.href = url;
+    } else {
+      window.open(url, "_blank");
+    }
   };
 
   const obtenerItemsParaEnvio = (item: PedidoItem): PedidoItem[] => {
@@ -789,10 +829,7 @@ export default function PedirProveedoresPage() {
                         </button>
                         <button
                           type="button"
-                          onClick={() => {
-                            const url = construirLinkCatalogo(listaVisible, proveedorUnicoTodos);
-                            if (url) window.open(url, "_blank");
-                          }}
+                          onClick={() => void abrirLinkCatalogo(listaVisible, proveedorUnicoTodos)}
                           title="Abrir enlace consolidado de todos los pedidos"
                           aria-label="Abrir enlace consolidado"
                           className="h-9 w-9 rounded-full bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/35 text-purple-700 dark:text-purple-200 inline-flex items-center justify-center cursor-pointer transition-colors shrink-0"
@@ -950,7 +987,7 @@ export default function PedirProveedoresPage() {
                                 </button>
                                 <button
                                   type="button"
-                                  onClick={() => enviarWhatsAppGrupo(obtenerItemsParaEnvio(item), provActual)}
+                                  onClick={() => void enviarWhatsAppGrupo(obtenerItemsParaEnvio(item), provActual)}
                                   title="Enviar este pedido por WhatsApp"
                                   aria-label="Enviar por WhatsApp"
                                   className="h-9 w-9 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 inline-flex items-center justify-center cursor-pointer shrink-0 transition-colors"
@@ -961,10 +998,7 @@ export default function PedirProveedoresPage() {
                                 </button>
                                 <button
                                   type="button"
-                                  onClick={() => {
-                                    const url = construirLinkCatalogo(obtenerItemsParaEnvio(item), provActual);
-                                    if (url) window.open(url, "_blank");
-                                  }}
+                                  onClick={() => void abrirLinkCatalogo(obtenerItemsParaEnvio(item), provActual)}
                                   title="Abrir página del pedido"
                                   aria-label="Abrir página del pedido"
                                   className="h-9 w-9 rounded-xl bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/30 text-purple-700 dark:text-purple-200 inline-flex items-center justify-center cursor-pointer shrink-0 transition-colors"
@@ -1154,7 +1188,7 @@ export default function PedirProveedoresPage() {
                                     <div className="inline-flex items-center gap-1.5">
                                       <button
                                         type="button"
-                                        onClick={() => enviarWhatsAppGrupo(obtenerItemsParaEnvio(item), provActual)}
+                                        onClick={() => void enviarWhatsAppGrupo(obtenerItemsParaEnvio(item), provActual)}
                                         title="Enviar este pedido por WhatsApp con enlace"
                                         aria-label="Enviar por WhatsApp"
                                         className="h-7 w-7 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 inline-flex items-center justify-center cursor-pointer transition-colors"
@@ -1165,10 +1199,7 @@ export default function PedirProveedoresPage() {
                                       </button>
                                       <button
                                         type="button"
-                                        onClick={() => {
-                                          const url = construirLinkCatalogo(obtenerItemsParaEnvio(item), provActual);
-                                          if (url) window.open(url, "_blank");
-                                        }}
+                                        onClick={() => void abrirLinkCatalogo(obtenerItemsParaEnvio(item), provActual)}
                                         title="Abrir página de pedido para este ítem"
                                         className="h-7 px-2 rounded-lg bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/30 text-purple-700 dark:text-purple-200 text-[11px] font-semibold cursor-pointer transition-colors"
                                       >

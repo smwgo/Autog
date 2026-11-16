@@ -4211,6 +4211,33 @@ export default function PaginaDetallePropuesta() {
       )}
 
       {/* CABECERA ESTÁNDAR Y BARRA DE ACCIONES SUPERIORES (SIN FONDO BLANCO) */}
+      {modalEditarPropuestaOpen && propuestaEditId ? (
+        <>
+          <Header />
+          <main className="max-w-4xl mx-auto w-full px-3 sm:px-6 py-4 sm:py-7">
+            <ModalNuevaOrdenTrabajo
+              isOpen={true}
+              isPageMode={true}
+              editOrderId={propuestaEditId}
+              clientesCatalogo={clientesCatalogo}
+              mostrarToast={mostrarToast}
+              onClose={() => {
+                setModalEditarPropuestaOpen(false);
+                setPropuestaEditId("");
+              }}
+              onOrdenCreada={(ordenActualizada) => {
+                const targetId = String(ordenActualizada?.id || propuestaEditId || orden?.id || "");
+                if (targetId) {
+                  void cargarDetallePorId(targetId, true);
+                }
+                setModalEditarPropuestaOpen(false);
+                setPropuestaEditId("");
+              }}
+            />
+          </main>
+        </>
+      ) : (
+      <>
       <div className="print:hidden">
         <Header />
 
@@ -7638,28 +7665,7 @@ export default function PaginaDetallePropuesta() {
           </div>
         );
       })()}
-
-      {/* MODAL: EDITAR DATOS DE PROPUESTA SIN SALIR DE PROPUESTA */}
-      {modalEditarPropuestaOpen && propuestaEditId && (
-        <ModalNuevaOrdenTrabajo
-          isOpen={modalEditarPropuestaOpen}
-          isPageMode={false}
-          editOrderId={propuestaEditId}
-          clientesCatalogo={clientesCatalogo}
-          mostrarToast={mostrarToast}
-          onClose={() => {
-            setModalEditarPropuestaOpen(false);
-            setPropuestaEditId("");
-          }}
-          onOrdenCreada={(ordenActualizada) => {
-            const targetId = String(ordenActualizada?.id || propuestaEditId || orden?.id || "");
-            if (targetId) {
-              void cargarDetallePorId(targetId, true);
-            }
-            setModalEditarPropuestaOpen(false);
-            setPropuestaEditId("");
-          }}
-        />
+      </>
       )}
     </div>
   );
