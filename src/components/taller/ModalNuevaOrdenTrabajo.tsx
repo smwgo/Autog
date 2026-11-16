@@ -2686,7 +2686,22 @@ export default function ModalNuevaOrdenTrabajo({
             >
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-                  {isPageMode && (
+                  {isPageMode && (onClose ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        resetFormularioCompleto();
+                        onClose();
+                      }}
+                      className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-zinc-200/60 hover:bg-zinc-200 dark:bg-white/[0.05] dark:hover:bg-white/[0.10] text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white transition-all flex items-center justify-center shrink-0 active:scale-95 cursor-pointer"
+                      title="Cerrar"
+                      aria-label="Cerrar"
+                    >
+                      <svg className="w-4 h-4 sm:w-4.5 sm:h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  ) : (
                     <Link
                       href="/taller"
                       onClick={() => {
@@ -2700,7 +2715,7 @@ export default function ModalNuevaOrdenTrabajo({
                         <path d="M6 18L18 6M6 6l12 12" />
                       </svg>
                     </Link>
-                  )}
+                  ))}
 
                   <div className="flex flex-col items-start min-w-0 leading-snug">
                     <div className="flex items-center gap-2">

@@ -58,6 +58,8 @@ interface OrdenResumen {
   id: string;
   orderNumber: string;
   vehicle: string;
+  pedidosCount?: number;
+  respuestasCount?: number;
   plate: string;
   client: string;
   clientPhone?: string | null;
@@ -212,6 +214,7 @@ export default function PanelPresupuestosPage() {
   const [filtroEstado, setFiltroEstado] = useState<string>("TODOS");
   const [menuTipoAbierto, setMenuTipoAbierto] = useState(false);
   const [menuEstadoAbierto, setMenuEstadoAbierto] = useState(false);
+  const [metricasMovilAbiertas, setMetricasMovilAbiertas] = useState(false);
   const menuEstadoRef = useRef<HTMLDivElement>(null);
   const [isPanelSelectorAdmin, setIsPanelSelectorAdmin] = useState(false);
 
@@ -254,6 +257,27 @@ export default function PanelPresupuestosPage() {
     aprobadas: 0,
     totalValorizado: 0,
   });
+
+  const metricasExtra = useMemo(() => {
+    let utilidadTotal = 0;
+    let ventaTotal = 0;
+    let enCajaPagadas = 0;
+    let pedidosTotal = 0;
+    let respuestasTotal = 0;
+    for (const o of ordenes) {
+      utilidadTotal += Number(o.utilidadEstimada || 0);
+      ventaTotal += Number(o.totalVentaEstimada || 0);
+      pedidosTotal += Number(o.pedidosCount || 0);
+      respuestasTotal += Number(o.respuestasCount || 0);
+      const st = String(o.status || "").toLowerCase();
+      const qs = String(o.quoteStatus || "").toLowerCase();
+      if (o.posRequestId || st === "pagado" || qs === "pagado" || qs.includes("caja")) {
+        enCajaPagadas += 1;
+      }
+    }
+    const margenPromedio = ventaTotal > 0 ? Math.round((utilidadTotal / ventaTotal) * 100) : 0;
+    return { utilidadTotal, margenPromedio, enCajaPagadas, pedidosTotal, respuestasTotal };
+  }, [ordenes]);
 
   // Casillero de verificación: orden con la que se está trabajando actualmente
   const [ordenTrabajandoId, setOrdenTrabajandoId] = useState<string | null>(null);
@@ -546,73 +570,61 @@ export default function PanelPresupuestosPage() {
                 {ordenes.length}
               </span>
             </div>
-
-            <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-              <button
-                type="button"
-                onClick={() => cargarOrdenes()}
-                className="h-9 sm:h-10 px-3.5 sm:px-4 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 text-zinc-700 dark:text-zinc-300 active:scale-95 font-semibold text-xs sm:text-sm shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-                title="Actualizar propuestas"
-              >
-                <span className={cargando ? "animate-spin" : ""}>🔄</span>
-                <span className="hidden sm:inline">Actualizar</span>
-              </button>
-            </div>
           </div>
 
-          {/* KPIs / Exactamente 3 Métricas con CollapsibleMetrics estilo POS Cotizaciones */}
-          <CollapsibleMetrics className="order-3 sm:order-2 mb-2 sm:mb-8">
+          {/* KPIs / Exactamente 3 Métricas (en escritorio siempre, en móvil controlado por el botón Métrica) */}
+          <div className={`order-3 sm:order-2 mb-2 sm:mb-8 ${metricasMovilAbiertas ? "block animate-in fade-in duration-200" : "hidden sm:block"}`}>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-3 sm:mb-8">
-              {/* Métrica 1: Total Propuestas & Valorizado */}
+              {/* Métrica 1: Total Propuestas & Valorizado + Utilidad */}
               <div className="bg-white dark:bg-zinc-900/80 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3.5 sm:gap-4 backdrop-blur-sm">
                 <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-purple-500/15 border border-purple-500/25 text-purple-500 dark:text-purple-400 flex items-center justify-center text-xl shrink-0">
                   💰
                 </div>
-                <div>
-                  <p className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">
+                <div className="min-w-0">
+                  <p className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white truncate">
                     ${kpis.totalValorizado.toLocaleString("en-US", { minimumFractionDigits: 2 })}
                   </p>
-                  <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">
-                    Total Propuestas ({kpis.total})
+                  <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium truncate">
+                    Total ({kpis.total})
                   </h3>
                 </div>
               </div>
 
-              {/* Métrica 2: Por Cotizar / Pendientes */}
+              {/* Métrica 2: Pedidos */}
               <div className="bg-white dark:bg-zinc-900/80 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3.5 sm:gap-4 backdrop-blur-sm">
                 <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-amber-500/15 border border-amber-500/25 text-amber-500 dark:text-amber-400 flex items-center justify-center text-xl shrink-0">
-                  ⏳
+                  🚚
                 </div>
-                <div>
+                <div className="min-w-0">
                   <p className="text-xl sm:text-2xl font-bold text-amber-600 dark:text-amber-400">
-                    {kpis.pendientesCotizar}
+                    {metricasExtra.pedidosTotal}
                   </p>
-                  <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">
-                    Por Cotizar
+                  <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium truncate">
+                    Pedidos
                   </h3>
                 </div>
               </div>
 
-              {/* Métrica 3: Autorizadas */}
+              {/* Métrica 3: Respuesta del proveedor */}
               <div className="bg-white dark:bg-zinc-900/80 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3.5 sm:gap-4 backdrop-blur-sm">
                 <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-emerald-500/15 border border-emerald-500/25 text-emerald-500 dark:text-emerald-400 flex items-center justify-center text-xl shrink-0">
                   ✅
                 </div>
-                <div>
+                <div className="min-w-0">
                   <p className="text-xl sm:text-2xl font-bold text-emerald-600 dark:text-emerald-400">
-                    {kpis.aprobadas}
+                    {metricasExtra.respuestasTotal}
                   </p>
-                  <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">
-                    Autorizadas
+                  <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium truncate">
+                    Respuesta del proveedor
                   </h3>
                 </div>
               </div>
             </div>
-          </CollapsibleMetrics>
+          </div>
 
-          {/* Filtros y Buscador */}
-          <div className="order-2 sm:order-3 flex flex-col sm:flex-row items-center justify-between gap-2 sm:gap-4 mb-2 sm:mb-6">
-            <div className="relative w-full flex-1">
+          {/* Filtros y Buscador (en móvil: buscador + 2 iconos Filtro y Métrica en la misma fila) */}
+          <div className="order-2 sm:order-3 flex flex-row items-center justify-between gap-2 sm:gap-4 mb-2 sm:mb-6">
+            <div className="relative flex-1 min-w-0">
               <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400 select-none">
                 🔍
               </span>
@@ -635,12 +647,28 @@ export default function PanelPresupuestosPage() {
               )}
             </div>
 
-            {/* Dropdown Filtro Estado estilo POS */}
-            <div className="relative w-full sm:w-36 shrink-0" ref={menuEstadoRef}>
+            {/* Dropdown Filtro Estado (en móvil: ícono compacto; en escritorio: botón completo) */}
+            <div className="relative shrink-0 sm:w-36" ref={menuEstadoRef}>
               <button
                 type="button"
                 onClick={() => setMenuEstadoAbierto(!menuEstadoAbierto)}
-                className="w-full h-11 px-4 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 text-zinc-800 dark:text-zinc-200 text-sm font-normal flex items-center justify-between transition-all cursor-pointer shadow-sm active:scale-98"
+                aria-label="Filtrar propuestas"
+                title="Filtrar propuestas"
+                className={`sm:hidden w-11 h-11 rounded-xl border flex items-center justify-center transition-all cursor-pointer shadow-sm active:scale-95 ${
+                  filtroEstado !== "TODAS"
+                    ? "bg-purple-500/15 border-purple-500/40 text-purple-600 dark:text-purple-300"
+                    : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300"
+                }`}
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.9}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 4.5h18l-6.75 7.5v5.25l-4.5 2.25V12L3 4.5Z" />
+                </svg>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setMenuEstadoAbierto(!menuEstadoAbierto)}
+                className="hidden sm:flex w-full h-11 px-4 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 text-zinc-800 dark:text-zinc-200 text-sm font-normal items-center justify-between transition-all cursor-pointer shadow-sm active:scale-98"
               >
                 <span>
                   {filtroEstado === "PENDIENTE"
@@ -664,7 +692,7 @@ export default function PanelPresupuestosPage() {
                     className="fixed inset-0 z-40"
                     onClick={() => setMenuEstadoAbierto(false)}
                   />
-                  <div className="absolute right-0 mt-1.5 w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-xl overflow-hidden z-50 py-1 animate-in fade-in zoom-in-95 duration-100">
+                  <div className="absolute right-0 mt-1.5 w-44 sm:w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-xl overflow-hidden z-50 py-1 animate-in fade-in zoom-in-95 duration-100">
                     {OPCIONES_ESTADO.map((opcion) => (
                       <button
                         key={opcion.id}
@@ -693,6 +721,23 @@ export default function PanelPresupuestosPage() {
                 </>
               )}
             </div>
+
+            {/* Botón Métrica en móvil al lado del buscador */}
+            <button
+              type="button"
+              onClick={() => setMetricasMovilAbiertas((v) => !v)}
+              aria-label="Mostrar u ocultar métricas"
+              title="Métricas"
+              className={`sm:hidden w-11 h-11 rounded-xl border flex items-center justify-center transition-all cursor-pointer shadow-sm active:scale-95 shrink-0 ${
+                metricasMovilAbiertas
+                  ? "bg-purple-500/15 border-purple-500/40 text-purple-600 dark:text-purple-300"
+                  : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300"
+              }`}
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.9}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z" />
+              </svg>
+            </button>
           </div>
 
           {/* Lista de Propuestas / Órdenes */}

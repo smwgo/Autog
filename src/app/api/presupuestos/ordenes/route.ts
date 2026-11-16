@@ -241,6 +241,30 @@ export async function GET(request: Request) {
         else if (combined.includes("lavado") || combined.includes("carwash") || combined.includes("encerado")) tipoNegocio = "Carwash";
         else if (combined.includes("tecni") || combined.includes("alineac") || combined.includes("balanceo")) tipoNegocio = "Tecnicentro";
 
+        const seenPedidoIds = new Set<string>();
+        let pedidosCount = 0;
+        let respuestasCount = 0;
+        for (const it of [...items, ...services]) {
+          if (!it || typeof it !== "object") continue;
+          const itId = String(it.id || "");
+          if (itId && seenPedidoIds.has(itId)) continue;
+          if (itId) seenPedidoIds.add(itId);
+          if (
+            it.enviadoProveedor ||
+            it.purchaseStatus === "PEDIDO_WHATSAPP" ||
+            it.purchaseStatus === "COTIZADO"
+          ) {
+            pedidosCount += 1;
+          }
+          if (
+            it.supplierAvailability === "SI_HAY" ||
+            it.supplierAvailability === "NO_HAY" ||
+            Boolean(it.supplierRespondedAt)
+          ) {
+            respuestasCount += 1;
+          }
+        }
+
         return {
           id: r.id,
           orderNumber: r.orderNumber,
@@ -270,6 +294,8 @@ export async function GET(request: Request) {
           itemsCount: items.length,
           servicesCount: services.length,
           findingsCount: findings.length,
+          pedidosCount,
+          respuestasCount,
           totalVentaEstimada: Number(totalVentaEstimada.toFixed(2)),
           totalCostoEstimado: Number(totalCostoEstimado.toFixed(2)),
           utilidadEstimada: Number(utilidadEstimada.toFixed(2)),
@@ -324,6 +350,8 @@ export async function GET(request: Request) {
                 itemsCount: items.length,
                 servicesCount: 0,
                 findingsCount: 0,
+                pedidosCount: 0,
+                respuestasCount: 0,
                 totalVentaEstimada: totalEst,
                 totalCostoEstimado: 0,
                 utilidadEstimada: totalEst,

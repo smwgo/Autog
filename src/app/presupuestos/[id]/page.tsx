@@ -4294,18 +4294,6 @@ export default function PaginaDetallePropuesta() {
                       </span>
                     </div>
                   </div>
-
-                  <button
-                    type="button"
-                    onClick={() => handleAbrirDatosIngreso(orden)}
-                    title="Editar datos de ingreso de esta propuesta"
-                    className="ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-zinc-200 dark:border-white/10 bg-white dark:bg-zinc-900 hover:border-purple-300 dark:hover:border-purple-500/40 hover:bg-purple-50 dark:hover:bg-purple-500/10 text-xs font-semibold text-zinc-700 dark:text-zinc-200 shadow-sm transition active:scale-95 cursor-pointer shrink-0"
-                  >
-                    <svg className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125" />
-                    </svg>
-                    <span>Editar</span>
-                  </button>
                 </div>
 
                 {/* FILA 2: CARRUSEL MORADO DE PROPUESTAS (CLIC DESLIZA A OTRA PROPUESTA / DOBLE CLIC ABRE DATOS DE INGRESO) */}
@@ -7791,10 +7779,10 @@ export default function PaginaDetallePropuesta() {
                           : "bg-rose-500/[0.06] border-rose-500/25"
                       }`}
                     >
-                      <div className="space-y-1 min-w-0 flex-1">
+                      <div className="space-y-1.5 min-w-0 flex-1">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span
-                            className={`px-2 py-0.5 rounded-md text-[11px] font-bold ${
+                            className={`px-2.5 py-0.5 rounded-md text-xs font-bold ${
                               siHay
                                 ? "bg-emerald-500/20 text-emerald-700 dark:text-emerald-300"
                                 : "bg-rose-500/20 text-rose-700 dark:text-rose-300"
@@ -7802,22 +7790,20 @@ export default function PaginaDetallePropuesta() {
                           >
                             {siHay ? "✓ Sí hay" : "✕ No hay"}
                           </span>
-                          <span className="text-xs font-bold text-zinc-500 dark:text-zinc-400 tabular-nums">
+                          <span className="text-sm font-bold text-zinc-500 dark:text-zinc-400 tabular-nums">
                             {it.qty}x
                           </span>
-                          <span className="text-sm font-bold text-zinc-900 dark:text-white truncate">
+                          <span className="text-base sm:text-sm font-bold text-zinc-900 dark:text-white truncate">
                             {it.name}
                           </span>
                         </div>
-                        <div className="flex items-center gap-2.5 flex-wrap text-xs text-zinc-500 dark:text-zinc-400">
+                        <div className="flex items-center gap-3 flex-wrap text-sm sm:text-xs text-zinc-500 dark:text-zinc-400">
                           <span className="font-semibold text-purple-600 dark:text-purple-300">
-                            {proveedorNombre}
+                            Proveedor: {proveedorNombre}
                           </span>
-                          {proveedorWhatsapp && (
-                            <span className="inline-flex items-center gap-1 font-mono text-[11px] text-emerald-600 dark:text-emerald-400">
-                              WhatsApp: {proveedorWhatsapp}
-                            </span>
-                          )}
+                          <span className="inline-flex items-center gap-1 font-mono text-sm sm:text-xs text-emerald-600 dark:text-emerald-400">
+                            WhatsApp: {proveedorWhatsapp || "Sin número"}
+                          </span>
                           {it.deliveryTime && <span>Envío: {it.deliveryTime}</span>}
                           {fechaResp && <span>{fechaResp}</span>}
                         </div>
