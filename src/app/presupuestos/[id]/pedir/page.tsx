@@ -276,6 +276,7 @@ export default function PedirProveedoresPage() {
   const [servicios, setServicios] = useState<PedidoItem[]>([]);
   const [proveedores, setProveedores] = useState<Proveedor[]>([]);
   const [seleccionadosIds, setSeleccionadosIds] = useState<Record<string, boolean>>({});
+  const [todoProveedorActivo, setTodoProveedorActivo] = useState(false);
   const [flotanteFotos, setFlotanteFotos] = useState<{
     titulo: string;
     fotos: string[];
@@ -456,6 +457,7 @@ export default function PedirProveedoresPage() {
 
   // Aplicar el mismo proveedor a TODOS los ítems marcados
   const handleAplicarProveedorATodos = async (provId: string) => {
+    setTodoProveedorActivo(Boolean(provId));
     const prov = proveedores.find((p) => p.id === provId);
     const actualizarTodos = (arr: PedidoItem[]) =>
       arr.map((it) =>
@@ -517,6 +519,7 @@ export default function PedirProveedoresPage() {
       return next;
     });
     setFlotanteProveedorGrupo(null);
+    setTodoProveedorActivo(false);
 
     await guardarCambiosEnServidor(
       nuevosRep,
@@ -594,6 +597,17 @@ export default function PedirProveedoresPage() {
       ? `https://wa.me/${phoneClean}?text=${mensaje}`
       : `https://wa.me/?text=${mensaje}`;
     window.open(url, "_blank");
+  };
+
+  const obtenerItemsParaEnvio = (item: PedidoItem): PedidoItem[] => {
+    const marcados = listaVisible.filter((it) => Boolean(seleccionadosIds[it.id]));
+    if (marcados.length > 0) {
+      return marcados;
+    }
+    if (todoProveedorActivo && listaVisible.length > 1) {
+      return listaVisible;
+    }
+    return [item];
   };
 
   // Agrupar ítems marcados por proveedor asignado
@@ -899,7 +913,7 @@ export default function PedirProveedoresPage() {
                                 </button>
                                 <button
                                   type="button"
-                                  onClick={() => enviarWhatsAppGrupo([item], provActual)}
+                                  onClick={() => enviarWhatsAppGrupo(obtenerItemsParaEnvio(item), provActual)}
                                   title="Enviar este pedido por WhatsApp"
                                   aria-label="Enviar por WhatsApp"
                                   className="h-9 w-9 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 inline-flex items-center justify-center cursor-pointer shrink-0 transition-colors"
@@ -911,7 +925,7 @@ export default function PedirProveedoresPage() {
                                 <button
                                   type="button"
                                   onClick={() => {
-                                    const url = construirLinkCatalogo([item], provActual);
+                                    const url = construirLinkCatalogo(obtenerItemsParaEnvio(item), provActual);
                                     if (url) window.open(url, "_blank");
                                   }}
                                   title="Abrir página del pedido"
@@ -1103,7 +1117,7 @@ export default function PedirProveedoresPage() {
                                     <div className="inline-flex items-center gap-1.5">
                                       <button
                                         type="button"
-                                        onClick={() => enviarWhatsAppGrupo([item], provActual)}
+                                        onClick={() => enviarWhatsAppGrupo(obtenerItemsParaEnvio(item), provActual)}
                                         title="Enviar este pedido por WhatsApp con enlace"
                                         aria-label="Enviar por WhatsApp"
                                         className="h-7 w-7 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 inline-flex items-center justify-center cursor-pointer transition-colors"
@@ -1115,7 +1129,7 @@ export default function PedirProveedoresPage() {
                                       <button
                                         type="button"
                                         onClick={() => {
-                                          const url = construirLinkCatalogo([item], provActual);
+                                          const url = construirLinkCatalogo(obtenerItemsParaEnvio(item), provActual);
                                           if (url) window.open(url, "_blank");
                                         }}
                                         title="Abrir página de pedido para este ítem"
