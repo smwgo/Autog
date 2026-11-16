@@ -591,6 +591,23 @@ export async function GET(request: Request) {
         itemsParaMostrar = marcadosExpresamente.length > 0 ? marcadosExpresamente : todosNormalizados;
       }
 
+      let vehiclePhoto: string | null = null;
+      try {
+        const plateSearch = String(order.plate || "").trim();
+        const vehId = String(order.vehicleId || "").trim();
+        if (vehId || plateSearch) {
+          const vRows = (await prisma.$queryRawUnsafe(
+            `SELECT "imageUrl" FROM "Vehicle" WHERE "id" = $1 OR "plate" ILIKE $2 LIMIT 1`,
+            vehId || "",
+            plateSearch || ""
+          ).catch(() => [])) as any[];
+          const rawVImg = vRows?.[0]?.imageUrl ? String(vRows[0].imageUrl) : "";
+          if (rawVImg && !rawVImg.startsWith("blob:")) {
+            vehiclePhoto = normalizarUrlMedia(rawVImg) || rawVImg;
+          }
+        }
+      } catch {}
+
       return NextResponse.json({
         success: true,
         mode: "individual",
@@ -600,6 +617,7 @@ export async function GET(request: Request) {
           orderNumber: order.orderNumber,
           vehicle: order.vehicle,
           plate: order.plate,
+          vehiclePhoto,
           dateIn: order.dateIn,
           createdAt: order.createdAt,
         },

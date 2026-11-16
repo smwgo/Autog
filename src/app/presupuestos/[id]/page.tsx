@@ -6,6 +6,7 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import { Header } from "@/components/Header";
 import { MiniAudioPlayer } from "@/components/taller/MiniAudioPlayer";
+import { abrirWhatsAppCompatible } from "@/lib/whatsapp";
 import { setCachedAudioDuration } from "@/lib/audio-duration";
 const CatalogoProductosServiciosTaller = dynamic(
   () => import("@/components/taller/CatalogoProductosServiciosTaller"),
@@ -420,6 +421,7 @@ export default function PaginaDetallePropuesta() {
   const [fotoClienteError, setFotoClienteError] = useState(false);
   const [modalEditarPropuestaOpen, setModalEditarPropuestaOpen] = useState(false);
   const [propuestaEditId, setPropuestaEditId] = useState<string>("");
+  const [modalRespuestasProvOpen, setModalRespuestasProvOpen] = useState(false);
 
   // Carrusel de propuestas en el encabezado morado (estilo Taller)
   const [listaPropuestas, setListaPropuestas] = useState<any[]>([]);
@@ -1274,6 +1276,8 @@ export default function PaginaDetallePropuesta() {
                 deliveryTime: match.deliveryTime ?? it.deliveryTime,
                 shippingMethod: match.shippingMethod ?? it.shippingMethod,
                 supplierRespondedAt: match.supplierRespondedAt ?? it.supplierRespondedAt,
+                purchaseStatus: match.purchaseStatus ?? it.purchaseStatus,
+                supplierName: match.supplierName ?? it.supplierName,
               };
             }
             return it;
@@ -1301,6 +1305,8 @@ export default function PaginaDetallePropuesta() {
                 deliveryTime: match.deliveryTime ?? sv.deliveryTime,
                 shippingMethod: match.shippingMethod ?? sv.shippingMethod,
                 supplierRespondedAt: match.supplierRespondedAt ?? sv.supplierRespondedAt,
+                purchaseStatus: match.purchaseStatus ?? sv.purchaseStatus,
+                supplierName: match.supplierName ?? sv.supplierName,
               };
             }
             return sv;
@@ -1392,7 +1398,7 @@ export default function PaginaDetallePropuesta() {
     setEstadoSync("guardando");
     if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
     debounceTimerRef.current = setTimeout(() => {
-      void sincronizarConNeon(nuevosRep, nuevosSrv, nuevosFind, nuevasNotas).catch(() => {});
+      void sincronizarConNeon(nuevosRep, nuevosSrv, nuevosFind, nuevasNotas).catch(() => { });
     }, 600);
   };
 
@@ -1685,7 +1691,7 @@ export default function PaginaDetallePropuesta() {
           audioChunksRapidoRef.current = [];
           try {
             recorder.stream.getTracks().forEach((t) => t.stop());
-          } catch {}
+          } catch { }
           resolve(blob.size > 0 ? { blob, mime } : null);
         };
         try {
@@ -1702,7 +1708,7 @@ export default function PaginaDetallePropuesta() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ action: "stop", sessionId: activePcSessionId, skipTranscribe: true }),
-        }).catch(() => {});
+        }).catch(() => { });
       }
       const ext = blobRes.mime.includes("mp4")
         ? "m4a"
@@ -2601,6 +2607,28 @@ export default function PaginaDetallePropuesta() {
     return [...srvs, ...prods];
   }, [servicios, repuestos]);
 
+  const itemsRespondidosProveedor = useMemo(() => {
+    const esRespondido = (x: any) =>
+      Boolean(
+        x.supplierRespondedAt ||
+        x.purchaseStatus === "COTIZADO" ||
+        x.supplierAvailability === "SI_HAY" ||
+        x.supplierAvailability === "NO_HAY"
+      );
+    const srvs = servicios
+      .filter(esRespondido)
+      .map((s) => ({ ...s, isService: true, qty: Number(s.qty || 1) }));
+    const prods = repuestos
+      .filter(esRespondido)
+      .map((r) => ({ ...r, isService: false, qty: Number(r.qty || 1) }));
+    return [...srvs, ...prods];
+  }, [servicios, repuestos]);
+
+  const itemsSiHayProveedor = useMemo(
+    () => itemsRespondidosProveedor.filter((x) => x.supplierAvailability === "SI_HAY"),
+    [itemsRespondidosProveedor]
+  );
+
   // Al pulsar el icono de camión junto a Manual en la tabla: marca/desmarca que se envió al listado de proveedor y cambia de color
   const handleToggleMarcarProveedor = (item: any, esServicio: boolean) => {
     const yaMarcado = Boolean(
@@ -2844,12 +2872,10 @@ export default function PaginaDetallePropuesta() {
       proveedoresElegidosObjetos[0]?.phone ||
       proveedorSeleccionado?.phone ||
       "";
-    const phoneClean = rawPhone.replace(/[^0-9]/g, "");
-    const mensaje = encodeURIComponent(generarMensajeWhatsAppProveedor(provEspecifico));
-    const url = phoneClean
-      ? `https://wa.me/${phoneClean}?text=${mensaje}`
-      : `https://wa.me/?text=${mensaje}`;
-    window.open(url, "_blank");
+    abrirWhatsAppCompatible({
+      phone: rawPhone,
+      text: generarMensajeWhatsAppProveedor(provEspecifico),
+    });
   };
 
   // Agrupación de trabajos por módulo y subcategoría
@@ -3495,8 +3521,8 @@ export default function PaginaDetallePropuesta() {
           nuevoEstado === "Aprobado"
             ? "Reparación"
             : nuevoEstado === "Pausada"
-            ? "Pausada"
-            : "Diagnóstico";
+              ? "Pausada"
+              : "Diagnóstico";
         const nuevoQuoteStatusOrden =
           nuevoEstado === "Pausada" ? orden.quoteStatus || "Pendiente" : nuevoEstado;
 
@@ -3673,79 +3699,78 @@ export default function PaginaDetallePropuesta() {
           audiosBorradorRapido.length > 0 ||
           grabandoAudioRapido ||
           subiendoMediaRapido) && (
-          <>
-            <label
-              title="Tomar foto"
-          className="h-10 w-10 sm:h-11 sm:w-11 rounded-xl border bg-blue-50/80 hover:bg-blue-100 dark:bg-blue-500/10 dark:hover:bg-blue-500/20 border-blue-200 dark:border-blue-500/30 text-blue-600 dark:text-blue-400 flex items-center justify-center cursor-pointer active:scale-95 transition-all relative"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z" />
-            <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0Z" />
-          </svg>
-          {fotosBorradorRapido.length > 0 && (
-            <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-blue-600 text-white text-[9px] font-bold flex items-center justify-center">
-              {fotosBorradorRapido.length}
-            </span>
-          )}
-          <input
-            type="file"
-            accept="image/*"
-            capture="environment"
-            disabled={subiendoMediaRapido}
-            onChange={(e) => handleSubirMediaBorrador(e, "foto")}
-            className="hidden"
-          />
-        </label>
+            <>
+              <label
+                title="Tomar foto"
+                className="h-10 w-10 sm:h-11 sm:w-11 rounded-xl border bg-blue-50/80 hover:bg-blue-100 dark:bg-blue-500/10 dark:hover:bg-blue-500/20 border-blue-200 dark:border-blue-500/30 text-blue-600 dark:text-blue-400 flex items-center justify-center cursor-pointer active:scale-95 transition-all relative"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0Z" />
+                </svg>
+                {fotosBorradorRapido.length > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-blue-600 text-white text-[9px] font-bold flex items-center justify-center">
+                    {fotosBorradorRapido.length}
+                  </span>
+                )}
+                <input
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  disabled={subiendoMediaRapido}
+                  onChange={(e) => handleSubirMediaBorrador(e, "foto")}
+                  className="hidden"
+                />
+              </label>
 
-        <label
-          title="Subir foto"
-          className="h-10 w-10 sm:h-11 sm:w-11 rounded-xl border bg-indigo-50/80 hover:bg-indigo-100 dark:bg-indigo-500/10 dark:hover:bg-indigo-500/20 border-indigo-200 dark:border-indigo-500/30 text-indigo-600 dark:text-indigo-400 flex items-center justify-center cursor-pointer active:scale-95 transition-all relative"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
-          </svg>
-          <input
-            type="file"
-            accept="image/*"
-            multiple
-            disabled={subiendoMediaRapido}
-            onChange={(e) => handleSubirMediaBorrador(e, "foto")}
-            className="hidden"
-          />
-        </label>
+              <label
+                title="Subir foto"
+                className="h-10 w-10 sm:h-11 sm:w-11 rounded-xl border bg-indigo-50/80 hover:bg-indigo-100 dark:bg-indigo-500/10 dark:hover:bg-indigo-500/20 border-indigo-200 dark:border-indigo-500/30 text-indigo-600 dark:text-indigo-400 flex items-center justify-center cursor-pointer active:scale-95 transition-all relative"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
+                </svg>
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  disabled={subiendoMediaRapido}
+                  onChange={(e) => handleSubirMediaBorrador(e, "foto")}
+                  className="hidden"
+                />
+              </label>
 
-        <button
-          type="button"
-          disabled={subiendoMediaRapido}
-          onClick={() => void handleToggleAudioRapido()}
-          title={grabandoAudioRapido ? "Detener y guardar audio" : "Grabar nota de audio"}
-          className={`h-10 sm:h-11 px-3 rounded-xl border flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 transition-all relative touch-manipulation ${
-            grabandoAudioRapido
-              ? "bg-rose-500 text-white border-rose-600 animate-pulse"
-              : "bg-amber-50/80 hover:bg-amber-100 dark:bg-amber-500/10 dark:hover:bg-amber-500/20 border-amber-200 dark:border-amber-500/30 text-amber-600 dark:text-amber-400"
-          }`}
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 0 0 6-6v-1.5m-6 7.5a6 6 0 0 1-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 0 1-3-3V4.5a3 3 0 1 1 6 0v8.25a3 3 0 0 1-3 3Z" />
-          </svg>
-          {grabandoAudioRapido && <span className="text-xs font-bold">{segundosAudioRapido}s</span>}
-          {!grabandoAudioRapido && audiosBorradorRapido.length > 0 && (
-            <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-amber-500 text-black text-[9px] font-bold flex items-center justify-center">
-              {audiosBorradorRapido.length}
-            </span>
+              <button
+                type="button"
+                disabled={subiendoMediaRapido}
+                onClick={() => void handleToggleAudioRapido()}
+                title={grabandoAudioRapido ? "Detener y guardar audio" : "Grabar nota de audio"}
+                className={`h-10 sm:h-11 px-3 rounded-xl border flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 transition-all relative touch-manipulation ${grabandoAudioRapido
+                    ? "bg-rose-500 text-white border-rose-600 animate-pulse"
+                    : "bg-amber-50/80 hover:bg-amber-100 dark:bg-amber-500/10 dark:hover:bg-amber-500/20 border-amber-200 dark:border-amber-500/30 text-amber-600 dark:text-amber-400"
+                  }`}
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 0 0 6-6v-1.5m-6 7.5a6 6 0 0 1-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 0 1-3-3V4.5a3 3 0 1 1 6 0v8.25a3 3 0 0 1-3 3Z" />
+                </svg>
+                {grabandoAudioRapido && <span className="text-xs font-bold">{segundosAudioRapido}s</span>}
+                {!grabandoAudioRapido && audiosBorradorRapido.length > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-amber-500 text-black text-[9px] font-bold flex items-center justify-center">
+                    {audiosBorradorRapido.length}
+                  </span>
+                )}
+              </button>
+              <input
+                ref={inputAudioFallbackRapidoRef}
+                type="file"
+                accept="audio/*"
+                capture
+                disabled={subiendoMediaRapido}
+                onChange={(e) => handleSubirMediaBorrador(e, "audio")}
+                className="hidden"
+              />
+            </>
           )}
-        </button>
-        <input
-          ref={inputAudioFallbackRapidoRef}
-          type="file"
-          accept="audio/*"
-          capture
-          disabled={subiendoMediaRapido}
-          onChange={(e) => handleSubirMediaBorrador(e, "audio")}
-          className="hidden"
-        />
-          </>
-        )}
 
         <button
           type="button"
@@ -4237,2470 +4262,2839 @@ export default function PaginaDetallePropuesta() {
           </main>
         </>
       ) : (
-      <>
-      <div className="print:hidden">
-        <Header />
+        <>
+          <div className="print:hidden">
+            <Header />
 
-        {/* Encabezado visible pero muy suave en Morado + Azul Zafiro */}
-        <section className="border-b border-purple-200/50 dark:border-purple-400/15 bg-gradient-to-r from-purple-50/65 via-purple-50/45 to-blue-50/55 dark:from-purple-500/[0.06] dark:via-purple-500/[0.04] dark:to-blue-500/[0.05]">
-          <div className="w-full max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 py-2.5 flex flex-col items-stretch gap-2.5 sm:gap-3">
-            {/* FILA 1: FLECHA VOLVER (←) + ORDEN DE SERVICIO #00001 + ACCIONES */}
-            <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
-              <Link
-                href="/presupuestos"
-                aria-label="Volver a Propuestas"
-                title="Volver a Propuestas"
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-600 shadow-sm transition hover:border-purple-300 hover:bg-purple-50 hover:text-purple-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:border-purple-700 dark:hover:bg-purple-950/40 dark:hover:text-purple-400"
-              >
-                <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <path d="m15 18-6-6 6-6" />
-                  <path d="M20 12H9" />
-                </svg>
-              </Link>
-              <div className="flex items-center gap-2 min-w-0 flex-1">
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <span className="min-w-0">
-                    <span className="block text-base sm:text-sm font-bold sm:font-semibold leading-tight text-zinc-900 dark:text-white">
-                      Orden de Propuesta
-                    </span>
-                    <span className="block text-sm sm:text-sm font-mono font-bold dark:font-normal leading-tight text-black dark:text-white mt-0.5">
-                      #{limpiarNumeroOrden(orden.orderNumber || orden.quoteNumber)}
-                    </span>
-                  </span>
+            {/* Encabezado visible pero muy suave en Morado + Azul Zafiro */}
+            <section className="border-b border-purple-200/50 dark:border-purple-400/15 bg-gradient-to-r from-purple-50/65 via-purple-50/45 to-blue-50/55 dark:from-purple-500/[0.06] dark:via-purple-500/[0.04] dark:to-blue-500/[0.05]">
+              <div className="w-full max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 py-2.5 flex flex-col items-stretch gap-2.5 sm:gap-3">
+                {/* FILA 1: FLECHA VOLVER (←) + ORDEN DE SERVICIO #00001 + ACCIONES */}
+                <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+                  <Link
+                    href="/presupuestos"
+                    aria-label="Volver a Propuestas"
+                    title="Volver a Propuestas"
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-600 shadow-sm transition hover:border-purple-300 hover:bg-purple-50 hover:text-purple-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:border-purple-700 dark:hover:bg-purple-950/40 dark:hover:text-purple-400"
+                  >
+                    <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <path d="m15 18-6-6 6-6" />
+                      <path d="M20 12H9" />
+                    </svg>
+                  </Link>
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <span className="min-w-0">
+                        <span className="block text-base sm:text-sm font-bold sm:font-semibold leading-tight text-zinc-900 dark:text-white">
+                          Orden de Propuesta
+                        </span>
+                        <span className="block text-sm sm:text-sm font-mono font-bold dark:font-normal leading-tight text-black dark:text-white mt-0.5">
+                          #{limpiarNumeroOrden(orden.orderNumber || orden.quoteNumber)}
+                        </span>
+                      </span>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => handleAbrirDatosIngreso(orden)}
+                    title="Editar datos de ingreso de esta propuesta"
+                    className="ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-zinc-200 dark:border-white/10 bg-white dark:bg-zinc-900 hover:border-purple-300 dark:hover:border-purple-500/40 hover:bg-purple-50 dark:hover:bg-purple-500/10 text-xs font-semibold text-zinc-700 dark:text-zinc-200 shadow-sm transition active:scale-95 cursor-pointer shrink-0"
+                  >
+                    <svg className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125" />
+                    </svg>
+                    <span>Editar</span>
+                  </button>
                 </div>
-              </div>
 
-              <button
-                type="button"
-                onClick={() => handleAbrirDatosIngreso(orden)}
-                title="Editar datos de ingreso de esta propuesta"
-                className="ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-zinc-200 dark:border-white/10 bg-white dark:bg-zinc-900 hover:border-purple-300 dark:hover:border-purple-500/40 hover:bg-purple-50 dark:hover:bg-purple-500/10 text-xs font-semibold text-zinc-700 dark:text-zinc-200 shadow-sm transition active:scale-95 cursor-pointer shrink-0"
-              >
-                <svg className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125" />
-                </svg>
-                <span>Editar</span>
-              </button>
-            </div>
-
-            {/* FILA 2: CARRUSEL MORADO DE PROPUESTAS (CLIC DESLIZA A OTRA PROPUESTA / DOBLE CLIC ABRE DATOS DE INGRESO) */}
-            <div className="w-full min-w-0 flex flex-col items-start gap-2">
-              <div
-                ref={ordenesCarouselRef}
-                className="w-full overflow-x-auto snap-x snap-mandatory flex gap-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:cursor-grab touch-pan-x overscroll-x-contain"
-                onPointerDown={(event: React.PointerEvent<HTMLDivElement>) => {
-                  if (event.pointerType !== "mouse" || event.button !== 0) return;
-                  const container = event.currentTarget;
-                  const startX = event.clientX;
-                  const startScroll = container.scrollLeft;
-                  let moved = false;
-                  container.style.scrollSnapType = "none";
-                  const onMove = (moveEvent: PointerEvent) => {
-                    const delta = moveEvent.clientX - startX;
-                    if (Math.abs(delta) > 5) moved = true;
-                    container.scrollLeft = startScroll - delta;
-                  };
-                  const onUp = () => {
-                    window.removeEventListener("pointermove", onMove);
-                    window.removeEventListener("pointerup", onUp);
-                    const step = container.clientWidth + 8;
-                    const index = Math.round(container.scrollLeft / step);
-                    container.scrollTo({ left: index * step, behavior: "smooth" });
-                    setTimeout(() => {
-                      container.style.scrollSnapType = "";
-                    }, 400);
-                    if (moved) {
-                      const block = (clickEvent: Event) => {
-                        clickEvent.stopPropagation();
-                        clickEvent.preventDefault();
-                      };
-                      container.addEventListener("click", block, { capture: true, once: true });
-                      setTimeout(() => container.removeEventListener("click", block, true), 0);
-                    }
-                  };
-                  window.addEventListener("pointermove", onMove);
-                  window.addEventListener("pointerup", onUp);
-                }}
-                onWheel={(event: React.WheelEvent<HTMLDivElement>) => {
-                  if (Math.abs(event.deltaY) > Math.abs(event.deltaX)) {
-                    event.currentTarget.scrollBy({
-                      left: event.deltaY,
-                      behavior: "smooth",
-                    });
-                  }
-                }}
-                onScroll={(event: React.UIEvent<HTMLDivElement>) => {
-                  if (ignorarScrollProgramaticoRef.current) return;
-                  const container = event.currentTarget;
-                  if (ordenesCarouselScrollTimeoutRef.current) {
-                    clearTimeout(ordenesCarouselScrollTimeoutRef.current);
-                  }
-                  ordenesCarouselScrollTimeoutRef.current = setTimeout(() => {
-                    if (ignorarScrollProgramaticoRef.current) return;
-                    const center = container.getBoundingClientRect().left + container.clientWidth / 2;
-                    const cards = Array.from(
-                      container.querySelectorAll<HTMLButtonElement>("[data-order-carousel-card]")
-                    );
-                    const visibleCard = cards.reduce<HTMLButtonElement | null>((closest, card) => {
-                      if (!closest) return card;
-                      const distance = Math.abs(card.getBoundingClientRect().left + card.offsetWidth / 2 - center);
-                      const closestDistance = Math.abs(
-                        closest.getBoundingClientRect().left + closest.offsetWidth / 2 - center
-                      );
-                      return distance < closestDistance ? card : closest;
-                    }, null);
-                    const orderId = visibleCard?.dataset.orderId;
-                    const visibleOrder = listaPropuestasCarrusel.find((auto) => auto.id === orderId);
-                    if (visibleOrder && visibleOrder.id !== orden.id) {
-                      handleIrAOtraPropuesta(visibleOrder);
-                    }
-                  }, 150);
-                }}
-              >
-                {listaPropuestasCarrusel.map((auto, index) => {
-                  const esActivo = auto.id === orden.id;
-                  const vehiculoCatalogo = clientesCatalogo
-                    .flatMap((cliente) => (Array.isArray(cliente.vehicles) ? cliente.vehicles : []))
-                    .find((vehiculo) => vehiculo.id === auto.vehicleId || vehiculo.plate === auto.plate);
-                  const vehiculoStr = String(auto.vehicle || orden.vehicle || "Vehículo");
-                  const anioEnNombre = vehiculoStr.match(/\b(?:19|20)\d{2}\b/)?.[0] || "";
-                  const anioVehiculo = anioEnNombre || vehiculoCatalogo?.year || "";
-
-                  let fotosCard: string[] = [];
-                  if (Array.isArray(vehiculoCatalogo?.photos)) {
-                    fotosCard = [...vehiculoCatalogo.photos];
-                  } else if (typeof vehiculoCatalogo?.photosJson === "string") {
-                    try {
-                      const parsed = JSON.parse(vehiculoCatalogo.photosJson);
-                      if (Array.isArray(parsed)) {
-                        fotosCard = parsed.filter((f): f is string => typeof f === "string");
-                      }
-                    } catch { }
-                  }
-                  if (vehiculoCatalogo?.imageUrl && !fotosCard.includes(vehiculoCatalogo.imageUrl)) {
-                    fotosCard.unshift(vehiculoCatalogo.imageUrl);
-                  }
-                  if (auto.vehiclePhoto && !fotosCard.includes(auto.vehiclePhoto)) {
-                    fotosCard.unshift(auto.vehiclePhoto);
-                  }
-                  if (esActivo && fotosVehiculo.length > 0) {
-                    fotosVehiculo.forEach((f) => {
-                      if (!fotosCard.includes(f)) fotosCard.push(f);
-                    });
-                  }
-                  const todasLasFotos = fotosCard.filter(
-                    (f): f is string =>
-                      typeof f === "string" && /^(data:image\/|https?:\/\/|\/|blob:)/i.test(f.trim())
-                  );
-                  const fotoVehiculoCard = todasLasFotos[0];
-                  const nombreVehiculo =
-                    vehiculoStr.replace(/\b(?:19|20)\d{2}\b/g, "").replace(/\s+/g, " ").trim() ||
-                    vehiculoStr;
-
-                  const clienteCatalogo = clientesCatalogo.find(
-                    (c) =>
-                      c.id === auto.customerId ||
-                      (Array.isArray(c.vehicles) &&
-                        c.vehicles.some((v: any) => v.plate === auto.plate || v.id === auto.vehicleId)) ||
-                      (c.name && auto.client && c.name.toLowerCase() === String(auto.client).toLowerCase())
-                  );
-                  const rawClient = auto.client || auto.customer?.name || clienteCatalogo?.name || "";
-                  const nombreClienteDisplay =
-                    rawClient &&
-                      !String(rawClient).toLowerCase().includes("consumidor final") &&
-                      !String(rawClient).toLowerCase().includes("cliente mostrador")
-                      ? String(rawClient)
-                      : "";
-
-                  return (
-                    <button
-                      key={`${auto.id}-${index}`}
-                      data-order-carousel-card
-                      data-order-id={auto.id}
-                      type="button"
-                      title="Clic para deslizar a otra propuesta · Doble clic para ver Datos de Ingreso"
-                      onClick={() => {
-                        const ahora = Date.now();
-                        const diff = ahora - ultimoToqueAutoRef.current.time;
-                        if (ultimoToqueAutoRef.current.id === auto.id && diff < 340) {
-                          // Doble clic / doble toque -> abrir Datos de Ingreso
-                          if (clickSimpleTimerRef.current) {
-                            clearTimeout(clickSimpleTimerRef.current);
-                            clickSimpleTimerRef.current = null;
-                          }
-                          ultimoToqueAutoRef.current = { id: "", time: 0 };
-                          handleAbrirDatosIngreso(auto);
-                          return;
-                        }
-                        ultimoToqueAutoRef.current = { id: auto.id, time: ahora };
-                        if (clickSimpleTimerRef.current) {
-                          clearTimeout(clickSimpleTimerRef.current);
-                        }
-                        clickSimpleTimerRef.current = setTimeout(() => {
-                          clickSimpleTimerRef.current = null;
-                          avanzarSiguientePropuesta(auto);
-                        }, 280);
-                      }}
-                      onDoubleClick={(e) => {
-                        e.preventDefault();
-                        if (clickSimpleTimerRef.current) {
-                          clearTimeout(clickSimpleTimerRef.current);
-                          clickSimpleTimerRef.current = null;
-                        }
-                        ultimoToqueAutoRef.current = { id: "", time: 0 };
-                        handleAbrirDatosIngreso(auto);
-                      }}
-                      aria-pressed={esActivo}
-                      className={`snap-start shrink-0 w-full min-h-[76px] sm:min-h-[68px] px-3.5 py-2.5 sm:px-3 sm:py-2 rounded-2xl sm:rounded-xl border text-left flex items-center justify-between gap-3 transition-colors cursor-pointer ${esActivo
-                        ? "bg-gradient-to-r from-blue-50/90 via-blue-50/75 to-indigo-50/80 dark:from-blue-500/[0.14] dark:via-blue-500/[0.11] dark:to-indigo-500/[0.12] border-blue-300/75 dark:border-blue-400/30 shadow-sm"
-                        : "bg-white dark:bg-[#111113] border-zinc-200 dark:border-white/10"
-                        }`}
-                    >
-                      <span
-                        role={fotoVehiculoCard ? "button" : undefined}
-                        tabIndex={fotoVehiculoCard ? 0 : undefined}
-                        title={fotoVehiculoCard ? "🔍 Clic para ampliar foto del vehículo en grande" : undefined}
-                        onClick={(e) => {
-                          if (fotoVehiculoCard) {
-                            e.stopPropagation();
-                            setFotoZoom(fotoVehiculoCard);
-                          }
-                        }}
-                        className={`relative w-16 h-14 sm:w-14 sm:h-12 rounded-xl sm:rounded-lg shrink-0 bg-blue-100/70 dark:bg-blue-500/15 text-blue-600 dark:text-blue-300 flex items-center justify-center overflow-hidden border border-blue-200/70 dark:border-blue-400/25 group/thumb ${fotoVehiculoCard
-                          ? "cursor-zoom-in hover:ring-2 hover:ring-blue-400/70 hover:scale-[1.04] transition-all"
-                          : ""
-                          }`}
-                      >
-                        <svg
-                          className="w-8 h-8 sm:w-7 sm:h-7"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                          strokeWidth={1.5}
-                          aria-hidden="true"
-                        >
-                          <path strokeLinecap="round" strokeLinejoin="round" d="m5 11 1.5-4.5A2 2 0 0 1 8.4 5h7.2a2 2 0 0 1 1.9 1.5L19 11M3.5 11h17v7h-17zM6.5 18v1.5M17.5 18v1.5" />
-                        </svg>
-                        {fotoVehiculoCard && (
-                          <>
-                            <img
-                              src={fotoVehiculoCard}
-                              alt={`Vehículo ${vehiculoStr}`}
-                              onError={(event) => {
-                                event.currentTarget.style.display = "none";
-                              }}
-                              className="absolute inset-0 w-full h-full rounded-xl sm:rounded-lg object-cover transition-transform duration-200 group-hover/thumb:scale-110"
-                            />
-                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/thumb:opacity-100 transition-opacity flex items-center justify-center text-white">
-                              <svg className="w-5 h-5 drop-shadow-md" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v6m3-3H7" />
-                              </svg>
-                            </div>
-                          </>
-                        )}
-                      </span>
-
-                      <span className="min-w-0 flex-1">
-                        <span className="block text-base sm:text-sm font-bold sm:font-semibold text-zinc-900 dark:text-white truncate">
-                          {nombreVehiculo}
-                        </span>
-                        <span className="mt-1 flex items-center gap-2.5 text-sm sm:text-xs text-zinc-600 dark:text-zinc-300">
-                          <span className="font-mono tracking-wider text-blue-600 dark:text-blue-400 truncate text-base sm:text-sm font-black">
-                            {auto.plate}
-                          </span>
-                          {anioVehiculo && (
-                            <span className="shrink-0 border-l-2 border-zinc-300 dark:border-white/25 pl-2.5 font-bold text-sm sm:text-xs text-zinc-700 dark:text-zinc-300">
-                              {anioVehiculo}
-                            </span>
-                          )}
-                        </span>
-                      </span>
-
-                      <div className="shrink-0 text-right max-w-[140px] sm:max-w-[220px] pl-1">
-                        {nombreClienteDisplay && (
-                          <span
-                            className="block text-xs sm:text-sm font-bold text-zinc-900 dark:text-white truncate"
-                            title={nombreClienteDisplay}
-                          >
-                            {nombreClienteDisplay}
-                          </span>
-                        )}
-                      </div>
-
-                      <div className="flex items-center gap-1 shrink-0">
-                        <span
-                          role="button"
-                          tabIndex={0}
-                          title={
-                            listaPropuestasCarrusel.length > 1
-                              ? `Propuesta anterior (${index + 1} de ${listaPropuestasCarrusel.length})`
-                              : "Propuesta anterior"
-                          }
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (listaPropuestasCarrusel.length > 1) {
-                              retrocederAnteriorPropuesta(auto);
-                            }
-                          }}
-                          className="p-2 sm:p-2 rounded-xl text-zinc-400 hover:text-purple-600 dark:text-zinc-400 dark:hover:text-purple-400 hover:bg-purple-50/70 dark:hover:bg-purple-500/15 active:scale-90 transition-all duration-200 cursor-pointer shrink-0 group/flecha-izq flex items-center justify-center select-none"
-                        >
-                          <svg
-                            className="w-5 h-5 sm:w-5.5 sm:h-5.5 transition-transform duration-200 group-hover/flecha-izq:-translate-x-0.5 group-hover/flecha-izq:scale-110"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                            strokeWidth={2.2}
-                            aria-hidden="true"
-                          >
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
-                          </svg>
-                        </span>
-
-                        <span
-                          role="button"
-                          tabIndex={0}
-                          title={
-                            listaPropuestasCarrusel.length > 1
-                              ? `Siguiente propuesta (${index + 1} de ${listaPropuestasCarrusel.length})`
-                              : "Siguiente propuesta"
-                          }
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (listaPropuestasCarrusel.length > 1) {
-                              avanzarSiguientePropuesta(auto);
-                            }
-                          }}
-                          className="p-2 sm:p-2 rounded-xl text-zinc-400 hover:text-purple-600 dark:text-zinc-400 dark:hover:text-purple-400 hover:bg-purple-50/70 dark:hover:bg-purple-500/15 active:scale-90 transition-all duration-200 cursor-pointer shrink-0 group/flecha-der flex items-center justify-center select-none"
-                        >
-                          <svg
-                            className="w-5 h-5 sm:w-5.5 sm:h-5.5 transition-transform duration-200 group-hover/flecha-der:translate-x-0.5 group-hover/flecha-der:scale-110"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                            strokeWidth={2.2}
-                            aria-hidden="true"
-                          >
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
-                          </svg>
-                        </span>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Barra de Ingreso + Semáforo de Estado igual que en Panel Taller */}
-              {(() => {
-                const fechaRaw = orden.dateIn || orden.createdAt;
-                let fechaTexto = "Hoy";
-                if (fechaRaw) {
-                  const d = new Date(fechaRaw);
-                  if (!isNaN(d.getTime())) {
-                    const hoy = new Date();
-                    const ayer = new Date(hoy);
-                    ayer.setDate(hoy.getDate() - 1);
-                    if (d.toDateString() === hoy.toDateString()) fechaTexto = "Hoy";
-                    else if (d.toDateString() === ayer.toDateString()) fechaTexto = "Ayer";
-                    else fechaTexto = d.toLocaleDateString("es-EC", { day: "2-digit", month: "short" });
-                  }
-                }
-                const isWorking = esAprobado && !esPausado && !esPagado;
-                return (
+                {/* FILA 2: CARRUSEL MORADO DE PROPUESTAS (CLIC DESLIZA A OTRA PROPUESTA / DOBLE CLIC ABRE DATOS DE INGRESO) */}
+                <div className="w-full min-w-0 flex flex-col items-start gap-2">
                   <div
-                    className={`inline-flex flex-wrap items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-xl sm:rounded-lg border text-xs font-medium max-w-full ${
-                      esPagado
-                        ? "bg-sky-500/10 border-sky-500/25 text-sky-700 dark:text-sky-400"
-                        : isWorking
-                          ? "bg-emerald-500/10 border-emerald-500/25 text-emerald-700 dark:text-emerald-400"
-                          : "bg-amber-500/10 border-amber-500/25 text-amber-700 dark:text-amber-400"
-                    }`}
+                    ref={ordenesCarouselRef}
+                    className="w-full overflow-x-auto snap-x snap-mandatory flex gap-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:cursor-grab touch-pan-x overscroll-x-contain"
+                    onPointerDown={(event: React.PointerEvent<HTMLDivElement>) => {
+                      if (event.pointerType !== "mouse" || event.button !== 0) return;
+                      const container = event.currentTarget;
+                      const startX = event.clientX;
+                      const startScroll = container.scrollLeft;
+                      let moved = false;
+                      container.style.scrollSnapType = "none";
+                      const onMove = (moveEvent: PointerEvent) => {
+                        const delta = moveEvent.clientX - startX;
+                        if (Math.abs(delta) > 5) moved = true;
+                        container.scrollLeft = startScroll - delta;
+                      };
+                      const onUp = () => {
+                        window.removeEventListener("pointermove", onMove);
+                        window.removeEventListener("pointerup", onUp);
+                        const step = container.clientWidth + 8;
+                        const index = Math.round(container.scrollLeft / step);
+                        container.scrollTo({ left: index * step, behavior: "smooth" });
+                        setTimeout(() => {
+                          container.style.scrollSnapType = "";
+                        }, 400);
+                        if (moved) {
+                          const block = (clickEvent: Event) => {
+                            clickEvent.stopPropagation();
+                            clickEvent.preventDefault();
+                          };
+                          container.addEventListener("click", block, { capture: true, once: true });
+                          setTimeout(() => container.removeEventListener("click", block, true), 0);
+                        }
+                      };
+                      window.addEventListener("pointermove", onMove);
+                      window.addEventListener("pointerup", onUp);
+                    }}
+                    onWheel={(event: React.WheelEvent<HTMLDivElement>) => {
+                      if (Math.abs(event.deltaY) > Math.abs(event.deltaX)) {
+                        event.currentTarget.scrollBy({
+                          left: event.deltaY,
+                          behavior: "smooth",
+                        });
+                      }
+                    }}
+                    onScroll={(event: React.UIEvent<HTMLDivElement>) => {
+                      if (ignorarScrollProgramaticoRef.current) return;
+                      const container = event.currentTarget;
+                      if (ordenesCarouselScrollTimeoutRef.current) {
+                        clearTimeout(ordenesCarouselScrollTimeoutRef.current);
+                      }
+                      ordenesCarouselScrollTimeoutRef.current = setTimeout(() => {
+                        if (ignorarScrollProgramaticoRef.current) return;
+                        const center = container.getBoundingClientRect().left + container.clientWidth / 2;
+                        const cards = Array.from(
+                          container.querySelectorAll<HTMLButtonElement>("[data-order-carousel-card]")
+                        );
+                        const visibleCard = cards.reduce<HTMLButtonElement | null>((closest, card) => {
+                          if (!closest) return card;
+                          const distance = Math.abs(card.getBoundingClientRect().left + card.offsetWidth / 2 - center);
+                          const closestDistance = Math.abs(
+                            closest.getBoundingClientRect().left + closest.offsetWidth / 2 - center
+                          );
+                          return distance < closestDistance ? card : closest;
+                        }, null);
+                        const orderId = visibleCard?.dataset.orderId;
+                        const visibleOrder = listaPropuestasCarrusel.find((auto) => auto.id === orderId);
+                        if (visibleOrder && visibleOrder.id !== orden.id) {
+                          handleIrAOtraPropuesta(visibleOrder);
+                        }
+                      }, 150);
+                    }}
                   >
-                    <span className="text-zinc-700 dark:text-zinc-300 whitespace-nowrap">
-                      Ingreso:{" "}
-                      <span className="text-zinc-900 dark:text-white font-semibold">
-                        {fechaTexto}
-                      </span>
-                    </span>
-                    <span className={esPagado ? "text-sky-500/60" : isWorking ? "text-emerald-500/60" : "text-amber-500/60"}>•</span>
-                    {esPagado ? (
-                      <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-sky-500/20 border border-sky-500/35 text-sky-800 dark:text-sky-300 font-bold">
-                        <span>✓ Pagado</span>
-                      </span>
-                    ) : (
-                      <button
-                        type="button"
-                        disabled={cambiandoEstado}
-                        onClick={() => {
-                          const siguienteEstado: "Aprobado" | "Pausada" | "Pendiente" = esPausado
-                            ? "Pendiente"
-                            : esAprobado
-                              ? "Pausada"
-                              : "Aprobado";
-                          void handleCambiarEstadoTaller(siguienteEstado);
-                        }}
-                        title="Semáforo: Clic para cambiar estado (En espera → Trabajando → Pausa)"
-                        className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg border font-bold transition-all cursor-pointer active:scale-95 shrink-0 ${
-                          isWorking
-                            ? "bg-emerald-500/20 hover:bg-emerald-500/30 border-emerald-500/35 text-emerald-800 dark:text-emerald-300"
-                            : "bg-amber-500/20 hover:bg-amber-500/30 border-amber-500/35 text-amber-800 dark:text-amber-300"
-                        }`}
-                      >
-                        <span
-                          className={`w-2 h-2 rounded-full shrink-0 ${
-                            isWorking
-                              ? "bg-emerald-500 dark:bg-emerald-400 animate-pulse"
-                              : "bg-amber-500 dark:bg-amber-400 animate-pulse"
-                          }`}
-                        />
-                        <span>{esPausado ? "Pausa" : esAprobado ? "Trabajando" : "En espera"}</span>
-                      </button>
-                    )}
-                  </div>
-                );
-              })()}
-            </div>
-          </div>
-        </section>
-      </div>
+                    {listaPropuestasCarrusel.map((auto, index) => {
+                      const esActivo = auto.id === orden.id;
+                      const vehiculoCatalogo = clientesCatalogo
+                        .flatMap((cliente) => (Array.isArray(cliente.vehicles) ? cliente.vehicles : []))
+                        .find((vehiculo) => vehiculo.id === auto.vehicleId || vehiculo.plate === auto.plate);
+                      const vehiculoStr = String(auto.vehicle || orden.vehicle || "Vehículo");
+                      const anioEnNombre = vehiculoStr.match(/\b(?:19|20)\d{2}\b/)?.[0] || "";
+                      const anioVehiculo = anioEnNombre || vehiculoCatalogo?.year || "";
 
-      {/* DOCUMENTO PRINCIPAL */}
-      <main className="w-full max-w-[1920px] mx-auto p-3 sm:p-6 md:p-8 lg:px-8 mt-2 sm:mt-4 print:m-0 print:p-0 print:max-w-none space-y-4">
-        {/* SELECTOR 4 EN 1 DE ESPECIALIDADES (AL MARCAR CAMBIA IGUAL QUE EN TALLER: Taller -> Lubricentro -> Car Wash -> Tecnicentro) */}
-        <div className="print:hidden flex flex-wrap items-center justify-between w-full gap-2 py-1">
-          <div className="flex items-center justify-between gap-2 w-full min-w-0 py-0.5">
-            <div className="flex items-center p-1 rounded-2xl bg-white dark:bg-[#0d0d0e] border border-zinc-200 dark:border-white/10 backdrop-blur-md shadow-sm dark:shadow-xl">
-              {(() => {
-                const MODULOS_PROP = [
-                  {
-                    id: "TALLER" as EspecialidadTipo,
-                    shortName: "Taller",
-                    bgClass: "bg-blue-500/10 dark:bg-blue-500/15",
-                    borderClass: "border-blue-500/30 dark:border-blue-400/35",
-                    textClass: "text-blue-600 dark:text-blue-300",
-                    shadowClass: "shadow-sm shadow-blue-500/10",
-                    svg: (className = "w-4 h-4") => (
-                      <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 11-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.743-.07a4.5 4.5 0 004.486-6.336l-3.276 3.277a3.004 3.004 0 01-2.25-2.25l3.276-3.276a4.5 4.5 0 00-6.336 4.486c.091.455.087.935-.012 1.39" />
-                      </svg>
-                    ),
-                  },
-                  {
-                    id: "LUBRICENTRO" as EspecialidadTipo,
-                    shortName: "Lubricentro",
-                    bgClass: "bg-amber-500/10 dark:bg-amber-500/15",
-                    borderClass: "border-amber-500/30 dark:border-amber-400/35",
-                    textClass: "text-amber-600 dark:text-amber-300",
-                    shadowClass: "shadow-sm shadow-amber-500/10",
-                    svg: (className = "w-4 h-4") => (
-                      <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M15.362 5.214A8.252 8.252 0 0112 21 8.25 8.25 0 016.038 7.048 8.287 8.287 0 009 9.6a8.983 8.983 0 013.361-6.867 8.21 8.21 0 003 2.48z" />
-                      </svg>
-                    ),
-                  },
-                  {
-                    id: "CARWASH" as EspecialidadTipo,
-                    shortName: "Car Wash",
-                    bgClass: "bg-teal-500/10 dark:bg-teal-500/15",
-                    borderClass: "border-teal-500/40 dark:border-teal-400/45",
-                    textClass: "text-teal-700 dark:text-teal-300",
-                    shadowClass: "shadow-sm shadow-teal-500/10",
-                    svg: (className = "w-4 h-4") => (
-                      <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" />
-                      </svg>
-                    ),
-                  },
-                  {
-                    id: "TECNICENTRO" as EspecialidadTipo,
-                    shortName: "Tecnicentro",
-                    bgClass: "bg-emerald-500/10 dark:bg-emerald-500/15",
-                    borderClass: "border-emerald-500/30 dark:border-emerald-400/35",
-                    textClass: "text-emerald-600 dark:text-emerald-300",
-                    shadowClass: "shadow-sm shadow-emerald-500/10",
-                    svg: (className = "w-4 h-4") => (
-                      <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
-                        <circle cx="12" cy="12" r="9" />
-                        <circle cx="12" cy="12" r="3" />
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v6m0 6v6M3 12h6m6 0h6" />
-                      </svg>
-                    ),
-                  },
-                ];
-                const idxActual = MODULOS_PROP.findIndex((m) => m.id === moduloActivoPropuesta);
-                const modActivo = MODULOS_PROP[idxActual >= 0 ? idxActual : 0];
-                const modSiguiente =
-                  MODULOS_PROP[((idxActual >= 0 ? idxActual : 0) + 1) % MODULOS_PROP.length];
+                      let fotosCard: string[] = [];
+                      if (Array.isArray(vehiculoCatalogo?.photos)) {
+                        fotosCard = [...vehiculoCatalogo.photos];
+                      } else if (typeof vehiculoCatalogo?.photosJson === "string") {
+                        try {
+                          const parsed = JSON.parse(vehiculoCatalogo.photosJson);
+                          if (Array.isArray(parsed)) {
+                            fotosCard = parsed.filter((f): f is string => typeof f === "string");
+                          }
+                        } catch { }
+                      }
+                      if (vehiculoCatalogo?.imageUrl && !fotosCard.includes(vehiculoCatalogo.imageUrl)) {
+                        fotosCard.unshift(vehiculoCatalogo.imageUrl);
+                      }
+                      if (auto.vehiclePhoto && !fotosCard.includes(auto.vehiclePhoto)) {
+                        fotosCard.unshift(auto.vehiclePhoto);
+                      }
+                      if (esActivo && fotosVehiculo.length > 0) {
+                        fotosVehiculo.forEach((f) => {
+                          if (!fotosCard.includes(f)) fotosCard.push(f);
+                        });
+                      }
+                      const todasLasFotos = fotosCard.filter(
+                        (f): f is string =>
+                          typeof f === "string" && /^(data:image\/|https?:\/\/|\/|blob:)/i.test(f.trim())
+                      );
+                      const fotoVehiculoCard = todasLasFotos[0];
+                      const nombreVehiculo =
+                        vehiculoStr.replace(/\b(?:19|20)\d{2}\b/g, "").replace(/\s+/g, " ").trim() ||
+                        vehiculoStr;
 
-                return (
-                  <button
-                    key={modActivo.id}
-                    type="button"
-                    onClick={() => setModuloActivoPropuesta(modSiguiente.id)}
-                    className={`h-9 px-3.5 rounded-xl text-xs sm:text-sm transition-all cursor-pointer flex items-center justify-center gap-1.5 active:scale-95 ${modActivo.bgClass} border ${modActivo.borderClass} ${modActivo.textClass} ${modActivo.shadowClass} backdrop-blur-sm font-bold`}
-                    title={`Cambiar a ${modSiguiente.shortName}`}
-                  >
-                    {modActivo.svg("w-4 h-4 shrink-0")}
-                    <span className="whitespace-nowrap">{modActivo.shortName}</span>
-                  </button>
-                );
-              })()}
-            </div>
+                      const clienteCatalogo = clientesCatalogo.find(
+                        (c) =>
+                          c.id === auto.customerId ||
+                          (Array.isArray(c.vehicles) &&
+                            c.vehicles.some((v: any) => v.plate === auto.plate || v.id === auto.vehicleId)) ||
+                          (c.name && auto.client && c.name.toLowerCase() === String(auto.client).toLowerCase())
+                      );
+                      const rawClient = auto.client || auto.customer?.name || clienteCatalogo?.name || "";
+                      const nombreClienteDisplay =
+                        rawClient &&
+                          !String(rawClient).toLowerCase().includes("consumidor final") &&
+                          !String(rawClient).toLowerCase().includes("cliente mostrador")
+                          ? String(rawClient)
+                          : "";
 
-            {/* LADO DERECHO SUPERIOR: ICONO FLOTANTE CON TODOS LOS PEDIDOS QUE VAN A PROVEEDOR */}
-            <div className="flex items-center gap-2 ml-auto">
-              <button
-                type="button"
-                onClick={() => router.push(`/presupuestos/${encodeURIComponent(orden.id)}/pedir`)}
-                className={`h-9 px-3.5 rounded-xl text-xs sm:text-sm transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-95 border backdrop-blur-sm font-semibold relative ${itemsMarcadosProveedor.length > 0
-                  ? "bg-zinc-100/80 hover:bg-zinc-200/80 dark:bg-white/[0.10] dark:hover:bg-white/[0.16] text-zinc-800 dark:text-white border-zinc-300/80 dark:border-white/25 shadow-sm shadow-white/5"
-                  : "bg-zinc-100/50 hover:bg-zinc-100/80 dark:bg-white/[0.06] dark:hover:bg-white/[0.12] text-zinc-700 dark:text-zinc-200 border-zinc-200/80 dark:border-white/15"
-                  }`}
-                title="Abrir página de pedidos marcados para asignar proveedores"
-              >
-                <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.9}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 7.5A1.5 1.5 0 0 1 3.75 6H14v10.5H8.5m-4 0H3.75a1.5 1.5 0 0 1-1.5-1.5V7.5ZM14 9h3.88a1.5 1.5 0 0 1 1.248.668l2.122 3.182c.163.245.25.533.25.828V15a1.5 1.5 0 0 1-1.5 1.5h-.5m-4 0H14" />
-                  <circle cx="6.5" cy="17.5" r="1.75" />
-                  <circle cx="17.5" cy="17.5" r="1.75" />
-                </svg>
-                <span className="whitespace-nowrap">Pedir</span>
-                <span
-                  className={`min-w-5 h-5 px-1.5 rounded-full text-[11px] font-bold inline-flex items-center justify-center transition-all ${itemsMarcadosProveedor.length > 0
-                    ? "bg-zinc-900/15 text-zinc-900 dark:bg-white/20 dark:text-white"
-                    : "bg-zinc-900/10 text-zinc-600 dark:bg-white/10 dark:text-zinc-300"
-                    }`}
-                >
-                  {itemsMarcadosProveedor.length}
-                </span>
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white dark:bg-[#0f0f13] border border-zinc-200 dark:border-white/10 rounded-3xl p-3.5 sm:p-8 md:p-10 shadow-2xl space-y-5 sm:space-y-6 print:border-none print:shadow-none print:p-4 print:rounded-none transition-all">
-          {/* ===================================================================
-              TALLER (BARRA RÁPIDA + SERVICIOS/PRODUCTOS + LIQUIDACIÓN)
-              =================================================================== */}
-          <div className="space-y-4">
-            {/* Barra superior rápida para añadir servicios/productos manuales, catálogo o rápidos en Taller */}
-            {renderBarraAgregarAdicional(moduloActivoPropuesta)}
-
-            {/* RESUMEN UNIFICADO IGUAL QUE EN TALLER (SERVICIOS PRIMERO [MANUALES PRIMERO], LUEGO PRODUCTOS) */}
-            {(servicios.length > 0 || repuestos.length > 0) && (() => {
-              const serviciosOrdenados = [...servicios].sort((a, b) => {
-                const aEsManual = Boolean(
-                  a.isManual ||
-                  String(a.id || "").startsWith("reg-") ||
-                  String(a.id || "").startsWith("man-")
-                );
-                const bEsManual = Boolean(
-                  b.isManual ||
-                  String(b.id || "").startsWith("reg-") ||
-                  String(b.id || "").startsWith("man-")
-                );
-                if (aEsManual && !bEsManual) return -1;
-                if (!aEsManual && bEsManual) return 1;
-                return 0;
-              });
-              const totalCantServicios = serviciosOrdenados.reduce(
-                (acc, it) => acc + (Number(it.qty) || 1),
-                0
-              );
-              const totalCantProductos = repuestos.reduce(
-                (acc, it) => acc + (Number(it.qty) || 1),
-                0
-              );
-
-              const getBadgeModuloClase = (mod?: string) => {
-                const m = String(mod || "Taller").toLowerCase();
-                if (m.includes("lubri")) {
-                  return "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/30";
-                }
-                if (m.includes("wash") || m.includes("lavad")) {
-                  return "bg-cyan-50 text-cyan-700 border-cyan-200 dark:bg-cyan-500/15 dark:text-cyan-300 dark:border-cyan-500/30";
-                }
-                if (m.includes("tecni")) {
-                  return "bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-500/15 dark:text-purple-300 dark:border-purple-500/30";
-                }
-                return "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-500/15 dark:text-blue-300 dark:border-blue-500/30";
-              };
-
-              const getNombreModulo = (orig?: string, cat?: string) => {
-                const o = String(orig || "").toUpperCase();
-                if (o === "LUBRICENTRO") return "Lubricentro";
-                if (o === "CARWASH") return "Car Wash";
-                if (o === "TECNICENTRO") return "Tecnicentro";
-                const c = String(cat || "").toLowerCase();
-                if (c.includes("lubri")) return "Lubricentro";
-                if (c.includes("wash") || c.includes("lavad")) return "Car Wash";
-                if (c.includes("tecni")) return "Tecnicentro";
-                return "Taller";
-              };
-
-              return (
-                <div className="p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-white/[0.03] border border-zinc-200/90 dark:border-white/10 shadow-2xs space-y-3.5 animate-fade-in">
-                  {/* SERVICIOS (PRIMERO) */}
-                  {serviciosOrdenados.length > 0 && (
-                    <div className="space-y-1.5">
-                      <span className="text-xs font-normal text-zinc-500 dark:text-zinc-400 flex items-center gap-1.5">
-                        <span>🔧</span>
-                        <span>Servicios ({totalCantServicios}):</span>
-                      </span>
-                      <div className="rounded-xl border border-zinc-200/80 dark:border-white/10 bg-white dark:bg-black/20 shadow-2xs overflow-hidden">
-                        {/* Vista Móvil Servicios (iOS / Android) */}
-                        <div className="sm:hidden divide-y divide-zinc-200/60 dark:divide-white/5">
-                          {serviciosOrdenados.map((it, idx) => {
-                            const cant = Number(it.qty) || 1;
-                            const origenLabel = getNombreModulo(it.origin, it.category);
-                            const esManual = Boolean(
-                              it.isManual ||
-                              String(it.id || "").startsWith("reg-") ||
-                              String(it.id || "").startsWith("man-")
-                            );
-                            const marcadoProv = Boolean(
-                              it.enviadoProveedor ||
-                              it.purchaseStatus === "PEDIDO_WHATSAPP" ||
-                              it.purchaseStatus === "COTIZADO"
-                            );
-                            return (
-                              <div
-                                key={`m-srv-${it.id || it.code || idx}`}
-                                className={`p-3 space-y-2.5 ${it.agregadoEnPropuesta ? "bg-amber-500/[0.07] dark:bg-amber-400/[0.06] border-l-2 border-l-amber-500/60" : ""}`}
-                              >
-                                <div className="flex items-start justify-between gap-2">
-                                  <div className="flex flex-wrap items-center gap-1.5 min-w-0 flex-1 text-sm font-medium text-zinc-800 dark:text-zinc-100 leading-snug">
-                                    <span className="break-words">{formatoPrimeraMayuscula(it.name)}</span>
-                                    {esManual && (
-                                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/35 shrink-0">
-                                        Manual
-                                      </span>
-                                    )}
-                                    {Array.isArray(it.fotos) && it.fotos.length > 0 && (
-                                      <button
-                                        type="button"
-                                        onClick={() => handleAbrirFlotanteFotos(it)}
-                                        className="h-7 px-2 rounded-lg border bg-indigo-50/80 hover:bg-indigo-100 dark:bg-indigo-500/15 dark:hover:bg-indigo-500/25 border-indigo-200 dark:border-indigo-500/30 text-indigo-600 dark:text-indigo-300 inline-flex items-center gap-1 text-[11px] font-medium cursor-pointer active:scale-95 transition-all shrink-0"
-                                        title={`Ver ${it.fotos.length} foto(s)`}
-                                      >
-                                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
-                                          <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
-                                        </svg>
-                                        {it.fotos.length > 1 && <span>{it.fotos.length}</span>}
-                                      </button>
-                                    )}
-                                    {Array.isArray(it.audios) && it.audios.length > 0 && (
-                                      <button
-                                        type="button"
-                                        onClick={() => handleAbrirFlotanteAudios(it)}
-                                        className="h-7 px-2 rounded-lg border bg-amber-50/80 hover:bg-amber-100 dark:bg-amber-500/15 dark:hover:bg-amber-500/25 border-amber-200 dark:border-amber-500/30 text-amber-600 dark:text-amber-300 inline-flex items-center gap-1 text-[11px] font-medium cursor-pointer active:scale-95 transition-all shrink-0"
-                                        title={`Escuchar ${it.audios.length} audio(s)`}
-                                      >
-                                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
-                                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 0 0 6-6v-1.5m-6 7.5a6 6 0 0 1-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 0 1-3-3V4.5a3 3 0 1 1 6 0v8.25a3 3 0 0 1-3 3Z" />
-                                        </svg>
-                                        {it.audios.length > 1 && <span>{it.audios.length}</span>}
-                                      </button>
-                                    )}
-                                  </div>
-                                  <button
-                                    type="button"
-                                    onClick={() => void handleDeleteService(it.id)}
-                                    className="w-7 h-7 inline-flex items-center justify-center rounded-lg text-zinc-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10 text-base font-bold cursor-pointer shrink-0"
-                                    title="Eliminar"
-                                  >
-                                    ×
-                                  </button>
-                                </div>
-
-                                <div className="flex flex-wrap items-center justify-between gap-2">
-                                  <div className="flex items-center gap-2 flex-wrap">
-                                    <div className="inline-flex items-center border border-zinc-200 dark:border-white/10 rounded-xl overflow-hidden bg-zinc-50 dark:bg-white/[0.04] h-8">
-                                      <button
-                                        type="button"
-                                        onClick={() => handleUpdateQty(it.id, -1)}
-                                        className="w-7 h-full flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-white text-sm font-bold cursor-pointer"
-                                      >
-                                        −
-                                      </button>
-                                      <span className="w-7 text-center text-xs font-bold text-zinc-800 dark:text-zinc-200 tabular-nums">
-                                        {cant}
-                                      </span>
-                                      <button
-                                        type="button"
-                                        onClick={() => handleUpdateQty(it.id, 1)}
-                                        className="w-7 h-full flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-white text-sm font-bold cursor-pointer"
-                                      >
-                                        +
-                                      </button>
-                                    </div>
-                                    <span className={`inline-block px-2 py-0.5 rounded-md text-[10px] font-semibold border ${getBadgeModuloClase(origenLabel)}`}>
-                                      {origenLabel}
-                                    </span>
-                                    {esManual && (
-                                      <button
-                                        type="button"
-                                        onClick={() => handleToggleMarcarProveedor(it, true)}
-                                        className={`h-8 px-2.5 rounded-lg border inline-flex items-center justify-center gap-1 text-[11px] font-semibold cursor-pointer active:scale-95 transition-all shrink-0 ${marcadoProv
-                                          ? "bg-blue-600 hover:bg-blue-500 text-white border-blue-500 shadow-sm shadow-blue-500/30"
-                                          : "bg-emerald-50/80 hover:bg-emerald-100 dark:bg-emerald-500/15 dark:hover:bg-emerald-500/25 border-emerald-200 dark:border-emerald-500/30 text-emerald-600 dark:text-emerald-300"
-                                          }`}
-                                      >
-                                        {!marcadoProv ? (
-                                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
-                                            <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 18.75a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 0 1-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 0 0-3.213-9.193 2.056 2.056 0 0 0-1.58-.86H14.25M16.5 18.75h-2.25m0-11.175V14.25m0 0H2.25m12 0v4.5m0-4.5H16.5" />
-                                          </svg>
-                                        ) : (
-                                          <span className="text-[11px]">✓ Enviado</span>
-                                        )}
-                                      </button>
-                                    )}
-                                  </div>
-
-                                  {esManual ? (
-                                    <div className="inline-flex items-center gap-1 px-2.5 h-8 rounded-xl border border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-white/[0.04] w-28 shrink-0">
-                                      <span className="text-xs text-zinc-400 font-semibold">$</span>
-                                      <input
-                                        type="number"
-                                        inputMode="decimal"
-                                        step="any"
-                                        min="0"
-                                        placeholder="0"
-                                        value={it.price || ""}
-                                        onChange={(e) => handleUpdateServicePrice(it.id, e.target.value)}
-                                        className="w-full bg-transparent text-right text-base sm:text-xs font-bold font-mono text-zinc-800 dark:text-zinc-100 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                      />
-                                    </div>
-                                  ) : (
-                                    <span className="font-mono text-sm font-bold text-zinc-800 dark:text-zinc-100 shrink-0">
-                                      ${Number(it.price || 0).toFixed(2)}
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                        <div className="hidden sm:block overflow-x-auto">
-                        <table className="w-full text-left text-xs border-collapse">
-                          <thead>
-                            <tr className="border-b border-zinc-200/80 dark:border-white/10 bg-zinc-50/80 dark:bg-white/[0.03] text-zinc-500 dark:text-zinc-400 text-[11px] font-semibold">
-                              <th className="py-2 px-3 w-24 text-center">Cant.</th>
-                              <th className="py-2 px-3">Descripción</th>
-                              <th className="py-2 px-2.5 w-28 text-center">Detalle</th>
-                              <th className="py-2 px-2.5 w-28 text-center">Pedir</th>
-                              <th className="py-2 px-2.5 w-28 text-center">PVP</th>
-                              <th className="py-2 px-2 w-10 text-center"></th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-zinc-200/60 dark:divide-white/5">
-                            {serviciosOrdenados.map((it, idx) => {
-                              const cant = Number(it.qty) || 1;
-                              const origenLabel = getNombreModulo(it.origin, it.category);
-                              const esManual = Boolean(
-                                it.isManual ||
-                                String(it.id || "").startsWith("reg-") ||
-                                String(it.id || "").startsWith("man-")
-                              );
-                              const marcadoProv = Boolean(
-                                it.enviadoProveedor ||
-                                it.purchaseStatus === "PEDIDO_WHATSAPP" ||
-                                it.purchaseStatus === "COTIZADO"
-                              );
-                              return (
-                                <tr
-                                  key={it.id || it.code || `srv-${idx}`}
-                                  className={`transition-colors ${it.agregadoEnPropuesta
-                                    ? "bg-amber-500/[0.07] dark:bg-amber-400/[0.06] border-l-2 border-l-amber-500/60 hover:bg-amber-500/[0.12] dark:hover:bg-amber-400/[0.10]"
-                                    : "hover:bg-zinc-50/60 dark:hover:bg-white/[0.02]"
-                                    }`}
-                                >
-                                  <td className="py-2 px-3 text-center">
-                                    <div className="inline-flex items-center border border-zinc-200 dark:border-white/10 rounded-lg overflow-hidden bg-zinc-50 dark:bg-white/[0.04]">
-                                      <button
-                                        type="button"
-                                        onClick={() => handleUpdateQty(it.id, -1)}
-                                        className="w-5 h-5 flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-white text-xs font-bold cursor-pointer"
-                                      >
-                                        −
-                                      </button>
-                                      <span className="w-6 text-center text-xs font-bold text-zinc-800 dark:text-zinc-200">
-                                        {cant}
-                                      </span>
-                                      <button
-                                        type="button"
-                                        onClick={() => handleUpdateQty(it.id, 1)}
-                                        className="w-5 h-5 flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-white text-xs font-bold cursor-pointer"
-                                      >
-                                        +
-                                      </button>
-                                    </div>
-                                  </td>
-                                  <td className="py-2 px-3 font-medium text-zinc-800 dark:text-zinc-200">
-                                    <div className="flex flex-wrap items-center gap-2">
-                                      <span>{formatoPrimeraMayuscula(it.name)}</span>
-                                      {esManual && (
-                                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/35 shrink-0">
-                                          Manual
-                                        </span>
-                                      )}
-                                      {Array.isArray(it.fotos) && it.fotos.length > 0 && (
-                                        <button
-                                          type="button"
-                                          onClick={() => handleAbrirFlotanteFotos(it)}
-                                          className="h-7 px-2 rounded-lg border bg-indigo-50/80 hover:bg-indigo-100 dark:bg-indigo-500/15 dark:hover:bg-indigo-500/25 border-indigo-200 dark:border-indigo-500/30 text-indigo-600 dark:text-indigo-300 inline-flex items-center gap-1 text-[11px] font-medium cursor-pointer active:scale-95 transition-all shrink-0"
-                                          title={`Ver ${it.fotos.length} foto(s)`}
-                                        >
-                                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
-                                            <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
-                                          </svg>
-                                          {it.fotos.length > 1 && <span>{it.fotos.length}</span>}
-                                        </button>
-                                      )}
-                                      {Array.isArray(it.audios) && it.audios.length > 0 && (
-                                        <button
-                                          type="button"
-                                          onClick={() => handleAbrirFlotanteAudios(it)}
-                                          className="h-7 px-2 rounded-lg border bg-amber-50/80 hover:bg-amber-100 dark:bg-amber-500/15 dark:hover:bg-amber-500/25 border-amber-200 dark:border-amber-500/30 text-amber-600 dark:text-amber-300 inline-flex items-center gap-1 text-[11px] font-medium cursor-pointer active:scale-95 transition-all shrink-0"
-                                          title={`Escuchar ${it.audios.length} audio(s)`}
-                                        >
-                                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
-                                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 0 0 6-6v-1.5m-6 7.5a6 6 0 0 1-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 0 1-3-3V4.5a3 3 0 1 1 6 0v8.25a3 3 0 0 1-3 3Z" />
-                                          </svg>
-                                          {it.audios.length > 1 && <span>{it.audios.length}</span>}
-                                        </button>
-                                      )}
-                                    </div>
-                                  </td>
-                                  <td className="py-2 px-2.5 text-center">
-                                    <span
-                                      className={`inline-block px-2 py-0.5 rounded-md text-[10px] font-semibold border ${getBadgeModuloClase(
-                                        origenLabel
-                                      )}`}
-                                    >
-                                      {origenLabel}
-                                    </span>
-                                  </td>
-                                  <td className="py-2 px-2.5 text-center">
-                                    {esManual ? (
-                                      <div className="inline-flex items-center justify-center gap-1.5">
-                                        <button
-                                          type="button"
-                                          onClick={() => handleToggleMarcarProveedor(it, true)}
-                                          className={`h-7 px-2 rounded-lg border inline-flex items-center justify-center gap-1 text-[11px] font-semibold cursor-pointer active:scale-95 transition-all shrink-0 ${marcadoProv
-                                            ? "bg-blue-600 hover:bg-blue-500 text-white border-blue-500 shadow-sm shadow-blue-500/30"
-                                            : "bg-emerald-50/80 hover:bg-emerald-100 dark:bg-emerald-500/15 dark:hover:bg-emerald-500/25 border-emerald-200 dark:border-emerald-500/30 text-emerald-600 dark:text-emerald-300"
-                                            }`}
-                                          title={
-                                            marcadoProv
-                                              ? "Enviado a pedidos de proveedor (clic para quitar)"
-                                              : "Marcar para pedir a proveedor"
-                                          }
-                                        >
-                                          {!marcadoProv ? (
-                                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
-                                              <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 18.75a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 0 1-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 0 0-3.213-9.193 2.056 2.056 0 0 0-1.58-.86H14.25M16.5 18.75h-2.25m0-11.175V14.25m0 0H2.25m12 0v4.5m0-4.5H16.5" />
-                                            </svg>
-                                          ) : (
-                                            <span className="text-[10px]">✓ Enviado</span>
-                                          )}
-                                        </button>
-                                        {it.supplierAvailability === "SI_HAY" && (
-                                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-500/40 text-[10px] font-bold shrink-0">
-                                            ✓ Sí hay{it.deliveryTime ? ` · ${it.deliveryTime}` : ""}
-                                          </span>
-                                        )}
-                                        {it.supplierAvailability === "NO_HAY" && (
-                                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-rose-50 dark:bg-rose-500/15 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-500/40 text-[10px] font-bold shrink-0">
-                                            ✕ No hay
-                                          </span>
-                                        )}
-                                      </div>
-                                    ) : (
-                                      <span className="text-zinc-300 dark:text-zinc-600 text-xs">—</span>
-                                    )}
-                                  </td>
-                                  <td className="py-2 px-2.5 text-center">
-                                    {esManual ? (
-                                      <div className="inline-flex items-center gap-1 px-2 py-1 rounded-lg border border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-white/[0.04] w-24">
-                                        <span className="text-[11px] text-zinc-400 font-semibold">$</span>
-                                        <input
-                                          type="number"
-                                          inputMode="decimal"
-                                          step="any"
-                                          min="0"
-                                          placeholder="0"
-                                          value={it.price || ""}
-                                          onChange={(e) => handleUpdateServicePrice(it.id, e.target.value)}
-                                          className="w-full bg-transparent text-right text-xs font-bold font-mono text-zinc-800 dark:text-zinc-100 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                        />
-                                      </div>
-                                    ) : (
-                                      <span className="inline-block font-mono text-xs font-bold text-zinc-800 dark:text-zinc-100">
-                                        ${Number(it.price || 0).toFixed(2)}
-                                      </span>
-                                    )}
-                                  </td>
-                                  <td className="py-2 px-2 text-center">
-                                    <button
-                                      type="button"
-                                      onClick={() => void handleDeleteService(it.id)}
-                                      className="w-6 h-6 inline-flex items-center justify-center rounded-lg text-zinc-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10 text-sm font-bold cursor-pointer"
-                                      title="Eliminar"
-                                    >
-                                      ×
-                                    </button>
-                                  </td>
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* PRODUCTOS (DESPUÉS DE SERVICIOS) */}
-                  {repuestos.length > 0 && (
-                    <div className="space-y-1.5">
-                      <span className="text-xs font-normal text-zinc-500 dark:text-zinc-400 flex items-center gap-1.5">
-                        <span>📦</span>
-                        <span>Productos ({totalCantProductos}):</span>
-                      </span>
-                      <div className="rounded-xl border border-zinc-200/80 dark:border-white/10 bg-white dark:bg-black/20 shadow-2xs overflow-hidden">
-                        {/* Vista Móvil Productos (iOS / Android) */}
-                        <div className="sm:hidden divide-y divide-zinc-200/60 dark:divide-white/5">
-                          {repuestos.map((it, idx) => {
-                            const cant = Number(it.qty) || 1;
-                            const origenLabel = getNombreModulo(it.origin, it.category);
-                            const esManual = Boolean(
-                              it.isManual ||
-                              String(it.id || "").startsWith("reg-") ||
-                              String(it.id || "").startsWith("man-")
-                            );
-                            const marcadoProv = Boolean(
-                              it.enviadoProveedor ||
-                              it.purchaseStatus === "PEDIDO_WHATSAPP" ||
-                              it.purchaseStatus === "COTIZADO"
-                            );
-                            return (
-                              <div
-                                key={`m-prod-${it.id || it.code || idx}`}
-                                className={`p-3 space-y-2.5 ${it.agregadoEnPropuesta ? "bg-amber-500/[0.07] dark:bg-amber-400/[0.06] border-l-2 border-l-amber-500/60" : ""}`}
-                              >
-                                <div className="flex items-start justify-between gap-2">
-                                  <div className="flex flex-wrap items-center gap-1.5 min-w-0 flex-1 text-sm font-medium text-zinc-800 dark:text-zinc-100 leading-snug">
-                                    <span className="break-words">{formatoPrimeraMayuscula(it.name)}</span>
-                                    {esManual && (
-                                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/35 shrink-0">
-                                        Manual
-                                      </span>
-                                    )}
-                                    {Array.isArray(it.fotos) && it.fotos.length > 0 && (
-                                      <button
-                                        type="button"
-                                        onClick={() => handleAbrirFlotanteFotos(it)}
-                                        className="h-7 px-2 rounded-lg border bg-indigo-50/80 hover:bg-indigo-100 dark:bg-indigo-500/15 dark:hover:bg-indigo-500/25 border-indigo-200 dark:border-indigo-500/30 text-indigo-600 dark:text-indigo-300 inline-flex items-center gap-1 text-[11px] font-medium cursor-pointer active:scale-95 transition-all shrink-0"
-                                        title={`Ver ${it.fotos.length} foto(s)`}
-                                      >
-                                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
-                                          <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
-                                        </svg>
-                                        {it.fotos.length > 1 && <span>{it.fotos.length}</span>}
-                                      </button>
-                                    )}
-                                    {Array.isArray(it.audios) && it.audios.length > 0 && (
-                                      <button
-                                        type="button"
-                                        onClick={() => handleAbrirFlotanteAudios(it)}
-                                        className="h-7 px-2 rounded-lg border bg-amber-50/80 hover:bg-amber-100 dark:bg-amber-500/15 dark:hover:bg-amber-500/25 border-amber-200 dark:border-amber-500/30 text-amber-600 dark:text-amber-300 inline-flex items-center gap-1 text-[11px] font-medium cursor-pointer active:scale-95 transition-all shrink-0"
-                                        title={`Escuchar ${it.audios.length} audio(s)`}
-                                      >
-                                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
-                                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 0 0 6-6v-1.5m-6 7.5a6 6 0 0 1-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 0 1-3-3V4.5a3 3 0 1 1 6 0v8.25a3 3 0 0 1-3 3Z" />
-                                        </svg>
-                                        {it.audios.length > 1 && <span>{it.audios.length}</span>}
-                                      </button>
-                                    )}
-                                  </div>
-                                  <button
-                                    type="button"
-                                    onClick={() => void handleDeleteItem(it.id)}
-                                    className="w-7 h-7 inline-flex items-center justify-center rounded-lg text-zinc-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10 text-base font-bold cursor-pointer shrink-0"
-                                    title="Eliminar"
-                                  >
-                                    ×
-                                  </button>
-                                </div>
-
-                                <div className="flex flex-wrap items-center justify-between gap-2">
-                                  <div className="flex items-center gap-2 flex-wrap">
-                                    <div className="inline-flex items-center border border-zinc-200 dark:border-white/10 rounded-xl overflow-hidden bg-zinc-50 dark:bg-white/[0.04] h-8">
-                                      <button
-                                        type="button"
-                                        onClick={() => handleUpdateQty(it.id, -1)}
-                                        className="w-7 h-full flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-white text-sm font-bold cursor-pointer"
-                                      >
-                                        −
-                                      </button>
-                                      <span className="w-7 text-center text-xs font-bold text-zinc-800 dark:text-zinc-200 tabular-nums">
-                                        {cant}
-                                      </span>
-                                      <button
-                                        type="button"
-                                        onClick={() => handleUpdateQty(it.id, 1)}
-                                        className="w-7 h-full flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-white text-sm font-bold cursor-pointer"
-                                      >
-                                        +
-                                      </button>
-                                    </div>
-                                    <span className={`inline-block px-2 py-0.5 rounded-md text-[10px] font-semibold border ${getBadgeModuloClase(origenLabel)}`}>
-                                      {origenLabel}
-                                    </span>
-                                    {esManual && (
-                                      <button
-                                        type="button"
-                                        onClick={() => handleToggleMarcarProveedor(it, false)}
-                                        className={`h-8 px-2.5 rounded-lg border inline-flex items-center justify-center gap-1 text-[11px] font-semibold cursor-pointer active:scale-95 transition-all shrink-0 ${marcadoProv
-                                          ? "bg-blue-600 hover:bg-blue-500 text-white border-blue-500 shadow-sm shadow-blue-500/30"
-                                          : "bg-emerald-50/80 hover:bg-emerald-100 dark:bg-emerald-500/15 dark:hover:bg-emerald-500/25 border-emerald-200 dark:border-emerald-500/30 text-emerald-600 dark:text-emerald-300"
-                                          }`}
-                                      >
-                                        {!marcadoProv ? (
-                                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
-                                            <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 18.75a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 0 1-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 0 0-3.213-9.193 2.056 2.056 0 0 0-1.58-.86H14.25M16.5 18.75h-2.25m0-11.175V14.25m0 0H2.25m12 0v4.5m0-4.5H16.5" />
-                                          </svg>
-                                        ) : (
-                                          <span className="text-[11px]">✓ Enviado</span>
-                                        )}
-                                      </button>
-                                    )}
-                                  </div>
-
-                                  {esManual ? (
-                                    <div className="inline-flex items-center gap-1 px-2.5 h-8 rounded-xl border border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-white/[0.04] w-28 shrink-0">
-                                      <span className="text-xs text-zinc-400 font-semibold">$</span>
-                                      <input
-                                        type="number"
-                                        inputMode="decimal"
-                                        step="any"
-                                        min="0"
-                                        placeholder="0"
-                                        value={it.price || ""}
-                                        onChange={(e) => handleUpdatePrice(it.id, "price", e.target.value)}
-                                        className="w-full bg-transparent text-right text-base sm:text-xs font-bold font-mono text-zinc-800 dark:text-zinc-100 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                      />
-                                    </div>
-                                  ) : (
-                                    <span className="font-mono text-sm font-bold text-zinc-800 dark:text-zinc-100 shrink-0">
-                                      ${Number(it.price || 0).toFixed(2)}
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                        <div className="hidden sm:block overflow-x-auto">
-                        <table className="w-full text-left text-xs border-collapse">
-                          <thead>
-                            <tr className="border-b border-zinc-200/80 dark:border-white/10 bg-zinc-50/80 dark:bg-white/[0.03] text-zinc-500 dark:text-zinc-400 text-[11px] font-semibold">
-                              <th className="py-2 px-3 w-24 text-center">Cant.</th>
-                              <th className="py-2 px-3">Descripción</th>
-                              <th className="py-2 px-2.5 w-28 text-center">Detalle</th>
-                              <th className="py-2 px-2.5 w-28 text-center">Pedir</th>
-                              <th className="py-2 px-2.5 w-28 text-center">PVP</th>
-                              <th className="py-2 px-2 w-10 text-center"></th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-zinc-200/60 dark:divide-white/5">
-                            {repuestos.map((it, idx) => {
-                              const cant = Number(it.qty) || 1;
-                              const origenLabel = getNombreModulo(it.origin, it.category);
-                              const esManual = Boolean(
-                                it.isManual ||
-                                String(it.id || "").startsWith("reg-") ||
-                                String(it.id || "").startsWith("man-")
-                              );
-                              const marcadoProv = Boolean(
-                                it.enviadoProveedor ||
-                                it.purchaseStatus === "PEDIDO_WHATSAPP" ||
-                                it.purchaseStatus === "COTIZADO"
-                              );
-                              return (
-                                <tr
-                                  key={it.id || it.code || `prod-${idx}`}
-                                  className={`transition-colors ${it.agregadoEnPropuesta
-                                    ? "bg-amber-500/[0.07] dark:bg-amber-400/[0.06] border-l-2 border-l-amber-500/60 hover:bg-amber-500/[0.12] dark:hover:bg-amber-400/[0.10]"
-                                    : "hover:bg-zinc-50/60 dark:hover:bg-white/[0.02]"
-                                    }`}
-                                >
-                                  <td className="py-2 px-3 text-center">
-                                    <div className="inline-flex items-center border border-zinc-200 dark:border-white/10 rounded-lg overflow-hidden bg-zinc-50 dark:bg-white/[0.04]">
-                                      <button
-                                        type="button"
-                                        onClick={() => handleUpdateQty(it.id, -1)}
-                                        className="w-5 h-5 flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-white text-xs font-bold cursor-pointer"
-                                      >
-                                        −
-                                      </button>
-                                      <span className="w-6 text-center text-xs font-bold text-zinc-800 dark:text-zinc-200">
-                                        {cant}
-                                      </span>
-                                      <button
-                                        type="button"
-                                        onClick={() => handleUpdateQty(it.id, 1)}
-                                        className="w-5 h-5 flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-white text-xs font-bold cursor-pointer"
-                                      >
-                                        +
-                                      </button>
-                                    </div>
-                                  </td>
-                                  <td className="py-2 px-3 font-medium text-zinc-800 dark:text-zinc-200">
-                                    <div className="flex flex-wrap items-center gap-2">
-                                      <span>{formatoPrimeraMayuscula(it.name)}</span>
-                                      {esManual && (
-                                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/35 shrink-0">
-                                          Manual
-                                        </span>
-                                      )}
-                                      {Array.isArray(it.fotos) && it.fotos.length > 0 && (
-                                        <button
-                                          type="button"
-                                          onClick={() => handleAbrirFlotanteFotos(it)}
-                                          className="h-7 px-2 rounded-lg border bg-indigo-50/80 hover:bg-indigo-100 dark:bg-indigo-500/15 dark:hover:bg-indigo-500/25 border-indigo-200 dark:border-indigo-500/30 text-indigo-600 dark:text-indigo-300 inline-flex items-center gap-1 text-[11px] font-medium cursor-pointer active:scale-95 transition-all shrink-0"
-                                          title={`Ver ${it.fotos.length} foto(s)`}
-                                        >
-                                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
-                                            <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
-                                          </svg>
-                                          {it.fotos.length > 1 && <span>{it.fotos.length}</span>}
-                                        </button>
-                                      )}
-                                      {Array.isArray(it.audios) && it.audios.length > 0 && (
-                                        <button
-                                          type="button"
-                                          onClick={() => handleAbrirFlotanteAudios(it)}
-                                          className="h-7 px-2 rounded-lg border bg-amber-50/80 hover:bg-amber-100 dark:bg-amber-500/15 dark:hover:bg-amber-500/25 border-amber-200 dark:border-amber-500/30 text-amber-600 dark:text-amber-300 inline-flex items-center gap-1 text-[11px] font-medium cursor-pointer active:scale-95 transition-all shrink-0"
-                                          title={`Escuchar ${it.audios.length} audio(s)`}
-                                        >
-                                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
-                                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 0 0 6-6v-1.5m-6 7.5a6 6 0 0 1-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 0 1-3-3V4.5a3 3 0 1 1 6 0v8.25a3 3 0 0 1-3 3Z" />
-                                          </svg>
-                                          {it.audios.length > 1 && <span>{it.audios.length}</span>}
-                                        </button>
-                                      )}
-                                    </div>
-                                  </td>
-                                  <td className="py-2 px-2.5 text-center">
-                                    <span
-                                      className={`inline-block px-2 py-0.5 rounded-md text-[10px] font-semibold border ${getBadgeModuloClase(
-                                        origenLabel
-                                      )}`}
-                                    >
-                                      {origenLabel}
-                                    </span>
-                                  </td>
-                                  <td className="py-2 px-2.5 text-center">
-                                    {esManual ? (
-                                      <div className="inline-flex items-center justify-center gap-1.5">
-                                        <button
-                                          type="button"
-                                          onClick={() => handleToggleMarcarProveedor(it, false)}
-                                          className={`h-7 px-2 rounded-lg border inline-flex items-center justify-center gap-1 text-[11px] font-semibold cursor-pointer active:scale-95 transition-all shrink-0 ${marcadoProv
-                                            ? "bg-blue-600 hover:bg-blue-500 text-white border-blue-500 shadow-sm shadow-blue-500/30"
-                                            : "bg-emerald-50/80 hover:bg-emerald-100 dark:bg-emerald-500/15 dark:hover:bg-emerald-500/25 border-emerald-200 dark:border-emerald-500/30 text-emerald-600 dark:text-emerald-300"
-                                            }`}
-                                          title={
-                                            marcadoProv
-                                              ? "Enviado a pedidos de proveedor (clic para quitar)"
-                                              : "Marcar para pedir a proveedor"
-                                          }
-                                        >
-                                          {!marcadoProv ? (
-                                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
-                                              <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 18.75a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 0 1-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 0 0-3.213-9.193 2.056 2.056 0 0 0-1.58-.86H14.25M16.5 18.75h-2.25m0-11.175V14.25m0 0H2.25m12 0v4.5m0-4.5H16.5" />
-                                            </svg>
-                                          ) : (
-                                            <span className="text-[10px]">✓ Enviado</span>
-                                          )}
-                                        </button>
-                                        {it.supplierAvailability === "SI_HAY" && (
-                                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-500/40 text-[10px] font-bold shrink-0">
-                                            ✓ Sí hay{it.deliveryTime ? ` · ${it.deliveryTime}` : ""}
-                                          </span>
-                                        )}
-                                        {it.supplierAvailability === "NO_HAY" && (
-                                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-rose-50 dark:bg-rose-500/15 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-500/40 text-[10px] font-bold shrink-0">
-                                            ✕ No hay
-                                          </span>
-                                        )}
-                                      </div>
-                                    ) : (
-                                      <span className="text-zinc-300 dark:text-zinc-600 text-xs">—</span>
-                                    )}
-                                  </td>
-                                  <td className="py-2 px-2.5 text-center">
-                                    {esManual ? (
-                                      <div className="inline-flex items-center gap-1 px-2 py-1 rounded-lg border border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-white/[0.04] w-24">
-                                        <span className="text-[11px] text-zinc-400 font-semibold">$</span>
-                                        <input
-                                          type="number"
-                                          inputMode="decimal"
-                                          step="any"
-                                          min="0"
-                                          placeholder="0"
-                                          value={it.price || ""}
-                                          onChange={(e) => handleUpdatePrice(it.id, "price", e.target.value)}
-                                          className="w-full bg-transparent text-right text-xs font-bold font-mono text-zinc-800 dark:text-zinc-100 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                        />
-                                      </div>
-                                    ) : (
-                                      <span className="inline-block font-mono text-xs font-bold text-zinc-800 dark:text-zinc-100">
-                                        ${Number(it.price || 0).toFixed(2)}
-                                      </span>
-                                    )}
-                                  </td>
-                                  <td className="py-2 px-2 text-center">
-                                    <button
-                                      type="button"
-                                      onClick={() => void handleDeleteItem(it.id)}
-                                      className="w-6 h-6 inline-flex items-center justify-center rounded-lg text-zinc-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10 text-sm font-bold cursor-pointer"
-                                      title="Eliminar"
-                                    >
-                                      ×
-                                    </button>
-                                  </td>
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })()}
-
-            {/* SECCIÓN FINAL: LIQUIDACIÓN + GUARDAR + PAGAR / POS */}
-            <div className="pt-4 border-t border-zinc-200 dark:border-white/10 space-y-6">
-              {/* LIQUIDACIÓN DE LA FACTURA & TOTALES */}
-              <div className="flex justify-end pt-4 border-t border-zinc-200 dark:border-white/10">
-                {/* Liquidación Financiera de Propuesta */}
-                <div className="w-full md:w-1/2 max-w-lg p-5 rounded-2xl bg-zinc-50 dark:bg-white/[0.02] border border-zinc-200 dark:border-white/10 space-y-3 font-sans">
-                  <div className="flex items-center justify-between text-xs text-zinc-600 dark:text-zinc-400">
-                    <span className="font-normal">Productos:</span>
-                    <span className="font-medium text-zinc-900 dark:text-white">
-                      ${calculos.subtotalRepuestos.toFixed(2)}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center justify-between text-xs text-zinc-600 dark:text-zinc-400">
-                    <span className="font-normal">Servicios:</span>
-                    <span className="font-medium text-zinc-900 dark:text-white">
-                      ${calculos.subtotalServicios.toFixed(2)}
-                    </span>
-                  </div>
-
-                  <div className="h-px bg-zinc-200 dark:bg-white/10" />
-
-                  <div className="flex items-center justify-between text-xs text-zinc-700 dark:text-zinc-300">
-                    <span className="font-normal">Subtotal:</span>
-                    <span className="font-semibold text-zinc-900 dark:text-white text-sm">
-                      ${calculos.subtotalBruto.toFixed(2)}
-                    </span>
-                  </div>
-
-                  {/* Descuento editable */}
-                  <div className="flex items-center justify-between text-xs text-zinc-600 dark:text-zinc-400">
-                    <div className="flex items-center gap-2">
-                      <span className="font-normal">Descuento:</span>
-                      <div className="inline-flex items-center gap-1 print:hidden">
-                        <input
-                          type="number"
-                          inputMode="decimal"
-                          min="0"
-                          max="100"
-                          value={porcentajeDescuento}
-                          onChange={(e) => setPorcentajeDescuento(parseFloat(e.target.value) || 0)}
-                          className="w-14 sm:w-12 h-8 sm:h-6 px-1.5 sm:px-1 text-center rounded-lg sm:rounded bg-white dark:bg-black border border-zinc-300 dark:border-white/10 text-base sm:text-xs font-normal"
-                        />
-                        <span className="text-[10px]">%</span>
-                      </div>
-                    </div>
-                    <span className="text-rose-500 font-medium">
-                      -${calculos.descuento.toFixed(2)}
-                    </span>
-                  </div>
-
-                  {/* IVA editable */}
-                  <div className="flex items-center justify-between text-xs text-zinc-600 dark:text-zinc-400">
-                    <div className="flex items-center gap-2">
-                      <span className="font-normal">IVA ({porcentajeIva}%):</span>
-                      <div className="inline-flex items-center gap-1 print:hidden">
-                        <select
-                          value={porcentajeIva}
-                          onChange={(e) => setPorcentajeIva(Number(e.target.value))}
-                          className="h-8 sm:h-6 px-1.5 sm:px-1 rounded-lg sm:rounded bg-white dark:bg-black border border-zinc-300 dark:border-white/10 text-base sm:text-[11px]"
+                      return (
+                        <button
+                          key={`${auto.id}-${index}`}
+                          data-order-carousel-card
+                          data-order-id={auto.id}
+                          type="button"
+                          title="Clic para deslizar a otra propuesta · Doble clic para ver Datos de Ingreso"
+                          onClick={() => {
+                            const ahora = Date.now();
+                            const diff = ahora - ultimoToqueAutoRef.current.time;
+                            if (ultimoToqueAutoRef.current.id === auto.id && diff < 340) {
+                              // Doble clic / doble toque -> abrir Datos de Ingreso
+                              if (clickSimpleTimerRef.current) {
+                                clearTimeout(clickSimpleTimerRef.current);
+                                clickSimpleTimerRef.current = null;
+                              }
+                              ultimoToqueAutoRef.current = { id: "", time: 0 };
+                              handleAbrirDatosIngreso(auto);
+                              return;
+                            }
+                            ultimoToqueAutoRef.current = { id: auto.id, time: ahora };
+                            if (clickSimpleTimerRef.current) {
+                              clearTimeout(clickSimpleTimerRef.current);
+                            }
+                            clickSimpleTimerRef.current = setTimeout(() => {
+                              clickSimpleTimerRef.current = null;
+                              avanzarSiguientePropuesta(auto);
+                            }, 280);
+                          }}
+                          onDoubleClick={(e) => {
+                            e.preventDefault();
+                            if (clickSimpleTimerRef.current) {
+                              clearTimeout(clickSimpleTimerRef.current);
+                              clickSimpleTimerRef.current = null;
+                            }
+                            ultimoToqueAutoRef.current = { id: "", time: 0 };
+                            handleAbrirDatosIngreso(auto);
+                          }}
+                          aria-pressed={esActivo}
+                          className={`snap-start shrink-0 w-full min-h-[76px] sm:min-h-[68px] px-3.5 py-2.5 sm:px-3 sm:py-2 rounded-2xl sm:rounded-xl border text-left flex items-center justify-between gap-3 transition-colors cursor-pointer ${esActivo
+                            ? "bg-gradient-to-r from-blue-50/90 via-blue-50/75 to-indigo-50/80 dark:from-blue-500/[0.14] dark:via-blue-500/[0.11] dark:to-indigo-500/[0.12] border-blue-300/75 dark:border-blue-400/30 shadow-sm"
+                            : "bg-white dark:bg-[#111113] border-zinc-200 dark:border-white/10"
+                            }`}
                         >
-                          <option value={15}>15%</option>
-                          <option value={12}>12%</option>
-                          <option value={0}>0%</option>
-                        </select>
-                      </div>
-                    </div>
-                    <span className="font-medium text-zinc-800 dark:text-zinc-200">
-                      ${calculos.iva.toFixed(2)}
-                    </span>
-                  </div>
-
-                  {/* TOTAL PROPUESTA */}
-                  <div className="p-4 rounded-xl bg-blue-600/10 border border-blue-600/30 flex items-center justify-between">
-                    <div>
-                      <span className="text-sm font-semibold text-blue-700 dark:text-blue-300 block">
-                        Total
-                      </span>
-                    </div>
-                    <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                      ${calculos.totalFacturaCliente.toFixed(2)}
-                    </span>
-                  </div>
-
-                </div>
-              </div>
-
-              {/* BARRA DE CIERRE FINAL: TÍTULOS DE 1 PALABRA + ICONO */}
-              <div className="print:hidden pt-5 border-t border-zinc-200 dark:border-white/10 flex flex-col md:flex-row items-stretch md:items-center justify-end gap-4 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] sm:pb-0">
-                <div className="flex items-center gap-2.5 flex-wrap justify-end w-full sm:w-auto">
-                  <button
-                    type="button"
-                    disabled={cambiandoEstado}
-                    onClick={handleTogglePagado}
-                    className={`flex-1 sm:flex-initial h-11 sm:h-10 px-4 rounded-xl border text-sm sm:text-xs font-medium sm:font-normal shadow-sm transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 ${esPagado
-                      ? "bg-sky-600 hover:bg-sky-500 border-sky-500 text-white"
-                      : "bg-sky-500/15 hover:bg-sky-500/25 border-sky-500/35 text-sky-600 dark:text-sky-300"
-                      }`}
-                  >
-                    <span>{esPagado ? "✓ Pagado" : "💳 Pagar"}</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    disabled={autorizando}
-                    onClick={handleAutorizarYEnviarAPos}
-                    className="flex-1 sm:flex-initial h-11 sm:h-10 px-5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm sm:text-xs font-medium sm:font-normal shadow-sm transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50"
-                  >
-                    <span>🛒</span>
-                    <span>{autorizando ? "..." : "POS"}</span>
-                  </button>
-                </div>
-              </div>
-
-            </div>
-          </div>
-
-          {/* FIRMAS EN FACTURA (Visible en impresión o PDF) */}
-          <div className="hidden print:grid grid-cols-2 gap-12 pt-16 mt-8 border-t border-zinc-300 text-center text-xs">
-            <div className="space-y-2">
-              <div className="border-b border-black w-48 mx-auto" />
-              <p className="font-bold">Firma del Cliente</p>
-              <p className="text-[10px] text-zinc-500">Aceptación de Presupuesto y Repuestos</p>
-            </div>
-            <div className="space-y-2">
-              <div className="border-b border-black w-48 mx-auto" />
-              <p className="font-bold">AutoG Centro Automotriz</p>
-              <p className="text-[10px] text-zinc-500">Mecánico: {(orden.mechanic || "Carlos Rodríguez").replace(/\s*\([^)]*\)/g, "").trim()}</p>
-            </div>
-          </div>
-        </div>
-      </main>
-
-      {/* MODAL CATÁLOGO WHATSAPP PARA PROVEEDORES */}
-      {modalWhatsApp && (
-        <div
-          onClick={() => setModalWhatsApp(false)}
-          className="fixed inset-0 z-50 bg-black/60 dark:bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in"
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="bg-white dark:bg-[#111113] border border-zinc-200 dark:border-white/10 rounded-3xl max-w-lg w-full p-6 space-y-5 shadow-2xl animate-scale-up text-zinc-900 dark:text-white"
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div className="space-y-1">
-                <h3 className="text-base sm:text-lg font-bold text-zinc-900 dark:text-white flex items-center gap-2">
-                  <span>📲</span>
-                  <span>Catálogo Digital para Proveedores</span>
-                </h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => setModalWhatsApp(false)}
-                className="w-8 h-8 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white flex items-center justify-center cursor-pointer transition-colors"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="space-y-3">
-              <div className="p-4 rounded-2xl bg-zinc-50 dark:bg-white/[0.03] border border-zinc-200 dark:border-white/10 space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-zinc-900 dark:text-white">1. Pedido de este Vehículo ({orden.plate})</span>
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-700 dark:text-blue-400 font-bold">
-                    Individual
-                  </span>
-                </div>
-                <p className="text-xs text-zinc-600 dark:text-zinc-400">
-                  Envía únicamente los {calculos.itemsPorComprar.length} repuestos requeridos para el {orden.vehicle}.
-                </p>
-                <div className="pt-2 flex items-center gap-2">
-                  <a
-                    href={`https://wa.me/?text=${encodeURIComponent(
-                      `Hola, te comparto el pedido de repuestos para el vehículo ${orden.vehicle} (Placa: ${orden.plate}). Puedes revisar fotos grandes y especificaciones aquí: ${window.location.origin}/pedidos-proveedor/${orden.id}${orden.supplierSig ? `?sig=${encodeURIComponent(orden.supplierSig)}` : ""}`
-                    )}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="h-9 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1.5 transition-all shadow-md shadow-emerald-600/20 active:scale-95"
-                  >
-                    <span>💬 Enviar por WhatsApp</span>
-                  </a>
-                  <button
-                    type="button"
-                    onClick={() => copiarAlPortapapeles(`${window.location.origin}/pedidos-proveedor/${orden.id}${orden.supplierSig ? `?sig=${encodeURIComponent(orden.supplierSig)}` : ""}`, "Enlace copiado al portapapeles.")}
-                    className="h-9 px-3 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/10 dark:hover:bg-white/15 text-zinc-700 dark:text-white text-xs font-semibold cursor-pointer transition-colors"
-                  >
-                    Copiar Link
-                  </button>
-                </div>
-              </div>
-
-              <div className="p-4 rounded-2xl bg-zinc-50 dark:bg-white/[0.03] border border-zinc-200 dark:border-white/10 space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-zinc-900 dark:text-white">2. Consolidado del Día</span>
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/15 text-purple-700 dark:text-purple-400 font-bold">
-                    Del Día
-                  </span>
-                </div>
-                <p className="text-xs text-zinc-600 dark:text-zinc-400">
-                  Agrupa todos los repuestos por comprar de todos los vehículos recibidos hoy en el taller.
-                </p>
-                <div className="pt-2 flex items-center gap-2">
-                  <a
-                    href={`https://wa.me/?text=${encodeURIComponent(
-                      `Hola, te comparto el consolidado general de repuestos requeridos para el taller hoy. Puedes revisar fotos y lista completa aquí: ${window.location.origin}/pedidos-proveedor/diario${orden.dailySupplierSig ? `?sig=${encodeURIComponent(orden.dailySupplierSig)}` : ""}`
-                    )}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="h-9 px-4 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold flex items-center gap-1.5 transition-all shadow-md shadow-purple-600/20 active:scale-95"
-                  >
-                    <span>💬 Enviar Consolidado</span>
-                  </a>
-                  <button
-                    type="button"
-                    onClick={() => copiarAlPortapapeles(`${window.location.origin}/pedidos-proveedor/diario${orden.dailySupplierSig ? `?sig=${encodeURIComponent(orden.dailySupplierSig)}` : ""}`, "Enlace del día copiado.")}
-                    className="h-9 px-3 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/10 dark:hover:bg-white/15 text-zinc-700 dark:text-white text-xs font-semibold cursor-pointer transition-colors"
-                  >
-                    Copiar Link
-                  </button>
-                </div>
-              </div>
-
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL FLOTANTE MODERNO Y MINIMALISTA DE PEDIDOS A PROVEEDOR */}
-      {modalProveedor.abierto && (
-        <div
-          onClick={() => setModalProveedor({ abierto: false, modo: "MASIVO" })}
-          className="fixed inset-0 z-50 bg-black/60 dark:bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in"
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="bg-white dark:bg-[#0d111a] border border-zinc-200 dark:border-white/10 rounded-3xl max-w-2xl w-full p-5 sm:p-6 space-y-5 shadow-2xl animate-scale-up text-zinc-900 dark:text-white max-h-[90vh] flex flex-col"
-          >
-            {/* Header minimalista estilo Catálogo */}
-            <div className="flex items-start justify-between gap-3 shrink-0 pb-3 border-b border-zinc-200/80 dark:border-white/10">
-              <div className="flex items-center gap-3">
-                <div className="w-11 h-11 rounded-2xl bg-blue-600 flex items-center justify-center text-white shadow-md shadow-blue-600/25 shrink-0">
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.9}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 18.75a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 0 1-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 0 0-3.213-9.193 2.056 2.056 0 0 0-1.58-.86H14.25M16.5 18.75h-2.25m0-11.175V14.25m0 0H2.25m12 0v4.5m0-4.5H16.5" />
-                  </svg>
-                </div>
-                <div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-[11px] font-bold tracking-wider uppercase text-blue-600 dark:text-blue-400">
-                      PEDIDOS A PROVEEDOR • OFICINA
-                    </span>
-                    <span className="px-2 py-0.5 rounded-md bg-amber-400 text-zinc-950 font-extrabold text-[10px] tracking-wide">
-                      PLACA: {orden.plate || "S/P"}
-                    </span>
-                  </div>
-                  <h3 className="text-base sm:text-lg font-extrabold text-zinc-900 dark:text-white tracking-tight">
-                    {orden.vehicle} — Orden #{String(orden.orderNumber || 1).padStart(5, "0")}
-                  </h3>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setModalProveedor({ abierto: false, modo: "MASIVO" })}
-                className="w-8 h-8 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white flex items-center justify-center cursor-pointer transition-colors shrink-0"
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* Cuerpo scrollable */}
-            <div className="space-y-5 overflow-y-auto flex-1 pr-1 text-xs">
-              {/* PASO 1: ESCOGER PROVEEDOR O PROVEEDORES */}
-              <div className="space-y-2.5">
-                <div className="flex items-center justify-between gap-2">
-                  <label className="font-bold text-zinc-800 dark:text-zinc-200 text-xs flex items-center gap-1.5">
-                    <span className="w-5 h-5 rounded-full bg-blue-600/15 text-blue-600 dark:text-blue-400 font-bold inline-flex items-center justify-center text-[11px]">
-                      1
-                    </span>
-                    <span>Escoger Proveedor o Proveedores ({proveedoresSeleccionadosIds.length})</span>
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => setMostrarNuevoProvInline((v) => !v)}
-                    className="text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
-                  >
-                    {mostrarNuevoProvInline ? "Cancelar" : "+ Nuevo Proveedor"}
-                  </button>
-                </div>
-
-                {mostrarNuevoProvInline && (
-                  <div className="p-3 rounded-2xl bg-zinc-50 dark:bg-white/[0.04] border border-zinc-200 dark:border-white/10 flex flex-wrap items-center gap-2">
-                    <input
-                      type="text"
-                      value={nuevoProvNombre}
-                      onChange={(e) => setNuevoProvNombre(e.target.value)}
-                      placeholder="Nombre (ej. Repuestos Japón Express)"
-                      className="flex-1 min-w-[160px] h-8 px-3 rounded-xl bg-white dark:bg-black/40 border border-zinc-200 dark:border-white/10 text-xs focus:outline-none focus:border-blue-500"
-                    />
-                    <input
-                      type="text"
-                      value={telefonoManualProveedor}
-                      onChange={(e) => setTelefonoManualProveedor(e.target.value)}
-                      placeholder="WhatsApp (ej. 0987654321)"
-                      className="w-40 h-8 px-3 rounded-xl bg-white dark:bg-black/40 border border-zinc-200 dark:border-white/10 text-xs font-mono focus:outline-none focus:border-blue-500"
-                    />
-                    <button
-                      type="button"
-                      onClick={handleAgregarProveedorInline}
-                      className="h-8 px-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold cursor-pointer"
-                    >
-                      Añadir
-                    </button>
-                  </div>
-                )}
-
-                <div className="flex items-center gap-2">
-                  <div className="relative flex-1">
-                    <input
-                      type="text"
-                      value={busquedaProveedor}
-                      onChange={(e) => setBusquedaProveedor(e.target.value)}
-                      placeholder="Buscar proveedor por nombre, contacto o categoría..."
-                      className="w-full h-9 pl-3 pr-8 rounded-xl bg-zinc-50 dark:bg-white/[0.04] border border-zinc-200 dark:border-white/10 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-blue-500"
-                    />
-                    {busquedaProveedor && (
-                      <button
-                        type="button"
-                        onClick={() => setBusquedaProveedor("")}
-                        className="absolute right-2.5 top-2.5 text-zinc-400 hover:text-zinc-600 dark:hover:text-white text-xs cursor-pointer"
-                      >
-                        ✕
-                      </button>
-                    )}
-                  </div>
-                  <input
-                    type="text"
-                    value={telefonoManualProveedor}
-                    onChange={(e) => setTelefonoManualProveedor(e.target.value)}
-                    placeholder="WhatsApp directo..."
-                    className="w-40 h-9 px-3 rounded-xl bg-zinc-50 dark:bg-white/[0.04] border border-zinc-200 dark:border-white/10 text-xs font-mono text-zinc-900 dark:text-white focus:outline-none focus:border-blue-500"
-                    title="Número de WhatsApp del proveedor"
-                  />
-                </div>
-
-                {/* Tarjetas minimalistas de proveedores (selección múltiple o individual) */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-36 overflow-y-auto pr-0.5">
-                  {proveedoresFiltrados.map((prov) => {
-                    const esElegido = proveedoresSeleccionadosIds.includes(prov.id);
-                    return (
-                      <div
-                        key={prov.id}
-                        onClick={() => toggleSeleccionProveedor(prov)}
-                        className={`p-2.5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-2 ${esElegido
-                          ? "bg-emerald-500/10 dark:bg-emerald-500/15 border-emerald-500/50 text-zinc-900 dark:text-white shadow-xs"
-                          : "bg-zinc-50/70 dark:bg-white/[0.03] border-zinc-200/80 dark:border-white/10 hover:border-zinc-300 dark:hover:border-white/20"
-                          }`}
-                      >
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-1.5">
-                            <span
-                              className={`w-4 h-4 rounded-md flex items-center justify-center text-[10px] font-bold shrink-0 ${esElegido
-                                ? "bg-emerald-500 text-zinc-950"
-                                : "border border-zinc-300 dark:border-white/20 text-transparent"
-                                }`}
+                          <span
+                            role={fotoVehiculoCard ? "button" : undefined}
+                            tabIndex={fotoVehiculoCard ? 0 : undefined}
+                            title={fotoVehiculoCard ? "🔍 Clic para ampliar foto del vehículo en grande" : undefined}
+                            onClick={(e) => {
+                              if (fotoVehiculoCard) {
+                                e.stopPropagation();
+                                setFotoZoom(fotoVehiculoCard);
+                              }
+                            }}
+                            className={`relative w-16 h-14 sm:w-14 sm:h-12 rounded-xl sm:rounded-lg shrink-0 bg-blue-100/70 dark:bg-blue-500/15 text-blue-600 dark:text-blue-300 flex items-center justify-center overflow-hidden border border-blue-200/70 dark:border-blue-400/25 group/thumb ${fotoVehiculoCard
+                              ? "cursor-zoom-in hover:ring-2 hover:ring-blue-400/70 hover:scale-[1.04] transition-all"
+                              : ""
+                              }`}
+                          >
+                            <svg
+                              className="w-8 h-8 sm:w-7 sm:h-7"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                              strokeWidth={1.5}
+                              aria-hidden="true"
                             >
-                              ✓
+                              <path strokeLinecap="round" strokeLinejoin="round" d="m5 11 1.5-4.5A2 2 0 0 1 8.4 5h7.2a2 2 0 0 1 1.9 1.5L19 11M3.5 11h17v7h-17zM6.5 18v1.5M17.5 18v1.5" />
+                            </svg>
+                            {fotoVehiculoCard && (
+                              <>
+                                <img
+                                  src={fotoVehiculoCard}
+                                  alt={`Vehículo ${vehiculoStr}`}
+                                  onError={(event) => {
+                                    event.currentTarget.style.display = "none";
+                                  }}
+                                  className="absolute inset-0 w-full h-full rounded-xl sm:rounded-lg object-cover transition-transform duration-200 group-hover/thumb:scale-110"
+                                />
+                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/thumb:opacity-100 transition-opacity flex items-center justify-center text-white">
+                                  <svg className="w-5 h-5 drop-shadow-md" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v6m3-3H7" />
+                                  </svg>
+                                </div>
+                              </>
+                            )}
+                          </span>
+
+                          <span className="min-w-0 flex-1">
+                            <span className="block text-base sm:text-sm font-bold sm:font-semibold text-zinc-900 dark:text-white truncate">
+                              {nombreVehiculo}
                             </span>
+                            <span className="mt-1 flex items-center gap-2.5 text-sm sm:text-xs text-zinc-600 dark:text-zinc-300">
+                              <span className="font-mono tracking-wider text-blue-600 dark:text-blue-400 truncate text-base sm:text-sm font-black">
+                                {auto.plate}
+                              </span>
+                              {anioVehiculo && (
+                                <span className="shrink-0 border-l-2 border-zinc-300 dark:border-white/25 pl-2.5 font-bold text-sm sm:text-xs text-zinc-700 dark:text-zinc-300">
+                                  {anioVehiculo}
+                                </span>
+                              )}
+                            </span>
+                          </span>
+
+                          <div className="shrink-0 text-right max-w-[140px] sm:max-w-[220px] pl-1">
+                            {nombreClienteDisplay && (
+                              <span
+                                className="block text-xs sm:text-sm font-bold text-zinc-900 dark:text-white truncate"
+                                title={nombreClienteDisplay}
+                              >
+                                {nombreClienteDisplay}
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="flex items-center gap-1 shrink-0">
                             <span
-                              className={`font-bold truncate ${esElegido ? "text-emerald-700 dark:text-emerald-400" : "text-zinc-800 dark:text-zinc-200"
-                                }`}
+                              role="button"
+                              tabIndex={0}
+                              title={
+                                listaPropuestasCarrusel.length > 1
+                                  ? `Propuesta anterior (${index + 1} de ${listaPropuestasCarrusel.length})`
+                                  : "Propuesta anterior"
+                              }
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (listaPropuestasCarrusel.length > 1) {
+                                  retrocederAnteriorPropuesta(auto);
+                                }
+                              }}
+                              className="p-2 sm:p-2 rounded-xl text-zinc-400 hover:text-purple-600 dark:text-zinc-400 dark:hover:text-purple-400 hover:bg-purple-50/70 dark:hover:bg-purple-500/15 active:scale-90 transition-all duration-200 cursor-pointer shrink-0 group/flecha-izq flex items-center justify-center select-none"
                             >
-                              {prov.name}
+                              <svg
+                                className="w-5 h-5 sm:w-5.5 sm:h-5.5 transition-transform duration-200 group-hover/flecha-izq:-translate-x-0.5 group-hover/flecha-izq:scale-110"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                                strokeWidth={2.2}
+                                aria-hidden="true"
+                              >
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+                              </svg>
+                            </span>
+
+                            <span
+                              role="button"
+                              tabIndex={0}
+                              title={
+                                listaPropuestasCarrusel.length > 1
+                                  ? `Siguiente propuesta (${index + 1} de ${listaPropuestasCarrusel.length})`
+                                  : "Siguiente propuesta"
+                              }
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (listaPropuestasCarrusel.length > 1) {
+                                  avanzarSiguientePropuesta(auto);
+                                }
+                              }}
+                              className="p-2 sm:p-2 rounded-xl text-zinc-400 hover:text-purple-600 dark:text-zinc-400 dark:hover:text-purple-400 hover:bg-purple-50/70 dark:hover:bg-purple-500/15 active:scale-90 transition-all duration-200 cursor-pointer shrink-0 group/flecha-der flex items-center justify-center select-none"
+                            >
+                              <svg
+                                className="w-5 h-5 sm:w-5.5 sm:h-5.5 transition-transform duration-200 group-hover/flecha-der:translate-x-0.5 group-hover/flecha-der:scale-110"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                                strokeWidth={2.2}
+                                aria-hidden="true"
+                              >
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                              </svg>
                             </span>
                           </div>
-                          <p className="text-[10px] text-zinc-500 dark:text-zinc-400 pl-5.5 truncate">
-                            {prov.phone ? `WhatsApp: ${prov.phone}` : prov.categories || "Proveedor"}
-                          </p>
-                        </div>
-                        {esElegido && (
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Barra de Ingreso + Semáforo de Estado igual que en Panel Taller */}
+                  {(() => {
+                    const fechaRaw = orden.dateIn || orden.createdAt;
+                    let fechaTexto = "Hoy";
+                    if (fechaRaw) {
+                      const d = new Date(fechaRaw);
+                      if (!isNaN(d.getTime())) {
+                        const hoy = new Date();
+                        const ayer = new Date(hoy);
+                        ayer.setDate(hoy.getDate() - 1);
+                        if (d.toDateString() === hoy.toDateString()) fechaTexto = "Hoy";
+                        else if (d.toDateString() === ayer.toDateString()) fechaTexto = "Ayer";
+                        else fechaTexto = d.toLocaleDateString("es-EC", { day: "2-digit", month: "short" });
+                      }
+                    }
+                    const isWorking = esAprobado && !esPausado && !esPagado;
+                    return (
+                      <div
+                        className={`inline-flex flex-wrap items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-xl sm:rounded-lg border text-xs font-medium max-w-full ${esPagado
+                            ? "bg-sky-500/10 border-sky-500/25 text-sky-700 dark:text-sky-400"
+                            : isWorking
+                              ? "bg-emerald-500/10 border-emerald-500/25 text-emerald-700 dark:text-emerald-400"
+                              : "bg-amber-500/10 border-amber-500/25 text-amber-700 dark:text-amber-400"
+                          }`}
+                      >
+                        <span className="text-zinc-700 dark:text-zinc-300 whitespace-nowrap">
+                          Ingreso:{" "}
+                          <span className="text-zinc-900 dark:text-white font-semibold">
+                            {fechaTexto}
+                          </span>
+                        </span>
+                        <span className={esPagado ? "text-sky-500/60" : isWorking ? "text-emerald-500/60" : "text-amber-500/60"}>•</span>
+                        {esPagado ? (
+                          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-sky-500/20 border border-sky-500/35 text-sky-800 dark:text-sky-300 font-bold">
+                            <span>✓ Pagado</span>
+                          </span>
+                        ) : (
                           <button
                             type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              void handleAbrirCatalogoProveedor(prov);
+                            disabled={cambiandoEstado}
+                            onClick={() => {
+                              const siguienteEstado: "Aprobado" | "Pausada" | "Pendiente" = esPausado
+                                ? "Pendiente"
+                                : esAprobado
+                                  ? "Pausada"
+                                  : "Aprobado";
+                              void handleCambiarEstadoTaller(siguienteEstado);
                             }}
-                            className="h-7 px-2 rounded-lg bg-blue-600/15 hover:bg-blue-600 text-blue-600 dark:text-blue-300 hover:text-white text-[10px] font-bold transition-colors shrink-0 cursor-pointer"
-                            title={`Abrir catálogo para ${prov.name}`}
+                            title="Semáforo: Clic para cambiar estado (En espera → Trabajando → Pausa)"
+                            className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg border font-bold transition-all cursor-pointer active:scale-95 shrink-0 ${isWorking
+                                ? "bg-emerald-500/20 hover:bg-emerald-500/30 border-emerald-500/35 text-emerald-800 dark:text-emerald-300"
+                                : "bg-amber-500/20 hover:bg-amber-500/30 border-amber-500/35 text-amber-800 dark:text-amber-300"
+                              }`}
                           >
-                            Ver link ↗
+                            <span
+                              className={`w-2 h-2 rounded-full shrink-0 ${isWorking
+                                  ? "bg-emerald-500 dark:bg-emerald-400 animate-pulse"
+                                  : "bg-amber-500 dark:bg-amber-400 animate-pulse"
+                                }`}
+                            />
+                            <span>{esPausado ? "Pausa" : esAprobado ? "Trabajando" : "En espera"}</span>
                           </button>
                         )}
                       </div>
                     );
-                  })}
+                  })()}
                 </div>
               </div>
-
-              {/* PASO 2: ESCOGER QUÉ SE VA A PEDIR */}
-              <div className="space-y-2.5">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <label className="font-bold text-zinc-800 dark:text-zinc-200 text-xs flex items-center gap-1.5">
-                    <span className="w-5 h-5 rounded-full bg-blue-600/15 text-blue-600 dark:text-blue-400 font-bold inline-flex items-center justify-center text-[11px]">
-                      2
-                    </span>
-                    <span>
-                      Qué se va a pedir ({itemsElegidosParaPedir.length} seleccionado{itemsElegidosParaPedir.length === 1 ? "" : "s"})
-                    </span>
-                  </label>
-                  <div className="flex items-center gap-2">
-                    {itemsMarcadosProveedor.length > 0 &&
-                      itemsMarcadosProveedor.length < servicios.length + repuestos.length && (
-                        <button
-                          type="button"
-                          onClick={() => setMostrarTodosEnModalProv((v) => !v)}
-                          className="text-[11px] font-medium text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white cursor-pointer"
-                        >
-                          {mostrarTodosEnModalProv
-                            ? `Ver solo marcados (${itemsMarcadosProveedor.length})`
-                            : `Ver todos (${servicios.length + repuestos.length})`}
-                        </button>
-                      )}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const todosMarcados =
-                          listaItemsEnModalProveedor.length > 0 &&
-                          listaItemsEnModalProveedor.every((it) => itemsSeleccionadosModalProv[it.id]);
-                        const nuevoMapa = { ...itemsSeleccionadosModalProv };
-                        listaItemsEnModalProveedor.forEach((it) => {
-                          nuevoMapa[it.id] = !todosMarcados;
-                        });
-                        setItemsSeleccionadosModalProv(nuevoMapa);
-                      }}
-                      className="text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
-                    >
-                      {listaItemsEnModalProveedor.length > 0 &&
-                        listaItemsEnModalProveedor.every((it) => itemsSeleccionadosModalProv[it.id])
-                        ? "Desmarcar todos"
-                        : "Marcar todos"}
-                    </button>
-                  </div>
-                </div>
-
-                {listaItemsEnModalProveedor.length === 0 ? (
-                  <div className="p-6 rounded-2xl border border-dashed border-zinc-200 dark:border-white/10 text-center text-zinc-400 text-xs">
-                    No hay ítems en la propuesta aún. Agrega un servicio o producto y márcalo con el icono de camión 🚚.
-                  </div>
-                ) : (
-                  <div className="space-y-1.5 max-h-56 overflow-y-auto pr-0.5">
-                    {listaItemsEnModalProveedor.map((it: any, idx: number) => {
-                      const seleccionado = Boolean(itemsSeleccionadosModalProv[it.id]);
-                      const yaEnviado = Boolean(
-                        it.enviadoProveedor ||
-                        it.purchaseStatus === "PEDIDO_WHATSAPP" ||
-                        it.purchaseStatus === "COTIZADO"
-                      );
-                      const cantFotos = Array.isArray(it.fotos) ? it.fotos.length : 0;
-                      const cantAudios = Array.isArray(it.audios) ? it.audios.length : 0;
-
-                      return (
-                        <div
-                          key={it.id || idx}
-                          onClick={() =>
-                            setItemsSeleccionadosModalProv((prev) => ({
-                              ...prev,
-                              [it.id]: !seleccionado,
-                            }))
-                          }
-                          className={`p-3 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${seleccionado
-                            ? "bg-blue-500/[0.08] dark:bg-blue-500/[0.12] border-blue-500/40 text-zinc-900 dark:text-white"
-                            : "bg-zinc-50/60 dark:bg-white/[0.02] border-zinc-200/70 dark:border-white/10 opacity-75 hover:opacity-100"
-                            }`}
-                        >
-                          <div className="flex items-center gap-3 min-w-0">
-                            <span
-                              className={`w-5 h-5 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 transition-colors ${seleccionado
-                                ? "bg-blue-600 text-white"
-                                : "border border-zinc-300 dark:border-white/20 text-transparent"
-                                }`}
-                            >
-                              ✓
-                            </span>
-                            <div className="min-w-0">
-                              <div className="flex flex-wrap items-center gap-1.5">
-                                <span className="px-1.5 py-0.5 rounded bg-zinc-200/80 dark:bg-white/10 text-[10px] font-bold text-zinc-700 dark:text-zinc-300">
-                                  #{idx + 1} • Cant: {it.qty || 1}
-                                </span>
-                                <span className="font-bold text-xs text-zinc-900 dark:text-white truncate">
-                                  {formatoPrimeraMayuscula(it.name)}
-                                </span>
-                                {yaEnviado && (
-                                  <span className="px-1.5 py-0.5 rounded bg-blue-600/15 text-blue-600 dark:text-blue-400 text-[10px] font-bold">
-                                    🚚 Marcado
-                                  </span>
-                                )}
-                              </div>
-                              {(it.findingText || cantFotos > 0 || cantAudios > 0) && (
-                                <div className="flex flex-wrap items-center gap-2 mt-1 text-[10px] text-zinc-500 dark:text-zinc-400">
-                                  {it.findingText && (
-                                    <span className="truncate max-w-xs">
-                                      Detalle: {it.findingText}
-                                    </span>
-                                  )}
-                                  {cantFotos > 0 && (
-                                    <span className="text-sky-600 dark:text-sky-400 font-semibold">
-                                      📷 {cantFotos} Foto{cantFotos > 1 ? "s" : ""}
-                                    </span>
-                                  )}
-                                  {cantAudios > 0 && (
-                                    <span className="text-amber-600 dark:text-amber-400 font-semibold">
-                                      🎙️ {cantAudios} Audio{cantAudios > 1 ? "s" : ""}
-                                    </span>
-                                  )}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-2 shrink-0">
-                            {it.supplierAvailability === "SI_HAY" && (
-                              <span className="px-2 py-0.5 rounded-lg bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-[10px] font-bold">
-                                ✓ Sí (${Number(it.cost || it.price || 0).toFixed(2)})
-                              </span>
-                            )}
-                            {it.supplierAvailability === "NO_HAY" && (
-                              <span className="px-2 py-0.5 rounded-lg bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30 text-[10px] font-bold">
-                                ✕ No hay
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-
-            </div>
-
-            {/* Footer minimalista con apertura directa del Catálogo del Proveedor + WhatsApp */}
-            <div className="pt-3 border-t border-zinc-200 dark:border-white/10 flex flex-wrap items-center justify-between gap-2 shrink-0">
-              <button
-                type="button"
-                onClick={async () => {
-                  const link = construirLinkCatalogoProveedor();
-                  await marcarItemsElegidosComoEnviados();
-                  copiarAlPortapapeles(link, "Link del catálogo del proveedor copiado.");
-                }}
-                className="h-9 px-3.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/[0.06] dark:hover:bg-white/[0.12] text-zinc-700 dark:text-zinc-200 text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-colors"
-              >
-                <span>🔗</span>
-                <span>Copiar Link Catálogo</span>
-              </button>
-
-              <div className="flex flex-wrap items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => void enviarWhatsAppProveedor()}
-                  className="h-9 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-md shadow-emerald-600/20 active:scale-95 flex items-center gap-1.5 cursor-pointer transition-all"
-                >
-                  <span>📲</span>
-                  <span>Enviar por WhatsApp</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void handleAbrirCatalogoProveedor()}
-                  className="h-9 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold shadow-md shadow-blue-600/25 active:scale-95 flex items-center gap-1.5 cursor-pointer transition-all"
-                >
-                  <span>🚚</span>
-                  <span>Abrir Catálogo del Proveedor ↗</span>
-                </button>
-              </div>
-
-            </div>
+            </section>
           </div>
-        </div>
-      )}
 
-      {/* MODAL AGREGAR NUEVO REPUESTO */}
-      {modalNuevoRepuesto && (
-        <div
-          onClick={() => setModalNuevoRepuesto(false)}
-          className="fixed inset-0 z-50 bg-black/60 dark:bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in"
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="bg-white dark:bg-[#111113] border border-zinc-200 dark:border-white/10 rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl animate-scale-up text-zinc-900 dark:text-white"
-          >
-            <div className="flex items-center justify-between">
-              <h3 className="text-base font-bold text-zinc-900 dark:text-white">
-                {hallazgoActivoParaAsignar ? `+ Elegir / Pedir Producto (Evidencia #${hallazgoActivoParaAsignar.numeroEvidencia})` : "+ Agregar Repuesto"}
-              </h3>
-              <button
-                type="button"
-                onClick={() => {
-                  setHallazgoActivoParaAsignar(null);
-                  setModalNuevoRepuesto(false);
-                }}
-                className="w-8 h-8 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white flex items-center justify-center cursor-pointer transition-colors"
-              >
-                ✕
-              </button>
-            </div>
+          {/* DOCUMENTO PRINCIPAL */}
+          <main className="w-full max-w-[1920px] mx-auto p-3 sm:p-6 md:p-8 lg:px-8 mt-2 sm:mt-4 print:m-0 print:p-0 print:max-w-none space-y-4">
+            {/* SELECTOR 4 EN 1 DE ESPECIALIDADES (AL MARCAR CAMBIA IGUAL QUE EN TALLER: Taller -> Lubricentro -> Car Wash -> Tecnicentro) */}
+            <div className="print:hidden flex flex-wrap items-center justify-between w-full gap-2 py-1">
+              <div className="flex items-center justify-between gap-2 w-full min-w-0 py-0.5">
+                <div className="flex items-center p-1 rounded-2xl bg-white dark:bg-[#0d0d0e] border border-zinc-200 dark:border-white/10 backdrop-blur-md shadow-sm dark:shadow-xl">
+                  {(() => {
+                    const MODULOS_PROP = [
+                      {
+                        id: "TALLER" as EspecialidadTipo,
+                        shortName: "Taller",
+                        bgClass: "bg-blue-500/10 dark:bg-blue-500/15",
+                        borderClass: "border-blue-500/30 dark:border-blue-400/35",
+                        textClass: "text-blue-600 dark:text-blue-300",
+                        shadowClass: "shadow-sm shadow-blue-500/10",
+                        svg: (className = "w-4 h-4") => (
+                          <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 11-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.743-.07a4.5 4.5 0 004.486-6.336l-3.276 3.277a3.004 3.004 0 01-2.25-2.25l3.276-3.276a4.5 4.5 0 00-6.336 4.486c.091.455.087.935-.012 1.39" />
+                          </svg>
+                        ),
+                      },
+                      {
+                        id: "LUBRICENTRO" as EspecialidadTipo,
+                        shortName: "Lubricentro",
+                        bgClass: "bg-amber-500/10 dark:bg-amber-500/15",
+                        borderClass: "border-amber-500/30 dark:border-amber-400/35",
+                        textClass: "text-amber-600 dark:text-amber-300",
+                        shadowClass: "shadow-sm shadow-amber-500/10",
+                        svg: (className = "w-4 h-4") => (
+                          <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M15.362 5.214A8.252 8.252 0 0112 21 8.25 8.25 0 016.038 7.048 8.287 8.287 0 009 9.6a8.983 8.983 0 013.361-6.867 8.21 8.21 0 003 2.48z" />
+                          </svg>
+                        ),
+                      },
+                      {
+                        id: "CARWASH" as EspecialidadTipo,
+                        shortName: "Car Wash",
+                        bgClass: "bg-teal-500/10 dark:bg-teal-500/15",
+                        borderClass: "border-teal-500/40 dark:border-teal-400/45",
+                        textClass: "text-teal-700 dark:text-teal-300",
+                        shadowClass: "shadow-sm shadow-teal-500/10",
+                        svg: (className = "w-4 h-4") => (
+                          <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" />
+                          </svg>
+                        ),
+                      },
+                      {
+                        id: "TECNICENTRO" as EspecialidadTipo,
+                        shortName: "Tecnicentro",
+                        bgClass: "bg-emerald-500/10 dark:bg-emerald-500/15",
+                        borderClass: "border-emerald-500/30 dark:border-emerald-400/35",
+                        textClass: "text-emerald-600 dark:text-emerald-300",
+                        shadowClass: "shadow-sm shadow-emerald-500/10",
+                        svg: (className = "w-4 h-4") => (
+                          <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+                            <circle cx="12" cy="12" r="9" />
+                            <circle cx="12" cy="12" r="3" />
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v6m0 6v6M3 12h6m6 0h6" />
+                          </svg>
+                        ),
+                      },
+                    ];
+                    const idxActual = MODULOS_PROP.findIndex((m) => m.id === moduloActivoPropuesta);
+                    const modActivo = MODULOS_PROP[idxActual >= 0 ? idxActual : 0];
+                    const modSiguiente =
+                      MODULOS_PROP[((idxActual >= 0 ? idxActual : 0) + 1) % MODULOS_PROP.length];
 
-            {hallazgoActivoParaAsignar && (
-              <div className="p-3 rounded-2xl bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/25 text-xs text-blue-900 dark:text-blue-200 space-y-1">
-                <div className="flex items-center gap-2 font-semibold">
-                  <span className="w-5 h-5 rounded-full bg-rose-600 text-white text-[11px] flex items-center justify-center shrink-0">
-                    #{hallazgoActivoParaAsignar.numeroEvidencia}
-                  </span>
-                  <span>Solución para Evidencia #{hallazgoActivoParaAsignar.numeroEvidencia} ({hallazgoActivoParaAsignar.vistaLabel})</span>
-                </div>
-                {hallazgoActivoParaAsignar.descripcion && (
-                  <p className="text-[11px] text-zinc-600 dark:text-zinc-400 italic">
-                    Hallazgo reportado: &quot;{hallazgoActivoParaAsignar.descripcion}&quot;
-                  </p>
-                )}
-              </div>
-            )}
-
-            <div className="space-y-3">
-              {/* Buscador en Catálogo Real de Neon */}
-              <div className="relative">
-                <label className="text-xs text-zinc-600 dark:text-zinc-400 font-semibold flex items-center justify-between mb-1">
-                  <span>🔍 Buscar en Catálogo Neon (PostgreSQL)</span>
-                  {buscandoProductoNeon && <span className="text-[10px] text-blue-500 animate-pulse font-normal">Buscando...</span>}
-                </label>
-                <input
-                  type="text"
-                  placeholder="Escribe para buscar (ej: Amalie, Aceite, Filtro, Pastillas)..."
-                  value={busquedaProductoNeon}
-                  onChange={(e) => setBusquedaProductoNeon(e.target.value)}
-                  className="w-full h-10 px-3 rounded-xl bg-blue-50/50 dark:bg-blue-950/20 border border-blue-300 dark:border-blue-700/60 text-xs text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
-                />
-                {productosEncontradosNeon.length > 0 && (
-                  <div className="mt-1.5 max-h-48 overflow-y-auto rounded-xl border border-blue-200 dark:border-blue-800 bg-white dark:bg-[#16161a] shadow-xl divide-y divide-zinc-100 dark:divide-white/5 z-30 relative">
-                    {productosEncontradosNeon.map((p) => (
+                    return (
                       <button
-                        key={p.id}
+                        key={modActivo.id}
                         type="button"
-                        onClick={() => {
-                          setNuevoNombre(p.name);
-                          setNuevoCodigo(p.sku || p.id);
-                          setNuevoPvp(String(p.salePrice ?? "0"));
-                          setNuevoCosto(String(p.costPrice ?? "0"));
-                          setNuevoCategoria(p.category || "TALLER");
-                          setNuevoProductId(p.id);
-                          setNuevoEnStock((p.stockCurrent ?? 0) > 0);
-                          setBusquedaProductoNeon("");
-                          setProductosEncontradosNeon([]);
-                        }}
-                        className="w-full p-2.5 text-left hover:bg-blue-50 dark:hover:bg-blue-950/50 flex items-center justify-between transition-colors text-xs cursor-pointer"
+                        onClick={() => setModuloActivoPropuesta(modSiguiente.id)}
+                        className={`h-9 px-3.5 rounded-xl text-xs sm:text-sm transition-all cursor-pointer flex items-center justify-center gap-1.5 active:scale-95 ${modActivo.bgClass} border ${modActivo.borderClass} ${modActivo.textClass} ${modActivo.shadowClass} backdrop-blur-sm font-bold`}
+                        title={`Cambiar a ${modSiguiente.shortName}`}
                       >
-                        <div className="min-w-0 pr-2">
-                          <p className="font-semibold text-zinc-900 dark:text-white truncate">{p.name}</p>
-                          <p className="text-[10px] text-zinc-500 dark:text-zinc-400 font-mono">
-                            SKU: {p.sku || "S/C"} · Stock: {p.stockCurrent ?? 0} {p.unit || "und"}
-                          </p>
-                        </div>
-                        <div className="text-right shrink-0">
-                          <p className="font-bold text-emerald-600 dark:text-emerald-400 font-mono">
-                            ${Number(p.salePrice ?? 0).toFixed(2)}
-                          </p>
-                          <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300 font-medium">
-                            Neon DB
-                          </span>
-                        </div>
+                        {modActivo.svg("w-4 h-4 shrink-0")}
+                        <span className="whitespace-nowrap">{modActivo.shortName}</span>
                       </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <div>
-                <label className="text-xs text-zinc-600 dark:text-zinc-400 font-medium block mb-1">
-                  Descripción del Repuesto o Producto
-                </label>
-                <input
-                  type="text"
-                  placeholder="Ej: Pastillas de Freno Bosch Delanteras"
-                  value={nuevoNombre}
-                  onChange={(e) => setNuevoNombre(e.target.value)}
-                  className="w-full h-10 px-3 rounded-xl bg-zinc-50 dark:bg-black border border-zinc-300 dark:border-white/10 text-xs text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs text-zinc-600 dark:text-zinc-400 font-medium block mb-1">
-                  Código / Referencia / SKU
-                </label>
-                <input
-                  type="text"
-                  placeholder="Ej: AM-75697-36"
-                  value={nuevoCodigo}
-                  onChange={(e) => setNuevoCodigo(e.target.value)}
-                  className="w-full h-10 px-3 rounded-xl bg-zinc-50 dark:bg-black border border-zinc-300 dark:border-white/10 text-xs text-zinc-900 dark:text-white font-mono placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                />
-              </div>
-
-              <div className="grid grid-cols-3 gap-2">
-                <div>
-                  <label className="text-xs text-zinc-600 dark:text-zinc-400 font-medium block mb-1">Cantidad</label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={nuevaCantidad}
-                    onChange={(e) => setNuevaCantidad(e.target.value)}
-                    className="w-full h-10 px-3 rounded-xl bg-zinc-50 dark:bg-black border border-zinc-300 dark:border-white/10 text-xs text-zinc-900 dark:text-white font-mono focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs text-zinc-600 dark:text-zinc-400 font-medium block mb-1">Costo ($)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={nuevoCosto}
-                    onChange={(e) => setNuevoCosto(e.target.value)}
-                    className="w-full h-10 px-3 rounded-xl bg-zinc-50 dark:bg-black border border-zinc-300 dark:border-white/10 text-xs text-zinc-900 dark:text-white font-mono focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs text-zinc-600 dark:text-zinc-400 font-medium block mb-1">PVP Venta ($)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={nuevoPvp}
-                    onChange={(e) => setNuevoPvp(e.target.value)}
-                    className="w-full h-10 px-3 rounded-xl bg-emerald-50/50 dark:bg-black border border-emerald-500/40 text-xs text-emerald-700 dark:text-emerald-400 font-mono font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="text-xs text-zinc-600 dark:text-zinc-400 font-medium block mb-1">Área / Origen</label>
-                  <select
-                    value={nuevoOrigen}
-                    onChange={(e) => setNuevoOrigen(e.target.value as EspecialidadTipo)}
-                    className="w-full h-10 px-2 rounded-xl bg-zinc-50 dark:bg-black border border-zinc-300 dark:border-white/10 text-xs text-zinc-900 dark:text-white cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                  >
-                    <option value="TALLER">🔧 Taller</option>
-                    <option value="LUBRICENTRO">🛢️ Lubricentro</option>
-                    <option value="CARWASH">🚿 Car Wash</option>
-                    <option value="TECNICENTRO">⚙️ Tecnicentro</option>
-                  </select>
+                    );
+                  })()}
                 </div>
 
-                <div>
-                  <label className="text-xs text-zinc-600 dark:text-zinc-400 font-medium block mb-1">Disponibilidad</label>
+                {/* LADO DERECHO SUPERIOR: ICONO FLOTANTE CON TODOS LOS PEDIDOS QUE VAN A PROVEEDOR + RESPUESTAS RECIBIDAS */}
+                <div className="flex items-center gap-1.5 sm:gap-2 ml-auto shrink-0">
                   <button
                     type="button"
-                    onClick={() => setNuevoEnStock(!nuevoEnStock)}
-                    className={`w-full h-10 rounded-xl text-xs font-semibold border transition-colors cursor-pointer flex items-center justify-center gap-1.5 ${nuevoEnStock
-                      ? "bg-emerald-50 dark:bg-emerald-500/15 border-emerald-300 dark:border-emerald-500/40 text-emerald-800 dark:text-emerald-400"
-                      : "bg-amber-50 dark:bg-amber-500/15 border-amber-300 dark:border-amber-500/40 text-amber-800 dark:text-amber-400"
-                      }`}
+                    onClick={() => setModalRespuestasProvOpen(true)}
+                    className={`h-9 px-2.5 sm:px-3.5 rounded-xl text-xs sm:text-sm transition-all cursor-pointer flex items-center justify-center gap-1.5 sm:gap-2 active:scale-95 border backdrop-blur-sm font-semibold relative touch-manipulation ${
+                      itemsSiHayProveedor.length > 0
+                        ? "bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-700 dark:text-emerald-300 border-emerald-500/35 shadow-sm"
+                        : itemsRespondidosProveedor.length > 0
+                        ? "bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 border-amber-500/35"
+                        : "bg-zinc-100/50 hover:bg-zinc-100/80 dark:bg-white/[0.06] dark:hover:bg-white/[0.12] text-zinc-600 dark:text-zinc-300 border-zinc-200/80 dark:border-white/15"
+                    }`}
+                    title="Ver qué pedidos confirmó el proveedor por el enlace"
                   >
-                    <span>{nuevoEnStock ? "📦 Sí hay en Bodega" : "🚚 Pedir a Proveedor"}</span>
+                    <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                    </svg>
+                    <span className="whitespace-nowrap">Recibido</span>
+                    <span
+                      className={`min-w-5 h-5 px-1.5 rounded-full text-[11px] font-bold inline-flex items-center justify-center transition-all ${
+                        itemsSiHayProveedor.length > 0
+                          ? "bg-emerald-500/25 text-emerald-800 dark:text-emerald-200"
+                          : itemsRespondidosProveedor.length > 0
+                          ? "bg-amber-500/25 text-amber-800 dark:text-amber-200"
+                          : "bg-zinc-900/10 text-zinc-600 dark:bg-white/10 dark:text-zinc-300"
+                      }`}
+                    >
+                      {itemsRespondidosProveedor.length}
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => router.push(`/presupuestos/${encodeURIComponent(orden.id)}/pedir`)}
+                    className={`h-9 px-2.5 sm:px-3.5 rounded-xl text-xs sm:text-sm transition-all cursor-pointer flex items-center justify-center gap-1.5 sm:gap-2 active:scale-95 border backdrop-blur-sm font-semibold relative touch-manipulation ${itemsMarcadosProveedor.length > 0
+                      ? "bg-zinc-100/80 hover:bg-zinc-200/80 dark:bg-white/[0.10] dark:hover:bg-white/[0.16] text-zinc-800 dark:text-white border-zinc-300/80 dark:border-white/25 shadow-sm shadow-white/5"
+                      : "bg-zinc-100/50 hover:bg-zinc-100/80 dark:bg-white/[0.06] dark:hover:bg-white/[0.12] text-zinc-700 dark:text-zinc-200 border-zinc-200/80 dark:border-white/15"
+                      }`}
+                    title="Abrir página de pedidos marcados para asignar proveedores"
+                  >
+                    <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.9}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 7.5A1.5 1.5 0 0 1 3.75 6H14v10.5H8.5m-4 0H3.75a1.5 1.5 0 0 1-1.5-1.5V7.5ZM14 9h3.88a1.5 1.5 0 0 1 1.248.668l2.122 3.182c.163.245.25.533.25.828V15a1.5 1.5 0 0 1-1.5 1.5h-.5m-4 0H14" />
+                      <circle cx="6.5" cy="17.5" r="1.75" />
+                      <circle cx="17.5" cy="17.5" r="1.75" />
+                    </svg>
+                    <span className="whitespace-nowrap">Pedir</span>
+                    <span
+                      className={`min-w-5 h-5 px-1.5 rounded-full text-[11px] font-bold inline-flex items-center justify-center transition-all ${itemsMarcadosProveedor.length > 0
+                        ? "bg-zinc-900/15 text-zinc-900 dark:bg-white/20 dark:text-white"
+                        : "bg-zinc-900/10 text-zinc-600 dark:bg-white/10 dark:text-zinc-300"
+                        }`}
+                    >
+                      {itemsMarcadosProveedor.length}
+                    </span>
                   </button>
                 </div>
               </div>
-
-              {!nuevoEnStock && (
-                <div>
-                  <label className="text-xs text-zinc-600 dark:text-zinc-400 font-medium block mb-1">Proveedor Externo</label>
-                  <input
-                    type="text"
-                    value={nuevoProveedor}
-                    onChange={(e) => setNuevoProveedor(e.target.value)}
-                    placeholder="Nombre del proveedor externo"
-                    className="w-full h-10 px-3 rounded-xl bg-zinc-50 dark:bg-black border border-zinc-300 dark:border-white/10 text-xs text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                  />
-                </div>
-              )}
-
-              <div className="pt-2">
-                <button
-                  type="button"
-                  onClick={handleAgregarRepuesto}
-                  className="w-full h-10 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all shadow-md shadow-blue-600/30 cursor-pointer active:scale-95"
-                >
-                  Agregar Repuesto
-                </button>
-              </div>
-
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL AGREGAR NUEVO SERVICIO / MANO DE OBRA */}
-      {modalNuevoServicio && (
-        <div
-          onClick={() => setModalNuevoServicio(false)}
-          className="fixed inset-0 z-50 bg-black/60 dark:bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in"
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="bg-white dark:bg-[#111113] border border-zinc-200 dark:border-white/10 rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl animate-scale-up text-zinc-900 dark:text-white"
-          >
-            <div className="flex items-center justify-between">
-              <h3 className="text-base font-bold text-zinc-900 dark:text-white">
-                {hallazgoActivoParaAsignar ? `+ Elegir Servicio (Evidencia #${hallazgoActivoParaAsignar.numeroEvidencia})` : "+ Agregar Servicio"}
-              </h3>
-              <button
-                type="button"
-                onClick={() => {
-                  setHallazgoActivoParaAsignar(null);
-                  setModalNuevoServicio(false);
-                }}
-                className="w-8 h-8 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white flex items-center justify-center cursor-pointer transition-colors"
-              >
-                ✕
-              </button>
             </div>
 
-            {hallazgoActivoParaAsignar && (
-              <div className="p-3 rounded-2xl bg-purple-50 dark:bg-purple-500/10 border border-purple-200 dark:border-purple-500/25 text-xs text-purple-900 dark:text-purple-200 space-y-1">
-                <div className="flex items-center gap-2 font-semibold">
-                  <span className="w-5 h-5 rounded-full bg-rose-600 text-white text-[11px] flex items-center justify-center shrink-0">
-                    #{hallazgoActivoParaAsignar.numeroEvidencia}
-                  </span>
-                  <span>Solución para Evidencia #{hallazgoActivoParaAsignar.numeroEvidencia} ({hallazgoActivoParaAsignar.vistaLabel})</span>
-                </div>
-                {hallazgoActivoParaAsignar.descripcion && (
-                  <p className="text-[11px] text-zinc-600 dark:text-zinc-400 italic">
-                    Hallazgo reportado: &quot;{hallazgoActivoParaAsignar.descripcion}&quot;
-                  </p>
-                )}
-              </div>
-            )}
+            <div className="bg-white dark:bg-[#0f0f13] border border-zinc-200 dark:border-white/10 rounded-3xl p-3.5 sm:p-8 md:p-10 shadow-2xl space-y-5 sm:space-y-6 print:border-none print:shadow-none print:p-4 print:rounded-none transition-all">
+              {/* ===================================================================
+              TALLER (BARRA RÁPIDA + SERVICIOS/PRODUCTOS + LIQUIDACIÓN)
+              =================================================================== */}
+              <div className="space-y-4">
+                {/* Barra superior rápida para añadir servicios/productos manuales, catálogo o rápidos en Taller */}
+                {renderBarraAgregarAdicional(moduloActivoPropuesta)}
 
-            <div className="space-y-3">
-              {/* Buscador en Catálogo de Servicios Neon */}
-              <div className="relative">
-                <label className="text-xs text-zinc-600 dark:text-zinc-400 font-semibold flex items-center justify-between mb-1">
-                  <span>🔍 Buscar en Catálogo de Servicios Neon</span>
-                  {buscandoServicioNeon && <span className="text-[10px] text-purple-500 animate-pulse font-normal">Buscando...</span>}
-                </label>
-                <input
-                  type="text"
-                  placeholder="Escribe para buscar (ej: Cambio de aceite, Frenos, Mantenimiento)..."
-                  value={busquedaServicioNeon}
-                  onChange={(e) => setBusquedaServicioNeon(e.target.value)}
-                  className="w-full h-10 px-3 rounded-xl bg-purple-50/50 dark:bg-purple-950/20 border border-purple-300 dark:border-purple-700/60 text-xs text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-purple-500/30"
-                />
-                {serviciosEncontradosNeon.length > 0 && (
-                  <div className="mt-1.5 max-h-48 overflow-y-auto rounded-xl border border-purple-200 dark:border-purple-800 bg-white dark:bg-[#16161a] shadow-xl divide-y divide-zinc-100 dark:divide-white/5 z-30 relative">
-                    {serviciosEncontradosNeon.map((s) => (
-                      <button
-                        key={s.id}
-                        type="button"
-                        onClick={() => {
-                          setNuevoServicioNombre(s.name);
-                          setNuevoServicioCodigo(s.code || s.id);
-                          setNuevoServicioPrecio(String(s.standardPrice ?? s.price ?? "0"));
-                          setNuevoServicioOrigen((s.category as EspecialidadTipo) || "TALLER");
-                          setBusquedaServicioNeon("");
-                          setServiciosEncontradosNeon([]);
-                        }}
-                        className="w-full p-2.5 text-left hover:bg-purple-50 dark:hover:bg-purple-950/50 flex items-center justify-between transition-colors text-xs cursor-pointer"
-                      >
-                        <div className="min-w-0 pr-2">
-                          <p className="font-semibold text-zinc-900 dark:text-white truncate">{s.name}</p>
-                          <p className="text-[10px] text-zinc-500 dark:text-zinc-400 font-mono">
-                            Código: {s.code || "S/C"} · Categoría: {s.category || "General"}
-                          </p>
+                {/* RESUMEN UNIFICADO IGUAL QUE EN TALLER (SERVICIOS PRIMERO [MANUALES PRIMERO], LUEGO PRODUCTOS) */}
+                {(servicios.length > 0 || repuestos.length > 0) && (() => {
+                  const serviciosOrdenados = [...servicios].sort((a, b) => {
+                    const aEsManual = Boolean(
+                      a.isManual ||
+                      String(a.id || "").startsWith("reg-") ||
+                      String(a.id || "").startsWith("man-")
+                    );
+                    const bEsManual = Boolean(
+                      b.isManual ||
+                      String(b.id || "").startsWith("reg-") ||
+                      String(b.id || "").startsWith("man-")
+                    );
+                    if (aEsManual && !bEsManual) return -1;
+                    if (!aEsManual && bEsManual) return 1;
+                    return 0;
+                  });
+                  const totalCantServicios = serviciosOrdenados.reduce(
+                    (acc, it) => acc + (Number(it.qty) || 1),
+                    0
+                  );
+                  const totalCantProductos = repuestos.reduce(
+                    (acc, it) => acc + (Number(it.qty) || 1),
+                    0
+                  );
+
+                  const getBadgeModuloClase = (mod?: string) => {
+                    const m = String(mod || "Taller").toLowerCase();
+                    if (m.includes("lubri")) {
+                      return "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/30";
+                    }
+                    if (m.includes("wash") || m.includes("lavad")) {
+                      return "bg-cyan-50 text-cyan-700 border-cyan-200 dark:bg-cyan-500/15 dark:text-cyan-300 dark:border-cyan-500/30";
+                    }
+                    if (m.includes("tecni")) {
+                      return "bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-500/15 dark:text-purple-300 dark:border-purple-500/30";
+                    }
+                    return "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-500/15 dark:text-blue-300 dark:border-blue-500/30";
+                  };
+
+                  const getNombreModulo = (orig?: string, cat?: string) => {
+                    const o = String(orig || "").toUpperCase();
+                    if (o === "LUBRICENTRO") return "Lubricentro";
+                    if (o === "CARWASH") return "Car Wash";
+                    if (o === "TECNICENTRO") return "Tecnicentro";
+                    const c = String(cat || "").toLowerCase();
+                    if (c.includes("lubri")) return "Lubricentro";
+                    if (c.includes("wash") || c.includes("lavad")) return "Car Wash";
+                    if (c.includes("tecni")) return "Tecnicentro";
+                    return "Taller";
+                  };
+
+                  return (
+                    <div className="p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-white/[0.03] border border-zinc-200/90 dark:border-white/10 shadow-2xs space-y-3.5 animate-fade-in">
+                      {/* SERVICIOS (PRIMERO) */}
+                      {serviciosOrdenados.length > 0 && (
+                        <div className="space-y-1.5">
+                          <span className="text-xs font-normal text-zinc-500 dark:text-zinc-400 flex items-center gap-1.5">
+                            <span>🔧</span>
+                            <span>Servicios ({totalCantServicios}):</span>
+                          </span>
+                          <div className="rounded-xl border border-zinc-200/80 dark:border-white/10 bg-white dark:bg-black/20 shadow-2xs overflow-hidden">
+                            {/* Vista Móvil Servicios (iOS / Android) */}
+                            <div className="sm:hidden divide-y divide-zinc-200/60 dark:divide-white/5">
+                              {serviciosOrdenados.map((it, idx) => {
+                                const cant = Number(it.qty) || 1;
+                                const origenLabel = getNombreModulo(it.origin, it.category);
+                                const esManual = Boolean(
+                                  it.isManual ||
+                                  String(it.id || "").startsWith("reg-") ||
+                                  String(it.id || "").startsWith("man-")
+                                );
+                                const marcadoProv = Boolean(
+                                  it.enviadoProveedor ||
+                                  it.purchaseStatus === "PEDIDO_WHATSAPP" ||
+                                  it.purchaseStatus === "COTIZADO"
+                                );
+                                return (
+                                  <div
+                                    key={`m-srv-${it.id || it.code || idx}`}
+                                    className={`p-3 space-y-2.5 ${it.agregadoEnPropuesta ? "bg-amber-500/[0.07] dark:bg-amber-400/[0.06] border-l-2 border-l-amber-500/60" : ""}`}
+                                  >
+                                    <div className="flex items-start justify-between gap-2">
+                                      <div className="flex flex-wrap items-center gap-1.5 min-w-0 flex-1 text-sm font-medium text-zinc-800 dark:text-zinc-100 leading-snug">
+                                        <span className="break-words">{formatoPrimeraMayuscula(it.name)}</span>
+                                        {esManual && (
+                                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/35 shrink-0">
+                                            Manual
+                                          </span>
+                                        )}
+                                        {Array.isArray(it.fotos) && it.fotos.length > 0 && (
+                                          <button
+                                            type="button"
+                                            onClick={() => handleAbrirFlotanteFotos(it)}
+                                            className="h-7 px-2 rounded-lg border bg-indigo-50/80 hover:bg-indigo-100 dark:bg-indigo-500/15 dark:hover:bg-indigo-500/25 border-indigo-200 dark:border-indigo-500/30 text-indigo-600 dark:text-indigo-300 inline-flex items-center gap-1 text-[11px] font-medium cursor-pointer active:scale-95 transition-all shrink-0"
+                                            title={`Ver ${it.fotos.length} foto(s)`}
+                                          >
+                                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                                              <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
+                                            </svg>
+                                            {it.fotos.length > 1 && <span>{it.fotos.length}</span>}
+                                          </button>
+                                        )}
+                                        {Array.isArray(it.audios) && it.audios.length > 0 && (
+                                          <button
+                                            type="button"
+                                            onClick={() => handleAbrirFlotanteAudios(it)}
+                                            className="h-7 px-2 rounded-lg border bg-amber-50/80 hover:bg-amber-100 dark:bg-amber-500/15 dark:hover:bg-amber-500/25 border-amber-200 dark:border-amber-500/30 text-amber-600 dark:text-amber-300 inline-flex items-center gap-1 text-[11px] font-medium cursor-pointer active:scale-95 transition-all shrink-0"
+                                            title={`Escuchar ${it.audios.length} audio(s)`}
+                                          >
+                                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                                              <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 0 0 6-6v-1.5m-6 7.5a6 6 0 0 1-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 0 1-3-3V4.5a3 3 0 1 1 6 0v8.25a3 3 0 0 1-3 3Z" />
+                                            </svg>
+                                            {it.audios.length > 1 && <span>{it.audios.length}</span>}
+                                          </button>
+                                        )}
+                                      </div>
+                                      <button
+                                        type="button"
+                                        onClick={() => void handleDeleteService(it.id)}
+                                        className="w-7 h-7 inline-flex items-center justify-center rounded-lg text-zinc-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10 text-base font-bold cursor-pointer shrink-0"
+                                        title="Eliminar"
+                                      >
+                                        ×
+                                      </button>
+                                    </div>
+
+                                    <div className="flex flex-wrap items-center justify-between gap-2">
+                                      <div className="flex items-center gap-2 flex-wrap">
+                                        <div className="inline-flex items-center border border-zinc-200 dark:border-white/10 rounded-xl overflow-hidden bg-zinc-50 dark:bg-white/[0.04] h-8">
+                                          <button
+                                            type="button"
+                                            onClick={() => handleUpdateQty(it.id, -1)}
+                                            className="w-7 h-full flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-white text-sm font-bold cursor-pointer"
+                                          >
+                                            −
+                                          </button>
+                                          <span className="w-7 text-center text-xs font-bold text-zinc-800 dark:text-zinc-200 tabular-nums">
+                                            {cant}
+                                          </span>
+                                          <button
+                                            type="button"
+                                            onClick={() => handleUpdateQty(it.id, 1)}
+                                            className="w-7 h-full flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-white text-sm font-bold cursor-pointer"
+                                          >
+                                            +
+                                          </button>
+                                        </div>
+                                        <span className={`inline-block px-2 py-0.5 rounded-md text-[10px] font-semibold border ${getBadgeModuloClase(origenLabel)}`}>
+                                          {origenLabel}
+                                        </span>
+                                        {esManual && (
+                                          <button
+                                            type="button"
+                                            onClick={() => handleToggleMarcarProveedor(it, true)}
+                                            className={`h-8 px-2.5 rounded-lg border inline-flex items-center justify-center gap-1 text-[11px] font-semibold cursor-pointer active:scale-95 transition-all shrink-0 ${marcadoProv
+                                              ? "bg-blue-600 hover:bg-blue-500 text-white border-blue-500 shadow-sm shadow-blue-500/30"
+                                              : "bg-emerald-50/80 hover:bg-emerald-100 dark:bg-emerald-500/15 dark:hover:bg-emerald-500/25 border-emerald-200 dark:border-emerald-500/30 text-emerald-600 dark:text-emerald-300"
+                                              }`}
+                                          >
+                                            {!marcadoProv ? (
+                                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 18.75a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 0 1-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 0 0-3.213-9.193 2.056 2.056 0 0 0-1.58-.86H14.25M16.5 18.75h-2.25m0-11.175V14.25m0 0H2.25m12 0v4.5m0-4.5H16.5" />
+                                              </svg>
+                                            ) : (
+                                              <span className="text-[11px]">✓ Enviado</span>
+                                            )}
+                                          </button>
+                                        )}
+                                      </div>
+
+                                      {esManual ? (
+                                        <div className="inline-flex items-center gap-1 px-2.5 h-8 rounded-xl border border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-white/[0.04] w-28 shrink-0">
+                                          <span className="text-xs text-zinc-400 font-semibold">$</span>
+                                          <input
+                                            type="number"
+                                            inputMode="decimal"
+                                            step="any"
+                                            min="0"
+                                            placeholder="0"
+                                            value={it.price || ""}
+                                            onChange={(e) => handleUpdateServicePrice(it.id, e.target.value)}
+                                            className="w-full bg-transparent text-right text-base sm:text-xs font-bold font-mono text-zinc-800 dark:text-zinc-100 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                          />
+                                        </div>
+                                      ) : (
+                                        <span className="font-mono text-sm font-bold text-zinc-800 dark:text-zinc-100 shrink-0">
+                                          ${Number(it.price || 0).toFixed(2)}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                            <div className="hidden sm:block overflow-x-auto">
+                              <table className="w-full text-left text-xs border-collapse">
+                                <thead>
+                                  <tr className="border-b border-zinc-200/80 dark:border-white/10 bg-zinc-50/80 dark:bg-white/[0.03] text-zinc-500 dark:text-zinc-400 text-[11px] font-semibold">
+                                    <th className="py-2 px-3 w-24 text-center">Cant.</th>
+                                    <th className="py-2 px-3">Descripción</th>
+                                    <th className="py-2 px-2.5 w-28 text-center">Detalle</th>
+                                    <th className="py-2 px-2.5 w-28 text-center">Pedir</th>
+                                    <th className="py-2 px-2.5 w-28 text-center">PVP</th>
+                                    <th className="py-2 px-2 w-10 text-center"></th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-zinc-200/60 dark:divide-white/5">
+                                  {serviciosOrdenados.map((it, idx) => {
+                                    const cant = Number(it.qty) || 1;
+                                    const origenLabel = getNombreModulo(it.origin, it.category);
+                                    const esManual = Boolean(
+                                      it.isManual ||
+                                      String(it.id || "").startsWith("reg-") ||
+                                      String(it.id || "").startsWith("man-")
+                                    );
+                                    const marcadoProv = Boolean(
+                                      it.enviadoProveedor ||
+                                      it.purchaseStatus === "PEDIDO_WHATSAPP" ||
+                                      it.purchaseStatus === "COTIZADO"
+                                    );
+                                    return (
+                                      <tr
+                                        key={it.id || it.code || `srv-${idx}`}
+                                        className={`transition-colors ${it.agregadoEnPropuesta
+                                          ? "bg-amber-500/[0.07] dark:bg-amber-400/[0.06] border-l-2 border-l-amber-500/60 hover:bg-amber-500/[0.12] dark:hover:bg-amber-400/[0.10]"
+                                          : "hover:bg-zinc-50/60 dark:hover:bg-white/[0.02]"
+                                          }`}
+                                      >
+                                        <td className="py-2 px-3 text-center">
+                                          <div className="inline-flex items-center border border-zinc-200 dark:border-white/10 rounded-lg overflow-hidden bg-zinc-50 dark:bg-white/[0.04]">
+                                            <button
+                                              type="button"
+                                              onClick={() => handleUpdateQty(it.id, -1)}
+                                              className="w-5 h-5 flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-white text-xs font-bold cursor-pointer"
+                                            >
+                                              −
+                                            </button>
+                                            <span className="w-6 text-center text-xs font-bold text-zinc-800 dark:text-zinc-200">
+                                              {cant}
+                                            </span>
+                                            <button
+                                              type="button"
+                                              onClick={() => handleUpdateQty(it.id, 1)}
+                                              className="w-5 h-5 flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-white text-xs font-bold cursor-pointer"
+                                            >
+                                              +
+                                            </button>
+                                          </div>
+                                        </td>
+                                        <td className="py-2 px-3 font-medium text-zinc-800 dark:text-zinc-200">
+                                          <div className="flex flex-wrap items-center gap-2">
+                                            <span>{formatoPrimeraMayuscula(it.name)}</span>
+                                            {esManual && (
+                                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/35 shrink-0">
+                                                Manual
+                                              </span>
+                                            )}
+                                            {Array.isArray(it.fotos) && it.fotos.length > 0 && (
+                                              <button
+                                                type="button"
+                                                onClick={() => handleAbrirFlotanteFotos(it)}
+                                                className="h-7 px-2 rounded-lg border bg-indigo-50/80 hover:bg-indigo-100 dark:bg-indigo-500/15 dark:hover:bg-indigo-500/25 border-indigo-200 dark:border-indigo-500/30 text-indigo-600 dark:text-indigo-300 inline-flex items-center gap-1 text-[11px] font-medium cursor-pointer active:scale-95 transition-all shrink-0"
+                                                title={`Ver ${it.fotos.length} foto(s)`}
+                                              >
+                                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                                                  <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
+                                                </svg>
+                                                {it.fotos.length > 1 && <span>{it.fotos.length}</span>}
+                                              </button>
+                                            )}
+                                            {Array.isArray(it.audios) && it.audios.length > 0 && (
+                                              <button
+                                                type="button"
+                                                onClick={() => handleAbrirFlotanteAudios(it)}
+                                                className="h-7 px-2 rounded-lg border bg-amber-50/80 hover:bg-amber-100 dark:bg-amber-500/15 dark:hover:bg-amber-500/25 border-amber-200 dark:border-amber-500/30 text-amber-600 dark:text-amber-300 inline-flex items-center gap-1 text-[11px] font-medium cursor-pointer active:scale-95 transition-all shrink-0"
+                                                title={`Escuchar ${it.audios.length} audio(s)`}
+                                              >
+                                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                                                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 0 0 6-6v-1.5m-6 7.5a6 6 0 0 1-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 0 1-3-3V4.5a3 3 0 1 1 6 0v8.25a3 3 0 0 1-3 3Z" />
+                                                </svg>
+                                                {it.audios.length > 1 && <span>{it.audios.length}</span>}
+                                              </button>
+                                            )}
+                                          </div>
+                                        </td>
+                                        <td className="py-2 px-2.5 text-center">
+                                          <span
+                                            className={`inline-block px-2 py-0.5 rounded-md text-[10px] font-semibold border ${getBadgeModuloClase(
+                                              origenLabel
+                                            )}`}
+                                          >
+                                            {origenLabel}
+                                          </span>
+                                        </td>
+                                        <td className="py-2 px-2.5 text-center">
+                                          {esManual ? (
+                                            <div className="inline-flex items-center justify-center gap-1.5">
+                                              <button
+                                                type="button"
+                                                onClick={() => handleToggleMarcarProveedor(it, true)}
+                                                className={`h-7 px-2 rounded-lg border inline-flex items-center justify-center gap-1 text-[11px] font-semibold cursor-pointer active:scale-95 transition-all shrink-0 ${marcadoProv
+                                                  ? "bg-blue-600 hover:bg-blue-500 text-white border-blue-500 shadow-sm shadow-blue-500/30"
+                                                  : "bg-emerald-50/80 hover:bg-emerald-100 dark:bg-emerald-500/15 dark:hover:bg-emerald-500/25 border-emerald-200 dark:border-emerald-500/30 text-emerald-600 dark:text-emerald-300"
+                                                  }`}
+                                                title={
+                                                  marcadoProv
+                                                    ? "Enviado a pedidos de proveedor (clic para quitar)"
+                                                    : "Marcar para pedir a proveedor"
+                                                }
+                                              >
+                                                {!marcadoProv ? (
+                                                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 18.75a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 0 1-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 0 0-3.213-9.193 2.056 2.056 0 0 0-1.58-.86H14.25M16.5 18.75h-2.25m0-11.175V14.25m0 0H2.25m12 0v4.5m0-4.5H16.5" />
+                                                  </svg>
+                                                ) : (
+                                                  <span className="text-[10px]">✓ Enviado</span>
+                                                )}
+                                              </button>
+                                              {it.supplierAvailability === "SI_HAY" && (
+                                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-500/40 text-[10px] font-bold shrink-0">
+                                                  ✓ Sí hay{it.deliveryTime ? ` · ${it.deliveryTime}` : ""}
+                                                </span>
+                                              )}
+                                              {it.supplierAvailability === "NO_HAY" && (
+                                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-rose-50 dark:bg-rose-500/15 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-500/40 text-[10px] font-bold shrink-0">
+                                                  ✕ No hay
+                                                </span>
+                                              )}
+                                            </div>
+                                          ) : (
+                                            <span className="text-zinc-300 dark:text-zinc-600 text-xs">—</span>
+                                          )}
+                                        </td>
+                                        <td className="py-2 px-2.5 text-center">
+                                          {esManual ? (
+                                            <div className="inline-flex items-center gap-1 px-2 py-1 rounded-lg border border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-white/[0.04] w-24">
+                                              <span className="text-[11px] text-zinc-400 font-semibold">$</span>
+                                              <input
+                                                type="number"
+                                                inputMode="decimal"
+                                                step="any"
+                                                min="0"
+                                                placeholder="0"
+                                                value={it.price || ""}
+                                                onChange={(e) => handleUpdateServicePrice(it.id, e.target.value)}
+                                                className="w-full bg-transparent text-right text-xs font-bold font-mono text-zinc-800 dark:text-zinc-100 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                              />
+                                            </div>
+                                          ) : (
+                                            <span className="inline-block font-mono text-xs font-bold text-zinc-800 dark:text-zinc-100">
+                                              ${Number(it.price || 0).toFixed(2)}
+                                            </span>
+                                          )}
+                                        </td>
+                                        <td className="py-2 px-2 text-center">
+                                          <button
+                                            type="button"
+                                            onClick={() => void handleDeleteService(it.id)}
+                                            className="w-6 h-6 inline-flex items-center justify-center rounded-lg text-zinc-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10 text-sm font-bold cursor-pointer"
+                                            title="Eliminar"
+                                          >
+                                            ×
+                                          </button>
+                                        </td>
+                                      </tr>
+                                    );
+                                  })}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
                         </div>
-                        <div className="text-right shrink-0">
-                          <p className="font-bold text-purple-600 dark:text-purple-400 font-mono">
-                            ${Number(s.standardPrice ?? s.price ?? 0).toFixed(2)}
-                          </p>
-                          <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900/60 text-purple-700 dark:text-purple-300 font-medium">
-                            Neon DB
+                      )}
+
+                      {/* PRODUCTOS (DESPUÉS DE SERVICIOS) */}
+                      {repuestos.length > 0 && (
+                        <div className="space-y-1.5">
+                          <span className="text-xs font-normal text-zinc-500 dark:text-zinc-400 flex items-center gap-1.5">
+                            <span>📦</span>
+                            <span>Productos ({totalCantProductos}):</span>
+                          </span>
+                          <div className="rounded-xl border border-zinc-200/80 dark:border-white/10 bg-white dark:bg-black/20 shadow-2xs overflow-hidden">
+                            {/* Vista Móvil Productos (iOS / Android) */}
+                            <div className="sm:hidden divide-y divide-zinc-200/60 dark:divide-white/5">
+                              {repuestos.map((it, idx) => {
+                                const cant = Number(it.qty) || 1;
+                                const origenLabel = getNombreModulo(it.origin, it.category);
+                                const esManual = Boolean(
+                                  it.isManual ||
+                                  String(it.id || "").startsWith("reg-") ||
+                                  String(it.id || "").startsWith("man-")
+                                );
+                                const marcadoProv = Boolean(
+                                  it.enviadoProveedor ||
+                                  it.purchaseStatus === "PEDIDO_WHATSAPP" ||
+                                  it.purchaseStatus === "COTIZADO"
+                                );
+                                return (
+                                  <div
+                                    key={`m-prod-${it.id || it.code || idx}`}
+                                    className={`p-3 space-y-2.5 ${it.agregadoEnPropuesta ? "bg-amber-500/[0.07] dark:bg-amber-400/[0.06] border-l-2 border-l-amber-500/60" : ""}`}
+                                  >
+                                    <div className="flex items-start justify-between gap-2">
+                                      <div className="flex flex-wrap items-center gap-1.5 min-w-0 flex-1 text-sm font-medium text-zinc-800 dark:text-zinc-100 leading-snug">
+                                        <span className="break-words">{formatoPrimeraMayuscula(it.name)}</span>
+                                        {esManual && (
+                                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/35 shrink-0">
+                                            Manual
+                                          </span>
+                                        )}
+                                        {Array.isArray(it.fotos) && it.fotos.length > 0 && (
+                                          <button
+                                            type="button"
+                                            onClick={() => handleAbrirFlotanteFotos(it)}
+                                            className="h-7 px-2 rounded-lg border bg-indigo-50/80 hover:bg-indigo-100 dark:bg-indigo-500/15 dark:hover:bg-indigo-500/25 border-indigo-200 dark:border-indigo-500/30 text-indigo-600 dark:text-indigo-300 inline-flex items-center gap-1 text-[11px] font-medium cursor-pointer active:scale-95 transition-all shrink-0"
+                                            title={`Ver ${it.fotos.length} foto(s)`}
+                                          >
+                                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                                              <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
+                                            </svg>
+                                            {it.fotos.length > 1 && <span>{it.fotos.length}</span>}
+                                          </button>
+                                        )}
+                                        {Array.isArray(it.audios) && it.audios.length > 0 && (
+                                          <button
+                                            type="button"
+                                            onClick={() => handleAbrirFlotanteAudios(it)}
+                                            className="h-7 px-2 rounded-lg border bg-amber-50/80 hover:bg-amber-100 dark:bg-amber-500/15 dark:hover:bg-amber-500/25 border-amber-200 dark:border-amber-500/30 text-amber-600 dark:text-amber-300 inline-flex items-center gap-1 text-[11px] font-medium cursor-pointer active:scale-95 transition-all shrink-0"
+                                            title={`Escuchar ${it.audios.length} audio(s)`}
+                                          >
+                                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                                              <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 0 0 6-6v-1.5m-6 7.5a6 6 0 0 1-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 0 1-3-3V4.5a3 3 0 1 1 6 0v8.25a3 3 0 0 1-3 3Z" />
+                                            </svg>
+                                            {it.audios.length > 1 && <span>{it.audios.length}</span>}
+                                          </button>
+                                        )}
+                                      </div>
+                                      <button
+                                        type="button"
+                                        onClick={() => void handleDeleteItem(it.id)}
+                                        className="w-7 h-7 inline-flex items-center justify-center rounded-lg text-zinc-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10 text-base font-bold cursor-pointer shrink-0"
+                                        title="Eliminar"
+                                      >
+                                        ×
+                                      </button>
+                                    </div>
+
+                                    <div className="flex flex-wrap items-center justify-between gap-2">
+                                      <div className="flex items-center gap-2 flex-wrap">
+                                        <div className="inline-flex items-center border border-zinc-200 dark:border-white/10 rounded-xl overflow-hidden bg-zinc-50 dark:bg-white/[0.04] h-8">
+                                          <button
+                                            type="button"
+                                            onClick={() => handleUpdateQty(it.id, -1)}
+                                            className="w-7 h-full flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-white text-sm font-bold cursor-pointer"
+                                          >
+                                            −
+                                          </button>
+                                          <span className="w-7 text-center text-xs font-bold text-zinc-800 dark:text-zinc-200 tabular-nums">
+                                            {cant}
+                                          </span>
+                                          <button
+                                            type="button"
+                                            onClick={() => handleUpdateQty(it.id, 1)}
+                                            className="w-7 h-full flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-white text-sm font-bold cursor-pointer"
+                                          >
+                                            +
+                                          </button>
+                                        </div>
+                                        <span className={`inline-block px-2 py-0.5 rounded-md text-[10px] font-semibold border ${getBadgeModuloClase(origenLabel)}`}>
+                                          {origenLabel}
+                                        </span>
+                                        {esManual && (
+                                          <button
+                                            type="button"
+                                            onClick={() => handleToggleMarcarProveedor(it, false)}
+                                            className={`h-8 px-2.5 rounded-lg border inline-flex items-center justify-center gap-1 text-[11px] font-semibold cursor-pointer active:scale-95 transition-all shrink-0 ${marcadoProv
+                                              ? "bg-blue-600 hover:bg-blue-500 text-white border-blue-500 shadow-sm shadow-blue-500/30"
+                                              : "bg-emerald-50/80 hover:bg-emerald-100 dark:bg-emerald-500/15 dark:hover:bg-emerald-500/25 border-emerald-200 dark:border-emerald-500/30 text-emerald-600 dark:text-emerald-300"
+                                              }`}
+                                          >
+                                            {!marcadoProv ? (
+                                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 18.75a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 0 1-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 0 0-3.213-9.193 2.056 2.056 0 0 0-1.58-.86H14.25M16.5 18.75h-2.25m0-11.175V14.25m0 0H2.25m12 0v4.5m0-4.5H16.5" />
+                                              </svg>
+                                            ) : (
+                                              <span className="text-[11px]">✓ Enviado</span>
+                                            )}
+                                          </button>
+                                        )}
+                                      </div>
+
+                                      {esManual ? (
+                                        <div className="inline-flex items-center gap-1 px-2.5 h-8 rounded-xl border border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-white/[0.04] w-28 shrink-0">
+                                          <span className="text-xs text-zinc-400 font-semibold">$</span>
+                                          <input
+                                            type="number"
+                                            inputMode="decimal"
+                                            step="any"
+                                            min="0"
+                                            placeholder="0"
+                                            value={it.price || ""}
+                                            onChange={(e) => handleUpdatePrice(it.id, "price", e.target.value)}
+                                            className="w-full bg-transparent text-right text-base sm:text-xs font-bold font-mono text-zinc-800 dark:text-zinc-100 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                          />
+                                        </div>
+                                      ) : (
+                                        <span className="font-mono text-sm font-bold text-zinc-800 dark:text-zinc-100 shrink-0">
+                                          ${Number(it.price || 0).toFixed(2)}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                            <div className="hidden sm:block overflow-x-auto">
+                              <table className="w-full text-left text-xs border-collapse">
+                                <thead>
+                                  <tr className="border-b border-zinc-200/80 dark:border-white/10 bg-zinc-50/80 dark:bg-white/[0.03] text-zinc-500 dark:text-zinc-400 text-[11px] font-semibold">
+                                    <th className="py-2 px-3 w-24 text-center">Cant.</th>
+                                    <th className="py-2 px-3">Descripción</th>
+                                    <th className="py-2 px-2.5 w-28 text-center">Detalle</th>
+                                    <th className="py-2 px-2.5 w-28 text-center">Pedir</th>
+                                    <th className="py-2 px-2.5 w-28 text-center">PVP</th>
+                                    <th className="py-2 px-2 w-10 text-center"></th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-zinc-200/60 dark:divide-white/5">
+                                  {repuestos.map((it, idx) => {
+                                    const cant = Number(it.qty) || 1;
+                                    const origenLabel = getNombreModulo(it.origin, it.category);
+                                    const esManual = Boolean(
+                                      it.isManual ||
+                                      String(it.id || "").startsWith("reg-") ||
+                                      String(it.id || "").startsWith("man-")
+                                    );
+                                    const marcadoProv = Boolean(
+                                      it.enviadoProveedor ||
+                                      it.purchaseStatus === "PEDIDO_WHATSAPP" ||
+                                      it.purchaseStatus === "COTIZADO"
+                                    );
+                                    return (
+                                      <tr
+                                        key={it.id || it.code || `prod-${idx}`}
+                                        className={`transition-colors ${it.agregadoEnPropuesta
+                                          ? "bg-amber-500/[0.07] dark:bg-amber-400/[0.06] border-l-2 border-l-amber-500/60 hover:bg-amber-500/[0.12] dark:hover:bg-amber-400/[0.10]"
+                                          : "hover:bg-zinc-50/60 dark:hover:bg-white/[0.02]"
+                                          }`}
+                                      >
+                                        <td className="py-2 px-3 text-center">
+                                          <div className="inline-flex items-center border border-zinc-200 dark:border-white/10 rounded-lg overflow-hidden bg-zinc-50 dark:bg-white/[0.04]">
+                                            <button
+                                              type="button"
+                                              onClick={() => handleUpdateQty(it.id, -1)}
+                                              className="w-5 h-5 flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-white text-xs font-bold cursor-pointer"
+                                            >
+                                              −
+                                            </button>
+                                            <span className="w-6 text-center text-xs font-bold text-zinc-800 dark:text-zinc-200">
+                                              {cant}
+                                            </span>
+                                            <button
+                                              type="button"
+                                              onClick={() => handleUpdateQty(it.id, 1)}
+                                              className="w-5 h-5 flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-white text-xs font-bold cursor-pointer"
+                                            >
+                                              +
+                                            </button>
+                                          </div>
+                                        </td>
+                                        <td className="py-2 px-3 font-medium text-zinc-800 dark:text-zinc-200">
+                                          <div className="flex flex-wrap items-center gap-2">
+                                            <span>{formatoPrimeraMayuscula(it.name)}</span>
+                                            {esManual && (
+                                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/35 shrink-0">
+                                                Manual
+                                              </span>
+                                            )}
+                                            {Array.isArray(it.fotos) && it.fotos.length > 0 && (
+                                              <button
+                                                type="button"
+                                                onClick={() => handleAbrirFlotanteFotos(it)}
+                                                className="h-7 px-2 rounded-lg border bg-indigo-50/80 hover:bg-indigo-100 dark:bg-indigo-500/15 dark:hover:bg-indigo-500/25 border-indigo-200 dark:border-indigo-500/30 text-indigo-600 dark:text-indigo-300 inline-flex items-center gap-1 text-[11px] font-medium cursor-pointer active:scale-95 transition-all shrink-0"
+                                                title={`Ver ${it.fotos.length} foto(s)`}
+                                              >
+                                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                                                  <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
+                                                </svg>
+                                                {it.fotos.length > 1 && <span>{it.fotos.length}</span>}
+                                              </button>
+                                            )}
+                                            {Array.isArray(it.audios) && it.audios.length > 0 && (
+                                              <button
+                                                type="button"
+                                                onClick={() => handleAbrirFlotanteAudios(it)}
+                                                className="h-7 px-2 rounded-lg border bg-amber-50/80 hover:bg-amber-100 dark:bg-amber-500/15 dark:hover:bg-amber-500/25 border-amber-200 dark:border-amber-500/30 text-amber-600 dark:text-amber-300 inline-flex items-center gap-1 text-[11px] font-medium cursor-pointer active:scale-95 transition-all shrink-0"
+                                                title={`Escuchar ${it.audios.length} audio(s)`}
+                                              >
+                                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                                                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 0 0 6-6v-1.5m-6 7.5a6 6 0 0 1-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 0 1-3-3V4.5a3 3 0 1 1 6 0v8.25a3 3 0 0 1-3 3Z" />
+                                                </svg>
+                                                {it.audios.length > 1 && <span>{it.audios.length}</span>}
+                                              </button>
+                                            )}
+                                          </div>
+                                        </td>
+                                        <td className="py-2 px-2.5 text-center">
+                                          <span
+                                            className={`inline-block px-2 py-0.5 rounded-md text-[10px] font-semibold border ${getBadgeModuloClase(
+                                              origenLabel
+                                            )}`}
+                                          >
+                                            {origenLabel}
+                                          </span>
+                                        </td>
+                                        <td className="py-2 px-2.5 text-center">
+                                          {esManual ? (
+                                            <div className="inline-flex items-center justify-center gap-1.5">
+                                              <button
+                                                type="button"
+                                                onClick={() => handleToggleMarcarProveedor(it, false)}
+                                                className={`h-7 px-2 rounded-lg border inline-flex items-center justify-center gap-1 text-[11px] font-semibold cursor-pointer active:scale-95 transition-all shrink-0 ${marcadoProv
+                                                  ? "bg-blue-600 hover:bg-blue-500 text-white border-blue-500 shadow-sm shadow-blue-500/30"
+                                                  : "bg-emerald-50/80 hover:bg-emerald-100 dark:bg-emerald-500/15 dark:hover:bg-emerald-500/25 border-emerald-200 dark:border-emerald-500/30 text-emerald-600 dark:text-emerald-300"
+                                                  }`}
+                                                title={
+                                                  marcadoProv
+                                                    ? "Enviado a pedidos de proveedor (clic para quitar)"
+                                                    : "Marcar para pedir a proveedor"
+                                                }
+                                              >
+                                                {!marcadoProv ? (
+                                                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 18.75a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 0 1-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 0 0-3.213-9.193 2.056 2.056 0 0 0-1.58-.86H14.25M16.5 18.75h-2.25m0-11.175V14.25m0 0H2.25m12 0v4.5m0-4.5H16.5" />
+                                                  </svg>
+                                                ) : (
+                                                  <span className="text-[10px]">✓ Enviado</span>
+                                                )}
+                                              </button>
+                                              {it.supplierAvailability === "SI_HAY" && (
+                                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-500/40 text-[10px] font-bold shrink-0">
+                                                  ✓ Sí hay{it.deliveryTime ? ` · ${it.deliveryTime}` : ""}
+                                                </span>
+                                              )}
+                                              {it.supplierAvailability === "NO_HAY" && (
+                                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-rose-50 dark:bg-rose-500/15 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-500/40 text-[10px] font-bold shrink-0">
+                                                  ✕ No hay
+                                                </span>
+                                              )}
+                                            </div>
+                                          ) : (
+                                            <span className="text-zinc-300 dark:text-zinc-600 text-xs">—</span>
+                                          )}
+                                        </td>
+                                        <td className="py-2 px-2.5 text-center">
+                                          {esManual ? (
+                                            <div className="inline-flex items-center gap-1 px-2 py-1 rounded-lg border border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-white/[0.04] w-24">
+                                              <span className="text-[11px] text-zinc-400 font-semibold">$</span>
+                                              <input
+                                                type="number"
+                                                inputMode="decimal"
+                                                step="any"
+                                                min="0"
+                                                placeholder="0"
+                                                value={it.price || ""}
+                                                onChange={(e) => handleUpdatePrice(it.id, "price", e.target.value)}
+                                                className="w-full bg-transparent text-right text-xs font-bold font-mono text-zinc-800 dark:text-zinc-100 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                              />
+                                            </div>
+                                          ) : (
+                                            <span className="inline-block font-mono text-xs font-bold text-zinc-800 dark:text-zinc-100">
+                                              ${Number(it.price || 0).toFixed(2)}
+                                            </span>
+                                          )}
+                                        </td>
+                                        <td className="py-2 px-2 text-center">
+                                          <button
+                                            type="button"
+                                            onClick={() => void handleDeleteItem(it.id)}
+                                            className="w-6 h-6 inline-flex items-center justify-center rounded-lg text-zinc-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10 text-sm font-bold cursor-pointer"
+                                            title="Eliminar"
+                                          >
+                                            ×
+                                          </button>
+                                        </td>
+                                      </tr>
+                                    );
+                                  })}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+
+                {/* SECCIÓN FINAL: LIQUIDACIÓN + GUARDAR + PAGAR / POS */}
+                <div className="pt-4 border-t border-zinc-200 dark:border-white/10 space-y-6">
+                  {/* LIQUIDACIÓN DE LA FACTURA & TOTALES */}
+                  <div className="flex justify-end pt-4 border-t border-zinc-200 dark:border-white/10">
+                    {/* Liquidación Financiera de Propuesta */}
+                    <div className="w-full md:w-1/2 max-w-lg p-5 rounded-2xl bg-zinc-50 dark:bg-white/[0.02] border border-zinc-200 dark:border-white/10 space-y-3 font-sans">
+                      <div className="flex items-center justify-between text-xs text-zinc-600 dark:text-zinc-400">
+                        <span className="font-normal">Productos:</span>
+                        <span className="font-medium text-zinc-900 dark:text-white">
+                          ${calculos.subtotalRepuestos.toFixed(2)}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center justify-between text-xs text-zinc-600 dark:text-zinc-400">
+                        <span className="font-normal">Servicios:</span>
+                        <span className="font-medium text-zinc-900 dark:text-white">
+                          ${calculos.subtotalServicios.toFixed(2)}
+                        </span>
+                      </div>
+
+                      <div className="h-px bg-zinc-200 dark:bg-white/10" />
+
+                      <div className="flex items-center justify-between text-xs text-zinc-700 dark:text-zinc-300">
+                        <span className="font-normal">Subtotal:</span>
+                        <span className="font-semibold text-zinc-900 dark:text-white text-sm">
+                          ${calculos.subtotalBruto.toFixed(2)}
+                        </span>
+                      </div>
+
+                      {/* Descuento editable */}
+                      <div className="flex items-center justify-between text-xs text-zinc-600 dark:text-zinc-400">
+                        <div className="flex items-center gap-2">
+                          <span className="font-normal">Descuento:</span>
+                          <div className="inline-flex items-center gap-1 print:hidden">
+                            <input
+                              type="number"
+                              inputMode="decimal"
+                              min="0"
+                              max="100"
+                              value={porcentajeDescuento}
+                              onChange={(e) => setPorcentajeDescuento(parseFloat(e.target.value) || 0)}
+                              className="w-14 sm:w-12 h-8 sm:h-6 px-1.5 sm:px-1 text-center rounded-lg sm:rounded bg-white dark:bg-black border border-zinc-300 dark:border-white/10 text-base sm:text-xs font-normal"
+                            />
+                            <span className="text-[10px]">%</span>
+                          </div>
+                        </div>
+                        <span className="text-rose-500 font-medium">
+                          -${calculos.descuento.toFixed(2)}
+                        </span>
+                      </div>
+
+                      {/* IVA editable */}
+                      <div className="flex items-center justify-between text-xs text-zinc-600 dark:text-zinc-400">
+                        <div className="flex items-center gap-2">
+                          <span className="font-normal">IVA ({porcentajeIva}%):</span>
+                          <div className="inline-flex items-center gap-1 print:hidden">
+                            <select
+                              value={porcentajeIva}
+                              onChange={(e) => setPorcentajeIva(Number(e.target.value))}
+                              className="h-8 sm:h-6 px-1.5 sm:px-1 rounded-lg sm:rounded bg-white dark:bg-black border border-zinc-300 dark:border-white/10 text-base sm:text-[11px]"
+                            >
+                              <option value={15}>15%</option>
+                              <option value={12}>12%</option>
+                              <option value={0}>0%</option>
+                            </select>
+                          </div>
+                        </div>
+                        <span className="font-medium text-zinc-800 dark:text-zinc-200">
+                          ${calculos.iva.toFixed(2)}
+                        </span>
+                      </div>
+
+                      {/* TOTAL PROPUESTA */}
+                      <div className="p-4 rounded-xl bg-blue-600/10 border border-blue-600/30 flex items-center justify-between">
+                        <div>
+                          <span className="text-sm font-semibold text-blue-700 dark:text-blue-300 block">
+                            Total
                           </span>
                         </div>
-                      </button>
-                    ))}
+                        <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                          ${calculos.totalFacturaCliente.toFixed(2)}
+                        </span>
+                      </div>
+
+                    </div>
                   </div>
-                )}
-              </div>
 
-              <div>
-                <label className="text-xs text-zinc-600 dark:text-zinc-400 font-medium block mb-1">
-                  Descripción del Servicio Técnico
-                </label>
-                <input
-                  type="text"
-                  placeholder="Ej: Cambio de Pastillas y Rectificación de Discos"
-                  value={nuevoServicioNombre}
-                  onChange={(e) => setNuevoServicioNombre(e.target.value)}
-                  className="w-full h-10 px-3 rounded-xl bg-zinc-50 dark:bg-black border border-zinc-300 dark:border-white/10 text-xs text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs text-zinc-600 dark:text-zinc-400 font-medium block mb-1">
-                  Código de Servicio
-                </label>
-                <input
-                  type="text"
-                  placeholder="Ej: SRV-7170"
-                  value={nuevoServicioCodigo}
-                  onChange={(e) => setNuevoServicioCodigo(e.target.value)}
-                  className="w-full h-10 px-3 rounded-xl bg-zinc-50 dark:bg-black border border-zinc-300 dark:border-white/10 text-xs text-zinc-900 dark:text-white font-mono placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="text-xs text-zinc-600 dark:text-zinc-400 font-medium block mb-1">Precio Servicio ($)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={nuevoServicioPrecio}
-                    onChange={(e) => setNuevoServicioPrecio(e.target.value)}
-                    className="w-full h-10 px-3 rounded-xl bg-purple-50/50 dark:bg-black border border-purple-500/40 text-xs text-purple-700 dark:text-purple-400 font-mono font-bold focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-xs text-zinc-600 dark:text-zinc-400 font-medium block mb-1">Área / Origen</label>
-                  <select
-                    value={nuevoServicioOrigen}
-                    onChange={(e) => setNuevoServicioOrigen(e.target.value as EspecialidadTipo)}
-                    className="w-full h-10 px-2 rounded-xl bg-zinc-50 dark:bg-black border border-zinc-300 dark:border-white/10 text-xs text-zinc-900 dark:text-white cursor-pointer focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
-                  >
-                    <option value="TALLER">🔧 Taller</option>
-                    <option value="LUBRICENTRO">🛢️ Lubricentro</option>
-                    <option value="CARWASH">🚿 Car Wash</option>
-                    <option value="TECNICENTRO">⚙️ Tecnicentro</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="pt-2">
-                <button
-                  type="button"
-                  onClick={handleAgregarServicio}
-                  className="w-full h-10 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold transition-all shadow-md shadow-purple-600/30 cursor-pointer active:scale-95"
-                >
-                  Agregar Servicio
-                </button>
-              </div>
-
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL FLOTANTE MINIMALISTA DE FOTOS POR EVIDENCIA */}
-      {flotanteFotos && (
-        <div
-          onClick={() => setFlotanteFotos(null)}
-          className="fixed inset-0 z-50 bg-black/70 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 animate-fade-in"
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="bg-white dark:bg-[#121216] border border-zinc-200 dark:border-white/10 rounded-3xl max-w-lg w-full p-4 sm:p-5 space-y-3.5 shadow-2xl animate-scale-up text-zinc-900 dark:text-white"
-          >
-            {/* Header del modal */}
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-9 h-9 rounded-2xl bg-blue-500/10 border border-blue-500/25 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
-                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <rect width="18" height="18" x="3" y="3" rx="4" />
-                    <circle cx="8.5" cy="8.5" r="1.5" />
-                    <path d="m21 15-5-5L5 21" />
-                  </svg>
-                </div>
-                <div className="min-w-0">
-                  <h3 className="text-sm font-bold text-zinc-900 dark:text-white truncate">
-                    Fotos de Evidencia #{flotanteFotos.pin.numeroEvidencia || flotanteFotos.pin.pinNumber || 1}
-                  </h3>
-                  <p className="text-[11px] text-zinc-500 dark:text-zinc-400 truncate">
-                    {flotanteFotos.pin.tipo ? formatoPrimeraMayuscula(flotanteFotos.pin.tipo) : (flotanteFotos.pin.descripcion || "Inspección")}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2 shrink-0">
-                {flotanteFotos.fotos.length > 0 && (
-                  <span className="text-[11px] font-mono font-medium px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-white/10 text-zinc-600 dark:text-zinc-300">
-                    {flotanteFotos.fotoActivaIdx + 1} / {flotanteFotos.fotos.length}
-                  </span>
-                )}
-                <button
-                  type="button"
-                  onClick={() => setFlotanteFotos(null)}
-                  className="w-8 h-8 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white flex items-center justify-center cursor-pointer transition-colors"
-                >
-                  ✕
-                </button>
-              </div>
-
-            </div>
-
-            {/* Imagen principal */}
-            {flotanteFotos.fotos.length > 0 ? (
-              <div className="space-y-3">
-                <div className="relative aspect-video sm:aspect-4/3 w-full rounded-2xl overflow-hidden bg-black/90 border border-zinc-200/80 dark:border-white/10 flex items-center justify-center group">
-                  <img
-                    src={flotanteFotos.fotos[flotanteFotos.fotoActivaIdx]}
-                    alt={`Evidencia ${flotanteFotos.fotoActivaIdx + 1}`}
-                    className="w-full h-full object-contain cursor-zoom-in"
-                    onClick={() => setFotoZoom(flotanteFotos.fotos[flotanteFotos.fotoActivaIdx])}
-                  />
-
-                  {/* Flechas de navegación si hay más de 1 foto */}
-                  {flotanteFotos.fotos.length > 1 && (
-                    <>
+                  {/* BARRA DE CIERRE FINAL: TÍTULOS DE 1 PALABRA + ICONO */}
+                  <div className="print:hidden pt-5 border-t border-zinc-200 dark:border-white/10 flex flex-col md:flex-row items-stretch md:items-center justify-end gap-4 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] sm:pb-0">
+                    <div className="flex items-center gap-2.5 flex-wrap justify-end w-full sm:w-auto">
                       <button
                         type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setFlotanteFotos((prev) => prev ? {
-                            ...prev,
-                            fotoActivaIdx: (prev.fotoActivaIdx - 1 + prev.fotos.length) % prev.fotos.length,
-                          } : null);
-                        }}
-                        className="absolute left-2 w-8 h-8 rounded-full bg-black/60 hover:bg-black text-white flex items-center justify-center text-sm backdrop-blur-xs cursor-pointer opacity-80 group-hover:opacity-100 transition-opacity"
-                      >
-                        ‹
-                      </button>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setFlotanteFotos((prev) => prev ? {
-                            ...prev,
-                            fotoActivaIdx: (prev.fotoActivaIdx + 1) % prev.fotos.length,
-                          } : null);
-                        }}
-                        className="absolute right-2 w-8 h-8 rounded-full bg-black/60 hover:bg-black text-white flex items-center justify-center text-sm backdrop-blur-xs cursor-pointer opacity-80 group-hover:opacity-100 transition-opacity"
-                      >
-                        ›
-                      </button>
-                    </>
-                  )}
-                </div>
-
-                {/* Tiras de miniaturas */}
-                {flotanteFotos.fotos.length > 1 && (
-                  <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-                    {flotanteFotos.fotos.map((f, idx) => (
-                      <button
-                        key={`thumb-${idx}`}
-                        type="button"
-                        onClick={() => setFlotanteFotos((prev) => prev ? { ...prev, fotoActivaIdx: idx } : null)}
-                        className={`w-14 h-12 rounded-xl overflow-hidden shrink-0 border-2 transition-all cursor-pointer ${flotanteFotos.fotoActivaIdx === idx
-                          ? "border-blue-500 scale-105 shadow-md shadow-blue-500/20"
-                          : "border-transparent opacity-60 hover:opacity-100"
+                        disabled={cambiandoEstado}
+                        onClick={handleTogglePagado}
+                        className={`flex-1 sm:flex-initial h-11 sm:h-10 px-4 rounded-xl border text-sm sm:text-xs font-medium sm:font-normal shadow-sm transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 ${esPagado
+                          ? "bg-sky-600 hover:bg-sky-500 border-sky-500 text-white"
+                          : "bg-sky-500/15 hover:bg-sky-500/25 border-sky-500/35 text-sky-600 dark:text-sky-300"
                           }`}
                       >
-                        <img src={f} alt={`Miniatura ${idx + 1}`} className="w-full h-full object-cover" />
+                        <span>{esPagado ? "✓ Pagado" : "💳 Pagar"}</span>
                       </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="p-8 text-center rounded-2xl bg-zinc-50 dark:bg-white/[0.02] border border-dashed border-zinc-200 dark:border-white/10 space-y-1">
-                <span className="text-2xl">📷</span>
-                <p className="text-xs text-zinc-500 dark:text-zinc-400 font-medium">
-                  No hay fotos adjuntas para esta evidencia aún.
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
 
-      {/* MODAL FLOTANTE MINIMALISTA DE AUDIO POR EVIDENCIA */}
-      {flotanteAudios && (
-        <div
-          onClick={() => setFlotanteAudios(null)}
-          className="fixed inset-0 z-50 bg-black/70 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 animate-fade-in"
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="bg-white dark:bg-[#121216] border border-zinc-200 dark:border-white/10 rounded-3xl max-w-md w-full p-4 shadow-2xl animate-scale-up text-zinc-900 dark:text-white"
-          >
-            {/* Lista de audios */}
-            {flotanteAudios.audios.length > 0 ? (
-              <div className="space-y-3 max-h-[60vh] overflow-y-auto">
-                {flotanteAudios.audios.map((aud, aIdx) => (
-                  <div
-                    key={aud.id || `aud-${aIdx}`}
-                    className="p-3.5 rounded-2xl bg-amber-500/5 border border-amber-500/20 space-y-2.5"
+                      <button
+                        type="button"
+                        disabled={autorizando}
+                        onClick={handleAutorizarYEnviarAPos}
+                        className="flex-1 sm:flex-initial h-11 sm:h-10 px-5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm sm:text-xs font-medium sm:font-normal shadow-sm transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50"
+                      >
+                        <span>🛒</span>
+                        <span>{autorizando ? "..." : "POS"}</span>
+                      </button>
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+
+              {/* FIRMAS EN FACTURA (Visible en impresión o PDF) */}
+              <div className="hidden print:grid grid-cols-2 gap-12 pt-16 mt-8 border-t border-zinc-300 text-center text-xs">
+                <div className="space-y-2">
+                  <div className="border-b border-black w-48 mx-auto" />
+                  <p className="font-bold">Firma del Cliente</p>
+                  <p className="text-[10px] text-zinc-500">Aceptación de Presupuesto y Repuestos</p>
+                </div>
+                <div className="space-y-2">
+                  <div className="border-b border-black w-48 mx-auto" />
+                  <p className="font-bold">AutoG Centro Automotriz</p>
+                  <p className="text-[10px] text-zinc-500">Mecánico: {(orden.mechanic || "Carlos Rodríguez").replace(/\s*\([^)]*\)/g, "").trim()}</p>
+                </div>
+              </div>
+            </div>
+          </main>
+
+          {/* MODAL CATÁLOGO WHATSAPP PARA PROVEEDORES */}
+          {modalWhatsApp && (
+            <div
+              onClick={() => setModalWhatsApp(false)}
+              className="fixed inset-0 z-50 bg-black/60 dark:bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in"
+            >
+              <div
+                onClick={(e) => e.stopPropagation()}
+                className="bg-white dark:bg-[#111113] border border-zinc-200 dark:border-white/10 rounded-3xl max-w-lg w-full p-6 space-y-5 shadow-2xl animate-scale-up text-zinc-900 dark:text-white"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="space-y-1">
+                    <h3 className="text-base sm:text-lg font-bold text-zinc-900 dark:text-white flex items-center gap-2">
+                      <span>📲</span>
+                      <span>Catálogo Digital para Proveedores</span>
+                    </h3>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setModalWhatsApp(false)}
+                    className="w-8 h-8 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white flex items-center justify-center cursor-pointer transition-colors"
                   >
-                    <div className="flex items-center justify-between text-xs gap-2">
-                      <span className="font-semibold text-amber-700 dark:text-amber-300 flex items-center gap-1.5">
-                        <span className="inline-block w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
-                        Audio #{aIdx + 1}
+                    ✕
+                  </button>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="p-4 rounded-2xl bg-zinc-50 dark:bg-white/[0.03] border border-zinc-200 dark:border-white/10 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-zinc-900 dark:text-white">1. Pedido de este Vehículo ({orden.plate})</span>
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-700 dark:text-blue-400 font-bold">
+                        Individual
                       </span>
-                      <div className="flex items-center gap-2">
-                        {aud.durationSeconds && (
-                          <span className="text-[11px] font-mono text-zinc-500 dark:text-zinc-400">
-                            {Math.floor(aud.durationSeconds / 60)}:{(aud.durationSeconds % 60).toString().padStart(2, "0")}
-                          </span>
-                        )}
-                        {aIdx === 0 && (
+                    </div>
+                    <p className="text-xs text-zinc-600 dark:text-zinc-400">
+                      Envía únicamente los {calculos.itemsPorComprar.length} repuestos requeridos para el {orden.vehicle}.
+                    </p>
+                    <div className="pt-2 flex items-center gap-2">
+                      <a
+                        href={`https://wa.me/?text=${encodeURIComponent(
+                          `Hola, te comparto el pedido de repuestos para el vehículo ${orden.vehicle} (Placa: ${orden.plate}). Puedes revisar fotos grandes y especificaciones aquí: ${window.location.origin}/pedidos-proveedor/${orden.id}${orden.supplierSig ? `?sig=${encodeURIComponent(orden.supplierSig)}` : ""}`
+                        )}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="h-9 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1.5 transition-all shadow-md shadow-emerald-600/20 active:scale-95"
+                      >
+                        <span>💬 Enviar por WhatsApp</span>
+                      </a>
+                      <button
+                        type="button"
+                        onClick={() => copiarAlPortapapeles(`${window.location.origin}/pedidos-proveedor/${orden.id}${orden.supplierSig ? `?sig=${encodeURIComponent(orden.supplierSig)}` : ""}`, "Enlace copiado al portapapeles.")}
+                        className="h-9 px-3 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/10 dark:hover:bg-white/15 text-zinc-700 dark:text-white text-xs font-semibold cursor-pointer transition-colors"
+                      >
+                        Copiar Link
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="p-4 rounded-2xl bg-zinc-50 dark:bg-white/[0.03] border border-zinc-200 dark:border-white/10 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-zinc-900 dark:text-white">2. Consolidado del Día</span>
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/15 text-purple-700 dark:text-purple-400 font-bold">
+                        Del Día
+                      </span>
+                    </div>
+                    <p className="text-xs text-zinc-600 dark:text-zinc-400">
+                      Agrupa todos los repuestos por comprar de todos los vehículos recibidos hoy en el taller.
+                    </p>
+                    <div className="pt-2 flex items-center gap-2">
+                      <a
+                        href={`https://wa.me/?text=${encodeURIComponent(
+                          `Hola, te comparto el consolidado general de repuestos requeridos para el taller hoy. Puedes revisar fotos y lista completa aquí: ${window.location.origin}/pedidos-proveedor/diario${orden.dailySupplierSig ? `?sig=${encodeURIComponent(orden.dailySupplierSig)}` : ""}`
+                        )}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="h-9 px-4 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold flex items-center gap-1.5 transition-all shadow-md shadow-purple-600/20 active:scale-95"
+                      >
+                        <span>💬 Enviar Consolidado</span>
+                      </a>
+                      <button
+                        type="button"
+                        onClick={() => copiarAlPortapapeles(`${window.location.origin}/pedidos-proveedor/diario${orden.dailySupplierSig ? `?sig=${encodeURIComponent(orden.dailySupplierSig)}` : ""}`, "Enlace del día copiado.")}
+                        className="h-9 px-3 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/10 dark:hover:bg-white/15 text-zinc-700 dark:text-white text-xs font-semibold cursor-pointer transition-colors"
+                      >
+                        Copiar Link
+                      </button>
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* MODAL FLOTANTE MODERNO Y MINIMALISTA DE PEDIDOS A PROVEEDOR */}
+          {modalProveedor.abierto && (
+            <div
+              onClick={() => setModalProveedor({ abierto: false, modo: "MASIVO" })}
+              className="fixed inset-0 z-50 bg-black/60 dark:bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in"
+            >
+              <div
+                onClick={(e) => e.stopPropagation()}
+                className="bg-white dark:bg-[#0d111a] border border-zinc-200 dark:border-white/10 rounded-3xl max-w-2xl w-full p-5 sm:p-6 space-y-5 shadow-2xl animate-scale-up text-zinc-900 dark:text-white max-h-[90vh] flex flex-col"
+              >
+                {/* Header minimalista estilo Catálogo */}
+                <div className="flex items-start justify-between gap-3 shrink-0 pb-3 border-b border-zinc-200/80 dark:border-white/10">
+                  <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-2xl bg-blue-600 flex items-center justify-center text-white shadow-md shadow-blue-600/25 shrink-0">
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.9}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 18.75a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 0 1-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 0 0-3.213-9.193 2.056 2.056 0 0 0-1.58-.86H14.25M16.5 18.75h-2.25m0-11.175V14.25m0 0H2.25m12 0v4.5m0-4.5H16.5" />
+                      </svg>
+                    </div>
+                    <div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-[11px] font-bold tracking-wider uppercase text-blue-600 dark:text-blue-400">
+                          PEDIDOS A PROVEEDOR • OFICINA
+                        </span>
+                        <span className="px-2 py-0.5 rounded-md bg-amber-400 text-zinc-950 font-extrabold text-[10px] tracking-wide">
+                          PLACA: {orden.plate || "S/P"}
+                        </span>
+                      </div>
+                      <h3 className="text-base sm:text-lg font-extrabold text-zinc-900 dark:text-white tracking-tight">
+                        {orden.vehicle} — Orden #{String(orden.orderNumber || 1).padStart(5, "0")}
+                      </h3>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setModalProveedor({ abierto: false, modo: "MASIVO" })}
+                    className="w-8 h-8 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white flex items-center justify-center cursor-pointer transition-colors shrink-0"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                {/* Cuerpo scrollable */}
+                <div className="space-y-5 overflow-y-auto flex-1 pr-1 text-xs">
+                  {/* PASO 1: ESCOGER PROVEEDOR O PROVEEDORES */}
+                  <div className="space-y-2.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <label className="font-bold text-zinc-800 dark:text-zinc-200 text-xs flex items-center gap-1.5">
+                        <span className="w-5 h-5 rounded-full bg-blue-600/15 text-blue-600 dark:text-blue-400 font-bold inline-flex items-center justify-center text-[11px]">
+                          1
+                        </span>
+                        <span>Escoger Proveedor o Proveedores ({proveedoresSeleccionadosIds.length})</span>
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setMostrarNuevoProvInline((v) => !v)}
+                        className="text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
+                      >
+                        {mostrarNuevoProvInline ? "Cancelar" : "+ Nuevo Proveedor"}
+                      </button>
+                    </div>
+
+                    {mostrarNuevoProvInline && (
+                      <div className="p-3 rounded-2xl bg-zinc-50 dark:bg-white/[0.04] border border-zinc-200 dark:border-white/10 flex flex-wrap items-center gap-2">
+                        <input
+                          type="text"
+                          value={nuevoProvNombre}
+                          onChange={(e) => setNuevoProvNombre(e.target.value)}
+                          placeholder="Nombre (ej. Repuestos Japón Express)"
+                          className="flex-1 min-w-[160px] h-8 px-3 rounded-xl bg-white dark:bg-black/40 border border-zinc-200 dark:border-white/10 text-xs focus:outline-none focus:border-blue-500"
+                        />
+                        <input
+                          type="text"
+                          value={telefonoManualProveedor}
+                          onChange={(e) => setTelefonoManualProveedor(e.target.value)}
+                          placeholder="WhatsApp (ej. 0987654321)"
+                          className="w-40 h-8 px-3 rounded-xl bg-white dark:bg-black/40 border border-zinc-200 dark:border-white/10 text-xs font-mono focus:outline-none focus:border-blue-500"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleAgregarProveedorInline}
+                          className="h-8 px-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold cursor-pointer"
+                        >
+                          Añadir
+                        </button>
+                      </div>
+                    )}
+
+                    <div className="flex items-center gap-2">
+                      <div className="relative flex-1">
+                        <input
+                          type="text"
+                          value={busquedaProveedor}
+                          onChange={(e) => setBusquedaProveedor(e.target.value)}
+                          placeholder="Buscar proveedor por nombre, contacto o categoría..."
+                          className="w-full h-9 pl-3 pr-8 rounded-xl bg-zinc-50 dark:bg-white/[0.04] border border-zinc-200 dark:border-white/10 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-blue-500"
+                        />
+                        {busquedaProveedor && (
                           <button
                             type="button"
-                            onClick={() => setFlotanteAudios(null)}
-                            className="w-7 h-7 rounded-lg bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white flex items-center justify-center cursor-pointer transition-colors shrink-0"
-                            title="Cerrar"
+                            onClick={() => setBusquedaProveedor("")}
+                            className="absolute right-2.5 top-2.5 text-zinc-400 hover:text-zinc-600 dark:hover:text-white text-xs cursor-pointer"
                           >
                             ✕
                           </button>
                         )}
                       </div>
+                      <input
+                        type="text"
+                        value={telefonoManualProveedor}
+                        onChange={(e) => setTelefonoManualProveedor(e.target.value)}
+                        placeholder="WhatsApp directo..."
+                        className="w-40 h-9 px-3 rounded-xl bg-zinc-50 dark:bg-white/[0.04] border border-zinc-200 dark:border-white/10 text-xs font-mono text-zinc-900 dark:text-white focus:outline-none focus:border-blue-500"
+                        title="Número de WhatsApp del proveedor"
+                      />
                     </div>
 
-                    <MiniAudioPlayer src={aud.url} initialDuration={aud.durationSeconds} />
+                    {/* Tarjetas minimalistas de proveedores (selección múltiple o individual) */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-36 overflow-y-auto pr-0.5">
+                      {proveedoresFiltrados.map((prov) => {
+                        const esElegido = proveedoresSeleccionadosIds.includes(prov.id);
+                        return (
+                          <div
+                            key={prov.id}
+                            onClick={() => toggleSeleccionProveedor(prov)}
+                            className={`p-2.5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-2 ${esElegido
+                              ? "bg-emerald-500/10 dark:bg-emerald-500/15 border-emerald-500/50 text-zinc-900 dark:text-white shadow-xs"
+                              : "bg-zinc-50/70 dark:bg-white/[0.03] border-zinc-200/80 dark:border-white/10 hover:border-zinc-300 dark:hover:border-white/20"
+                              }`}
+                          >
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-1.5">
+                                <span
+                                  className={`w-4 h-4 rounded-md flex items-center justify-center text-[10px] font-bold shrink-0 ${esElegido
+                                    ? "bg-emerald-500 text-zinc-950"
+                                    : "border border-zinc-300 dark:border-white/20 text-transparent"
+                                    }`}
+                                >
+                                  ✓
+                                </span>
+                                <span
+                                  className={`font-bold truncate ${esElegido ? "text-emerald-700 dark:text-emerald-400" : "text-zinc-800 dark:text-zinc-200"
+                                    }`}
+                                >
+                                  {prov.name}
+                                </span>
+                              </div>
+                              <p className="text-[10px] text-zinc-500 dark:text-zinc-400 pl-5.5 truncate">
+                                {prov.phone ? `WhatsApp: ${prov.phone}` : prov.categories || "Proveedor"}
+                              </p>
+                            </div>
+                            {esElegido && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  void handleAbrirCatalogoProveedor(prov);
+                                }}
+                                className="h-7 px-2 rounded-lg bg-blue-600/15 hover:bg-blue-600 text-blue-600 dark:text-blue-300 hover:text-white text-[10px] font-bold transition-colors shrink-0 cursor-pointer"
+                                title={`Abrir catálogo para ${prov.name}`}
+                              >
+                                Ver link ↗
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
 
-                    {aud.transcriptionText && (
-                      <div className="p-2.5 rounded-xl bg-white dark:bg-black/40 border border-zinc-200 dark:border-white/5 text-xs text-zinc-700 dark:text-zinc-300 italic">
-                        <span className="font-semibold not-italic block text-[10px] text-zinc-400 uppercase tracking-wider mb-0.5">
-                          Transcripción:
+                  {/* PASO 2: ESCOGER QUÉ SE VA A PEDIR */}
+                  <div className="space-y-2.5">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <label className="font-bold text-zinc-800 dark:text-zinc-200 text-xs flex items-center gap-1.5">
+                        <span className="w-5 h-5 rounded-full bg-blue-600/15 text-blue-600 dark:text-blue-400 font-bold inline-flex items-center justify-center text-[11px]">
+                          2
                         </span>
-                        &quot;{aud.transcriptionText}&quot;
+                        <span>
+                          Qué se va a pedir ({itemsElegidosParaPedir.length} seleccionado{itemsElegidosParaPedir.length === 1 ? "" : "s"})
+                        </span>
+                      </label>
+                      <div className="flex items-center gap-2">
+                        {itemsMarcadosProveedor.length > 0 &&
+                          itemsMarcadosProveedor.length < servicios.length + repuestos.length && (
+                            <button
+                              type="button"
+                              onClick={() => setMostrarTodosEnModalProv((v) => !v)}
+                              className="text-[11px] font-medium text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white cursor-pointer"
+                            >
+                              {mostrarTodosEnModalProv
+                                ? `Ver solo marcados (${itemsMarcadosProveedor.length})`
+                                : `Ver todos (${servicios.length + repuestos.length})`}
+                            </button>
+                          )}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const todosMarcados =
+                              listaItemsEnModalProveedor.length > 0 &&
+                              listaItemsEnModalProveedor.every((it) => itemsSeleccionadosModalProv[it.id]);
+                            const nuevoMapa = { ...itemsSeleccionadosModalProv };
+                            listaItemsEnModalProveedor.forEach((it) => {
+                              nuevoMapa[it.id] = !todosMarcados;
+                            });
+                            setItemsSeleccionadosModalProv(nuevoMapa);
+                          }}
+                          className="text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
+                        >
+                          {listaItemsEnModalProveedor.length > 0 &&
+                            listaItemsEnModalProveedor.every((it) => itemsSeleccionadosModalProv[it.id])
+                            ? "Desmarcar todos"
+                            : "Marcar todos"}
+                        </button>
+                      </div>
+                    </div>
+
+                    {listaItemsEnModalProveedor.length === 0 ? (
+                      <div className="p-6 rounded-2xl border border-dashed border-zinc-200 dark:border-white/10 text-center text-zinc-400 text-xs">
+                        No hay ítems en la propuesta aún. Agrega un servicio o producto y márcalo con el icono de camión 🚚.
+                      </div>
+                    ) : (
+                      <div className="space-y-1.5 max-h-56 overflow-y-auto pr-0.5">
+                        {listaItemsEnModalProveedor.map((it: any, idx: number) => {
+                          const seleccionado = Boolean(itemsSeleccionadosModalProv[it.id]);
+                          const yaEnviado = Boolean(
+                            it.enviadoProveedor ||
+                            it.purchaseStatus === "PEDIDO_WHATSAPP" ||
+                            it.purchaseStatus === "COTIZADO"
+                          );
+                          const cantFotos = Array.isArray(it.fotos) ? it.fotos.length : 0;
+                          const cantAudios = Array.isArray(it.audios) ? it.audios.length : 0;
+
+                          return (
+                            <div
+                              key={it.id || idx}
+                              onClick={() =>
+                                setItemsSeleccionadosModalProv((prev) => ({
+                                  ...prev,
+                                  [it.id]: !seleccionado,
+                                }))
+                              }
+                              className={`p-3 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${seleccionado
+                                ? "bg-blue-500/[0.08] dark:bg-blue-500/[0.12] border-blue-500/40 text-zinc-900 dark:text-white"
+                                : "bg-zinc-50/60 dark:bg-white/[0.02] border-zinc-200/70 dark:border-white/10 opacity-75 hover:opacity-100"
+                                }`}
+                            >
+                              <div className="flex items-center gap-3 min-w-0">
+                                <span
+                                  className={`w-5 h-5 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 transition-colors ${seleccionado
+                                    ? "bg-blue-600 text-white"
+                                    : "border border-zinc-300 dark:border-white/20 text-transparent"
+                                    }`}
+                                >
+                                  ✓
+                                </span>
+                                <div className="min-w-0">
+                                  <div className="flex flex-wrap items-center gap-1.5">
+                                    <span className="px-1.5 py-0.5 rounded bg-zinc-200/80 dark:bg-white/10 text-[10px] font-bold text-zinc-700 dark:text-zinc-300">
+                                      #{idx + 1} • Cant: {it.qty || 1}
+                                    </span>
+                                    <span className="font-bold text-xs text-zinc-900 dark:text-white truncate">
+                                      {formatoPrimeraMayuscula(it.name)}
+                                    </span>
+                                    {yaEnviado && (
+                                      <span className="px-1.5 py-0.5 rounded bg-blue-600/15 text-blue-600 dark:text-blue-400 text-[10px] font-bold">
+                                        🚚 Marcado
+                                      </span>
+                                    )}
+                                  </div>
+                                  {(it.findingText || cantFotos > 0 || cantAudios > 0) && (
+                                    <div className="flex flex-wrap items-center gap-2 mt-1 text-[10px] text-zinc-500 dark:text-zinc-400">
+                                      {it.findingText && (
+                                        <span className="truncate max-w-xs">
+                                          Detalle: {it.findingText}
+                                        </span>
+                                      )}
+                                      {cantFotos > 0 && (
+                                        <span className="text-sky-600 dark:text-sky-400 font-semibold">
+                                          📷 {cantFotos} Foto{cantFotos > 1 ? "s" : ""}
+                                        </span>
+                                      )}
+                                      {cantAudios > 0 && (
+                                        <span className="text-amber-600 dark:text-amber-400 font-semibold">
+                                          🎙️ {cantAudios} Audio{cantAudios > 1 ? "s" : ""}
+                                        </span>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-2 shrink-0">
+                                {it.supplierAvailability === "SI_HAY" && (
+                                  <span className="px-2 py-0.5 rounded-lg bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-[10px] font-bold">
+                                    ✓ Sí (${Number(it.cost || it.price || 0).toFixed(2)})
+                                  </span>
+                                )}
+                                {it.supplierAvailability === "NO_HAY" && (
+                                  <span className="px-2 py-0.5 rounded-lg bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30 text-[10px] font-bold">
+                                    ✕ No hay
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
                     )}
                   </div>
-                ))}
+
+                </div>
+
+                {/* Footer minimalista con apertura directa del Catálogo del Proveedor + WhatsApp */}
+                <div className="pt-3 border-t border-zinc-200 dark:border-white/10 flex flex-wrap items-center justify-between gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const link = construirLinkCatalogoProveedor();
+                      await marcarItemsElegidosComoEnviados();
+                      copiarAlPortapapeles(link, "Link del catálogo del proveedor copiado.");
+                    }}
+                    className="h-9 px-3.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/[0.06] dark:hover:bg-white/[0.12] text-zinc-700 dark:text-zinc-200 text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-colors"
+                  >
+                    <span>🔗</span>
+                    <span>Copiar Link Catálogo</span>
+                  </button>
+
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => void enviarWhatsAppProveedor()}
+                      className="h-9 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-md shadow-emerald-600/20 active:scale-95 flex items-center gap-1.5 cursor-pointer transition-all"
+                    >
+                      <span>📲</span>
+                      <span>Enviar por WhatsApp</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void handleAbrirCatalogoProveedor()}
+                      className="h-9 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold shadow-md shadow-blue-600/25 active:scale-95 flex items-center gap-1.5 cursor-pointer transition-all"
+                    >
+                      <span>🚚</span>
+                      <span>Abrir Catálogo del Proveedor ↗</span>
+                    </button>
+                  </div>
+
+                </div>
               </div>
-            ) : (
-              <div className="relative p-8 text-center rounded-2xl bg-zinc-50 dark:bg-white/[0.02] border border-dashed border-zinc-200 dark:border-white/10 space-y-1">
+            </div>
+          )}
+
+          {/* MODAL AGREGAR NUEVO REPUESTO */}
+          {modalNuevoRepuesto && (
+            <div
+              onClick={() => setModalNuevoRepuesto(false)}
+              className="fixed inset-0 z-50 bg-black/60 dark:bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in"
+            >
+              <div
+                onClick={(e) => e.stopPropagation()}
+                className="bg-white dark:bg-[#111113] border border-zinc-200 dark:border-white/10 rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl animate-scale-up text-zinc-900 dark:text-white"
+              >
+                <div className="flex items-center justify-between">
+                  <h3 className="text-base font-bold text-zinc-900 dark:text-white">
+                    {hallazgoActivoParaAsignar ? `+ Elegir / Pedir Producto (Evidencia #${hallazgoActivoParaAsignar.numeroEvidencia})` : "+ Agregar Repuesto"}
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setHallazgoActivoParaAsignar(null);
+                      setModalNuevoRepuesto(false);
+                    }}
+                    className="w-8 h-8 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white flex items-center justify-center cursor-pointer transition-colors"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                {hallazgoActivoParaAsignar && (
+                  <div className="p-3 rounded-2xl bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/25 text-xs text-blue-900 dark:text-blue-200 space-y-1">
+                    <div className="flex items-center gap-2 font-semibold">
+                      <span className="w-5 h-5 rounded-full bg-rose-600 text-white text-[11px] flex items-center justify-center shrink-0">
+                        #{hallazgoActivoParaAsignar.numeroEvidencia}
+                      </span>
+                      <span>Solución para Evidencia #{hallazgoActivoParaAsignar.numeroEvidencia} ({hallazgoActivoParaAsignar.vistaLabel})</span>
+                    </div>
+                    {hallazgoActivoParaAsignar.descripcion && (
+                      <p className="text-[11px] text-zinc-600 dark:text-zinc-400 italic">
+                        Hallazgo reportado: &quot;{hallazgoActivoParaAsignar.descripcion}&quot;
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                <div className="space-y-3">
+                  {/* Buscador en Catálogo Real de Neon */}
+                  <div className="relative">
+                    <label className="text-xs text-zinc-600 dark:text-zinc-400 font-semibold flex items-center justify-between mb-1">
+                      <span>🔍 Buscar en Catálogo Neon (PostgreSQL)</span>
+                      {buscandoProductoNeon && <span className="text-[10px] text-blue-500 animate-pulse font-normal">Buscando...</span>}
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Escribe para buscar (ej: Amalie, Aceite, Filtro, Pastillas)..."
+                      value={busquedaProductoNeon}
+                      onChange={(e) => setBusquedaProductoNeon(e.target.value)}
+                      className="w-full h-10 px-3 rounded-xl bg-blue-50/50 dark:bg-blue-950/20 border border-blue-300 dark:border-blue-700/60 text-xs text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                    />
+                    {productosEncontradosNeon.length > 0 && (
+                      <div className="mt-1.5 max-h-48 overflow-y-auto rounded-xl border border-blue-200 dark:border-blue-800 bg-white dark:bg-[#16161a] shadow-xl divide-y divide-zinc-100 dark:divide-white/5 z-30 relative">
+                        {productosEncontradosNeon.map((p) => (
+                          <button
+                            key={p.id}
+                            type="button"
+                            onClick={() => {
+                              setNuevoNombre(p.name);
+                              setNuevoCodigo(p.sku || p.id);
+                              setNuevoPvp(String(p.salePrice ?? "0"));
+                              setNuevoCosto(String(p.costPrice ?? "0"));
+                              setNuevoCategoria(p.category || "TALLER");
+                              setNuevoProductId(p.id);
+                              setNuevoEnStock((p.stockCurrent ?? 0) > 0);
+                              setBusquedaProductoNeon("");
+                              setProductosEncontradosNeon([]);
+                            }}
+                            className="w-full p-2.5 text-left hover:bg-blue-50 dark:hover:bg-blue-950/50 flex items-center justify-between transition-colors text-xs cursor-pointer"
+                          >
+                            <div className="min-w-0 pr-2">
+                              <p className="font-semibold text-zinc-900 dark:text-white truncate">{p.name}</p>
+                              <p className="text-[10px] text-zinc-500 dark:text-zinc-400 font-mono">
+                                SKU: {p.sku || "S/C"} · Stock: {p.stockCurrent ?? 0} {p.unit || "und"}
+                              </p>
+                            </div>
+                            <div className="text-right shrink-0">
+                              <p className="font-bold text-emerald-600 dark:text-emerald-400 font-mono">
+                                ${Number(p.salePrice ?? 0).toFixed(2)}
+                              </p>
+                              <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300 font-medium">
+                                Neon DB
+                              </span>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="text-xs text-zinc-600 dark:text-zinc-400 font-medium block mb-1">
+                      Descripción del Repuesto o Producto
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Ej: Pastillas de Freno Bosch Delanteras"
+                      value={nuevoNombre}
+                      onChange={(e) => setNuevoNombre(e.target.value)}
+                      className="w-full h-10 px-3 rounded-xl bg-zinc-50 dark:bg-black border border-zinc-300 dark:border-white/10 text-xs text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs text-zinc-600 dark:text-zinc-400 font-medium block mb-1">
+                      Código / Referencia / SKU
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Ej: AM-75697-36"
+                      value={nuevoCodigo}
+                      onChange={(e) => setNuevoCodigo(e.target.value)}
+                      className="w-full h-10 px-3 rounded-xl bg-zinc-50 dark:bg-black border border-zinc-300 dark:border-white/10 text-xs text-zinc-900 dark:text-white font-mono placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2">
+                    <div>
+                      <label className="text-xs text-zinc-600 dark:text-zinc-400 font-medium block mb-1">Cantidad</label>
+                      <input
+                        type="number"
+                        min="1"
+                        value={nuevaCantidad}
+                        onChange={(e) => setNuevaCantidad(e.target.value)}
+                        className="w-full h-10 px-3 rounded-xl bg-zinc-50 dark:bg-black border border-zinc-300 dark:border-white/10 text-xs text-zinc-900 dark:text-white font-mono focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs text-zinc-600 dark:text-zinc-400 font-medium block mb-1">Costo ($)</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={nuevoCosto}
+                        onChange={(e) => setNuevoCosto(e.target.value)}
+                        className="w-full h-10 px-3 rounded-xl bg-zinc-50 dark:bg-black border border-zinc-300 dark:border-white/10 text-xs text-zinc-900 dark:text-white font-mono focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs text-zinc-600 dark:text-zinc-400 font-medium block mb-1">PVP Venta ($)</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={nuevoPvp}
+                        onChange={(e) => setNuevoPvp(e.target.value)}
+                        className="w-full h-10 px-3 rounded-xl bg-emerald-50/50 dark:bg-black border border-emerald-500/40 text-xs text-emerald-700 dark:text-emerald-400 font-mono font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-xs text-zinc-600 dark:text-zinc-400 font-medium block mb-1">Área / Origen</label>
+                      <select
+                        value={nuevoOrigen}
+                        onChange={(e) => setNuevoOrigen(e.target.value as EspecialidadTipo)}
+                        className="w-full h-10 px-2 rounded-xl bg-zinc-50 dark:bg-black border border-zinc-300 dark:border-white/10 text-xs text-zinc-900 dark:text-white cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                      >
+                        <option value="TALLER">🔧 Taller</option>
+                        <option value="LUBRICENTRO">🛢️ Lubricentro</option>
+                        <option value="CARWASH">🚿 Car Wash</option>
+                        <option value="TECNICENTRO">⚙️ Tecnicentro</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="text-xs text-zinc-600 dark:text-zinc-400 font-medium block mb-1">Disponibilidad</label>
+                      <button
+                        type="button"
+                        onClick={() => setNuevoEnStock(!nuevoEnStock)}
+                        className={`w-full h-10 rounded-xl text-xs font-semibold border transition-colors cursor-pointer flex items-center justify-center gap-1.5 ${nuevoEnStock
+                          ? "bg-emerald-50 dark:bg-emerald-500/15 border-emerald-300 dark:border-emerald-500/40 text-emerald-800 dark:text-emerald-400"
+                          : "bg-amber-50 dark:bg-amber-500/15 border-amber-300 dark:border-amber-500/40 text-amber-800 dark:text-amber-400"
+                          }`}
+                      >
+                        <span>{nuevoEnStock ? "📦 Sí hay en Bodega" : "🚚 Pedir a Proveedor"}</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {!nuevoEnStock && (
+                    <div>
+                      <label className="text-xs text-zinc-600 dark:text-zinc-400 font-medium block mb-1">Proveedor Externo</label>
+                      <input
+                        type="text"
+                        value={nuevoProveedor}
+                        onChange={(e) => setNuevoProveedor(e.target.value)}
+                        placeholder="Nombre del proveedor externo"
+                        className="w-full h-10 px-3 rounded-xl bg-zinc-50 dark:bg-black border border-zinc-300 dark:border-white/10 text-xs text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                      />
+                    </div>
+                  )}
+
+                  <div className="pt-2">
+                    <button
+                      type="button"
+                      onClick={handleAgregarRepuesto}
+                      className="w-full h-10 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all shadow-md shadow-blue-600/30 cursor-pointer active:scale-95"
+                    >
+                      Agregar Repuesto
+                    </button>
+                  </div>
+
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* MODAL AGREGAR NUEVO SERVICIO / MANO DE OBRA */}
+          {modalNuevoServicio && (
+            <div
+              onClick={() => setModalNuevoServicio(false)}
+              className="fixed inset-0 z-50 bg-black/60 dark:bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in"
+            >
+              <div
+                onClick={(e) => e.stopPropagation()}
+                className="bg-white dark:bg-[#111113] border border-zinc-200 dark:border-white/10 rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl animate-scale-up text-zinc-900 dark:text-white"
+              >
+                <div className="flex items-center justify-between">
+                  <h3 className="text-base font-bold text-zinc-900 dark:text-white">
+                    {hallazgoActivoParaAsignar ? `+ Elegir Servicio (Evidencia #${hallazgoActivoParaAsignar.numeroEvidencia})` : "+ Agregar Servicio"}
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setHallazgoActivoParaAsignar(null);
+                      setModalNuevoServicio(false);
+                    }}
+                    className="w-8 h-8 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white flex items-center justify-center cursor-pointer transition-colors"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                {hallazgoActivoParaAsignar && (
+                  <div className="p-3 rounded-2xl bg-purple-50 dark:bg-purple-500/10 border border-purple-200 dark:border-purple-500/25 text-xs text-purple-900 dark:text-purple-200 space-y-1">
+                    <div className="flex items-center gap-2 font-semibold">
+                      <span className="w-5 h-5 rounded-full bg-rose-600 text-white text-[11px] flex items-center justify-center shrink-0">
+                        #{hallazgoActivoParaAsignar.numeroEvidencia}
+                      </span>
+                      <span>Solución para Evidencia #{hallazgoActivoParaAsignar.numeroEvidencia} ({hallazgoActivoParaAsignar.vistaLabel})</span>
+                    </div>
+                    {hallazgoActivoParaAsignar.descripcion && (
+                      <p className="text-[11px] text-zinc-600 dark:text-zinc-400 italic">
+                        Hallazgo reportado: &quot;{hallazgoActivoParaAsignar.descripcion}&quot;
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                <div className="space-y-3">
+                  {/* Buscador en Catálogo de Servicios Neon */}
+                  <div className="relative">
+                    <label className="text-xs text-zinc-600 dark:text-zinc-400 font-semibold flex items-center justify-between mb-1">
+                      <span>🔍 Buscar en Catálogo de Servicios Neon</span>
+                      {buscandoServicioNeon && <span className="text-[10px] text-purple-500 animate-pulse font-normal">Buscando...</span>}
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Escribe para buscar (ej: Cambio de aceite, Frenos, Mantenimiento)..."
+                      value={busquedaServicioNeon}
+                      onChange={(e) => setBusquedaServicioNeon(e.target.value)}
+                      className="w-full h-10 px-3 rounded-xl bg-purple-50/50 dark:bg-purple-950/20 border border-purple-300 dark:border-purple-700/60 text-xs text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-purple-500/30"
+                    />
+                    {serviciosEncontradosNeon.length > 0 && (
+                      <div className="mt-1.5 max-h-48 overflow-y-auto rounded-xl border border-purple-200 dark:border-purple-800 bg-white dark:bg-[#16161a] shadow-xl divide-y divide-zinc-100 dark:divide-white/5 z-30 relative">
+                        {serviciosEncontradosNeon.map((s) => (
+                          <button
+                            key={s.id}
+                            type="button"
+                            onClick={() => {
+                              setNuevoServicioNombre(s.name);
+                              setNuevoServicioCodigo(s.code || s.id);
+                              setNuevoServicioPrecio(String(s.standardPrice ?? s.price ?? "0"));
+                              setNuevoServicioOrigen((s.category as EspecialidadTipo) || "TALLER");
+                              setBusquedaServicioNeon("");
+                              setServiciosEncontradosNeon([]);
+                            }}
+                            className="w-full p-2.5 text-left hover:bg-purple-50 dark:hover:bg-purple-950/50 flex items-center justify-between transition-colors text-xs cursor-pointer"
+                          >
+                            <div className="min-w-0 pr-2">
+                              <p className="font-semibold text-zinc-900 dark:text-white truncate">{s.name}</p>
+                              <p className="text-[10px] text-zinc-500 dark:text-zinc-400 font-mono">
+                                Código: {s.code || "S/C"} · Categoría: {s.category || "General"}
+                              </p>
+                            </div>
+                            <div className="text-right shrink-0">
+                              <p className="font-bold text-purple-600 dark:text-purple-400 font-mono">
+                                ${Number(s.standardPrice ?? s.price ?? 0).toFixed(2)}
+                              </p>
+                              <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900/60 text-purple-700 dark:text-purple-300 font-medium">
+                                Neon DB
+                              </span>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="text-xs text-zinc-600 dark:text-zinc-400 font-medium block mb-1">
+                      Descripción del Servicio Técnico
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Ej: Cambio de Pastillas y Rectificación de Discos"
+                      value={nuevoServicioNombre}
+                      onChange={(e) => setNuevoServicioNombre(e.target.value)}
+                      className="w-full h-10 px-3 rounded-xl bg-zinc-50 dark:bg-black border border-zinc-300 dark:border-white/10 text-xs text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs text-zinc-600 dark:text-zinc-400 font-medium block mb-1">
+                      Código de Servicio
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Ej: SRV-7170"
+                      value={nuevoServicioCodigo}
+                      onChange={(e) => setNuevoServicioCodigo(e.target.value)}
+                      className="w-full h-10 px-3 rounded-xl bg-zinc-50 dark:bg-black border border-zinc-300 dark:border-white/10 text-xs text-zinc-900 dark:text-white font-mono placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-xs text-zinc-600 dark:text-zinc-400 font-medium block mb-1">Precio Servicio ($)</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={nuevoServicioPrecio}
+                        onChange={(e) => setNuevoServicioPrecio(e.target.value)}
+                        className="w-full h-10 px-3 rounded-xl bg-purple-50/50 dark:bg-black border border-purple-500/40 text-xs text-purple-700 dark:text-purple-400 font-mono font-bold focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-xs text-zinc-600 dark:text-zinc-400 font-medium block mb-1">Área / Origen</label>
+                      <select
+                        value={nuevoServicioOrigen}
+                        onChange={(e) => setNuevoServicioOrigen(e.target.value as EspecialidadTipo)}
+                        className="w-full h-10 px-2 rounded-xl bg-zinc-50 dark:bg-black border border-zinc-300 dark:border-white/10 text-xs text-zinc-900 dark:text-white cursor-pointer focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
+                      >
+                        <option value="TALLER">🔧 Taller</option>
+                        <option value="LUBRICENTRO">🛢️ Lubricentro</option>
+                        <option value="CARWASH">🚿 Car Wash</option>
+                        <option value="TECNICENTRO">⚙️ Tecnicentro</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="pt-2">
+                    <button
+                      type="button"
+                      onClick={handleAgregarServicio}
+                      className="w-full h-10 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold transition-all shadow-md shadow-purple-600/30 cursor-pointer active:scale-95"
+                    >
+                      Agregar Servicio
+                    </button>
+                  </div>
+
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* MODAL FLOTANTE MINIMALISTA DE FOTOS POR EVIDENCIA */}
+          {flotanteFotos && (
+            <div
+              onClick={() => setFlotanteFotos(null)}
+              className="fixed inset-0 z-50 bg-black/70 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 animate-fade-in"
+            >
+              <div
+                onClick={(e) => e.stopPropagation()}
+                className="bg-white dark:bg-[#121216] border border-zinc-200 dark:border-white/10 rounded-3xl max-w-lg w-full p-4 sm:p-5 space-y-3.5 shadow-2xl animate-scale-up text-zinc-900 dark:text-white"
+              >
+                {/* Header del modal */}
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-9 h-9 rounded-2xl bg-blue-500/10 border border-blue-500/25 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <rect width="18" height="18" x="3" y="3" rx="4" />
+                        <circle cx="8.5" cy="8.5" r="1.5" />
+                        <path d="m21 15-5-5L5 21" />
+                      </svg>
+                    </div>
+                    <div className="min-w-0">
+                      <h3 className="text-sm font-bold text-zinc-900 dark:text-white truncate">
+                        Fotos de Evidencia #{flotanteFotos.pin.numeroEvidencia || flotanteFotos.pin.pinNumber || 1}
+                      </h3>
+                      <p className="text-[11px] text-zinc-500 dark:text-zinc-400 truncate">
+                        {flotanteFotos.pin.tipo ? formatoPrimeraMayuscula(flotanteFotos.pin.tipo) : (flotanteFotos.pin.descripcion || "Inspección")}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    {flotanteFotos.fotos.length > 0 && (
+                      <span className="text-[11px] font-mono font-medium px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-white/10 text-zinc-600 dark:text-zinc-300">
+                        {flotanteFotos.fotoActivaIdx + 1} / {flotanteFotos.fotos.length}
+                      </span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setFlotanteFotos(null)}
+                      className="w-8 h-8 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white flex items-center justify-center cursor-pointer transition-colors"
+                    >
+                      ✕
+                    </button>
+                  </div>
+
+                </div>
+
+                {/* Imagen principal */}
+                {flotanteFotos.fotos.length > 0 ? (
+                  <div className="space-y-3">
+                    <div className="relative aspect-video sm:aspect-4/3 w-full rounded-2xl overflow-hidden bg-black/90 border border-zinc-200/80 dark:border-white/10 flex items-center justify-center group">
+                      <img
+                        src={flotanteFotos.fotos[flotanteFotos.fotoActivaIdx]}
+                        alt={`Evidencia ${flotanteFotos.fotoActivaIdx + 1}`}
+                        className="w-full h-full object-contain cursor-zoom-in"
+                        onClick={() => setFotoZoom(flotanteFotos.fotos[flotanteFotos.fotoActivaIdx])}
+                      />
+
+                      {/* Flechas de navegación si hay más de 1 foto */}
+                      {flotanteFotos.fotos.length > 1 && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setFlotanteFotos((prev) => prev ? {
+                                ...prev,
+                                fotoActivaIdx: (prev.fotoActivaIdx - 1 + prev.fotos.length) % prev.fotos.length,
+                              } : null);
+                            }}
+                            className="absolute left-2 w-8 h-8 rounded-full bg-black/60 hover:bg-black text-white flex items-center justify-center text-sm backdrop-blur-xs cursor-pointer opacity-80 group-hover:opacity-100 transition-opacity"
+                          >
+                            ‹
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setFlotanteFotos((prev) => prev ? {
+                                ...prev,
+                                fotoActivaIdx: (prev.fotoActivaIdx + 1) % prev.fotos.length,
+                              } : null);
+                            }}
+                            className="absolute right-2 w-8 h-8 rounded-full bg-black/60 hover:bg-black text-white flex items-center justify-center text-sm backdrop-blur-xs cursor-pointer opacity-80 group-hover:opacity-100 transition-opacity"
+                          >
+                            ›
+                          </button>
+                        </>
+                      )}
+                    </div>
+
+                    {/* Tiras de miniaturas */}
+                    {flotanteFotos.fotos.length > 1 && (
+                      <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+                        {flotanteFotos.fotos.map((f, idx) => (
+                          <button
+                            key={`thumb-${idx}`}
+                            type="button"
+                            onClick={() => setFlotanteFotos((prev) => prev ? { ...prev, fotoActivaIdx: idx } : null)}
+                            className={`w-14 h-12 rounded-xl overflow-hidden shrink-0 border-2 transition-all cursor-pointer ${flotanteFotos.fotoActivaIdx === idx
+                              ? "border-blue-500 scale-105 shadow-md shadow-blue-500/20"
+                              : "border-transparent opacity-60 hover:opacity-100"
+                              }`}
+                          >
+                            <img src={f} alt={`Miniatura ${idx + 1}`} className="w-full h-full object-cover" />
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="p-8 text-center rounded-2xl bg-zinc-50 dark:bg-white/[0.02] border border-dashed border-zinc-200 dark:border-white/10 space-y-1">
+                    <span className="text-2xl">📷</span>
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400 font-medium">
+                      No hay fotos adjuntas para esta evidencia aún.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* MODAL FLOTANTE MINIMALISTA DE AUDIO POR EVIDENCIA */}
+          {flotanteAudios && (
+            <div
+              onClick={() => setFlotanteAudios(null)}
+              className="fixed inset-0 z-50 bg-black/70 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 animate-fade-in"
+            >
+              <div
+                onClick={(e) => e.stopPropagation()}
+                className="bg-white dark:bg-[#121216] border border-zinc-200 dark:border-white/10 rounded-3xl max-w-md w-full p-4 shadow-2xl animate-scale-up text-zinc-900 dark:text-white"
+              >
+                {/* Lista de audios */}
+                {flotanteAudios.audios.length > 0 ? (
+                  <div className="space-y-3 max-h-[60vh] overflow-y-auto">
+                    {flotanteAudios.audios.map((aud, aIdx) => (
+                      <div
+                        key={aud.id || `aud-${aIdx}`}
+                        className="p-3.5 rounded-2xl bg-amber-500/5 border border-amber-500/20 space-y-2.5"
+                      >
+                        <div className="flex items-center justify-between text-xs gap-2">
+                          <span className="font-semibold text-amber-700 dark:text-amber-300 flex items-center gap-1.5">
+                            <span className="inline-block w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                            Audio #{aIdx + 1}
+                          </span>
+                          <div className="flex items-center gap-2">
+                            {aud.durationSeconds && (
+                              <span className="text-[11px] font-mono text-zinc-500 dark:text-zinc-400">
+                                {Math.floor(aud.durationSeconds / 60)}:{(aud.durationSeconds % 60).toString().padStart(2, "0")}
+                              </span>
+                            )}
+                            {aIdx === 0 && (
+                              <button
+                                type="button"
+                                onClick={() => setFlotanteAudios(null)}
+                                className="w-7 h-7 rounded-lg bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white flex items-center justify-center cursor-pointer transition-colors shrink-0"
+                                title="Cerrar"
+                              >
+                                ✕
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
+                        <MiniAudioPlayer src={aud.url} initialDuration={aud.durationSeconds} />
+
+                        {aud.transcriptionText && (
+                          <div className="p-2.5 rounded-xl bg-white dark:bg-black/40 border border-zinc-200 dark:border-white/5 text-xs text-zinc-700 dark:text-zinc-300 italic">
+                            <span className="font-semibold not-italic block text-[10px] text-zinc-400 uppercase tracking-wider mb-0.5">
+                              Transcripción:
+                            </span>
+                            &quot;{aud.transcriptionText}&quot;
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="relative p-8 text-center rounded-2xl bg-zinc-50 dark:bg-white/[0.02] border border-dashed border-zinc-200 dark:border-white/10 space-y-1">
+                    <button
+                      type="button"
+                      onClick={() => setFlotanteAudios(null)}
+                      className="absolute top-2.5 right-2.5 w-7 h-7 rounded-lg bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white flex items-center justify-center cursor-pointer transition-colors"
+                      title="Cerrar"
+                    >
+                      ✕
+                    </button>
+                    <span className="text-2xl">🎙️</span>
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400 font-medium">
+                      No se grabaron audios para esta evidencia.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* MODAL FLOTANTE DE DETALLES POR EVIDENCIA */}
+          {flotanteDetalles && (
+            <div
+              onClick={() => setFlotanteDetalles(null)}
+              className="fixed inset-0 z-50 bg-black/70 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 animate-fade-in"
+            >
+              <div
+                onClick={(e) => e.stopPropagation()}
+                className="bg-white dark:bg-[#121216] border border-zinc-200 dark:border-white/10 rounded-3xl max-w-lg w-full p-5 space-y-4 shadow-2xl animate-scale-up text-zinc-900 dark:text-white max-h-[85vh] flex flex-col"
+              >
+                {/* Header del modal */}
+                <div className="flex items-center justify-between gap-3 shrink-0">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-9 h-9 rounded-2xl bg-zinc-100 dark:bg-white/10 border border-zinc-200 dark:border-white/15 text-zinc-700 dark:text-zinc-200 flex items-center justify-center shrink-0">
+                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                    </div>
+                    <div className="min-w-0">
+                      <h3 className="text-sm font-bold text-zinc-900 dark:text-white truncate">
+                        Detalles de Evidencia #{flotanteDetalles.pin.numeroEvidencia || flotanteDetalles.pin.pinNumber || 1}
+                      </h3>
+                      <p className="text-[11px] text-zinc-500 dark:text-zinc-400 truncate">
+                        {flotanteDetalles.sec?.nombre || "Taller"} · {formatoPrimeraMayuscula(flotanteDetalles.pin.vistaLabel || flotanteDetalles.pin.vista || "General")}
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setFlotanteDetalles(null)}
+                    className="w-8 h-8 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white flex items-center justify-center cursor-pointer transition-colors shrink-0"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                {/* Contenido scrolleable */}
+                <div className="space-y-4 overflow-y-auto flex-1 pr-1 text-xs">
+                  <div className="p-3.5 rounded-2xl bg-zinc-50 dark:bg-white/[0.02] border border-zinc-200/80 dark:border-white/10 space-y-3">
+                    <div>
+                      <label className="text-[11px] text-zinc-500 dark:text-zinc-400 font-medium block mb-1">
+                        Tipo de Hallazgo / Daño:
+                      </label>
+                      <input
+                        type="text"
+                        value={flotanteDetalles.pin.tipo || ""}
+                        onChange={(e) => {
+                          const nuevoTipo = e.target.value;
+                          setFlotanteDetalles((prev) => prev ? { ...prev, pin: { ...prev.pin, tipo: nuevoTipo } } : null);
+                        }}
+                        placeholder="Ej: Raspón, Abolladura, Fuga de aceite..."
+                        className="w-full h-9 px-3 rounded-xl bg-white dark:bg-black border border-zinc-300 dark:border-white/10 font-semibold text-rose-600 dark:text-rose-400 focus:outline-none focus:ring-2 focus:ring-rose-500/20"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="text-[11px] text-zinc-500 dark:text-zinc-400 font-medium block mb-1">
+                          Vista del Vehículo:
+                        </label>
+                        <select
+                          value={flotanteDetalles.pin.vista || "frontal"}
+                          onChange={(e) => {
+                            const nuevaVista = e.target.value;
+                            const vistaLabel = nuevaVista.charAt(0).toUpperCase() + nuevaVista.slice(1).replace(/_/g, " ");
+                            setFlotanteDetalles((prev) => prev ? { ...prev, pin: { ...prev.pin, vista: nuevaVista, vistaLabel } } : null);
+                          }}
+                          className="w-full h-9 px-2 rounded-xl bg-white dark:bg-black border border-zinc-300 dark:border-white/10 text-zinc-800 dark:text-zinc-200 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                        >
+                          <option value="frontal">Frontal</option>
+                          <option value="posterior">Posterior</option>
+                          <option value="lateral_izq">Lateral Izquierdo</option>
+                          <option value="lateral_der">Lateral Derecho</option>
+                          <option value="techo">Techo / Superior</option>
+                          <option value="interior">Interior / Habitáculo</option>
+                          <option value="motor">Compartimiento Motor</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-[11px] text-zinc-500 dark:text-zinc-400 font-medium block mb-1">
+                          Sistema Automotriz:
+                        </label>
+                        <div className="h-9 px-3 rounded-xl bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/5 flex items-center font-medium text-zinc-800 dark:text-zinc-200 truncate">
+                          {flotanteDetalles.sec?.nombre || "Taller"}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Observación / Descripción */}
+                  <div className="space-y-1.5">
+                    <label className="font-semibold text-zinc-800 dark:text-zinc-200 block text-xs">
+                      Observaciones Técnicas (Editable):
+                    </label>
+                    <textarea
+                      rows={3}
+                      value={flotanteDetalles.pin.descripcion || ""}
+                      onChange={(e) => {
+                        const desc = e.target.value;
+                        setFlotanteDetalles((prev) => prev ? { ...prev, pin: { ...prev.pin, descripcion: desc } } : null);
+                      }}
+                      placeholder="Escribe notas técnicas de este hallazgo..."
+                      className="w-full p-3 rounded-2xl bg-zinc-50 dark:bg-black/40 border border-zinc-300 dark:border-white/10 text-zinc-800 dark:text-zinc-200 text-xs leading-relaxed focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                    />
+                  </div>
+
+                  {/* Solicitudes de Repuesto y Servicio */}
+                  <div className="space-y-2">
+                    <label className="font-semibold text-zinc-800 dark:text-zinc-200 block text-xs">
+                      Requerimientos del Hallazgo:
+                    </label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <label
+                        className={`p-2.5 rounded-xl border flex items-center gap-2 cursor-pointer transition-all ${flotanteDetalles.pin.solicitaRepuesto
+                          ? "bg-amber-500/10 border-amber-500/40 text-amber-700 dark:text-amber-300 font-semibold"
+                          : "bg-zinc-50 dark:bg-white/[0.02] border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-400"
+                          }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={Boolean(flotanteDetalles.pin.solicitaRepuesto)}
+                          onChange={(e) => {
+                            handleToggleSolicitaPropuesta(flotanteDetalles.pin.id, "solicitaRepuesto", e.target.checked);
+                            setFlotanteDetalles((prev) =>
+                              prev ? { ...prev, pin: { ...prev.pin, solicitaRepuesto: e.target.checked } } : null
+                            );
+                          }}
+                          className="w-4 h-4 rounded text-amber-600 accent-amber-500 cursor-pointer"
+                        />
+                        <span>📦 Requiere Producto</span>
+                      </label>
+
+                      <label
+                        className={`p-2.5 rounded-xl border flex items-center gap-2 cursor-pointer transition-all ${flotanteDetalles.pin.solicitaServicio
+                          ? "bg-purple-500/10 border-purple-500/40 text-purple-700 dark:text-purple-300 font-semibold"
+                          : "bg-zinc-50 dark:bg-white/[0.02] border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-400"
+                          }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={Boolean(flotanteDetalles.pin.solicitaServicio)}
+                          onChange={(e) => {
+                            handleToggleSolicitaPropuesta(flotanteDetalles.pin.id, "solicitaServicio", e.target.checked);
+                            setFlotanteDetalles((prev) =>
+                              prev ? { ...prev, pin: { ...prev.pin, solicitaServicio: e.target.checked } } : null
+                            );
+                          }}
+                          className="w-4 h-4 rounded text-purple-600 accent-purple-500 cursor-pointer"
+                        />
+                        <span>🔧 Requiere Servicio</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Botones de acción rápida */}
+                  <div className="pt-2 flex items-center justify-between gap-2 flex-wrap border-t border-zinc-200 dark:border-white/10">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const p = flotanteDetalles.pin;
+                        setFlotanteDetalles(null);
+                        handleAbrirFlotanteFotos(p);
+                      }}
+                      className="h-8 px-3 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800/60 text-blue-700 dark:text-blue-300 hover:bg-blue-100 flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <span>📷 Ver Fotos</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const p = flotanteDetalles.pin;
+                        setFlotanteDetalles(null);
+                        handleAbrirFlotanteAudios(p);
+                      }}
+                      className="h-8 px-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 text-amber-700 dark:text-amber-300 hover:bg-amber-100 flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <span>🎙️ Audios</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const p = flotanteDetalles.pin;
+                        setFlotanteDetalles(null);
+                        abrirModalProveedor("INDIVIDUAL", undefined, p);
+                      }}
+                      className="h-8 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white flex items-center gap-1.5 cursor-pointer shadow-xs ml-auto"
+                    >
+                      <span>🚚 Pedir a Proveedor</span>
+                    </button>
+                  </div>
+
+                  {/* Acciones CRUD Neon del Hallazgo */}
+                  <div className="pt-2 flex items-center justify-between gap-2 border-t border-zinc-200 dark:border-white/10">
+                    <button
+                      type="button"
+                      onClick={() => handleEliminarHallazgo(flotanteDetalles.pin.id)}
+                      className="h-9 px-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 text-rose-600 dark:text-rose-300 border border-rose-200 dark:border-rose-900/50 flex items-center gap-1.5 cursor-pointer font-medium"
+                    >
+                      <span>🗑️ Eliminar Hallazgo</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleActualizarDatosHallazgo(flotanteDetalles.pin.id, flotanteDetalles.pin.tipo, flotanteDetalles.pin.descripcion || "", flotanteDetalles.pin.vista)}
+                      className="h-9 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white flex items-center gap-1.5 cursor-pointer font-bold shadow-md shadow-blue-600/30 ml-auto"
+                    >
+                      <span>💾 Guardar Cambios en Neon</span>
+                    </button>
+                  </div>
+
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* MODAL FLOTANTE DE MANUAL TÉCNICO Y ASIGNACIÓN MANUAL */}
+          {flotanteManual && (
+            <div
+              onClick={() => setFlotanteManual(null)}
+              className="fixed inset-0 z-50 bg-black/70 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 animate-fade-in"
+            >
+              <div
+                onClick={(e) => e.stopPropagation()}
+                className="bg-white dark:bg-[#121216] border border-zinc-200 dark:border-white/10 rounded-3xl max-w-lg w-full p-5 space-y-4 shadow-2xl animate-scale-up text-zinc-900 dark:text-white max-h-[85vh] flex flex-col"
+              >
+                {/* Header del modal */}
+                <div className="flex items-center justify-between gap-3 shrink-0">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-9 h-9 rounded-2xl bg-purple-500/10 border border-purple-500/25 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0">
+                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                      </svg>
+                    </div>
+                    <div className="min-w-0">
+                      <h3 className="text-sm font-bold text-zinc-900 dark:text-white truncate">
+                        Manual Técnico y Asignación Manual
+                      </h3>
+                      <p className="text-[11px] text-zinc-500 dark:text-zinc-400 truncate">
+                        Evidencia #{flotanteManual.pin.numeroEvidencia || flotanteManual.pin.pinNumber || 1} · {formatoPrimeraMayuscula(flotanteManual.pin.tipo)}
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setFlotanteManual(null)}
+                    className="w-8 h-8 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white flex items-center justify-center cursor-pointer transition-colors shrink-0"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                {/* Contenido scrolleable */}
+                <div className="space-y-4 overflow-y-auto flex-1 pr-1 text-xs">
+                  {/* Tarjeta 1: Ficha técnica y búsqueda de manual */}
+                  <div className="p-4 rounded-2xl bg-purple-50/70 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-800/50 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold text-purple-900 dark:text-purple-200 flex items-center gap-1.5">
+                        <span>📖</span>
+                        <span>Guía de Taller / Ficha Técnica</span>
+                      </span>
+                      <span className="text-[11px] font-mono text-purple-700 dark:text-purple-300">
+                        {orden.plate || "S/P"}
+                      </span>
+                    </div>
+                    <div className="space-y-1 text-zinc-700 dark:text-zinc-300">
+                      <p><strong>Vehículo:</strong> {orden.vehicle || "Vehículo no especificado"}</p>
+                      <p><strong>Componente:</strong> {formatoPrimeraMayuscula(flotanteManual.pin.tipo)} ({flotanteManual.sec?.nombre || "Taller"})</p>
+                      {flotanteManual.pin.descripcion && (
+                        <p className="italic text-zinc-500 dark:text-zinc-400">
+                          &quot;{flotanteManual.pin.descripcion}&quot;
+                        </p>
+                      )}
+                    </div>
+
+                    <a
+                      href={`https://www.google.com/search?q=${encodeURIComponent(
+                        `manual de taller servicio ${orden.vehicle || ""} ${flotanteManual.pin.tipo || ""} procedimiento torque pdf`
+                      )}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="w-full h-9 rounded-xl bg-white dark:bg-zinc-900 border border-purple-300 dark:border-purple-700/60 hover:bg-purple-50 dark:hover:bg-purple-900/30 text-purple-700 dark:text-purple-300 font-medium flex items-center justify-center gap-2 transition-all shadow-2xs cursor-pointer text-xs"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                      </svg>
+                      <span>Abrir Manual Técnico / Diagrama en Línea (PDF)</span>
+                    </a>
+                  </div>
+
+                  {/* Tarjeta 2: Ingreso Manual de Repuesto / Servicio */}
+                  <div className="p-4 rounded-2xl bg-zinc-50 dark:bg-white/[0.02] border border-zinc-200 dark:border-white/10 space-y-3">
+                    <span className="font-semibold text-zinc-800 dark:text-zinc-200 block">
+                      Ingreso Manual para esta Evidencia:
+                    </span>
+                    <p className="text-zinc-500 dark:text-zinc-400">
+                      Asigna directamente productos, insumos o mano de obra manual vinculados al #{flotanteManual.pin.numeroEvidencia || 1}:
+                    </p>
+                    <div className="grid grid-cols-2 gap-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const p = flotanteManual.pin;
+                          setFlotanteManual(null);
+                          setHallazgoActivoParaAsignar(p);
+                          setNuevoNombre(p.descripcion ? `Repuesto para ${p.tipo}: ${p.descripcion}` : `Repuesto para ${p.tipo}`);
+                          setNuevoEnStock(true);
+                          setNuevoProveedor("Bodega Taller");
+                          setNuevoOrigen("TALLER");
+                          setModalNuevoRepuesto(true);
+                        }}
+                        className="h-9 px-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-medium flex items-center justify-center gap-1.5 cursor-pointer shadow-xs active:scale-95"
+                      >
+                        <span>+ Repuesto Manual</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const p = flotanteManual.pin;
+                          setFlotanteManual(null);
+                          setHallazgoActivoParaAsignar(p);
+                          setNuevoServicioNombre(p.descripcion ? `Servicio de ${p.tipo}: ${p.descripcion}` : `Servicio de ${p.tipo}`);
+                          setNuevoServicioOrigen("TALLER");
+                          setModalNuevoServicio(true);
+                        }}
+                        className="h-9 px-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-medium flex items-center justify-center gap-1.5 cursor-pointer shadow-xs active:scale-95"
+                      >
+                        <span>+ Servicio Manual</span>
+                      </button>
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ZOOM FOTO EVIDENCIA */}
+          {fotoZoom && (
+            <div
+              onClick={() => setFotoZoom(null)}
+              className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in"
+            >
+              <div className="relative max-w-4xl w-full max-h-[90vh] flex flex-col items-center justify-center">
                 <button
                   type="button"
-                  onClick={() => setFlotanteAudios(null)}
-                  className="absolute top-2.5 right-2.5 w-7 h-7 rounded-lg bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white flex items-center justify-center cursor-pointer transition-colors"
-                  title="Cerrar"
+                  onClick={() => setFotoZoom(null)}
+                  className="absolute top-2 right-2 w-10 h-10 rounded-full bg-black/70 hover:bg-black text-white border border-white/20 flex items-center justify-center text-lg z-10 cursor-pointer"
                 >
                   ✕
                 </button>
-                <span className="text-2xl">🎙️</span>
-                <p className="text-xs text-zinc-500 dark:text-zinc-400 font-medium">
-                  No se grabaron audios para esta evidencia.
-                </p>
+                <img src={fotoZoom} alt="Foto ampliada" className="max-h-[85vh] w-auto max-w-full rounded-2xl object-contain shadow-2xl border border-white/10" />
               </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* MODAL FLOTANTE DE DETALLES POR EVIDENCIA */}
-      {flotanteDetalles && (
-        <div
-          onClick={() => setFlotanteDetalles(null)}
-          className="fixed inset-0 z-50 bg-black/70 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 animate-fade-in"
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="bg-white dark:bg-[#121216] border border-zinc-200 dark:border-white/10 rounded-3xl max-w-lg w-full p-5 space-y-4 shadow-2xl animate-scale-up text-zinc-900 dark:text-white max-h-[85vh] flex flex-col"
-          >
-            {/* Header del modal */}
-            <div className="flex items-center justify-between gap-3 shrink-0">
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-9 h-9 rounded-2xl bg-zinc-100 dark:bg-white/10 border border-zinc-200 dark:border-white/15 text-zinc-700 dark:text-zinc-200 flex items-center justify-center shrink-0">
-                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                </div>
-                <div className="min-w-0">
-                  <h3 className="text-sm font-bold text-zinc-900 dark:text-white truncate">
-                    Detalles de Evidencia #{flotanteDetalles.pin.numeroEvidencia || flotanteDetalles.pin.pinNumber || 1}
-                  </h3>
-                  <p className="text-[11px] text-zinc-500 dark:text-zinc-400 truncate">
-                    {flotanteDetalles.sec?.nombre || "Taller"} · {formatoPrimeraMayuscula(flotanteDetalles.pin.vistaLabel || flotanteDetalles.pin.vista || "General")}
-                  </p>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setFlotanteDetalles(null)}
-                className="w-8 h-8 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white flex items-center justify-center cursor-pointer transition-colors shrink-0"
-              >
-                ✕
-              </button>
             </div>
+          )}
 
-            {/* Contenido scrolleable */}
-            <div className="space-y-4 overflow-y-auto flex-1 pr-1 text-xs">
-              <div className="p-3.5 rounded-2xl bg-zinc-50 dark:bg-white/[0.02] border border-zinc-200/80 dark:border-white/10 space-y-3">
-                <div>
-                  <label className="text-[11px] text-zinc-500 dark:text-zinc-400 font-medium block mb-1">
-                    Tipo de Hallazgo / Daño:
-                  </label>
-                  <input
-                    type="text"
-                    value={flotanteDetalles.pin.tipo || ""}
-                    onChange={(e) => {
-                      const nuevoTipo = e.target.value;
-                      setFlotanteDetalles((prev) => prev ? { ...prev, pin: { ...prev.pin, tipo: nuevoTipo } } : null);
-                    }}
-                    placeholder="Ej: Raspón, Abolladura, Fuga de aceite..."
-                    className="w-full h-9 px-3 rounded-xl bg-white dark:bg-black border border-zinc-300 dark:border-white/10 font-semibold text-rose-600 dark:text-rose-400 focus:outline-none focus:ring-2 focus:ring-rose-500/20"
-                  />
+          {/* MODAL REGISTRAR NUEVO HALLAZGO EN NEON */}
+          {modalNuevoHallazgo.abierto && (
+            <div
+              onClick={() => setModalNuevoHallazgo({ abierto: false })}
+              className="fixed inset-0 z-50 bg-black/70 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in"
+            >
+              <div
+                onClick={(e) => e.stopPropagation()}
+                className="bg-white dark:bg-[#121216] border border-zinc-200 dark:border-white/10 rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl animate-scale-up text-zinc-900 dark:text-white"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-9 h-9 rounded-2xl bg-rose-500/10 border border-rose-500/25 text-rose-600 dark:text-rose-400 flex items-center justify-center font-bold text-sm">
+                      +
+                    </div>
+                    <div>
+                      <h3 className="text-base font-bold text-zinc-900 dark:text-white">
+                        Registrar Nuevo Hallazgo
+                      </h3>
+                      <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
+                        {modalNuevoHallazgo.seccionNombre || "Taller"} · Persistencia directa a Neon
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setModalNuevoHallazgo({ abierto: false })}
+                    className="w-8 h-8 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white flex items-center justify-center cursor-pointer transition-colors"
+                  >
+                    ✕
+                  </button>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-3 text-xs">
                   <div>
-                    <label className="text-[11px] text-zinc-500 dark:text-zinc-400 font-medium block mb-1">
-                      Vista del Vehículo:
+                    <label className="text-xs text-zinc-600 dark:text-zinc-400 font-medium block mb-1">
+                      Tipo de Hallazgo / Daño
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Ej: Fuga de aceite, Pastillas desgastadas, Golpe guardafangos..."
+                      value={nuevoHallazgoTipo}
+                      onChange={(e) => setNuevoHallazgoTipo(e.target.value)}
+                      className="w-full h-10 px-3 rounded-xl bg-zinc-50 dark:bg-black border border-zinc-300 dark:border-white/10 text-xs text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs text-zinc-600 dark:text-zinc-400 font-medium block mb-1">
+                      Vista del Vehículo
                     </label>
                     <select
-                      value={flotanteDetalles.pin.vista || "frontal"}
-                      onChange={(e) => {
-                        const nuevaVista = e.target.value;
-                        const vistaLabel = nuevaVista.charAt(0).toUpperCase() + nuevaVista.slice(1).replace(/_/g, " ");
-                        setFlotanteDetalles((prev) => prev ? { ...prev, pin: { ...prev.pin, vista: nuevaVista, vistaLabel } } : null);
-                      }}
-                      className="w-full h-9 px-2 rounded-xl bg-white dark:bg-black border border-zinc-300 dark:border-white/10 text-zinc-800 dark:text-zinc-200 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                      value={nuevoHallazgoVista}
+                      onChange={(e) => setNuevoHallazgoVista(e.target.value)}
+                      className="w-full h-10 px-3 rounded-xl bg-zinc-50 dark:bg-black border border-zinc-300 dark:border-white/10 text-xs text-zinc-900 dark:text-white cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                     >
                       <option value="frontal">Frontal</option>
                       <option value="posterior">Posterior</option>
@@ -6711,961 +7105,762 @@ export default function PaginaDetallePropuesta() {
                       <option value="motor">Compartimiento Motor</option>
                     </select>
                   </div>
+
                   <div>
-                    <label className="text-[11px] text-zinc-500 dark:text-zinc-400 font-medium block mb-1">
-                      Sistema Automotriz:
+                    <label className="text-xs text-zinc-600 dark:text-zinc-400 font-medium block mb-1">
+                      Descripción Técnica y Detalle del Hallazgo
                     </label>
-                    <div className="h-9 px-3 rounded-xl bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/5 flex items-center font-medium text-zinc-800 dark:text-zinc-200 truncate">
-                      {flotanteDetalles.sec?.nombre || "Taller"}
+                    <textarea
+                      rows={3}
+                      placeholder="Describe la condición encontrada, gravedad o diagnóstico preliminar..."
+                      value={nuevoHallazgoDescripcion}
+                      onChange={(e) => setNuevoHallazgoDescripcion(e.target.value)}
+                      className="w-full p-3 rounded-xl bg-zinc-50 dark:bg-black border border-zinc-300 dark:border-white/10 text-xs text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 pt-1">
+                    <label
+                      className={`p-2.5 rounded-xl border flex items-center gap-2 cursor-pointer transition-all ${nuevoHallazgoSolicitaRepuesto
+                        ? "bg-amber-500/10 border-amber-500/40 text-amber-700 dark:text-amber-300 font-semibold"
+                        : "bg-zinc-50 dark:bg-white/[0.02] border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-400"
+                        }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={nuevoHallazgoSolicitaRepuesto}
+                        onChange={(e) => setNuevoHallazgoSolicitaRepuesto(e.target.checked)}
+                        className="w-4 h-4 rounded text-amber-600 accent-amber-500 cursor-pointer"
+                      />
+                      <span>📦 Requiere Producto</span>
+                    </label>
+
+                    <label
+                      className={`p-2.5 rounded-xl border flex items-center gap-2 cursor-pointer transition-all ${nuevoHallazgoSolicitaServicio
+                        ? "bg-purple-500/10 border-purple-500/40 text-purple-700 dark:text-purple-300 font-semibold"
+                        : "bg-zinc-50 dark:bg-white/[0.02] border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-400"
+                        }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={nuevoHallazgoSolicitaServicio}
+                        onChange={(e) => setNuevoHallazgoSolicitaServicio(e.target.checked)}
+                        className="w-4 h-4 rounded text-purple-600 accent-purple-500 cursor-pointer"
+                      />
+                      <span>🔧 Requiere Servicio</span>
+                    </label>
+                  </div>
+
+                  <div className="pt-2">
+                    <button
+                      type="button"
+                      onClick={handleCrearNuevoHallazgo}
+                      className="w-full h-10 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition-all shadow-md shadow-rose-600/30 cursor-pointer active:scale-95 flex items-center justify-center gap-2"
+                    >
+                      <span>💾 Registrar Hallazgo en Neon PostgreSQL</span>
+                    </button>
+                  </div>
+
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ================================================================= */}
+          {/* MODAL: TIEMPO, ENVÍO Y ESTADO PROVEEDOR (MINIMALISTA 1 PALABRA)   */}
+          {/* ================================================================= */}
+          {itemTiempoEnvioModal && (() => {
+            const esServicioModal = itemTiempoEnvioModal.isService;
+            const currentItem: any = esServicioModal
+              ? servicios.find((s) => s.id === itemTiempoEnvioModal.id)
+              : repuestos.find((r) => r.id === itemTiempoEnvioModal.id);
+            if (!currentItem) return null;
+
+            return (
+              <div
+                className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 animate-in fade-in duration-150"
+                onClick={() => setItemTiempoEnvioModal(null)}
+              >
+                <div
+                  className="w-full max-w-md rounded-2xl border border-slate-800 bg-[#0d1322] p-5 shadow-2xl space-y-4"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {/* Header */}
+                  <div className="flex items-center justify-between border-b border-slate-800/80 pb-3">
+                    <div className="min-w-0 pr-2">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-blue-400 block">
+                        {esServicioModal ? "🔧 Servicio" : "📦 Producto"}
+                      </span>
+                      <h4 className="text-sm font-black text-white truncate">
+                        {currentItem.name}
+                      </h4>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setItemTiempoEnvioModal(null)}
+                      className="w-8 h-8 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center text-xs font-bold cursor-pointer shrink-0"
+                    >
+                      ✕
+                    </button>
+                  </div>
+
+                  {/* 1. Stock & Disponibilidad Proveedor */}
+                  <div className="space-y-1.5">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                      📦 Stock
+                    </span>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleUpdateItemFields(currentItem.id, esServicioModal, {
+                            inStock: true,
+                            purchaseStatus: "STOCK_LOCAL",
+                            supplierName: "Bodega Taller",
+                          })
+                        }
+                        className={`h-9 rounded-xl text-xs font-bold border transition-all flex items-center justify-center gap-1.5 cursor-pointer ${currentItem.inStock
+                          ? "bg-emerald-500/20 border-emerald-500/50 text-emerald-300"
+                          : "bg-slate-900/60 border-slate-800 text-slate-400 hover:text-slate-200"
+                          }`}
+                      >
+                        <span>🏢</span>
+                        <span>Bodega</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleUpdateItemFields(currentItem.id, esServicioModal, {
+                            inStock: false,
+                            purchaseStatus: "POR_PEDIR",
+                            supplierName:
+                              currentItem.supplierName && currentItem.supplierName !== "Bodega Taller"
+                                ? currentItem.supplierName
+                                : "Proveedor General",
+                          })
+                        }
+                        className={`h-9 rounded-xl text-xs font-bold border transition-all flex items-center justify-center gap-1.5 cursor-pointer ${!currentItem.inStock
+                          ? "bg-amber-500/20 border-amber-500/50 text-amber-300"
+                          : "bg-slate-900/60 border-slate-800 text-slate-400 hover:text-slate-200"
+                          }`}
+                      >
+                        <span>🚚</span>
+                        <span>Pedir</span>
+                      </button>
+                    </div>
+
+                    {/* Respuesta de proveedor: Sí hay / No hay */}
+                    <div className="grid grid-cols-2 gap-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleUpdateItemFields(currentItem.id, esServicioModal, {
+                            supplierAvailability:
+                              currentItem.supplierAvailability === "SI_HAY" ? null : "SI_HAY",
+                          })
+                        }
+                        className={`h-8 rounded-xl text-[11px] font-bold border transition-all flex items-center justify-center gap-1.5 cursor-pointer ${currentItem.supplierAvailability === "SI_HAY"
+                          ? "bg-emerald-600 text-white border-emerald-500 shadow-sm"
+                          : "bg-slate-900/40 border-slate-800 text-slate-400 hover:text-emerald-300"
+                          }`}
+                      >
+                        <span>✓</span>
+                        <span>Sí hay</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleUpdateItemFields(currentItem.id, esServicioModal, {
+                            supplierAvailability:
+                              currentItem.supplierAvailability === "NO_HAY" ? null : "NO_HAY",
+                          })
+                        }
+                        className={`h-8 rounded-xl text-[11px] font-bold border transition-all flex items-center justify-center gap-1.5 cursor-pointer ${currentItem.supplierAvailability === "NO_HAY"
+                          ? "bg-rose-600 text-white border-rose-500 shadow-sm"
+                          : "bg-slate-900/40 border-slate-800 text-slate-400 hover:text-rose-300"
+                          }`}
+                      >
+                        <span>✕</span>
+                        <span>No hay</span>
+                      </button>
                     </div>
                   </div>
+
+                  {/* 2. Tiempo (Cuándo llega / ejecución) - Deslizable */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                        ⏱️ Tiempo
+                      </span>
+                      {currentItem.deliveryTime && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleUpdateItemFields(currentItem.id, esServicioModal, {
+                              deliveryTime: null,
+                            })
+                          }
+                          className="text-[10px] text-slate-500 hover:text-rose-400 cursor-pointer"
+                        >
+                          Limpiar
+                        </button>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1">
+                      {OPCIONES_TIEMPO_RAPIDO.map((t) => {
+                        const active = currentItem.deliveryTime === t.id;
+                        return (
+                          <button
+                            key={t.id}
+                            type="button"
+                            onClick={() =>
+                              handleUpdateItemFields(currentItem.id, esServicioModal, {
+                                deliveryTime: active ? null : t.id,
+                              })
+                            }
+                            className={`h-8 px-3 rounded-xl text-xs font-bold border shrink-0 transition-all cursor-pointer ${active
+                              ? "bg-blue-600 text-white border-blue-400 shadow-sm"
+                              : "bg-slate-900/60 border-slate-800 text-slate-300 hover:border-slate-700"
+                              }`}
+                          >
+                            {t.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* 3. Envío (Por dónde lo envía) - Deslizable */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                        🚚 Envío
+                      </span>
+                      {currentItem.shippingMethod && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleUpdateItemFields(currentItem.id, esServicioModal, {
+                              shippingMethod: null,
+                            })
+                          }
+                          className="text-[10px] text-slate-500 hover:text-rose-400 cursor-pointer"
+                        >
+                          Limpiar
+                        </button>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1">
+                      {OPCIONES_ENVIO_RAPIDO.map((env) => {
+                        const active = currentItem.shippingMethod === env.id;
+                        return (
+                          <button
+                            key={env.id}
+                            type="button"
+                            onClick={() =>
+                              handleUpdateItemFields(currentItem.id, esServicioModal, {
+                                shippingMethod: active ? null : env.id,
+                              })
+                            }
+                            className={`h-8 px-3 rounded-xl text-xs font-bold border shrink-0 transition-all flex items-center gap-1.5 cursor-pointer ${active
+                              ? "bg-purple-600 text-white border-purple-400 shadow-sm"
+                              : "bg-slate-900/60 border-slate-800 text-slate-300 hover:border-slate-700"
+                              }`}
+                          >
+                            <span>{env.icon}</span>
+                            <span>{env.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* 4. Costo Proveedor y PVP */}
+                  <div className="grid grid-cols-2 gap-3 pt-1">
+                    <div>
+                      <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
+                        💵 Costo ($)
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={currentItem.costPrice || 0}
+                        onChange={(e) => {
+                          const val = Math.max(0, Number(e.target.value) || 0);
+                          handleUpdateItemFields(currentItem.id, esServicioModal, {
+                            costPrice: val,
+                            supplierPrice: val,
+                          });
+                        }}
+                        className="w-full h-9 rounded-xl bg-slate-900 border border-slate-800 px-3 text-xs font-bold text-slate-200 focus:outline-none focus:border-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 block mb-1">
+                        🏷️ PVP ($)
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={currentItem.price || 0}
+                        onChange={(e) => {
+                          const val = Math.max(0, Number(e.target.value) || 0);
+                          handleUpdateItemFields(currentItem.id, esServicioModal, {
+                            price: val,
+                          });
+                        }}
+                        className="w-full h-9 rounded-xl bg-emerald-950/30 border border-emerald-500/40 px-3 text-xs font-bold text-emerald-300 focus:outline-none focus:border-emerald-400"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Footer Actions */}
+                  <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-800/80">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const pinAsociado = currentItem.findingId
+                          ? hallazgos.find(
+                            (h: any) =>
+                              h.id === currentItem.findingId ||
+                              h.originalId === currentItem.findingId
+                          )
+                          : undefined;
+                        setItemTiempoEnvioModal(null);
+                        abrirModalProveedor("INDIVIDUAL", currentItem, pinAsociado);
+                      }}
+                      className="h-9 px-3.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/40 text-emerald-300 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
+                    >
+                      <span>💬</span>
+                      <span>Pedir</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setItemTiempoEnvioModal(null);
+                      }}
+                      className="h-9 px-5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all cursor-pointer"
+                    >
+                      ✓ Listo
+                    </button>
+                  </div>
+
                 </div>
               </div>
+            );
+          })()}
 
-              {/* Observación / Descripción */}
-              <div className="space-y-1.5">
-                <label className="font-semibold text-zinc-800 dark:text-zinc-200 block text-xs">
-                  Observaciones Técnicas (Editable):
-                </label>
-                <textarea
-                  rows={3}
-                  value={flotanteDetalles.pin.descripcion || ""}
-                  onChange={(e) => {
-                    const desc = e.target.value;
-                    setFlotanteDetalles((prev) => prev ? { ...prev, pin: { ...prev.pin, descripcion: desc } } : null);
+          {/* ================================================================= */}
+          {/* MODAL: CATÁLOGO INTERACTIVO TALLER (CARRITO CON STOCK Y PRECIO)   */}
+          {/* ================================================================= */}
+          {modalCatalogoTallerAbierto.abierto && (
+            <div
+              className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-3 animate-in fade-in duration-150"
+              onClick={() =>
+                setModalCatalogoTallerAbierto({ abierto: false, origen: "TALLER" })
+              }
+            >
+              <div
+                onClick={(e) => e.stopPropagation()}
+                className="relative w-full max-w-2xl max-h-[85dvh] overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden rounded-2xl bg-white dark:bg-[#111113] border border-zinc-200 dark:border-white/10 p-4 shadow-2xl space-y-3"
+              >
+                <div className="flex items-center justify-between pb-1">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                    <span className="text-sm font-bold text-zinc-900 dark:text-white">
+                      Todos los Productos y Servicios
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setModalCatalogoTallerAbierto({ abierto: false, origen: "TALLER" })
+                    }
+                    className="w-7 h-7 rounded-lg flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-xs font-bold transition-colors cursor-pointer"
+                    title="Cerrar"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                <CatalogoProductosServiciosTaller
+                  itemsSeleccionados={itemsPropuestaParaTrabajos}
+                  onAgregarItem={(item, delta = 1) => {
+                    if (delta > 0) {
+                      void handleAgregarDesdeCatalogoTaller([{ ...item, qty: delta }]);
+                    }
                   }}
-                  placeholder="Escribe notas técnicas de este hallazgo..."
-                  className="w-full p-3 rounded-2xl bg-zinc-50 dark:bg-black/40 border border-zinc-300 dark:border-white/10 text-zinc-800 dark:text-zinc-200 text-xs leading-relaxed focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                  onEliminarItem={(itemId) => {
+                    const esSrv = servicios.some((s) => s.id === itemId || s.code === itemId);
+                    if (esSrv) {
+                      const target = servicios.find((s) => s.id === itemId || s.code === itemId);
+                      if (target) void handleDeleteService(target.id);
+                    } else {
+                      const target = repuestos.find((r) => r.id === itemId || r.code === itemId);
+                      if (target) void handleDeleteItem(target.id);
+                    }
+                  }}
+                  serviciosCatalogo={catalogoServiciosState}
+                  productosCatalogo={catalogoProductosState}
+                  titulo="Catálogo"
+                  siempreAbierto={true}
+                  mostrarChipsSeleccionados={false}
+                  ocultarCabeceraYCategoria={true}
+                  limitarDosFilasInicial={true}
                 />
               </div>
+            </div>
+          )}
 
-              {/* Solicitudes de Repuesto y Servicio */}
-              <div className="space-y-2">
-                <label className="font-semibold text-zinc-800 dark:text-zinc-200 block text-xs">
-                  Requerimientos del Hallazgo:
-                </label>
-                <div className="grid grid-cols-2 gap-2">
-                  <label
-                    className={`p-2.5 rounded-xl border flex items-center gap-2 cursor-pointer transition-all ${flotanteDetalles.pin.solicitaRepuesto
-                      ? "bg-amber-500/10 border-amber-500/40 text-amber-700 dark:text-amber-300 font-semibold"
-                      : "bg-zinc-50 dark:bg-white/[0.02] border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-400"
-                      }`}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={Boolean(flotanteDetalles.pin.solicitaRepuesto)}
-                      onChange={(e) => {
-                        handleToggleSolicitaPropuesta(flotanteDetalles.pin.id, "solicitaRepuesto", e.target.checked);
-                        setFlotanteDetalles((prev) =>
-                          prev ? { ...prev, pin: { ...prev.pin, solicitaRepuesto: e.target.checked } } : null
-                        );
-                      }}
-                      className="w-4 h-4 rounded text-amber-600 accent-amber-500 cursor-pointer"
-                    />
-                    <span>📦 Requiere Producto</span>
-                  </label>
+          {/* ================================================================= */}
+          {/* MODAL: SERVICIOS RÁPIDOS 1-CLIC POR ESPECIALIDAD                  */}
+          {/* ================================================================= */}
+          {modalAccesosRapidosAbierto.abierto && (() => {
+            const modKeyRaw = String(modalAccesosRapidosAbierto.origen || "TALLER").toLowerCase();
+            const modKey =
+              modKeyRaw.includes("lubri")
+                ? "lubricentro"
+                : modKeyRaw.includes("car") || modKeyRaw.includes("lav")
+                  ? "carwash"
+                  : modKeyRaw.includes("tecni")
+                    ? "tecnicentro"
+                    : "taller";
+            const modLabel =
+              modKey === "lubricentro"
+                ? "Lubricentro"
+                : modKey === "carwash"
+                  ? "Car Wash"
+                  : modKey === "tecnicentro"
+                    ? "Tecnicentro"
+                    : "Taller";
+            const listaBase = (SERVICIOS_RAPIDOS_POR_MODULO[modKey] || SERVICIOS_RAPIDOS_POR_MODULO.taller).map(
+              (nombre) => {
+                const matchCatalogo = (
+                  SERVICIOS_RAPIDOS_POR_ESPECIALIDAD[modalAccesosRapidosAbierto.origen] ||
+                  SERVICIOS_RAPIDOS_POR_ESPECIALIDAD.TALLER
+                ).find((x) => x.nombre.toLowerCase() === nombre.toLowerCase());
+                return { nombre, precio: matchCatalogo?.precio ?? 0 };
+              }
+            );
+            const listaFiltrada = listaBase.filter((s) =>
+              !busquedaAccesoRapido.trim()
+                ? true
+                : s.nombre.toLowerCase().includes(busquedaAccesoRapido.trim().toLowerCase())
+            );
 
-                  <label
-                    className={`p-2.5 rounded-xl border flex items-center gap-2 cursor-pointer transition-all ${flotanteDetalles.pin.solicitaServicio
-                      ? "bg-purple-500/10 border-purple-500/40 text-purple-700 dark:text-purple-300 font-semibold"
-                      : "bg-zinc-50 dark:bg-white/[0.02] border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-400"
-                      }`}
-                  >
+            return (
+              <div
+                className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-3 animate-fade-in"
+                onClick={() =>
+                  setModalAccesosRapidosAbierto({ abierto: false, origen: "TALLER" })
+                }
+              >
+                <div
+                  onClick={(e) => e.stopPropagation()}
+                  className="relative w-full max-w-lg rounded-2xl bg-white dark:bg-[#111113] border border-zinc-200 dark:border-white/10 p-4 shadow-2xl space-y-3"
+                >
+                  <div className="flex items-center justify-between border-b border-zinc-200 dark:border-white/10 pb-2.5">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="w-2 h-2 rounded-full bg-violet-500 shrink-0" />
+                      <span className="text-sm font-bold text-zinc-900 dark:text-white truncate">
+                        Accesos rápidos ({modLabel})
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setModalAccesosRapidosAbierto({ abierto: false, origen: "TALLER" })
+                      }
+                      className="w-7 h-7 rounded-lg flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-xs font-bold transition-colors cursor-pointer shrink-0"
+                      title="Cerrar"
+                    >
+                      ✕
+                    </button>
+                  </div>
+
+                  <div className="flex items-center gap-2">
                     <input
-                      type="checkbox"
-                      checked={Boolean(flotanteDetalles.pin.solicitaServicio)}
-                      onChange={(e) => {
-                        handleToggleSolicitaPropuesta(flotanteDetalles.pin.id, "solicitaServicio", e.target.checked);
-                        setFlotanteDetalles((prev) =>
-                          prev ? { ...prev, pin: { ...prev.pin, solicitaServicio: e.target.checked } } : null
-                        );
+                      type="text"
+                      value={busquedaAccesoRapido}
+                      onChange={(e) => setBusquedaAccesoRapido(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && busquedaAccesoRapido.trim()) {
+                          e.preventDefault();
+                          const limpio = busquedaAccesoRapido.trim();
+                          const exacto = listaFiltrada.find(
+                            (s) => s.nombre.toLowerCase() === limpio.toLowerCase()
+                          );
+                          handleAgregarAccesoRapido(
+                            exacto ? exacto.nombre : limpio,
+                            exacto ? exacto.precio : 0,
+                            modalAccesosRapidosAbierto.origen
+                          );
+                          setBusquedaAccesoRapido("");
+                          setModalAccesosRapidosAbierto({ abierto: false, origen: "TALLER" });
+                        }
                       }}
-                      className="w-4 h-4 rounded text-purple-600 accent-purple-500 cursor-pointer"
+                      placeholder="Buscar o añadir..."
+                      autoFocus
+                      className="flex-1 min-w-0 rounded-xl bg-zinc-50 dark:bg-white/[0.04] border border-zinc-200 dark:border-white/10 px-3 py-2 text-base sm:text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-violet-500"
                     />
-                    <span>🔧 Requiere Servicio</span>
-                  </label>
+                    <button
+                      type="button"
+                      onClick={() => setModoManualRapidoPropuesta((prev) => !prev)}
+                      className={`px-3 py-2 rounded-xl border text-xs font-semibold flex items-center gap-1.5 shrink-0 cursor-pointer transition-all active:scale-95 ${modoManualRapidoPropuesta
+                          ? "bg-amber-500/20 border-amber-500/50 text-amber-700 dark:text-amber-300"
+                          : "bg-zinc-100 dark:bg-white/[0.05] border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200/70 dark:hover:bg-white/10"
+                        }`}
+                      title="Marcar para añadir servicios manuales"
+                    >
+                      <span
+                        className={`w-3.5 h-3.5 rounded flex items-center justify-center text-[10px] border ${modoManualRapidoPropuesta
+                            ? "bg-amber-500 border-amber-500 text-black font-black"
+                            : "border-zinc-400 dark:border-zinc-500"
+                          }`}
+                      >
+                        {modoManualRapidoPropuesta ? "✓" : ""}
+                      </span>
+                      <span>Manual</span>
+                    </button>
+                  </div>
+
+                  {modoManualRapidoPropuesta && (
+                    <div className="p-2.5 rounded-xl border border-amber-500/35 bg-amber-500/10 space-y-2 animate-fade-in">
+                      <div className="flex items-stretch gap-2">
+                        <input
+                          type="text"
+                          value={textoManualRapidoPropuesta}
+                          onChange={(e) => setTextoManualRapidoPropuesta(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" && textoManualRapidoPropuesta.trim()) {
+                              e.preventDefault();
+                              const limpio = textoManualRapidoPropuesta.trim();
+                              handleAgregarAccesoRapido(limpio, 0, modalAccesosRapidosAbierto.origen);
+                              setTextoManualRapidoPropuesta("");
+                              setModalAccesosRapidosAbierto({ abierto: false, origen: "TALLER" });
+                            }
+                          }}
+                          placeholder="Escribe servicio manual..."
+                          className="flex-1 min-w-0 rounded-xl bg-white dark:bg-black/40 border border-amber-500/30 px-3 py-2 text-base sm:text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-amber-500"
+                        />
+                        <button
+                          type="button"
+                          disabled={!textoManualRapidoPropuesta.trim()}
+                          onClick={() => {
+                            const limpio = textoManualRapidoPropuesta.trim();
+                            if (!limpio) return;
+                            handleAgregarAccesoRapido(limpio, 0, modalAccesosRapidosAbierto.origen);
+                            setTextoManualRapidoPropuesta("");
+                            setModalAccesosRapidosAbierto({ abierto: false, origen: "TALLER" });
+                          }}
+                          className="px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 disabled:opacity-40 text-black text-xs font-bold shrink-0 cursor-pointer disabled:cursor-not-allowed active:scale-95 transition-all"
+                        >
+                          + Añadir
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-72 overflow-y-auto pr-0.5">
+                    {listaFiltrada.map((srv, idx) => {
+                      const meta = getServicioRapidoMeta(srv.nombre, modLabel);
+                      return (
+                        <div
+                          key={`${srv.nombre}-${idx}`}
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => {
+                            handleAgregarAccesoRapido(
+                              srv.nombre,
+                              srv.precio,
+                              modalAccesosRapidosAbierto.origen
+                            );
+                            setModalAccesosRapidosAbierto({ abierto: false, origen: "TALLER" });
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              handleAgregarAccesoRapido(
+                                srv.nombre,
+                                srv.precio,
+                                modalAccesosRapidosAbierto.origen
+                              );
+                              setModalAccesosRapidosAbierto({ abierto: false, origen: "TALLER" });
+                            }
+                          }}
+                          className="group p-2.5 rounded-xl border border-zinc-200/90 dark:border-white/10 bg-zinc-50/70 hover:bg-zinc-100/90 dark:bg-white/[0.03] dark:hover:bg-white/[0.08] text-left text-xs transition-all cursor-pointer flex items-center justify-between gap-2 active:scale-[0.98] shadow-2xs hover:shadow-xs hover:border-zinc-300 dark:hover:border-white/20"
+                        >
+                          <div className="flex items-center gap-2 min-w-0 flex-1">
+                            <div
+                              className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border ${meta.iconBoxClass}`}
+                            >
+                              {meta.icon}
+                            </div>
+                            <span className="font-medium text-zinc-900 dark:text-zinc-100 text-xs sm:text-[13px] leading-snug break-words group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors flex-1 min-w-0">
+                              {srv.nombre}
+                            </span>
+                          </div>
+                          <span className="w-6 h-6 rounded-lg bg-zinc-200/60 dark:bg-white/10 group-hover:bg-violet-600 group-hover:text-white dark:group-hover:bg-violet-500 text-violet-600 dark:text-violet-400 flex items-center justify-center text-xs font-bold shrink-0 transition-colors">
+                            +
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+
                 </div>
               </div>
-
-              {/* Botones de acción rápida */}
-              <div className="pt-2 flex items-center justify-between gap-2 flex-wrap border-t border-zinc-200 dark:border-white/10">
-                <button
-                  type="button"
-                  onClick={() => {
-                    const p = flotanteDetalles.pin;
-                    setFlotanteDetalles(null);
-                    handleAbrirFlotanteFotos(p);
-                  }}
-                  className="h-8 px-3 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800/60 text-blue-700 dark:text-blue-300 hover:bg-blue-100 flex items-center gap-1.5 cursor-pointer"
-                >
-                  <span>📷 Ver Fotos</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const p = flotanteDetalles.pin;
-                    setFlotanteDetalles(null);
-                    handleAbrirFlotanteAudios(p);
-                  }}
-                  className="h-8 px-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 text-amber-700 dark:text-amber-300 hover:bg-amber-100 flex items-center gap-1.5 cursor-pointer"
-                >
-                  <span>🎙️ Audios</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const p = flotanteDetalles.pin;
-                    setFlotanteDetalles(null);
-                    abrirModalProveedor("INDIVIDUAL", undefined, p);
-                  }}
-                  className="h-8 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white flex items-center gap-1.5 cursor-pointer shadow-xs ml-auto"
-                >
-                  <span>🚚 Pedir a Proveedor</span>
-                </button>
-              </div>
-
-              {/* Acciones CRUD Neon del Hallazgo */}
-              <div className="pt-2 flex items-center justify-between gap-2 border-t border-zinc-200 dark:border-white/10">
-                <button
-                  type="button"
-                  onClick={() => handleEliminarHallazgo(flotanteDetalles.pin.id)}
-                  className="h-9 px-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 text-rose-600 dark:text-rose-300 border border-rose-200 dark:border-rose-900/50 flex items-center gap-1.5 cursor-pointer font-medium"
-                >
-                  <span>🗑️ Eliminar Hallazgo</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleActualizarDatosHallazgo(flotanteDetalles.pin.id, flotanteDetalles.pin.tipo, flotanteDetalles.pin.descripcion || "", flotanteDetalles.pin.vista)}
-                  className="h-9 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white flex items-center gap-1.5 cursor-pointer font-bold shadow-md shadow-blue-600/30 ml-auto"
-                >
-                  <span>💾 Guardar Cambios en Neon</span>
-                </button>
-              </div>
-
-            </div>
-          </div>
-        </div>
+            );
+          })()}
+        </>
       )}
 
-      {/* MODAL FLOTANTE DE MANUAL TÉCNICO Y ASIGNACIÓN MANUAL */}
-      {flotanteManual && (
+      {/* MODAL: RESPUESTAS DEL PROVEEDOR RECIBIDAS POR EL ENLACE */}
+      {modalRespuestasProvOpen && (
         <div
-          onClick={() => setFlotanteManual(null)}
-          className="fixed inset-0 z-50 bg-black/70 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 animate-fade-in"
+          onClick={() => setModalRespuestasProvOpen(false)}
+          className="fixed inset-0 z-50 bg-black/75 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4 animate-fade-in"
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="bg-white dark:bg-[#121216] border border-zinc-200 dark:border-white/10 rounded-3xl max-w-lg w-full p-5 space-y-4 shadow-2xl animate-scale-up text-zinc-900 dark:text-white max-h-[85vh] flex flex-col"
+            className="w-full max-w-2xl bg-white dark:bg-[#111114] border border-zinc-200 dark:border-white/10 rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[85dvh]"
           >
-            {/* Header del modal */}
-            <div className="flex items-center justify-between gap-3 shrink-0">
+            <div className="px-4 py-3.5 border-b border-zinc-200 dark:border-white/10 flex items-center justify-between gap-3">
               <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-9 h-9 rounded-2xl bg-purple-500/10 border border-purple-500/25 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0">
-                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                <div className="w-8 h-8 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
                   </svg>
                 </div>
                 <div className="min-w-0">
                   <h3 className="text-sm font-bold text-zinc-900 dark:text-white truncate">
-                    Manual Técnico y Asignación Manual
-                  </h3>
-                  <p className="text-[11px] text-zinc-500 dark:text-zinc-400 truncate">
-                    Evidencia #{flotanteManual.pin.numeroEvidencia || flotanteManual.pin.pinNumber || 1} · {formatoPrimeraMayuscula(flotanteManual.pin.tipo)}
-                  </p>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setFlotanteManual(null)}
-                className="w-8 h-8 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white flex items-center justify-center cursor-pointer transition-colors shrink-0"
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* Contenido scrolleable */}
-            <div className="space-y-4 overflow-y-auto flex-1 pr-1 text-xs">
-              {/* Tarjeta 1: Ficha técnica y búsqueda de manual */}
-              <div className="p-4 rounded-2xl bg-purple-50/70 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-800/50 space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="font-semibold text-purple-900 dark:text-purple-200 flex items-center gap-1.5">
-                    <span>📖</span>
-                    <span>Guía de Taller / Ficha Técnica</span>
-                  </span>
-                  <span className="text-[11px] font-mono text-purple-700 dark:text-purple-300">
-                    {orden.plate || "S/P"}
-                  </span>
-                </div>
-                <div className="space-y-1 text-zinc-700 dark:text-zinc-300">
-                  <p><strong>Vehículo:</strong> {orden.vehicle || "Vehículo no especificado"}</p>
-                  <p><strong>Componente:</strong> {formatoPrimeraMayuscula(flotanteManual.pin.tipo)} ({flotanteManual.sec?.nombre || "Taller"})</p>
-                  {flotanteManual.pin.descripcion && (
-                    <p className="italic text-zinc-500 dark:text-zinc-400">
-                      &quot;{flotanteManual.pin.descripcion}&quot;
-                    </p>
-                  )}
-                </div>
-
-                <a
-                  href={`https://www.google.com/search?q=${encodeURIComponent(
-                    `manual de taller servicio ${orden.vehicle || ""} ${flotanteManual.pin.tipo || ""} procedimiento torque pdf`
-                  )}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="w-full h-9 rounded-xl bg-white dark:bg-zinc-900 border border-purple-300 dark:border-purple-700/60 hover:bg-purple-50 dark:hover:bg-purple-900/30 text-purple-700 dark:text-purple-300 font-medium flex items-center justify-center gap-2 transition-all shadow-2xs cursor-pointer text-xs"
-                >
-                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                  </svg>
-                  <span>Abrir Manual Técnico / Diagrama en Línea (PDF)</span>
-                </a>
-              </div>
-
-              {/* Tarjeta 2: Ingreso Manual de Repuesto / Servicio */}
-              <div className="p-4 rounded-2xl bg-zinc-50 dark:bg-white/[0.02] border border-zinc-200 dark:border-white/10 space-y-3">
-                <span className="font-semibold text-zinc-800 dark:text-zinc-200 block">
-                  Ingreso Manual para esta Evidencia:
-                </span>
-                <p className="text-zinc-500 dark:text-zinc-400">
-                  Asigna directamente productos, insumos o mano de obra manual vinculados al #{flotanteManual.pin.numeroEvidencia || 1}:
-                </p>
-                <div className="grid grid-cols-2 gap-2 pt-1">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const p = flotanteManual.pin;
-                      setFlotanteManual(null);
-                      setHallazgoActivoParaAsignar(p);
-                      setNuevoNombre(p.descripcion ? `Repuesto para ${p.tipo}: ${p.descripcion}` : `Repuesto para ${p.tipo}`);
-                      setNuevoEnStock(true);
-                      setNuevoProveedor("Bodega Taller");
-                      setNuevoOrigen("TALLER");
-                      setModalNuevoRepuesto(true);
-                    }}
-                    className="h-9 px-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-medium flex items-center justify-center gap-1.5 cursor-pointer shadow-xs active:scale-95"
-                  >
-                    <span>+ Repuesto Manual</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const p = flotanteManual.pin;
-                      setFlotanteManual(null);
-                      setHallazgoActivoParaAsignar(p);
-                      setNuevoServicioNombre(p.descripcion ? `Servicio de ${p.tipo}: ${p.descripcion}` : `Servicio de ${p.tipo}`);
-                      setNuevoServicioOrigen("TALLER");
-                      setModalNuevoServicio(true);
-                    }}
-                    className="h-9 px-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-medium flex items-center justify-center gap-1.5 cursor-pointer shadow-xs active:scale-95"
-                  >
-                    <span>+ Servicio Manual</span>
-                  </button>
-                </div>
-              </div>
-
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ZOOM FOTO EVIDENCIA */}
-      {fotoZoom && (
-        <div
-          onClick={() => setFotoZoom(null)}
-          className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in"
-        >
-          <div className="relative max-w-4xl w-full max-h-[90vh] flex flex-col items-center justify-center">
-            <button
-              type="button"
-              onClick={() => setFotoZoom(null)}
-              className="absolute top-2 right-2 w-10 h-10 rounded-full bg-black/70 hover:bg-black text-white border border-white/20 flex items-center justify-center text-lg z-10 cursor-pointer"
-            >
-              ✕
-            </button>
-            <img src={fotoZoom} alt="Foto ampliada" className="max-h-[85vh] w-auto max-w-full rounded-2xl object-contain shadow-2xl border border-white/10" />
-          </div>
-        </div>
-      )}
-
-      {/* MODAL REGISTRAR NUEVO HALLAZGO EN NEON */}
-      {modalNuevoHallazgo.abierto && (
-        <div
-          onClick={() => setModalNuevoHallazgo({ abierto: false })}
-          className="fixed inset-0 z-50 bg-black/70 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in"
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="bg-white dark:bg-[#121216] border border-zinc-200 dark:border-white/10 rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl animate-scale-up text-zinc-900 dark:text-white"
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-2xl bg-rose-500/10 border border-rose-500/25 text-rose-600 dark:text-rose-400 flex items-center justify-center font-bold text-sm">
-                  +
-                </div>
-                <div>
-                  <h3 className="text-base font-bold text-zinc-900 dark:text-white">
-                    Registrar Nuevo Hallazgo
+                    Respuestas de Proveedor
                   </h3>
                   <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
-                    {modalNuevoHallazgo.seccionNombre || "Taller"} · Persistencia directa a Neon
+                    {itemsSiHayProveedor.length} sí hay · {itemsRespondidosProveedor.length - itemsSiHayProveedor.length} no hay
                   </p>
                 </div>
               </div>
               <button
                 type="button"
-                onClick={() => setModalNuevoHallazgo({ abierto: false })}
-                className="w-8 h-8 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white flex items-center justify-center cursor-pointer transition-colors"
+                onClick={() => setModalRespuestasProvOpen(false)}
+                className="w-8 h-8 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white flex items-center justify-center text-sm cursor-pointer transition-colors"
               >
                 ✕
               </button>
             </div>
 
-            <div className="space-y-3 text-xs">
-              <div>
-                <label className="text-xs text-zinc-600 dark:text-zinc-400 font-medium block mb-1">
-                  Tipo de Hallazgo / Daño
-                </label>
-                <input
-                  type="text"
-                  placeholder="Ej: Fuga de aceite, Pastillas desgastadas, Golpe guardafangos..."
-                  value={nuevoHallazgoTipo}
-                  onChange={(e) => setNuevoHallazgoTipo(e.target.value)}
-                  className="w-full h-10 px-3 rounded-xl bg-zinc-50 dark:bg-black border border-zinc-300 dark:border-white/10 text-xs text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs text-zinc-600 dark:text-zinc-400 font-medium block mb-1">
-                  Vista del Vehículo
-                </label>
-                <select
-                  value={nuevoHallazgoVista}
-                  onChange={(e) => setNuevoHallazgoVista(e.target.value)}
-                  className="w-full h-10 px-3 rounded-xl bg-zinc-50 dark:bg-black border border-zinc-300 dark:border-white/10 text-xs text-zinc-900 dark:text-white cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                >
-                  <option value="frontal">Frontal</option>
-                  <option value="posterior">Posterior</option>
-                  <option value="lateral_izq">Lateral Izquierdo</option>
-                  <option value="lateral_der">Lateral Derecho</option>
-                  <option value="techo">Techo / Superior</option>
-                  <option value="interior">Interior / Habitáculo</option>
-                  <option value="motor">Compartimiento Motor</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="text-xs text-zinc-600 dark:text-zinc-400 font-medium block mb-1">
-                  Descripción Técnica y Detalle del Hallazgo
-                </label>
-                <textarea
-                  rows={3}
-                  placeholder="Describe la condición encontrada, gravedad o diagnóstico preliminar..."
-                  value={nuevoHallazgoDescripcion}
-                  onChange={(e) => setNuevoHallazgoDescripcion(e.target.value)}
-                  className="w-full p-3 rounded-xl bg-zinc-50 dark:bg-black border border-zinc-300 dark:border-white/10 text-xs text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-2 pt-1">
-                <label
-                  className={`p-2.5 rounded-xl border flex items-center gap-2 cursor-pointer transition-all ${nuevoHallazgoSolicitaRepuesto
-                    ? "bg-amber-500/10 border-amber-500/40 text-amber-700 dark:text-amber-300 font-semibold"
-                    : "bg-zinc-50 dark:bg-white/[0.02] border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-400"
-                    }`}
-                >
-                  <input
-                    type="checkbox"
-                    checked={nuevoHallazgoSolicitaRepuesto}
-                    onChange={(e) => setNuevoHallazgoSolicitaRepuesto(e.target.checked)}
-                    className="w-4 h-4 rounded text-amber-600 accent-amber-500 cursor-pointer"
-                  />
-                  <span>📦 Requiere Producto</span>
-                </label>
-
-                <label
-                  className={`p-2.5 rounded-xl border flex items-center gap-2 cursor-pointer transition-all ${nuevoHallazgoSolicitaServicio
-                    ? "bg-purple-500/10 border-purple-500/40 text-purple-700 dark:text-purple-300 font-semibold"
-                    : "bg-zinc-50 dark:bg-white/[0.02] border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-400"
-                    }`}
-                >
-                  <input
-                    type="checkbox"
-                    checked={nuevoHallazgoSolicitaServicio}
-                    onChange={(e) => setNuevoHallazgoSolicitaServicio(e.target.checked)}
-                    className="w-4 h-4 rounded text-purple-600 accent-purple-500 cursor-pointer"
-                  />
-                  <span>🔧 Requiere Servicio</span>
-                </label>
-              </div>
-
-              <div className="pt-2">
-                <button
-                  type="button"
-                  onClick={handleCrearNuevoHallazgo}
-                  className="w-full h-10 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition-all shadow-md shadow-rose-600/30 cursor-pointer active:scale-95 flex items-center justify-center gap-2"
-                >
-                  <span>💾 Registrar Hallazgo en Neon PostgreSQL</span>
-                </button>
-              </div>
-
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ================================================================= */}
-      {/* MODAL: TIEMPO, ENVÍO Y ESTADO PROVEEDOR (MINIMALISTA 1 PALABRA)   */}
-      {/* ================================================================= */}
-      {itemTiempoEnvioModal && (() => {
-        const esServicioModal = itemTiempoEnvioModal.isService;
-        const currentItem: any = esServicioModal
-          ? servicios.find((s) => s.id === itemTiempoEnvioModal.id)
-          : repuestos.find((r) => r.id === itemTiempoEnvioModal.id);
-        if (!currentItem) return null;
-
-        return (
-          <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 animate-in fade-in duration-150"
-            onClick={() => setItemTiempoEnvioModal(null)}
-          >
-            <div
-              className="w-full max-w-md rounded-2xl border border-slate-800 bg-[#0d1322] p-5 shadow-2xl space-y-4"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {/* Header */}
-              <div className="flex items-center justify-between border-b border-slate-800/80 pb-3">
-                <div className="min-w-0 pr-2">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-blue-400 block">
-                    {esServicioModal ? "🔧 Servicio" : "📦 Producto"}
-                  </span>
-                  <h4 className="text-sm font-black text-white truncate">
-                    {currentItem.name}
-                  </h4>
+            <div className="p-4 overflow-y-auto space-y-2.5">
+              {itemsRespondidosProveedor.length === 0 ? (
+                <div className="py-10 text-center space-y-1.5">
+                  <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">
+                    Aún no llega ninguna respuesta del proveedor.
+                  </p>
+                  <p className="text-xs text-zinc-400 dark:text-zinc-500">
+                    Cuando el proveedor confirme desde el enlace, aparecerá aquí automáticamente.
+                  </p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setItemTiempoEnvioModal(null)}
-                  className="w-8 h-8 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center text-xs font-bold cursor-pointer shrink-0"
-                >
-                  ✕
-                </button>
-              </div>
-
-              {/* 1. Stock & Disponibilidad Proveedor */}
-              <div className="space-y-1.5">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-                  📦 Stock
-                </span>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      handleUpdateItemFields(currentItem.id, esServicioModal, {
-                        inStock: true,
-                        purchaseStatus: "STOCK_LOCAL",
-                        supplierName: "Bodega Taller",
+              ) : (
+                itemsRespondidosProveedor.map((it) => {
+                  const siHay = it.supplierAvailability === "SI_HAY";
+                  const provMatch = proveedores.find(
+                    (p: any) =>
+                      (it.supplierId && p.id === it.supplierId) ||
+                      (it.supplierName &&
+                        String(p.name || "").trim().toLowerCase() ===
+                          String(it.supplierName || "").trim().toLowerCase())
+                  );
+                  const proveedorNombre = it.supplierName || provMatch?.name || "Proveedor";
+                  const proveedorWhatsapp = it.supplierPhone || provMatch?.phone || "";
+                  const fechaResp = it.supplierRespondedAt
+                    ? new Date(it.supplierRespondedAt).toLocaleString("es-EC", {
+                        day: "2-digit",
+                        month: "2-digit",
+                        hour: "2-digit",
+                        minute: "2-digit",
                       })
-                    }
-                    className={`h-9 rounded-xl text-xs font-bold border transition-all flex items-center justify-center gap-1.5 cursor-pointer ${currentItem.inStock
-                      ? "bg-emerald-500/20 border-emerald-500/50 text-emerald-300"
-                      : "bg-slate-900/60 border-slate-800 text-slate-400 hover:text-slate-200"
-                      }`}
-                  >
-                    <span>🏢</span>
-                    <span>Bodega</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      handleUpdateItemFields(currentItem.id, esServicioModal, {
-                        inStock: false,
-                        purchaseStatus: "POR_PEDIR",
-                        supplierName:
-                          currentItem.supplierName && currentItem.supplierName !== "Bodega Taller"
-                            ? currentItem.supplierName
-                            : "Proveedor General",
-                      })
-                    }
-                    className={`h-9 rounded-xl text-xs font-bold border transition-all flex items-center justify-center gap-1.5 cursor-pointer ${!currentItem.inStock
-                      ? "bg-amber-500/20 border-amber-500/50 text-amber-300"
-                      : "bg-slate-900/60 border-slate-800 text-slate-400 hover:text-slate-200"
-                      }`}
-                  >
-                    <span>🚚</span>
-                    <span>Pedir</span>
-                  </button>
-                </div>
-
-                {/* Respuesta de proveedor: Sí hay / No hay */}
-                <div className="grid grid-cols-2 gap-2 pt-1">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      handleUpdateItemFields(currentItem.id, esServicioModal, {
-                        supplierAvailability:
-                          currentItem.supplierAvailability === "SI_HAY" ? null : "SI_HAY",
-                      })
-                    }
-                    className={`h-8 rounded-xl text-[11px] font-bold border transition-all flex items-center justify-center gap-1.5 cursor-pointer ${currentItem.supplierAvailability === "SI_HAY"
-                      ? "bg-emerald-600 text-white border-emerald-500 shadow-sm"
-                      : "bg-slate-900/40 border-slate-800 text-slate-400 hover:text-emerald-300"
-                      }`}
-                  >
-                    <span>✓</span>
-                    <span>Sí hay</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      handleUpdateItemFields(currentItem.id, esServicioModal, {
-                        supplierAvailability:
-                          currentItem.supplierAvailability === "NO_HAY" ? null : "NO_HAY",
-                      })
-                    }
-                    className={`h-8 rounded-xl text-[11px] font-bold border transition-all flex items-center justify-center gap-1.5 cursor-pointer ${currentItem.supplierAvailability === "NO_HAY"
-                      ? "bg-rose-600 text-white border-rose-500 shadow-sm"
-                      : "bg-slate-900/40 border-slate-800 text-slate-400 hover:text-rose-300"
-                      }`}
-                  >
-                    <span>✕</span>
-                    <span>No hay</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* 2. Tiempo (Cuándo llega / ejecución) - Deslizable */}
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                    ⏱️ Tiempo
-                  </span>
-                  {currentItem.deliveryTime && (
-                    <button
-                      type="button"
-                      onClick={() =>
-                        handleUpdateItemFields(currentItem.id, esServicioModal, {
-                          deliveryTime: null,
-                        })
-                      }
-                      className="text-[10px] text-slate-500 hover:text-rose-400 cursor-pointer"
-                    >
-                      Limpiar
-                    </button>
-                  )}
-                </div>
-                <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1">
-                  {OPCIONES_TIEMPO_RAPIDO.map((t) => {
-                    const active = currentItem.deliveryTime === t.id;
-                    return (
-                      <button
-                        key={t.id}
-                        type="button"
-                        onClick={() =>
-                          handleUpdateItemFields(currentItem.id, esServicioModal, {
-                            deliveryTime: active ? null : t.id,
-                          })
-                        }
-                        className={`h-8 px-3 rounded-xl text-xs font-bold border shrink-0 transition-all cursor-pointer ${active
-                          ? "bg-blue-600 text-white border-blue-400 shadow-sm"
-                          : "bg-slate-900/60 border-slate-800 text-slate-300 hover:border-slate-700"
-                          }`}
-                      >
-                        {t.label}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* 3. Envío (Por dónde lo envía) - Deslizable */}
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                    🚚 Envío
-                  </span>
-                  {currentItem.shippingMethod && (
-                    <button
-                      type="button"
-                      onClick={() =>
-                        handleUpdateItemFields(currentItem.id, esServicioModal, {
-                          shippingMethod: null,
-                        })
-                      }
-                      className="text-[10px] text-slate-500 hover:text-rose-400 cursor-pointer"
-                    >
-                      Limpiar
-                    </button>
-                  )}
-                </div>
-                <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1">
-                  {OPCIONES_ENVIO_RAPIDO.map((env) => {
-                    const active = currentItem.shippingMethod === env.id;
-                    return (
-                      <button
-                        key={env.id}
-                        type="button"
-                        onClick={() =>
-                          handleUpdateItemFields(currentItem.id, esServicioModal, {
-                            shippingMethod: active ? null : env.id,
-                          })
-                        }
-                        className={`h-8 px-3 rounded-xl text-xs font-bold border shrink-0 transition-all flex items-center gap-1.5 cursor-pointer ${active
-                          ? "bg-purple-600 text-white border-purple-400 shadow-sm"
-                          : "bg-slate-900/60 border-slate-800 text-slate-300 hover:border-slate-700"
-                          }`}
-                      >
-                        <span>{env.icon}</span>
-                        <span>{env.label}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* 4. Costo Proveedor y PVP */}
-              <div className="grid grid-cols-2 gap-3 pt-1">
-                <div>
-                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
-                    💵 Costo ($)
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={currentItem.costPrice || 0}
-                    onChange={(e) => {
-                      const val = Math.max(0, Number(e.target.value) || 0);
-                      handleUpdateItemFields(currentItem.id, esServicioModal, {
-                        costPrice: val,
-                        supplierPrice: val,
-                      });
-                    }}
-                    className="w-full h-9 rounded-xl bg-slate-900 border border-slate-800 px-3 text-xs font-bold text-slate-200 focus:outline-none focus:border-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 block mb-1">
-                    🏷️ PVP ($)
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={currentItem.price || 0}
-                    onChange={(e) => {
-                      const val = Math.max(0, Number(e.target.value) || 0);
-                      handleUpdateItemFields(currentItem.id, esServicioModal, {
-                        price: val,
-                      });
-                    }}
-                    className="w-full h-9 rounded-xl bg-emerald-950/30 border border-emerald-500/40 px-3 text-xs font-bold text-emerald-300 focus:outline-none focus:border-emerald-400"
-                  />
-                </div>
-              </div>
-
-              {/* Footer Actions */}
-              <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-800/80">
-                <button
-                  type="button"
-                  onClick={() => {
-                    const pinAsociado = currentItem.findingId
-                      ? hallazgos.find(
-                        (h: any) =>
-                          h.id === currentItem.findingId ||
-                          h.originalId === currentItem.findingId
-                      )
-                      : undefined;
-                    setItemTiempoEnvioModal(null);
-                    abrirModalProveedor("INDIVIDUAL", currentItem, pinAsociado);
-                  }}
-                  className="h-9 px-3.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/40 text-emerald-300 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
-                >
-                  <span>💬</span>
-                  <span>Pedir</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setItemTiempoEnvioModal(null);
-                  }}
-                  className="h-9 px-5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all cursor-pointer"
-                >
-                  ✓ Listo
-                </button>
-              </div>
-
-            </div>
-          </div>
-        );
-      })()}
-
-      {/* ================================================================= */}
-      {/* MODAL: CATÁLOGO INTERACTIVO TALLER (CARRITO CON STOCK Y PRECIO)   */}
-      {/* ================================================================= */}
-      {modalCatalogoTallerAbierto.abierto && (
-        <div
-          className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-3 animate-in fade-in duration-150"
-          onClick={() =>
-            setModalCatalogoTallerAbierto({ abierto: false, origen: "TALLER" })
-          }
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="relative w-full max-w-2xl max-h-[85dvh] overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden rounded-2xl bg-white dark:bg-[#111113] border border-zinc-200 dark:border-white/10 p-4 shadow-2xl space-y-3"
-          >
-            <div className="flex items-center justify-between pb-1">
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                <span className="text-sm font-bold text-zinc-900 dark:text-white">
-                  Todos los Productos y Servicios
-                </span>
-              </div>
-              <button
-                type="button"
-                onClick={() =>
-                  setModalCatalogoTallerAbierto({ abierto: false, origen: "TALLER" })
-                }
-                className="w-7 h-7 rounded-lg flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-xs font-bold transition-colors cursor-pointer"
-                title="Cerrar"
-              >
-                ✕
-              </button>
-            </div>
-
-            <CatalogoProductosServiciosTaller
-              itemsSeleccionados={itemsPropuestaParaTrabajos}
-              onAgregarItem={(item, delta = 1) => {
-                if (delta > 0) {
-                  void handleAgregarDesdeCatalogoTaller([{ ...item, qty: delta }]);
-                }
-              }}
-              onEliminarItem={(itemId) => {
-                const esSrv = servicios.some((s) => s.id === itemId || s.code === itemId);
-                if (esSrv) {
-                  const target = servicios.find((s) => s.id === itemId || s.code === itemId);
-                  if (target) void handleDeleteService(target.id);
-                } else {
-                  const target = repuestos.find((r) => r.id === itemId || r.code === itemId);
-                  if (target) void handleDeleteItem(target.id);
-                }
-              }}
-              serviciosCatalogo={catalogoServiciosState}
-              productosCatalogo={catalogoProductosState}
-              titulo="Catálogo"
-              siempreAbierto={true}
-              mostrarChipsSeleccionados={false}
-              ocultarCabeceraYCategoria={true}
-              limitarDosFilasInicial={true}
-            />
-          </div>
-        </div>
-      )}
-
-      {/* ================================================================= */}
-      {/* MODAL: SERVICIOS RÁPIDOS 1-CLIC POR ESPECIALIDAD                  */}
-      {/* ================================================================= */}
-      {modalAccesosRapidosAbierto.abierto && (() => {
-        const modKeyRaw = String(modalAccesosRapidosAbierto.origen || "TALLER").toLowerCase();
-        const modKey =
-          modKeyRaw.includes("lubri")
-            ? "lubricentro"
-            : modKeyRaw.includes("car") || modKeyRaw.includes("lav")
-            ? "carwash"
-            : modKeyRaw.includes("tecni")
-            ? "tecnicentro"
-            : "taller";
-        const modLabel =
-          modKey === "lubricentro"
-            ? "Lubricentro"
-            : modKey === "carwash"
-            ? "Car Wash"
-            : modKey === "tecnicentro"
-            ? "Tecnicentro"
-            : "Taller";
-        const listaBase = (SERVICIOS_RAPIDOS_POR_MODULO[modKey] || SERVICIOS_RAPIDOS_POR_MODULO.taller).map(
-          (nombre) => {
-            const matchCatalogo = (
-              SERVICIOS_RAPIDOS_POR_ESPECIALIDAD[modalAccesosRapidosAbierto.origen] ||
-              SERVICIOS_RAPIDOS_POR_ESPECIALIDAD.TALLER
-            ).find((x) => x.nombre.toLowerCase() === nombre.toLowerCase());
-            return { nombre, precio: matchCatalogo?.precio ?? 0 };
-          }
-        );
-        const listaFiltrada = listaBase.filter((s) =>
-          !busquedaAccesoRapido.trim()
-            ? true
-            : s.nombre.toLowerCase().includes(busquedaAccesoRapido.trim().toLowerCase())
-        );
-
-        return (
-          <div
-            className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-3 animate-fade-in"
-            onClick={() =>
-              setModalAccesosRapidosAbierto({ abierto: false, origen: "TALLER" })
-            }
-          >
-            <div
-              onClick={(e) => e.stopPropagation()}
-              className="relative w-full max-w-lg rounded-2xl bg-white dark:bg-[#111113] border border-zinc-200 dark:border-white/10 p-4 shadow-2xl space-y-3"
-            >
-              <div className="flex items-center justify-between border-b border-zinc-200 dark:border-white/10 pb-2.5">
-                <div className="flex items-center gap-2 min-w-0">
-                  <span className="w-2 h-2 rounded-full bg-violet-500 shrink-0" />
-                  <span className="text-sm font-bold text-zinc-900 dark:text-white truncate">
-                    Accesos rápidos ({modLabel})
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() =>
-                    setModalAccesosRapidosAbierto({ abierto: false, origen: "TALLER" })
-                  }
-                  className="w-7 h-7 rounded-lg flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-xs font-bold transition-colors cursor-pointer shrink-0"
-                  title="Cerrar"
-                >
-                  ✕
-                </button>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  value={busquedaAccesoRapido}
-                  onChange={(e) => setBusquedaAccesoRapido(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && busquedaAccesoRapido.trim()) {
-                      e.preventDefault();
-                      const limpio = busquedaAccesoRapido.trim();
-                      const exacto = listaFiltrada.find(
-                        (s) => s.nombre.toLowerCase() === limpio.toLowerCase()
-                      );
-                      handleAgregarAccesoRapido(
-                        exacto ? exacto.nombre : limpio,
-                        exacto ? exacto.precio : 0,
-                        modalAccesosRapidosAbierto.origen
-                      );
-                      setBusquedaAccesoRapido("");
-                      setModalAccesosRapidosAbierto({ abierto: false, origen: "TALLER" });
-                    }
-                  }}
-                  placeholder="Buscar o añadir..."
-                  autoFocus
-                  className="flex-1 min-w-0 rounded-xl bg-zinc-50 dark:bg-white/[0.04] border border-zinc-200 dark:border-white/10 px-3 py-2 text-base sm:text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-violet-500"
-                />
-                <button
-                  type="button"
-                  onClick={() => setModoManualRapidoPropuesta((prev) => !prev)}
-                  className={`px-3 py-2 rounded-xl border text-xs font-semibold flex items-center gap-1.5 shrink-0 cursor-pointer transition-all active:scale-95 ${
-                    modoManualRapidoPropuesta
-                      ? "bg-amber-500/20 border-amber-500/50 text-amber-700 dark:text-amber-300"
-                      : "bg-zinc-100 dark:bg-white/[0.05] border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200/70 dark:hover:bg-white/10"
-                  }`}
-                  title="Marcar para añadir servicios manuales"
-                >
-                  <span
-                    className={`w-3.5 h-3.5 rounded flex items-center justify-center text-[10px] border ${
-                      modoManualRapidoPropuesta
-                        ? "bg-amber-500 border-amber-500 text-black font-black"
-                        : "border-zinc-400 dark:border-zinc-500"
-                    }`}
-                  >
-                    {modoManualRapidoPropuesta ? "✓" : ""}
-                  </span>
-                  <span>Manual</span>
-                </button>
-              </div>
-
-              {modoManualRapidoPropuesta && (
-                <div className="p-2.5 rounded-xl border border-amber-500/35 bg-amber-500/10 space-y-2 animate-fade-in">
-                  <div className="flex items-stretch gap-2">
-                    <input
-                      type="text"
-                      value={textoManualRapidoPropuesta}
-                      onChange={(e) => setTextoManualRapidoPropuesta(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" && textoManualRapidoPropuesta.trim()) {
-                          e.preventDefault();
-                          const limpio = textoManualRapidoPropuesta.trim();
-                          handleAgregarAccesoRapido(limpio, 0, modalAccesosRapidosAbierto.origen);
-                          setTextoManualRapidoPropuesta("");
-                          setModalAccesosRapidosAbierto({ abierto: false, origen: "TALLER" });
-                        }
-                      }}
-                      placeholder="Escribe servicio manual..."
-                      className="flex-1 min-w-0 rounded-xl bg-white dark:bg-black/40 border border-amber-500/30 px-3 py-2 text-base sm:text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-amber-500"
-                    />
-                    <button
-                      type="button"
-                      disabled={!textoManualRapidoPropuesta.trim()}
-                      onClick={() => {
-                        const limpio = textoManualRapidoPropuesta.trim();
-                        if (!limpio) return;
-                        handleAgregarAccesoRapido(limpio, 0, modalAccesosRapidosAbierto.origen);
-                        setTextoManualRapidoPropuesta("");
-                        setModalAccesosRapidosAbierto({ abierto: false, origen: "TALLER" });
-                      }}
-                      className="px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 disabled:opacity-40 text-black text-xs font-bold shrink-0 cursor-pointer disabled:cursor-not-allowed active:scale-95 transition-all"
-                    >
-                      + Añadir
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-72 overflow-y-auto pr-0.5">
-                {listaFiltrada.map((srv, idx) => {
-                  const meta = getServicioRapidoMeta(srv.nombre, modLabel);
+                    : "";
                   return (
                     <div
-                      key={`${srv.nombre}-${idx}`}
-                      role="button"
-                      tabIndex={0}
-                      onClick={() => {
-                        handleAgregarAccesoRapido(
-                          srv.nombre,
-                          srv.precio,
-                          modalAccesosRapidosAbierto.origen
-                        );
-                        setModalAccesosRapidosAbierto({ abierto: false, origen: "TALLER" });
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") {
-                          e.preventDefault();
-                          handleAgregarAccesoRapido(
-                            srv.nombre,
-                            srv.precio,
-                            modalAccesosRapidosAbierto.origen
-                          );
-                          setModalAccesosRapidosAbierto({ abierto: false, origen: "TALLER" });
-                        }
-                      }}
-                      className="group p-2.5 rounded-xl border border-zinc-200/90 dark:border-white/10 bg-zinc-50/70 hover:bg-zinc-100/90 dark:bg-white/[0.03] dark:hover:bg-white/[0.08] text-left text-xs transition-all cursor-pointer flex items-center justify-between gap-2 active:scale-[0.98] shadow-2xs hover:shadow-xs hover:border-zinc-300 dark:hover:border-white/20"
+                      key={`${it.isService ? "s" : "r"}-${it.id}`}
+                      className={`rounded-xl border p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 ${
+                        siHay
+                          ? "bg-emerald-500/[0.06] border-emerald-500/25"
+                          : "bg-rose-500/[0.06] border-rose-500/25"
+                      }`}
                     >
-                      <div className="flex items-center gap-2 min-w-0 flex-1">
-                        <div
-                          className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border ${meta.iconBoxClass}`}
-                        >
-                          {meta.icon}
+                      <div className="space-y-1 min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span
+                            className={`px-2 py-0.5 rounded-md text-[11px] font-bold ${
+                              siHay
+                                ? "bg-emerald-500/20 text-emerald-700 dark:text-emerald-300"
+                                : "bg-rose-500/20 text-rose-700 dark:text-rose-300"
+                            }`}
+                          >
+                            {siHay ? "✓ Sí hay" : "✕ No hay"}
+                          </span>
+                          <span className="text-xs font-bold text-zinc-500 dark:text-zinc-400 tabular-nums">
+                            {it.qty}x
+                          </span>
+                          <span className="text-sm font-bold text-zinc-900 dark:text-white truncate">
+                            {it.name}
+                          </span>
                         </div>
-                        <span className="font-medium text-zinc-900 dark:text-zinc-100 text-xs sm:text-[13px] leading-snug break-words group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors flex-1 min-w-0">
-                          {srv.nombre}
+                        <div className="flex items-center gap-2.5 flex-wrap text-xs text-zinc-500 dark:text-zinc-400">
+                          <span className="font-semibold text-purple-600 dark:text-purple-300">
+                            {proveedorNombre}
+                          </span>
+                          {proveedorWhatsapp && (
+                            <span className="inline-flex items-center gap-1 font-mono text-[11px] text-emerald-600 dark:text-emerald-400">
+                              WhatsApp: {proveedorWhatsapp}
+                            </span>
+                          )}
+                          {it.deliveryTime && <span>Envío: {it.deliveryTime}</span>}
+                          {fechaResp && <span>{fechaResp}</span>}
+                        </div>
+                      </div>
+
+                      <div className="text-right shrink-0">
+                        <span
+                          className={`text-base font-black font-mono ${
+                            siHay
+                              ? "text-emerald-600 dark:text-emerald-400"
+                              : "text-zinc-400 line-through"
+                          }`}
+                        >
+                          ${Number(it.supplierPrice || 0).toFixed(2)}
                         </span>
                       </div>
-                      <span className="w-6 h-6 rounded-lg bg-zinc-200/60 dark:bg-white/10 group-hover:bg-violet-600 group-hover:text-white dark:group-hover:bg-violet-500 text-violet-600 dark:text-violet-400 flex items-center justify-center text-xs font-bold shrink-0 transition-colors">
-                        +
-                      </span>
                     </div>
                   );
-                })}
-              </div>
+                })
+              )}
+            </div>
 
+            <div className="px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] border-t border-zinc-200 dark:border-white/10 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setModalRespuestasProvOpen(false);
+                  router.push(`/presupuestos/${encodeURIComponent(orden.id)}/pedir`);
+                }}
+                className="h-9 px-3.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/[0.06] dark:hover:bg-white/[0.12] text-xs font-semibold text-zinc-700 dark:text-zinc-200 cursor-pointer transition-colors"
+              >
+                Ir a Pedir
+              </button>
+              <button
+                type="button"
+                onClick={() => setModalRespuestasProvOpen(false)}
+                className="h-9 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold cursor-pointer transition-colors"
+              >
+                Cerrar
+              </button>
             </div>
           </div>
-        );
-      })()}
-      </>
+        </div>
       )}
     </div>
   );

@@ -214,6 +214,32 @@ export default function PaginaCatalogoProveedor() {
   const paramPhone = searchParams?.get("phone") || searchParams?.get("tel") || "";
   const paramSuppliersJson = searchParams?.get("suppliers") || "";
   const paramSig = searchParams?.get("sig") || "";
+  const paramSentAt = searchParams?.get("sentAt") || "";
+
+  const [temaOscuro, setTemaOscuro] = useState(true);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const saved = localStorage.getItem("proveedor_tema");
+      const isDark = saved ? saved === "dark" : document.documentElement.classList.contains("dark");
+      setTemaOscuro(isDark);
+      document.documentElement.classList.toggle("dark", isDark);
+    } catch {}
+  }, []);
+
+  const toggleTema = () => {
+    setTemaOscuro((prev) => {
+      const next = !prev;
+      if (typeof window !== "undefined") {
+        try {
+          localStorage.setItem("proveedor_tema", next ? "dark" : "light");
+          document.documentElement.classList.toggle("dark", next);
+        } catch {}
+      }
+      return next;
+    });
+  };
 
   const proveedoresUrl = useMemo(() => {
     if (!paramSuppliersJson) return [];
@@ -427,8 +453,27 @@ export default function PaginaCatalogoProveedor() {
     return raw.padStart(5, "0");
   }, [order]);
 
+  const fechaHoraEnvio = useMemo(() => {
+    const raw = paramSentAt || order?.createdAt || order?.dateIn || "";
+    if (!raw) return "";
+    const num = Number(raw);
+    const d = Number.isFinite(num) && num > 0 ? new Date(num) : new Date(String(raw));
+    if (Number.isNaN(d.getTime())) return String(raw);
+    return d.toLocaleString("es-EC", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  }, [paramSentAt, order]);
+
   return (
-    <div className="min-h-screen bg-[#09090b] text-zinc-100 font-sans selection:bg-purple-500/30 pb-24">
+    <div
+      className={`min-h-screen font-sans selection:bg-purple-500/30 pb-24 transition-colors ${
+        temaOscuro ? "bg-[#09090b] text-zinc-100" : "bg-zinc-50 text-zinc-900"
+      }`}
+    >
       {/* Toast Flotante */}
       {toast && (
         <div
@@ -458,40 +503,126 @@ export default function PaginaCatalogoProveedor() {
         ) : (
           <>
             {/* CABECERA LIMPIA ESTILO PROPUESTA (TÍTULO UNA SOLA PALABRA) */}
-            <header className="rounded-2xl bg-gradient-to-r from-purple-500/[0.08] via-[#111114] to-blue-500/[0.07] border border-white/10 p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div className="space-y-1.5 min-w-0">
-                <div className="flex items-center gap-2.5 flex-wrap">
-                  <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
-                    Cotización
-                  </h1>
-                  <span className="font-mono text-xs sm:text-sm font-bold text-zinc-300 bg-white/[0.06] border border-white/10 px-2 py-0.5 rounded-lg">
-                    #{numeroOrdenFormateado}
-                  </span>
-                  {isSingleView && allItemsCount > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => setVerTodos((v) => !v)}
-                      className="px-2.5 py-0.5 rounded-lg bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 text-[11px] font-medium text-zinc-200 cursor-pointer transition-colors"
-                    >
-                      {verTodos ? "Filtrados" : `Ver todos (${allItemsCount})`}
-                    </button>
-                  )}
-                </div>
-
+            <header
+              className={`rounded-2xl border p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-colors ${
+                temaOscuro
+                  ? "bg-gradient-to-r from-purple-500/[0.08] via-[#111114] to-blue-500/[0.07] border-white/10"
+                  : "bg-white border-zinc-200 shadow-sm"
+              }`}
+            >
+              <div className="flex items-start gap-3 min-w-0">
                 {order && (
-                  <div className="flex items-center gap-2 flex-wrap text-xs sm:text-sm text-zinc-300">
-                    <span className="font-semibold text-white">{order.vehicle}</span>
-                    {order.plate && (
-                      <span className="font-mono font-bold text-blue-400 bg-blue-500/10 border border-blue-500/25 px-2 py-0.5 rounded-md text-xs">
-                        {order.plate}
-                      </span>
+                  <div
+                    className={`w-12 h-12 rounded-xl overflow-hidden shrink-0 border flex items-center justify-center ${
+                      temaOscuro
+                        ? "bg-white/[0.04] border-white/10 text-zinc-400"
+                        : "bg-zinc-100 border-zinc-200 text-zinc-500"
+                    }`}
+                  >
+                    {order.vehiclePhoto ? (
+                      <img
+                        src={order.vehiclePhoto}
+                        alt={order.vehicle || "Vehículo"}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.6}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 18.75a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 0 1-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 0 0-3.213-9.193 2.056 2.056 0 0 0-1.58-.86H14.25M16.5 18.75h-2.25m0-11.175V14.25m0 0H2.25m12 0v4.5m0-4.5H16.5" />
+                      </svg>
                     )}
                   </div>
                 )}
+
+                <div className="space-y-1.5 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h1
+                      className={`text-xl sm:text-2xl font-bold tracking-tight ${
+                        temaOscuro ? "text-white" : "text-zinc-900"
+                      }`}
+                    >
+                      Cotización
+                    </h1>
+                    <span
+                      className={`font-mono text-xs sm:text-sm font-bold px-2 py-0.5 rounded-lg border ${
+                        temaOscuro
+                          ? "text-zinc-300 bg-white/[0.06] border-white/10"
+                          : "text-zinc-700 bg-zinc-100 border-zinc-200"
+                      }`}
+                    >
+                      #{numeroOrdenFormateado}
+                    </span>
+                    {isSingleView && allItemsCount > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => setVerTodos((v) => !v)}
+                        className={`px-2.5 py-0.5 rounded-lg border text-[11px] font-medium cursor-pointer transition-colors ${
+                          temaOscuro
+                            ? "bg-white/[0.06] hover:bg-white/[0.12] border-white/10 text-zinc-200"
+                            : "bg-zinc-100 hover:bg-zinc-200 border-zinc-200 text-zinc-700"
+                        }`}
+                      >
+                        {verTodos ? "Filtrados" : `Ver todos (${allItemsCount})`}
+                      </button>
+                    )}
+                  </div>
+
+                  {order && (
+                    <div
+                      className={`flex items-center gap-2 flex-wrap text-xs sm:text-sm ${
+                        temaOscuro ? "text-zinc-300" : "text-zinc-600"
+                      }`}
+                    >
+                      <span className={`font-semibold ${temaOscuro ? "text-white" : "text-zinc-900"}`}>
+                        {order.vehicle}
+                      </span>
+                      {order.plate && (
+                        <span className="font-mono font-bold text-blue-500 dark:text-blue-400 bg-blue-500/10 border border-blue-500/25 px-2 py-0.5 rounded-md text-xs">
+                          {order.plate}
+                        </span>
+                      )}
+                      {fechaHoraEnvio && (
+                        <span
+                          className={`text-[11px] font-mono ${
+                            temaOscuro ? "text-zinc-400" : "text-zinc-500"
+                          }`}
+                        >
+                          · Enviado: {fechaHoraEnvio}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
 
-              {/* Proveedor Compacto */}
-              <div className="rounded-xl bg-black/30 border border-white/10 px-3.5 py-2.5 sm:text-right shrink-0">
+              {/* Proveedor Compacto + Botón Modo Claro / Oscuro */}
+              <div className="flex items-center justify-between sm:justify-end gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={toggleTema}
+                  title={temaOscuro ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}
+                  aria-label="Cambiar modo claro u oscuro"
+                  className={`w-9 h-9 rounded-xl border flex items-center justify-center cursor-pointer transition-colors shrink-0 ${
+                    temaOscuro
+                      ? "bg-white/[0.05] hover:bg-white/[0.1] border-white/10 text-amber-300"
+                      : "bg-zinc-100 hover:bg-zinc-200 border-zinc-200 text-zinc-700"
+                  }`}
+                >
+                  {temaOscuro ? (
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v2.25m6.364.386-1.591 1.591M21 12h-2.25m-.386 6.364-1.591-1.591M12 18.75V21m-4.773-4.227-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z" />
+                    </svg>
+                  ) : (
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z" />
+                    </svg>
+                  )}
+                </button>
+
+                <div
+                  className={`rounded-xl border px-3.5 py-2.5 sm:text-right shrink-0 ${
+                    temaOscuro ? "bg-black/30 border-white/10" : "bg-zinc-50 border-zinc-200"
+                  }`}
+                >
                 {proveedoresUrl.length > 1 && !editandoProveedor ? (
                   <div className="flex items-center sm:justify-end gap-1.5">
                     <select
@@ -570,12 +701,19 @@ export default function PaginaCatalogoProveedor() {
                     </button>
                   </div>
                 )}
+                </div>
               </div>
             </header>
 
             {/* LISTADO LIMPIO DE ÍTEMS ESTILO PROPUESTA */}
             {items.length === 0 ? (
-              <div className="p-10 text-center bg-[#111114] rounded-2xl border border-white/10 text-zinc-400 text-xs">
+              <div
+                className={`p-10 text-center rounded-2xl border text-xs ${
+                  temaOscuro
+                    ? "bg-[#111114] border-white/10 text-zinc-400"
+                    : "bg-white border-zinc-200 text-zinc-500"
+                }`}
+              >
                 Sin ítems pendientes en esta solicitud.
               </div>
             ) : (
@@ -708,7 +846,7 @@ export default function PaginaCatalogoProveedor() {
                                   supplierAvailability: "SI_HAY",
                                 })
                               }
-                              className={`h-8 px-3 rounded-lg text-xs font-bold cursor-pointer transition-all ${
+                              className={`h-9 sm:h-8 px-3.5 sm:px-3 rounded-lg text-xs font-bold cursor-pointer transition-all touch-manipulation ${
                                 disp === "SI_HAY"
                                   ? "bg-emerald-600 text-white"
                                   : "text-zinc-400 hover:text-white"
@@ -724,7 +862,7 @@ export default function PaginaCatalogoProveedor() {
                                   supplierPrice: 0,
                                 })
                               }
-                              className={`h-8 px-3 rounded-lg text-xs font-bold cursor-pointer transition-all ${
+                              className={`h-9 sm:h-8 px-3.5 sm:px-3 rounded-lg text-xs font-bold cursor-pointer transition-all touch-manipulation ${
                                 disp === "NO_HAY"
                                   ? "bg-rose-600 text-white"
                                   : "text-zinc-400 hover:text-white"
@@ -740,6 +878,7 @@ export default function PaginaCatalogoProveedor() {
                             </span>
                             <input
                               type="number"
+                              inputMode="decimal"
                               step="0.01"
                               min="0"
                               disabled={disp === "NO_HAY"}
@@ -752,7 +891,7 @@ export default function PaginaCatalogoProveedor() {
                               }
                               placeholder="0.00"
                               aria-label="Precio"
-                              className="w-24 sm:w-28 h-9 pl-6 pr-2.5 rounded-xl bg-black/40 border border-white/10 focus:border-emerald-500 text-sm font-bold text-white placeholder:text-zinc-500 focus:outline-none disabled:opacity-40 tabular-nums"
+                              className="w-24 sm:w-28 h-9 pl-6 pr-2.5 rounded-xl bg-black/40 border border-white/10 focus:border-emerald-500 text-base sm:text-sm font-bold text-white placeholder:text-zinc-500 focus:outline-none disabled:opacity-40 tabular-nums"
                             />
                           </div>
 
@@ -766,7 +905,7 @@ export default function PaginaCatalogoProveedor() {
                                 deliveryTime: e.target.value,
                               })
                             }
-                            className="h-9 px-2.5 rounded-xl bg-black/40 border border-white/10 focus:border-amber-500 text-amber-400 font-bold text-xs focus:outline-none cursor-pointer disabled:opacity-40"
+                            className="h-9 px-2.5 rounded-xl bg-black/40 border border-white/10 focus:border-amber-500 text-amber-400 font-bold text-base sm:text-xs focus:outline-none cursor-pointer disabled:opacity-40"
                           >
                             {OPCIONES_TIEMPO.map((t) => (
                               <option key={t} value={t} className="bg-[#111114] text-white">
@@ -801,7 +940,7 @@ export default function PaginaCatalogoProveedor() {
 
       {/* Barra Inferior Fija Limpia */}
       {!cargando && !error && items.length > 0 && (
-        <div className="fixed bottom-0 inset-x-0 z-30 bg-[#09090b]/95 backdrop-blur-xl border-t border-white/10 px-4 py-3">
+        <div className="fixed bottom-0 inset-x-0 z-30 bg-[#09090b]/95 backdrop-blur-xl border-t border-white/10 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
           <div className="max-w-4xl mx-auto flex items-center justify-between gap-3">
             <div className="flex items-baseline gap-3">
               <span className="text-base sm:text-lg font-black text-emerald-400 font-mono">

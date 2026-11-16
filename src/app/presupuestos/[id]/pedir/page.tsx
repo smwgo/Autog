@@ -7,6 +7,7 @@ import Link from "next/link";
 import { Header } from "@/components/Header";
 import { MiniAudioPlayer } from "@/components/taller/MiniAudioPlayer";
 import { useRealtimeSync } from "@/hooks/useRealtimeSync";
+import { abrirWhatsAppCompatible, detectarPlataformaWhatsApp } from "@/lib/whatsapp";
 
 interface Proveedor {
   id: string;
@@ -582,13 +583,20 @@ export default function PedirProveedoresPage() {
     if (prov?.name) query.set("supplier", prov.name);
     if (prov?.phone) query.set("phone", prov.phone);
     if (orden?.supplierSig) query.set("sig", orden.supplierSig);
+    query.set("sentAt", String(Date.now()));
     return `/pedidos-proveedor/${orden.id}?${query.toString()}`;
   };
+
+  const shortLinkCacheRef = useRef<Map<string, string>>(new Map());
 
   const construirLinkCorto = async (itemsGrupo: PedidoItem[], prov?: Proveedor) => {
     if (!orden || typeof window === "undefined") return "";
     const rutaRelativa = construirRutaCatalogo(itemsGrupo, prov);
     if (!rutaRelativa) return "";
+    const cached = shortLinkCacheRef.current.get(rutaRelativa);
+    if (cached) {
+      return `${window.location.origin}${cached}`;
+    }
     try {
       const res = await fetch("/api/short-link", {
         method: "POST",
@@ -597,6 +605,7 @@ export default function PedirProveedoresPage() {
       });
       const data = await res.json().catch(() => null);
       if (res.ok && data?.success && data?.shortPath) {
+        shortLinkCacheRef.current.set(rutaRelativa, String(data.shortPath));
         return `${window.location.origin}${data.shortPath}`;
       }
     } catch {
@@ -607,13 +616,39 @@ export default function PedirProveedoresPage() {
 
   const abrirLinkCatalogo = async (itemsGrupo: PedidoItem[], prov?: Proveedor) => {
     if (typeof window === "undefined") return;
-    const win = window.open("about:blank", "_blank");
+    const isIOS = detectarPlataformaWhatsApp() === "ios";
+    const win = isIOS ? null : window.open("about:blank", "_blank");
     const link = await construirLinkCorto(itemsGrupo, prov);
     if (!link) {
-      if (win) win.close();
+      if (win && !win.closed) win.close();
       return;
     }
-    if (win) {
+    let copiado = false;
+    try {
+      if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
+        await navigator.clipboard.writeText(link);
+        copiado = true;
+      }
+    } catch { }
+    if (!copiado) {
+      try {
+        const ta = document.createElement("textarea");
+        ta.value = link;
+        ta.setAttribute("readonly", "");
+        ta.style.position = "fixed";
+        ta.style.opacity = "0";
+        document.body.appendChild(ta);
+        ta.select();
+        copiado = document.execCommand("copy");
+        document.body.removeChild(ta);
+      } catch { }
+    }
+    if (copiado) {
+      mostrarToast("✓ Link copiado al portapapeles", "ok");
+    }
+    if (isIOS) {
+      window.location.assign(link);
+    } else if (win && !win.closed) {
       win.location.href = link;
     } else {
       window.open(link, "_blank");
@@ -622,7 +657,8 @@ export default function PedirProveedoresPage() {
 
   const enviarWhatsAppGrupo = async (itemsGrupo: PedidoItem[], prov?: Proveedor) => {
     if (!orden || itemsGrupo.length === 0 || typeof window === "undefined") return;
-    const win = window.open("about:blank", "_blank");
+    const isIOS = detectarPlataformaWhatsApp() === "ios";
+    const win = isIOS ? null : window.open("about:blank", "_blank");
     const ahora = new Date();
     const fechaHora = ahora.toLocaleString("es-EC", {
       day: "2-digit",
@@ -634,18 +670,12 @@ export default function PedirProveedoresPage() {
     const link = await construirLinkCorto(itemsGrupo, prov);
     const vehiculoInfo = `${orden.vehicle || "Vehículo"} (Placa: ${orden.plate || "N/A"})`;
     const detalle = itemsGrupo.map((it) => `• ${it.qty || 1}x ${it.name}`).join("\n");
-    const mensaje = encodeURIComponent(
-      `Hola${prov?.name ? ` ${prov.name}` : ""}, solicito cotización para el vehículo ${vehiculoInfo}\nFecha y hora: ${fechaHora}\n\nLo que necesito:\n${detalle}\n\nAbre el catálogo del proveedor para confirmar disponibilidad, precio y tiempo de entrega:\n${link}`
-    );
-    const phoneClean = (prov?.phone || "").replace(/[^0-9]/g, "");
-    const url = phoneClean
-      ? `https://wa.me/${phoneClean}?text=${mensaje}`
-      : `https://wa.me/?text=${mensaje}`;
-    if (win) {
-      win.location.href = url;
-    } else {
-      window.open(url, "_blank");
-    }
+    const texto = `Hola${prov?.name ? ` ${prov.name}` : ""}, solicito cotización para el vehículo ${vehiculoInfo}\nFecha y hora: ${fechaHora}\n\nLo que necesito:\n${detalle}\n\nAbre el catálogo del proveedor para confirmar disponibilidad, precio y tiempo de entrega:\n${link}`;
+    abrirWhatsAppCompatible({
+      phone: prov?.phone,
+      text: texto,
+      preOpenedWindow: win,
+    });
   };
 
   const obtenerItemsParaEnvio = (item: PedidoItem): PedidoItem[] => {
@@ -768,19 +798,19 @@ export default function PedirProveedoresPage() {
               </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2 shrink-0">
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-zinc-200/80 dark:border-white/10 bg-zinc-50/80 dark:bg-white/[0.03]">
+            <div className="grid grid-cols-3 sm:flex sm:flex-wrap items-center gap-1.5 sm:gap-2 w-full lg:w-auto shrink-0">
+              <div className="inline-flex items-center justify-center sm:justify-start gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 rounded-xl border border-zinc-200/80 dark:border-white/10 bg-zinc-50/80 dark:bg-white/[0.03]">
                 <span className="text-[11px] text-zinc-500 dark:text-zinc-400">Pedidos</span>
-                <span className="text-sm font-bold text-zinc-900 dark:text-white tabular-nums">{itemsMarcados.length}</span>
+                <span className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-white tabular-nums">{itemsMarcados.length}</span>
               </div>
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-zinc-200/80 dark:border-white/10 bg-zinc-50/80 dark:bg-white/[0.03]">
-                <span className="text-[11px] text-zinc-500 dark:text-zinc-400">Proveedores</span>
-                <span className="text-sm font-bold text-purple-600 dark:text-purple-300 tabular-nums">{gruposPorProveedor.length}</span>
+              <div className="inline-flex items-center justify-center sm:justify-start gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 rounded-xl border border-zinc-200/80 dark:border-white/10 bg-zinc-50/80 dark:bg-white/[0.03]">
+                <span className="text-[11px] text-zinc-500 dark:text-zinc-400 truncate">Proveed.</span>
+                <span className="text-xs sm:text-sm font-bold text-purple-600 dark:text-purple-300 tabular-nums">{gruposPorProveedor.length}</span>
               </div>
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-zinc-200/80 dark:border-white/10 bg-zinc-50/80 dark:bg-white/[0.03]">
-                <span className={`w-1.5 h-1.5 rounded-full ${sinProveedorCount > 0 ? "bg-amber-400" : "bg-emerald-400"}`} />
-                <span className="text-[11px] text-zinc-500 dark:text-zinc-400">Sin asignar</span>
-                <span className={`text-sm font-bold tabular-nums ${sinProveedorCount > 0 ? "text-amber-600 dark:text-amber-400" : "text-emerald-600 dark:text-emerald-400"}`}>
+              <div className="inline-flex items-center justify-center sm:justify-start gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 rounded-xl border border-zinc-200/80 dark:border-white/10 bg-zinc-50/80 dark:bg-white/[0.03]">
+                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${sinProveedorCount > 0 ? "bg-amber-400" : "bg-emerald-400"}`} />
+                <span className="text-[11px] text-zinc-500 dark:text-zinc-400 truncate">Sin asig.</span>
+                <span className={`text-xs sm:text-sm font-bold tabular-nums ${sinProveedorCount > 0 ? "text-amber-600 dark:text-amber-400" : "text-emerald-600 dark:text-emerald-400"}`}>
                   {sinProveedorCount}
                 </span>
               </div>
@@ -799,8 +829,8 @@ export default function PedirProveedoresPage() {
                     ? gruposPorProveedor[0].prov
                     : undefined;
                 return (
-                  <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
-                    <div className="flex-1 sm:w-64">
+                  <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto shrink-0">
+                    <div className="flex-1 min-w-[180px] sm:w-64">
                       <ProveedorRowDropdown
                         proveedores={proveedores}
                         valueId={proveedorUnicoTodos?.id}
@@ -942,13 +972,13 @@ export default function PedirProveedoresPage() {
                                 </span>
                               </div>
 
-                              <div className="flex items-center gap-2">
+                              <div className="flex flex-wrap items-center gap-2">
                                 {(() => {
                                   const nombreRaw = String(item.supplierName || "").trim();
                                   const esGenerico = !nombreRaw || nombreRaw.toLowerCase() === "proveedor general";
                                   const nombreMostrar = provActual?.name || (!esGenerico ? nombreRaw : "");
                                   return (
-                                    <div className="flex-1 min-w-0">
+                                    <div className="flex-1 min-w-[130px]">
                                       <button
                                         type="button"
                                         onClick={() => {
@@ -958,9 +988,9 @@ export default function PedirProveedoresPage() {
                                             targetIds: [item.id],
                                           });
                                         }}
-                                        className={`h-9 rounded-lg border text-xs transition-colors cursor-pointer inline-flex items-center ${nombreMostrar
+                                        className={`h-9 rounded-lg border text-xs transition-colors cursor-pointer inline-flex items-center touch-manipulation ${nombreMostrar
                                           ? "w-full px-2.5 text-left truncate bg-purple-500/10 border-purple-500/30 text-zinc-900 dark:text-white font-medium hover:bg-purple-500/15"
-                                          : "px-2.5 justify-center bg-zinc-50 dark:bg-white/[0.04] border-zinc-200 dark:border-white/10 text-zinc-400 hover:text-purple-400 hover:border-purple-400/40"
+                                          : "px-3 justify-center bg-zinc-50 dark:bg-white/[0.04] border-zinc-200 dark:border-white/10 text-zinc-400 hover:text-purple-400 hover:border-purple-400/40"
                                           }`}
                                         title={nombreMostrar ? `Proveedor: ${nombreMostrar}` : "Buscar y seleccionar proveedor"}
                                       >
@@ -1418,7 +1448,7 @@ export default function PedirProveedoresPage() {
                   value={busquedaProveedorFlotante}
                   onChange={(e) => setBusquedaProveedorFlotante(e.target.value)}
                   placeholder="Buscar proveedor..."
-                  className="w-full h-9 pl-8.5 pr-3 rounded-lg bg-zinc-100/80 dark:bg-white/[0.04] border border-zinc-200/70 dark:border-white/[0.08] text-xs text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:border-purple-500/60 focus:bg-white dark:focus:bg-white/[0.06] transition-colors"
+                  className="w-full h-10 sm:h-9 pl-8.5 pr-3 rounded-lg bg-zinc-100/80 dark:bg-white/[0.04] border border-zinc-200/70 dark:border-white/[0.08] text-base sm:text-xs text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:border-purple-500/60 focus:bg-white dark:focus:bg-white/[0.06] transition-colors"
                 />
               </div>
               <button
