@@ -314,31 +314,77 @@ function inferStatusColor(status: string, explicitColor?: string | null): string
 }
 
 function mapOrderRow(r: any) {
-  const rawItems = safeParseJson<any[]>(r.itemsJson, []);
-  const legacyServices = safeParseJson<string[]>(r.servicesJson, []);
+  const defaultItemStatus =
+    r.status === "Listo para Entregar" || r.status === "LISTO_PARA_COBRO"
+      ? "Listo"
+      : r.status === "Reparando" || r.status === "En Proceso"
+        ? "En Proceso"
+        : "Pendiente";
 
-  // Si la orden venía del formato anterior (solo nombres en servicesJson), construir items compatibles
-  const items =
-    rawItems.length > 0
-      ? rawItems
-      : legacyServices.map((srvName, idx) => ({
-        id: `legacy-${r.id}-${idx}`,
-        type: "SERVICE",
-        category: "Mecánica Rápida",
-        code: `SRV-0${idx + 1}`,
-        name: srvName,
-        price:
-          legacyServices.length > 0 && r.totalCost
-            ? Number((Number(r.totalCost) / legacyServices.length).toFixed(2))
-            : 25,
-        qty: 1,
-        status:
-          r.status === "Listo para Entregar" || r.status === "LISTO_PARA_COBRO"
-            ? "Listo"
-            : r.status === "Reparando" || r.status === "En Proceso"
-              ? "En Proceso"
-              : "Pendiente",
-      }));
+  const unwrapNestedItem = (entry: any, fallbackId: string, defaultType?: string) => {
+    if (!entry || typeof entry !== "object") return null;
+    const base =
+      entry.name && typeof entry.name === "object" && typeof entry.name.name === "string"
+        ? { ...entry, ...entry.name }
+        : entry;
+    const resolvedType = base.type || defaultType || (base.isService ? "SERVICE" : "PRODUCT");
+    return {
+      ...base,
+      id: base.id || fallbackId,
+      type: resolvedType,
+      isService: resolvedType === "SERVICE" ? true : Boolean(base.isService),
+      qty: Number(base.qty) > 0 ? Number(base.qty) : 1,
+      price: Number(base.price) || 0,
+      status: base.status || defaultItemStatus,
+    };
+  };
+
+  const rawItems = safeParseJson<any[]>(r.itemsJson, [])
+    .map((it, idx) => unwrapNestedItem(it, `item-${r.id}-${idx}`))
+    .filter((it): it is NonNullable<typeof it> => Boolean(it));
+
+  const rawServices = safeParseJson<any[]>(r.servicesJson, []);
+  const normalizedServices = rawServices
+    .map((srv, idx) => {
+      if (typeof srv === "string") {
+        return {
+          id: `legacy-${r.id}-${idx}`,
+          type: "SERVICE",
+          isService: true,
+          category: "Mecánica Rápida",
+          code: `SRV-0${idx + 1}`,
+          name: srv,
+          price:
+            rawServices.length > 0 && r.totalCost
+              ? Number((Number(r.totalCost) / rawServices.length).toFixed(2))
+              : 25,
+          qty: 1,
+          status: defaultItemStatus,
+        };
+      }
+      return unwrapNestedItem(srv, `srv-${r.id}-${idx}`, "SERVICE");
+    })
+    .filter((srv): srv is NonNullable<typeof srv> => Boolean(srv));
+
+  // Combinar itemsJson con servicesJson (evitando duplicados cuando ambos guardan los mismos servicios)
+  const seenIds = new Set<string>(rawItems.map((it) => String(it.id)));
+  const seenServiceNames = new Set<string>(
+    rawItems
+      .filter((it) => it.type === "SERVICE")
+      .map((it) => String(it.name || "").trim().toLowerCase())
+      .filter(Boolean)
+  );
+
+  const items = [...rawItems];
+  for (const srv of normalizedServices) {
+    const srvId = String(srv.id);
+    const srvNameKey = String(srv.name || "").trim().toLowerCase();
+    if (seenIds.has(srvId)) continue;
+    if (srvNameKey && seenServiceNames.has(srvNameKey)) continue;
+    seenIds.add(srvId);
+    if (srvNameKey) seenServiceNames.add(srvNameKey);
+    items.push(srv);
+  }
 
   const receptionPhotos = safeParseJson<string[]>(r.receptionPhotosJson, []);
   const evidencePhotos = safeParseJson<string[]>(r.evidencePhotosJson, []);

@@ -1290,7 +1290,7 @@ export default function RegistroFinalUnificado({
           >
             <div
               onClick={(e) => e.stopPropagation()}
-              className="relative w-full max-w-2xl max-h-[85dvh] overflow-y-auto rounded-2xl bg-white dark:bg-[#111113] border border-zinc-200 dark:border-white/10 p-4 shadow-2xl space-y-3"
+              className="relative w-full max-w-2xl max-h-[85dvh] overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden rounded-2xl bg-white dark:bg-[#111113] border border-zinc-200 dark:border-white/10 p-4 shadow-2xl space-y-3"
             >
               <div className="flex items-center justify-between pb-1">
                 <div className="flex items-center gap-2">

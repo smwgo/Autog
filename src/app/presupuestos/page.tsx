@@ -506,7 +506,7 @@ export default function PanelPresupuestosPage() {
   // ============================================================================
 
   return (
-    <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-black font-sans pb-24 md:pb-0 text-zinc-900 dark:text-white selection:bg-blue-500/30">
+    <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-black font-sans pb-[calc(env(safe-area-inset-bottom)+5.5rem)] md:pb-8 text-zinc-900 dark:text-white selection:bg-blue-500/30">
       <Header />
 
       {/* Toast Notificaciones */}
@@ -621,7 +621,7 @@ export default function PanelPresupuestosPage() {
                 value={busqueda}
                 onChange={(e) => setBusqueda(e.target.value)}
                 placeholder="Buscar..."
-                className="w-full pl-10 pr-10 h-11 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white text-sm font-normal focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all placeholder:text-zinc-400 shadow-sm"
+                className="w-full pl-10 pr-10 h-11 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white text-base sm:text-sm font-normal focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all placeholder:text-zinc-400 shadow-sm"
               />
               {busqueda && (
                 <button
@@ -708,7 +708,7 @@ export default function PanelPresupuestosPage() {
               </div>
             ) : (
               <>
-                {/* Vista Móvil Compacta */}
+                {/* Vista Móvil Compacta (optimizada iOS y Android) */}
                 <div className="md:hidden space-y-2.5">
                   {ordenes.map((orden, idx) => {
                     const estaTrabajando = ordenTrabajandoId === orden.id || ordenTrabajandoId === orden.orderNumber;
@@ -718,18 +718,18 @@ export default function PanelPresupuestosPage() {
                       <div
                         key={`movil-${orden.id || idx}`}
                         onClick={() => irAPropuesta(orden.id)}
-                        className={`rounded-2xl border p-3.5 space-y-2.5 shadow-xs transition-all cursor-pointer ${estaTrabajando
+                        className={`rounded-2xl border p-3.5 space-y-2.5 shadow-xs transition-all cursor-pointer active:scale-[0.99] ${estaTrabajando
                           ? "bg-purple-50/40 dark:bg-purple-950/20 border-purple-500/50 ring-1 ring-purple-500/30"
                           : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700"
                           }`}
                       >
-                        <div className="flex items-center justify-between gap-3">
-                          <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="flex items-start justify-between gap-2.5">
+                          <div className="flex items-center gap-2.5 min-w-0 flex-1">
                             <button
                               type="button"
                               onClick={(e) => toggleOrdenTrabajando(orden.id, e)}
                               title={estaTrabajando ? "Orden en trabajo (clic para desmarcar)" : "Marcar como orden en trabajo"}
-                              className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all cursor-pointer shrink-0 ${estaTrabajando
+                              className={`w-6 h-6 rounded-lg border flex items-center justify-center transition-all cursor-pointer shrink-0 ${estaTrabajando
                                 ? "bg-purple-600 border-purple-500 text-white"
                                 : "border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800/80 text-transparent"
                                 }`}
@@ -738,26 +738,31 @@ export default function PanelPresupuestosPage() {
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                               </svg>
                             </button>
-                            <span className="font-normal text-xs text-purple-600 dark:text-purple-400 shrink-0">
-                              #{limpiarNumeroOrden(orden.orderNumber)}
-                            </span>
-                            <span className="font-normal text-xs text-zinc-900 dark:text-zinc-100 truncate">
-                              {orden.client}
-                            </span>
-                            <span className="font-normal text-xs text-zinc-500 dark:text-zinc-400 truncate">
-                              · {orden.vehicle}
-                            </span>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-1.5 min-w-0">
+                                <span className="font-mono font-semibold text-xs text-purple-600 dark:text-purple-400 shrink-0">
+                                  #{limpiarNumeroOrden(orden.orderNumber)}
+                                </span>
+                                <span className="font-semibold text-sm text-zinc-900 dark:text-zinc-100 truncate">
+                                  {orden.client}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-1.5 text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 min-w-0">
+                                <span className="truncate">{orden.vehicle}</span>
+                                <span className="shrink-0 text-zinc-300 dark:text-zinc-600">·</span>
+                                <span className="shrink-0 text-[11px] text-zinc-400">
+                                  {fecha}{hora ? ` ${hora}` : ""}
+                                </span>
+                              </div>
+                            </div>
                           </div>
-                          <span className="font-normal text-xs text-zinc-900 dark:text-white shrink-0">
+                          <span className="font-semibold text-sm tabular-nums text-zinc-900 dark:text-white shrink-0 pt-0.5">
                             ${orden.totalVentaEstimada.toFixed(2)}
                           </span>
                         </div>
 
                         <div className="flex items-center justify-between pt-2 border-t border-zinc-100 dark:border-zinc-800/80 text-xs gap-2">
-                          <span className="font-normal text-xs text-zinc-500 dark:text-zinc-400">
-                            {fecha}{hora ? ` · ${hora}` : ""}
-                          </span>
-                          <div className="flex items-center gap-1.5 shrink-0 flex-wrap justify-end" onClick={(e) => e.stopPropagation()}>
+                          <div onClick={(e) => e.stopPropagation()}>
                             <button
                               type="button"
                               disabled={cambiandoEstadoId === orden.id}
@@ -773,31 +778,35 @@ export default function PanelPresupuestosPage() {
                                         : "Pagado";
                                 handleCambiarEstadoPropuesta(orden.id, siguienteEstado);
                               }}
-                              className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-normal border transition-all hover:brightness-110 active:scale-95 cursor-pointer disabled:opacity-50 ${stTaller.badgeClass}`}
+                              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border transition-all hover:brightness-110 active:scale-95 cursor-pointer disabled:opacity-50 ${stTaller.badgeClass}`}
                               title="Clic para cambiar estado (En espera → Trabajando → Pausa → Pagado)"
                             >
                               <span className={`w-1.5 h-1.5 rounded-full ${stTaller.dotClass}`} />
                               <span>{stTaller.label}</span>
                             </button>
+                          </div>
 
+                          <div className="flex items-center gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
                             <button
                               type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 setOrdenAEliminar(orden);
                               }}
-                              className="w-7 h-7 rounded-lg bg-rose-50 dark:bg-rose-500/10 hover:bg-rose-100 dark:hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-normal flex items-center justify-center transition-all cursor-pointer"
+                              className="w-9 h-9 rounded-xl bg-rose-50 dark:bg-rose-500/10 hover:bg-rose-100 dark:hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-normal flex items-center justify-center transition-all cursor-pointer active:scale-95"
                               title="Eliminar propuesta"
+                              aria-label="Eliminar propuesta"
                             >
-                              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                               </svg>
                             </button>
                             <button
                               type="button"
                               onClick={() => irAPropuesta(orden.id)}
-                              className="w-7 h-7 rounded-lg bg-purple-50 dark:bg-purple-500/10 hover:bg-purple-100 dark:hover:bg-purple-500/20 text-purple-600 dark:text-purple-400 text-xs font-normal flex items-center justify-center transition-all cursor-pointer"
+                              className="w-9 h-9 rounded-xl bg-purple-50 dark:bg-purple-500/10 hover:bg-purple-100 dark:hover:bg-purple-500/20 text-purple-600 dark:text-purple-400 text-sm font-semibold flex items-center justify-center transition-all cursor-pointer active:scale-95"
                               title="Abrir propuesta"
+                              aria-label="Abrir propuesta"
                             >
                               →
                             </button>

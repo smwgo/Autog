@@ -57,6 +57,7 @@ export async function GET(req: Request) {
       !safeKey.startsWith("taller_notas_voz/") &&
       !safeKey.startsWith("taller_audio/") &&
       !safeKey.startsWith("taller-evidencias/") &&
+      !safeKey.startsWith("taller_evidencia/") &&
       !safeKey.startsWith("data:audio/")
     ) {
       return NextResponse.json(

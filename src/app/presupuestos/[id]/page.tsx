@@ -6,6 +6,7 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import { Header } from "@/components/Header";
 import { MiniAudioPlayer } from "@/components/taller/MiniAudioPlayer";
+import { setCachedAudioDuration } from "@/lib/audio-duration";
 const CatalogoProductosServiciosTaller = dynamic(
   () => import("@/components/taller/CatalogoProductosServiciosTaller"),
   { ssr: false }
@@ -426,6 +427,8 @@ export default function PaginaDetallePropuesta() {
   const latestTargetIdRef = useRef<string>(id);
   const catalogoProductosRef = useRef<any[]>([]);
   const catalogoServiciosRef = useRef<any[]>([]);
+  const [catalogoProductosState, setCatalogoProductosState] = useState<any[]>([]);
+  const [catalogoServiciosState, setCatalogoServiciosState] = useState<any[]>([]);
 
   const resolverPrecioServicioCatalogo = useCallback((nombre?: string, precioActual?: number, esManual?: boolean): number => {
     const actual = Number(precioActual || 0);
@@ -472,9 +475,11 @@ export default function PaginaDetallePropuesta() {
         }
         if (resTal?.success && Array.isArray(resTal.productos)) {
           catalogoProductosRef.current = resTal.productos;
+          setCatalogoProductosState(resTal.productos);
         }
         if (resTal?.success && Array.isArray(resTal.servicios)) {
           catalogoServiciosRef.current = resTal.servicios;
+          setCatalogoServiciosState(resTal.servicios);
         }
         // Si ya hay ítems cargados sin precio y son de catálogo, completar su precio automáticamente
         setServicios((prev) =>
@@ -711,6 +716,13 @@ export default function PaginaDetallePropuesta() {
   const [busquedaAccesoRapido, setBusquedaAccesoRapido] = useState("");
   const [modoManualRapidoPropuesta, setModoManualRapidoPropuesta] = useState(false);
   const [textoManualRapidoPropuesta, setTextoManualRapidoPropuesta] = useState("");
+  const [grabandoAudioRapido, setGrabandoAudioRapido] = useState(false);
+  const [segundosAudioRapido, setSegundosAudioRapido] = useState(0);
+  const mediaRecorderRapidoRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRapidoRef = useRef<Blob[]>([]);
+  const audioTimerRapidoRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pcMicSessionIdRapidoRef = useRef<string | null>(null);
+  const inputAudioFallbackRapidoRef = useRef<HTMLInputElement | null>(null);
   const [itemTiempoEnvioModal, setItemTiempoEnvioModal] = useState<{
     id: string;
     isService: boolean;
@@ -1604,12 +1616,251 @@ export default function PaginaDetallePropuesta() {
     }
   };
 
+  const subirArchivoAudioGrabadoPropuesta = async (file: File): Promise<string | null> => {
+    if (!orden) return null;
+    setSubiendoMediaRapido(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("orderId", orden.id);
+      formData.append("orderNumber", orden.orderNumber);
+      formData.append("plate", orden.plate);
+      formData.append("folder", "taller_evidencia");
+      formData.append("tipo", "audio");
+      const res = await fetch("/api/storage/upload", { method: "POST", body: formData });
+      const data = await res.json().catch(() => null);
+      if (data?.success && data?.url) {
+        setAudiosBorradorRapido((p) => [...p, data.url]);
+        mostrarToast("🎙️ Nota de audio grabada");
+        return data.url;
+      }
+      return await new Promise<string | null>((resolve) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const url = String(reader.result || "");
+          if (url) {
+            setAudiosBorradorRapido((p) => [...p, url]);
+            mostrarToast("🎙️ Nota de audio grabada");
+          }
+          resolve(url || null);
+        };
+        reader.onerror = () => resolve(null);
+        reader.readAsDataURL(file);
+      });
+    } catch {
+      mostrarToast("Error al subir audio grabado", "err");
+      return null;
+    } finally {
+      setSubiendoMediaRapido(false);
+    }
+  };
+
+  const detenerYSubirAudioRapido = async (): Promise<string | null> => {
+    const duracionGrabadaSeg = segundosAudioRapido;
+    if (audioTimerRapidoRef.current) {
+      clearInterval(audioTimerRapidoRef.current);
+      audioTimerRapidoRef.current = null;
+    }
+    setGrabandoAudioRapido(false);
+    setSegundosAudioRapido(0);
+
+    const activePcSessionId = pcMicSessionIdRapidoRef.current;
+    pcMicSessionIdRapidoRef.current = null;
+
+    const recorder = mediaRecorderRapidoRef.current;
+    mediaRecorderRapidoRef.current = null;
+
+    let blobRes: { blob: Blob; mime: string } | null = null;
+    if (recorder && recorder.state !== "inactive") {
+      blobRes = await new Promise<{ blob: Blob; mime: string } | null>((resolve) => {
+        recorder.onstop = () => {
+          const mime = recorder.mimeType || "audio/webm";
+          const blob = new Blob(audioChunksRapidoRef.current, { type: mime });
+          audioChunksRapidoRef.current = [];
+          try {
+            recorder.stream.getTracks().forEach((t) => t.stop());
+          } catch {}
+          resolve(blob.size > 0 ? { blob, mime } : null);
+        };
+        try {
+          recorder.stop();
+        } catch {
+          resolve(null);
+        }
+      });
+    }
+
+    if (blobRes && blobRes.blob.size > 0) {
+      if (activePcSessionId) {
+        fetch("/api/taller/pc-mic", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "stop", sessionId: activePcSessionId, skipTranscribe: true }),
+        }).catch(() => {});
+      }
+      const ext = blobRes.mime.includes("mp4")
+        ? "m4a"
+        : blobRes.mime.includes("ogg")
+          ? "ogg"
+          : "webm";
+      const file = new File([blobRes.blob], `audio_${Date.now()}.${ext}`, {
+        type: blobRes.mime,
+      });
+      const uploadedUrl = await subirArchivoAudioGrabadoPropuesta(file);
+      if (uploadedUrl) {
+        setCachedAudioDuration(uploadedUrl, Math.max(1, duracionGrabadaSeg));
+      }
+      return uploadedUrl;
+    }
+
+    if (activePcSessionId) {
+      try {
+        setSubiendoMediaRapido(true);
+        const res = await fetch("/api/taller/pc-mic", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "stop",
+            sessionId: activePcSessionId,
+            skipTranscribe: true,
+          }),
+        });
+        const data = await res.json();
+        if (data?.success && data?.audioBase64) {
+          const binStr = atob(data.audioBase64);
+          const bytes = new Uint8Array(binStr.length);
+          for (let i = 0; i < binStr.length; i++) {
+            bytes[i] = binStr.charCodeAt(i);
+          }
+          const wavFile = new File([bytes], `audio_pc_${Date.now()}.wav`, {
+            type: "audio/wav",
+          });
+          const uploadedUrl = await subirArchivoAudioGrabadoPropuesta(wavFile);
+          if (uploadedUrl) {
+            setCachedAudioDuration(uploadedUrl, Math.max(1, duracionGrabadaSeg));
+          }
+          return uploadedUrl;
+        }
+      } catch (err) {
+        console.error("Error al detener grabación de PC en propuesta:", err);
+      } finally {
+        setSubiendoMediaRapido(false);
+      }
+    }
+
+    return null;
+  };
+
+  const handleToggleAudioRapido = async () => {
+    if (grabandoAudioRapido) {
+      await detenerYSubirAudioRapido();
+      return;
+    }
+    const esMovil =
+      typeof navigator !== "undefined" && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+    if (
+      typeof navigator !== "undefined" &&
+      navigator.mediaDevices?.getUserMedia &&
+      typeof MediaRecorder !== "undefined"
+    ) {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            channelCount: 1,
+          },
+        });
+        const candidatosMime = [
+          "audio/webm;codecs=opus",
+          "audio/webm",
+          "audio/mp4",
+          "audio/ogg;codecs=opus",
+        ];
+        const mimeSoportado =
+          candidatosMime.find((m) => {
+            try {
+              return MediaRecorder.isTypeSupported(m);
+            } catch {
+              return false;
+            }
+          }) || "";
+        let recorder: MediaRecorder;
+        try {
+          recorder = new MediaRecorder(stream, {
+            ...(mimeSoportado ? { mimeType: mimeSoportado } : {}),
+            audioBitsPerSecond: 24000,
+          });
+        } catch {
+          recorder = mimeSoportado
+            ? new MediaRecorder(stream, { mimeType: mimeSoportado })
+            : new MediaRecorder(stream);
+        }
+        audioChunksRapidoRef.current = [];
+        recorder.ondataavailable = (ev) => {
+          if (ev.data && ev.data.size > 0) audioChunksRapidoRef.current.push(ev.data);
+        };
+        mediaRecorderRapidoRef.current = recorder;
+        recorder.start(500);
+        setGrabandoAudioRapido(true);
+        setSegundosAudioRapido(0);
+        if (audioTimerRapidoRef.current) clearInterval(audioTimerRapidoRef.current);
+        audioTimerRapidoRef.current = setInterval(() => {
+          setSegundosAudioRapido((prev) => prev + 1);
+        }, 1000);
+        return;
+      } catch {
+        // Fallback abajo si el navegador bloqueó o no hay getUserMedia
+      }
+    }
+
+    if (!esMovil) {
+      const sessionId = `prop_${Date.now()}`;
+      try {
+        const res = await fetch("/api/taller/pc-mic", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "start", sessionId }),
+        });
+        const data = await res.json();
+        if (data?.success) {
+          pcMicSessionIdRapidoRef.current = sessionId;
+          setGrabandoAudioRapido(true);
+          setSegundosAudioRapido(0);
+          if (audioTimerRapidoRef.current) clearInterval(audioTimerRapidoRef.current);
+          audioTimerRapidoRef.current = setInterval(() => {
+            setSegundosAudioRapido((prev) => prev + 1);
+          }, 1000);
+          return;
+        }
+      } catch {
+        // Continuar a fallback
+      }
+    }
+
+    if (inputAudioFallbackRapidoRef.current) {
+      inputAudioFallbackRapidoRef.current.click();
+      return;
+    }
+
+    mostrarToast("No se pudo acceder al micrófono.", "err");
+  };
+
   // Añadir servicio o producto rápido desde la barra superior (con foto, audio, tiempo y estado Bodega/Pedir)
   const handleAgregarRapidoEnPropuesta = async (origen: EspecialidadTipo) => {
     const nombre = descripcionRapida.trim();
     if (!nombre) {
       mostrarToast("Escribe el nombre del servicio o producto", "err");
       return;
+    }
+
+    let audiosFinales = [...audiosBorradorRapido];
+    if (grabandoAudioRapido) {
+      const audioRecienGrabado = await detenerYSubirAudioRapido();
+      if (audioRecienGrabado && !audiosFinales.includes(audioRecienGrabado)) {
+        audiosFinales = [...audiosFinales, audioRecienGrabado];
+      }
     }
 
     if (tipoRapido === "SERVICE") {
@@ -1628,7 +1879,7 @@ export default function PaginaDetallePropuesta() {
         isManual: true,
         agregadoEnPropuesta: true,
         fotos: [...fotosBorradorRapido],
-        audios: [...audiosBorradorRapido],
+        audios: audiosFinales,
         deliveryTime: tiempoRapido || null,
       };
       const nuevosServicios = [...servicios, nuevoSrv];
@@ -1659,7 +1910,7 @@ export default function PaginaDetallePropuesta() {
         isManual: true,
         agregadoEnPropuesta: true,
         fotos: [...fotosBorradorRapido],
-        audios: [...audiosBorradorRapido],
+        audios: audiosFinales,
         deliveryTime: tiempoRapido || null,
       };
       const nuevosRepuestos = [...repuestos, nuevoItem];
@@ -3395,7 +3646,7 @@ export default function PaginaDetallePropuesta() {
               }
             }}
             placeholder="Escribe una descripción..."
-            className="flex-1 min-w-0 rounded-xl bg-white dark:bg-white/[0.03] border border-zinc-200 dark:border-white/10 focus:border-blue-500/50 px-3.5 py-2.5 text-sm text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none"
+            className="flex-1 min-w-0 rounded-xl bg-white dark:bg-white/[0.03] border border-zinc-200 dark:border-white/10 focus:border-blue-500/50 px-3.5 py-2.5 text-base sm:text-sm text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none"
           />
           <button
             type="button"
@@ -3408,10 +3659,16 @@ export default function PaginaDetallePropuesta() {
         </div>
       </div>
 
-      {/* Botones rápidos: Tomar foto, Subir foto, Audio, Catálogo (Carrito) y Servicios Rápidos (Rayo) */}
+      {/* Botones rápidos: Tomar foto, Subir foto, Audio (al escribir/adjuntar), Catálogo (Carrito) y Servicios Rápidos (Rayo) */}
       <div className="flex flex-wrap items-center gap-2">
-        <label
-          title="Tomar foto"
+        {(descripcionRapida.trim().length > 0 ||
+          fotosBorradorRapido.length > 0 ||
+          audiosBorradorRapido.length > 0 ||
+          grabandoAudioRapido ||
+          subiendoMediaRapido) && (
+          <>
+            <label
+              title="Tomar foto"
           className="h-10 w-10 sm:h-11 sm:w-11 rounded-xl border bg-blue-50/80 hover:bg-blue-100 dark:bg-blue-500/10 dark:hover:bg-blue-500/20 border-blue-200 dark:border-blue-500/30 text-blue-600 dark:text-blue-400 flex items-center justify-center cursor-pointer active:scale-95 transition-all relative"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
@@ -3450,27 +3707,38 @@ export default function PaginaDetallePropuesta() {
           />
         </label>
 
-        <label
-          title="Grabar o adjuntar nota de audio"
-          className="h-10 w-10 sm:h-11 sm:w-11 rounded-xl border bg-amber-50/80 hover:bg-amber-100 dark:bg-amber-500/10 dark:hover:bg-amber-500/20 border-amber-200 dark:border-amber-500/30 text-amber-600 dark:text-amber-400 flex items-center justify-center cursor-pointer active:scale-95 transition-all relative"
+        <button
+          type="button"
+          disabled={subiendoMediaRapido}
+          onClick={() => void handleToggleAudioRapido()}
+          title={grabandoAudioRapido ? "Detener y guardar audio" : "Grabar nota de audio"}
+          className={`h-10 sm:h-11 px-3 rounded-xl border flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 transition-all relative touch-manipulation ${
+            grabandoAudioRapido
+              ? "bg-rose-500 text-white border-rose-600 animate-pulse"
+              : "bg-amber-50/80 hover:bg-amber-100 dark:bg-amber-500/10 dark:hover:bg-amber-500/20 border-amber-200 dark:border-amber-500/30 text-amber-600 dark:text-amber-400"
+          }`}
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 0 0 6-6v-1.5m-6 7.5a6 6 0 0 1-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 0 1-3-3V4.5a3 3 0 1 1 6 0v8.25a3 3 0 0 1-3 3Z" />
           </svg>
-          {audiosBorradorRapido.length > 0 && (
+          {grabandoAudioRapido && <span className="text-xs font-bold">{segundosAudioRapido}s</span>}
+          {!grabandoAudioRapido && audiosBorradorRapido.length > 0 && (
             <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-amber-500 text-black text-[9px] font-bold flex items-center justify-center">
               {audiosBorradorRapido.length}
             </span>
           )}
-          <input
-            type="file"
-            accept="audio/*"
-            capture
-            disabled={subiendoMediaRapido}
-            onChange={(e) => handleSubirMediaBorrador(e, "audio")}
-            className="hidden"
-          />
-        </label>
+        </button>
+        <input
+          ref={inputAudioFallbackRapidoRef}
+          type="file"
+          accept="audio/*"
+          capture
+          disabled={subiendoMediaRapido}
+          onChange={(e) => handleSubirMediaBorrador(e, "audio")}
+          className="hidden"
+        />
+          </>
+        )}
 
         <button
           type="button"
@@ -3504,6 +3772,29 @@ export default function PaginaDetallePropuesta() {
         </button>
       </div>
 
+      {/* Barra visual cuando está grabando audio en PC o móvil */}
+      {grabandoAudioRapido && (
+        <div className="flex items-center justify-between gap-3 px-3.5 py-2.5 rounded-xl border border-rose-500/40 bg-rose-50/80 dark:bg-rose-500/10 text-rose-700 dark:text-rose-200 animate-fade-in">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <span className="w-2.5 h-2.5 rounded-full bg-rose-600 animate-ping shrink-0" />
+            <span className="text-xs font-mono font-bold bg-rose-600 text-white px-2 py-0.5 rounded-md">
+              {String(Math.floor(segundosAudioRapido / 60)).padStart(2, "0")}:
+              {String(segundosAudioRapido % 60).padStart(2, "0")}
+            </span>
+            <span className="text-xs font-medium truncate">
+              Grabando audio...
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => void handleToggleAudioRapido()}
+            className="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold cursor-pointer shrink-0 active:scale-95 transition-all"
+          >
+            Detener
+          </button>
+        </div>
+      )}
+
       {/* Vista previa de fotos y audios adjuntos antes de pulsar Añadir */}
       {(fotosBorradorRapido.length > 0 || audiosBorradorRapido.length > 0) && (
         <div className="flex flex-wrap items-center gap-2 pt-1 animate-fade-in">
@@ -3533,20 +3824,12 @@ export default function PaginaDetallePropuesta() {
             </div>
           ))}
           {audiosBorradorRapido.map((url, idx) => (
-            <div
+            <MiniAudioPlayer
               key={`daudio-${idx}`}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-300 border border-amber-500/30 text-xs"
-            >
-              <span>🎙️ Audio {idx + 1}</span>
-              <button
-                type="button"
-                onClick={() => setAudiosBorradorRapido((prev) => prev.filter((_, i) => i !== idx))}
-                className="text-rose-500 font-bold hover:underline cursor-pointer"
-                title="Quitar audio"
-              >
-                ×
-              </button>
-            </div>
+              src={url}
+              compact
+              onRemove={() => setAudiosBorradorRapido((prev) => prev.filter((_, i) => i !== idx))}
+            />
           ))}
         </div>
       )}
@@ -3944,7 +4227,7 @@ export default function PaginaDetallePropuesta() {
                 <div className="flex items-center gap-2.5 min-w-0">
                   <span className="min-w-0">
                     <span className="block text-base sm:text-sm font-bold sm:font-semibold leading-tight text-zinc-900 dark:text-white">
-                      Orden de Propuesta
+                      Orden de Servicio
                     </span>
                     <span className="block text-sm sm:text-sm font-mono font-bold dark:font-normal leading-tight text-black dark:text-white mt-0.5">
                       #{limpiarNumeroOrden(orden.orderNumber || orden.quoteNumber)}
@@ -3953,44 +4236,6 @@ export default function PaginaDetallePropuesta() {
                 </div>
               </div>
 
-              {/* Etiqueta de estado de la propuesta a la derecha (clic directo para cambiar estado en Taller) */}
-              <div className="relative shrink-0 ml-auto">
-                {esPagado ? (
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-normal bg-sky-500/15 border-sky-500/40 text-sky-600 dark:text-sky-400">
-                    <span>✓ Pagado</span>
-                  </span>
-                ) : (
-                  <button
-                    type="button"
-                    disabled={cambiandoEstado}
-                    onClick={() => {
-                      const siguienteEstado: "Aprobado" | "Pausada" | "Pendiente" = esPausado
-                        ? "Pendiente"
-                        : esAprobado
-                          ? "Pausada"
-                          : "Aprobado";
-                      void handleCambiarEstadoTaller(siguienteEstado);
-                    }}
-                    title="Clic para cambiar estado en Taller (En espera → Trabajando → Pausa)"
-                    className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-normal transition-all cursor-pointer active:scale-95 ${esPausado
-                      ? "bg-amber-500/15 hover:bg-amber-500/25 border-amber-500/40 text-amber-600 dark:text-amber-400"
-                      : esAprobado
-                        ? "bg-emerald-500/15 hover:bg-emerald-500/25 border-emerald-500/40 text-emerald-400 dark:text-emerald-300"
-                        : "bg-amber-500/15 hover:bg-amber-500/25 border-amber-500/40 text-amber-600 dark:text-amber-400"
-                      }`}
-                  >
-                    <span
-                      className={`w-1.5 h-1.5 rounded-full ${esPausado
-                        ? "bg-amber-500"
-                        : esAprobado
-                          ? "bg-emerald-400 animate-pulse"
-                          : "bg-amber-500"
-                        }`}
-                    />
-                    <span>{esPausado ? "Pausa" : esAprobado ? "Trabajando" : "En espera"}</span>
-                  </button>
-                )}
-              </div>
             </div>
 
             {/* FILA 2: CARRUSEL MORADO DE PROPUESTAS (CLIC DESLIZA A OTRA PROPUESTA / DOBLE CLIC ABRE DATOS DE INGRESO) */}
@@ -4162,7 +4407,7 @@ export default function PaginaDetallePropuesta() {
                       }}
                       aria-pressed={esActivo}
                       className={`snap-start shrink-0 w-full min-h-[76px] sm:min-h-[68px] px-3.5 py-2.5 sm:px-3 sm:py-2 rounded-2xl sm:rounded-xl border text-left flex items-center justify-between gap-3 transition-colors cursor-pointer ${esActivo
-                        ? "bg-gradient-to-r from-purple-50/90 via-purple-50/75 to-blue-50/80 dark:from-purple-500/[0.14] dark:via-purple-500/[0.11] dark:to-blue-500/[0.12] border-purple-300/75 dark:border-purple-400/30 shadow-sm"
+                        ? "bg-gradient-to-r from-blue-50/90 via-blue-50/75 to-indigo-50/80 dark:from-blue-500/[0.14] dark:via-blue-500/[0.11] dark:to-indigo-500/[0.12] border-blue-300/75 dark:border-blue-400/30 shadow-sm"
                         : "bg-white dark:bg-[#111113] border-zinc-200 dark:border-white/10"
                         }`}
                     >
@@ -4176,8 +4421,8 @@ export default function PaginaDetallePropuesta() {
                             setFotoZoom(fotoVehiculoCard);
                           }
                         }}
-                        className={`relative w-16 h-14 sm:w-14 sm:h-12 rounded-xl sm:rounded-lg shrink-0 bg-purple-100/70 dark:bg-purple-500/15 text-purple-600 dark:text-purple-300 flex items-center justify-center overflow-hidden border border-purple-200/70 dark:border-purple-400/25 group/thumb ${fotoVehiculoCard
-                          ? "cursor-zoom-in hover:ring-2 hover:ring-purple-400/70 hover:scale-[1.04] transition-all"
+                        className={`relative w-16 h-14 sm:w-14 sm:h-12 rounded-xl sm:rounded-lg shrink-0 bg-blue-100/70 dark:bg-blue-500/15 text-blue-600 dark:text-blue-300 flex items-center justify-center overflow-hidden border border-blue-200/70 dark:border-blue-400/25 group/thumb ${fotoVehiculoCard
+                          ? "cursor-zoom-in hover:ring-2 hover:ring-blue-400/70 hover:scale-[1.04] transition-all"
                           : ""
                           }`}
                       >
@@ -4215,7 +4460,7 @@ export default function PaginaDetallePropuesta() {
                           {nombreVehiculo}
                         </span>
                         <span className="mt-1 flex items-center gap-2.5 text-sm sm:text-xs text-zinc-600 dark:text-zinc-300">
-                          <span className="font-mono tracking-wider text-purple-600 dark:text-purple-400 truncate text-base sm:text-sm font-black">
+                          <span className="font-mono tracking-wider text-blue-600 dark:text-blue-400 truncate text-base sm:text-sm font-black">
                             {auto.plate}
                           </span>
                           {anioVehiculo && (
@@ -4298,6 +4543,76 @@ export default function PaginaDetallePropuesta() {
                   );
                 })}
               </div>
+
+              {/* Barra de Ingreso + Semáforo de Estado igual que en Panel Taller */}
+              {(() => {
+                const fechaRaw = orden.dateIn || orden.createdAt;
+                let fechaTexto = "Hoy";
+                if (fechaRaw) {
+                  const d = new Date(fechaRaw);
+                  if (!isNaN(d.getTime())) {
+                    const hoy = new Date();
+                    const ayer = new Date(hoy);
+                    ayer.setDate(hoy.getDate() - 1);
+                    if (d.toDateString() === hoy.toDateString()) fechaTexto = "Hoy";
+                    else if (d.toDateString() === ayer.toDateString()) fechaTexto = "Ayer";
+                    else fechaTexto = d.toLocaleDateString("es-EC", { day: "2-digit", month: "short" });
+                  }
+                }
+                const isWorking = esAprobado && !esPausado && !esPagado;
+                return (
+                  <div
+                    className={`inline-flex flex-wrap items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-xl sm:rounded-lg border text-xs font-medium max-w-full ${
+                      esPagado
+                        ? "bg-sky-500/10 border-sky-500/25 text-sky-700 dark:text-sky-400"
+                        : isWorking
+                          ? "bg-emerald-500/10 border-emerald-500/25 text-emerald-700 dark:text-emerald-400"
+                          : "bg-amber-500/10 border-amber-500/25 text-amber-700 dark:text-amber-400"
+                    }`}
+                  >
+                    <span className="text-zinc-700 dark:text-zinc-300 whitespace-nowrap">
+                      Ingreso:{" "}
+                      <span className="text-zinc-900 dark:text-white font-semibold">
+                        {fechaTexto}
+                      </span>
+                    </span>
+                    <span className={esPagado ? "text-sky-500/60" : isWorking ? "text-emerald-500/60" : "text-amber-500/60"}>•</span>
+                    {esPagado ? (
+                      <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-sky-500/20 border border-sky-500/35 text-sky-800 dark:text-sky-300 font-bold">
+                        <span>✓ Pagado</span>
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        disabled={cambiandoEstado}
+                        onClick={() => {
+                          const siguienteEstado: "Aprobado" | "Pausada" | "Pendiente" = esPausado
+                            ? "Pendiente"
+                            : esAprobado
+                              ? "Pausada"
+                              : "Aprobado";
+                          void handleCambiarEstadoTaller(siguienteEstado);
+                        }}
+                        title="Semáforo: Clic para cambiar estado (En espera → Trabajando → Pausa)"
+                        className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg border font-bold transition-all cursor-pointer active:scale-95 shrink-0 ${
+                          isWorking
+                            ? "bg-emerald-500/20 hover:bg-emerald-500/30 border-emerald-500/35 text-emerald-800 dark:text-emerald-300"
+                            : "bg-amber-500/20 hover:bg-amber-500/30 border-amber-500/35 text-amber-800 dark:text-amber-300"
+                        }`}
+                      >
+                        <span
+                          className={`w-2 h-2 rounded-full shrink-0 ${
+                            isWorking
+                              ? "bg-emerald-500 dark:bg-emerald-400 animate-pulse"
+                              : "bg-amber-500 dark:bg-amber-400 animate-pulse"
+                          }`}
+                        />
+                        <span>{esPausado ? "Pausa" : esAprobado ? "Trabajando" : "En espera"}</span>
+                      </button>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
           </div>
         </section>
@@ -4416,7 +4731,7 @@ export default function PaginaDetallePropuesta() {
           </div>
         </div>
 
-        <div className="bg-white dark:bg-[#0f0f13] border border-zinc-200 dark:border-white/10 rounded-3xl p-5 sm:p-8 md:p-10 shadow-2xl space-y-6 print:border-none print:shadow-none print:p-4 print:rounded-none transition-all">
+        <div className="bg-white dark:bg-[#0f0f13] border border-zinc-200 dark:border-white/10 rounded-3xl p-3.5 sm:p-8 md:p-10 shadow-2xl space-y-5 sm:space-y-6 print:border-none print:shadow-none print:p-4 print:rounded-none transition-all">
           {/* ===================================================================
               TALLER (BARRA RÁPIDA + SERVICIOS/PRODUCTOS + LIQUIDACIÓN)
               =================================================================== */}
@@ -4485,7 +4800,141 @@ export default function PaginaDetallePropuesta() {
                         <span>🔧</span>
                         <span>Servicios ({totalCantServicios}):</span>
                       </span>
-                      <div className="overflow-x-auto rounded-xl border border-zinc-200/80 dark:border-white/10 bg-white dark:bg-black/20 shadow-2xs">
+                      <div className="rounded-xl border border-zinc-200/80 dark:border-white/10 bg-white dark:bg-black/20 shadow-2xs overflow-hidden">
+                        {/* Vista Móvil Servicios (iOS / Android) */}
+                        <div className="sm:hidden divide-y divide-zinc-200/60 dark:divide-white/5">
+                          {serviciosOrdenados.map((it, idx) => {
+                            const cant = Number(it.qty) || 1;
+                            const origenLabel = getNombreModulo(it.origin, it.category);
+                            const esManual = Boolean(
+                              it.isManual ||
+                              String(it.id || "").startsWith("reg-") ||
+                              String(it.id || "").startsWith("man-")
+                            );
+                            const marcadoProv = Boolean(
+                              it.enviadoProveedor ||
+                              it.purchaseStatus === "PEDIDO_WHATSAPP" ||
+                              it.purchaseStatus === "COTIZADO"
+                            );
+                            return (
+                              <div
+                                key={`m-srv-${it.id || it.code || idx}`}
+                                className={`p-3 space-y-2.5 ${it.agregadoEnPropuesta ? "bg-amber-500/[0.07] dark:bg-amber-400/[0.06] border-l-2 border-l-amber-500/60" : ""}`}
+                              >
+                                <div className="flex items-start justify-between gap-2">
+                                  <div className="flex flex-wrap items-center gap-1.5 min-w-0 flex-1 text-sm font-medium text-zinc-800 dark:text-zinc-100 leading-snug">
+                                    <span className="break-words">{formatoPrimeraMayuscula(it.name)}</span>
+                                    {esManual && (
+                                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/35 shrink-0">
+                                        Manual
+                                      </span>
+                                    )}
+                                    {Array.isArray(it.fotos) && it.fotos.length > 0 && (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleAbrirFlotanteFotos(it)}
+                                        className="h-7 px-2 rounded-lg border bg-indigo-50/80 hover:bg-indigo-100 dark:bg-indigo-500/15 dark:hover:bg-indigo-500/25 border-indigo-200 dark:border-indigo-500/30 text-indigo-600 dark:text-indigo-300 inline-flex items-center gap-1 text-[11px] font-medium cursor-pointer active:scale-95 transition-all shrink-0"
+                                        title={`Ver ${it.fotos.length} foto(s)`}
+                                      >
+                                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                                          <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
+                                        </svg>
+                                        {it.fotos.length > 1 && <span>{it.fotos.length}</span>}
+                                      </button>
+                                    )}
+                                    {Array.isArray(it.audios) && it.audios.length > 0 && (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleAbrirFlotanteAudios(it)}
+                                        className="h-7 px-2 rounded-lg border bg-amber-50/80 hover:bg-amber-100 dark:bg-amber-500/15 dark:hover:bg-amber-500/25 border-amber-200 dark:border-amber-500/30 text-amber-600 dark:text-amber-300 inline-flex items-center gap-1 text-[11px] font-medium cursor-pointer active:scale-95 transition-all shrink-0"
+                                        title={`Escuchar ${it.audios.length} audio(s)`}
+                                      >
+                                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 0 0 6-6v-1.5m-6 7.5a6 6 0 0 1-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 0 1-3-3V4.5a3 3 0 1 1 6 0v8.25a3 3 0 0 1-3 3Z" />
+                                        </svg>
+                                        {it.audios.length > 1 && <span>{it.audios.length}</span>}
+                                      </button>
+                                    )}
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => void handleDeleteService(it.id)}
+                                    className="w-7 h-7 inline-flex items-center justify-center rounded-lg text-zinc-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10 text-base font-bold cursor-pointer shrink-0"
+                                    title="Eliminar"
+                                  >
+                                    ×
+                                  </button>
+                                </div>
+
+                                <div className="flex flex-wrap items-center justify-between gap-2">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <div className="inline-flex items-center border border-zinc-200 dark:border-white/10 rounded-xl overflow-hidden bg-zinc-50 dark:bg-white/[0.04] h-8">
+                                      <button
+                                        type="button"
+                                        onClick={() => handleUpdateQty(it.id, -1)}
+                                        className="w-7 h-full flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-white text-sm font-bold cursor-pointer"
+                                      >
+                                        −
+                                      </button>
+                                      <span className="w-7 text-center text-xs font-bold text-zinc-800 dark:text-zinc-200 tabular-nums">
+                                        {cant}
+                                      </span>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleUpdateQty(it.id, 1)}
+                                        className="w-7 h-full flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-white text-sm font-bold cursor-pointer"
+                                      >
+                                        +
+                                      </button>
+                                    </div>
+                                    <span className={`inline-block px-2 py-0.5 rounded-md text-[10px] font-semibold border ${getBadgeModuloClase(origenLabel)}`}>
+                                      {origenLabel}
+                                    </span>
+                                    {esManual && (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleToggleMarcarProveedor(it, true)}
+                                        className={`h-8 px-2.5 rounded-lg border inline-flex items-center justify-center gap-1 text-[11px] font-semibold cursor-pointer active:scale-95 transition-all shrink-0 ${marcadoProv
+                                          ? "bg-blue-600 hover:bg-blue-500 text-white border-blue-500 shadow-sm shadow-blue-500/30"
+                                          : "bg-emerald-50/80 hover:bg-emerald-100 dark:bg-emerald-500/15 dark:hover:bg-emerald-500/25 border-emerald-200 dark:border-emerald-500/30 text-emerald-600 dark:text-emerald-300"
+                                          }`}
+                                      >
+                                        {!marcadoProv ? (
+                                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 18.75a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 0 1-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 0 0-3.213-9.193 2.056 2.056 0 0 0-1.58-.86H14.25M16.5 18.75h-2.25m0-11.175V14.25m0 0H2.25m12 0v4.5m0-4.5H16.5" />
+                                          </svg>
+                                        ) : (
+                                          <span className="text-[11px]">✓ Enviado</span>
+                                        )}
+                                      </button>
+                                    )}
+                                  </div>
+
+                                  {esManual ? (
+                                    <div className="inline-flex items-center gap-1 px-2.5 h-8 rounded-xl border border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-white/[0.04] w-28 shrink-0">
+                                      <span className="text-xs text-zinc-400 font-semibold">$</span>
+                                      <input
+                                        type="number"
+                                        inputMode="decimal"
+                                        step="0.01"
+                                        min="0"
+                                        placeholder="0.00"
+                                        value={it.price || ""}
+                                        onChange={(e) => handleUpdateServicePrice(it.id, e.target.value)}
+                                        className="w-full bg-transparent text-right text-base sm:text-xs font-bold font-mono text-zinc-800 dark:text-zinc-100 focus:outline-none"
+                                      />
+                                    </div>
+                                  ) : (
+                                    <span className="font-mono text-sm font-bold text-zinc-800 dark:text-zinc-100 shrink-0">
+                                      ${Number(it.price || 0).toFixed(2)}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                        <div className="hidden sm:block overflow-x-auto">
                         <table className="w-full text-left text-xs border-collapse">
                           <thead>
                             <tr className="border-b border-zinc-200/80 dark:border-white/10 bg-zinc-50/80 dark:bg-white/[0.03] text-zinc-500 dark:text-zinc-400 text-[11px] font-semibold">
@@ -4659,6 +5108,7 @@ export default function PaginaDetallePropuesta() {
                             })}
                           </tbody>
                         </table>
+                        </div>
                       </div>
                     </div>
                   )}
@@ -4670,7 +5120,141 @@ export default function PaginaDetallePropuesta() {
                         <span>📦</span>
                         <span>Productos ({totalCantProductos}):</span>
                       </span>
-                      <div className="overflow-x-auto rounded-xl border border-zinc-200/80 dark:border-white/10 bg-white dark:bg-black/20 shadow-2xs">
+                      <div className="rounded-xl border border-zinc-200/80 dark:border-white/10 bg-white dark:bg-black/20 shadow-2xs overflow-hidden">
+                        {/* Vista Móvil Productos (iOS / Android) */}
+                        <div className="sm:hidden divide-y divide-zinc-200/60 dark:divide-white/5">
+                          {repuestos.map((it, idx) => {
+                            const cant = Number(it.qty) || 1;
+                            const origenLabel = getNombreModulo(it.origin, it.category);
+                            const esManual = Boolean(
+                              it.isManual ||
+                              String(it.id || "").startsWith("reg-") ||
+                              String(it.id || "").startsWith("man-")
+                            );
+                            const marcadoProv = Boolean(
+                              it.enviadoProveedor ||
+                              it.purchaseStatus === "PEDIDO_WHATSAPP" ||
+                              it.purchaseStatus === "COTIZADO"
+                            );
+                            return (
+                              <div
+                                key={`m-prod-${it.id || it.code || idx}`}
+                                className={`p-3 space-y-2.5 ${it.agregadoEnPropuesta ? "bg-amber-500/[0.07] dark:bg-amber-400/[0.06] border-l-2 border-l-amber-500/60" : ""}`}
+                              >
+                                <div className="flex items-start justify-between gap-2">
+                                  <div className="flex flex-wrap items-center gap-1.5 min-w-0 flex-1 text-sm font-medium text-zinc-800 dark:text-zinc-100 leading-snug">
+                                    <span className="break-words">{formatoPrimeraMayuscula(it.name)}</span>
+                                    {esManual && (
+                                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/35 shrink-0">
+                                        Manual
+                                      </span>
+                                    )}
+                                    {Array.isArray(it.fotos) && it.fotos.length > 0 && (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleAbrirFlotanteFotos(it)}
+                                        className="h-7 px-2 rounded-lg border bg-indigo-50/80 hover:bg-indigo-100 dark:bg-indigo-500/15 dark:hover:bg-indigo-500/25 border-indigo-200 dark:border-indigo-500/30 text-indigo-600 dark:text-indigo-300 inline-flex items-center gap-1 text-[11px] font-medium cursor-pointer active:scale-95 transition-all shrink-0"
+                                        title={`Ver ${it.fotos.length} foto(s)`}
+                                      >
+                                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                                          <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
+                                        </svg>
+                                        {it.fotos.length > 1 && <span>{it.fotos.length}</span>}
+                                      </button>
+                                    )}
+                                    {Array.isArray(it.audios) && it.audios.length > 0 && (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleAbrirFlotanteAudios(it)}
+                                        className="h-7 px-2 rounded-lg border bg-amber-50/80 hover:bg-amber-100 dark:bg-amber-500/15 dark:hover:bg-amber-500/25 border-amber-200 dark:border-amber-500/30 text-amber-600 dark:text-amber-300 inline-flex items-center gap-1 text-[11px] font-medium cursor-pointer active:scale-95 transition-all shrink-0"
+                                        title={`Escuchar ${it.audios.length} audio(s)`}
+                                      >
+                                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 0 0 6-6v-1.5m-6 7.5a6 6 0 0 1-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 0 1-3-3V4.5a3 3 0 1 1 6 0v8.25a3 3 0 0 1-3 3Z" />
+                                        </svg>
+                                        {it.audios.length > 1 && <span>{it.audios.length}</span>}
+                                      </button>
+                                    )}
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => void handleDeleteItem(it.id)}
+                                    className="w-7 h-7 inline-flex items-center justify-center rounded-lg text-zinc-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10 text-base font-bold cursor-pointer shrink-0"
+                                    title="Eliminar"
+                                  >
+                                    ×
+                                  </button>
+                                </div>
+
+                                <div className="flex flex-wrap items-center justify-between gap-2">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <div className="inline-flex items-center border border-zinc-200 dark:border-white/10 rounded-xl overflow-hidden bg-zinc-50 dark:bg-white/[0.04] h-8">
+                                      <button
+                                        type="button"
+                                        onClick={() => handleUpdateQty(it.id, -1)}
+                                        className="w-7 h-full flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-white text-sm font-bold cursor-pointer"
+                                      >
+                                        −
+                                      </button>
+                                      <span className="w-7 text-center text-xs font-bold text-zinc-800 dark:text-zinc-200 tabular-nums">
+                                        {cant}
+                                      </span>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleUpdateQty(it.id, 1)}
+                                        className="w-7 h-full flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-white text-sm font-bold cursor-pointer"
+                                      >
+                                        +
+                                      </button>
+                                    </div>
+                                    <span className={`inline-block px-2 py-0.5 rounded-md text-[10px] font-semibold border ${getBadgeModuloClase(origenLabel)}`}>
+                                      {origenLabel}
+                                    </span>
+                                    {esManual && (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleToggleMarcarProveedor(it, false)}
+                                        className={`h-8 px-2.5 rounded-lg border inline-flex items-center justify-center gap-1 text-[11px] font-semibold cursor-pointer active:scale-95 transition-all shrink-0 ${marcadoProv
+                                          ? "bg-blue-600 hover:bg-blue-500 text-white border-blue-500 shadow-sm shadow-blue-500/30"
+                                          : "bg-emerald-50/80 hover:bg-emerald-100 dark:bg-emerald-500/15 dark:hover:bg-emerald-500/25 border-emerald-200 dark:border-emerald-500/30 text-emerald-600 dark:text-emerald-300"
+                                          }`}
+                                      >
+                                        {!marcadoProv ? (
+                                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 18.75a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 0 1-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 0 0-3.213-9.193 2.056 2.056 0 0 0-1.58-.86H14.25M16.5 18.75h-2.25m0-11.175V14.25m0 0H2.25m12 0v4.5m0-4.5H16.5" />
+                                          </svg>
+                                        ) : (
+                                          <span className="text-[11px]">✓ Enviado</span>
+                                        )}
+                                      </button>
+                                    )}
+                                  </div>
+
+                                  {esManual ? (
+                                    <div className="inline-flex items-center gap-1 px-2.5 h-8 rounded-xl border border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-white/[0.04] w-28 shrink-0">
+                                      <span className="text-xs text-zinc-400 font-semibold">$</span>
+                                      <input
+                                        type="number"
+                                        inputMode="decimal"
+                                        step="0.01"
+                                        min="0"
+                                        placeholder="0.00"
+                                        value={it.price || ""}
+                                        onChange={(e) => handleUpdatePrice(it.id, "price", e.target.value)}
+                                        className="w-full bg-transparent text-right text-base sm:text-xs font-bold font-mono text-zinc-800 dark:text-zinc-100 focus:outline-none"
+                                      />
+                                    </div>
+                                  ) : (
+                                    <span className="font-mono text-sm font-bold text-zinc-800 dark:text-zinc-100 shrink-0">
+                                      ${Number(it.price || 0).toFixed(2)}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                        <div className="hidden sm:block overflow-x-auto">
                         <table className="w-full text-left text-xs border-collapse">
                           <thead>
                             <tr className="border-b border-zinc-200/80 dark:border-white/10 bg-zinc-50/80 dark:bg-white/[0.03] text-zinc-500 dark:text-zinc-400 text-[11px] font-semibold">
@@ -4844,6 +5428,7 @@ export default function PaginaDetallePropuesta() {
                             })}
                           </tbody>
                         </table>
+                        </div>
                       </div>
                     </div>
                   )}
@@ -4887,11 +5472,12 @@ export default function PaginaDetallePropuesta() {
                       <div className="inline-flex items-center gap-1 print:hidden">
                         <input
                           type="number"
+                          inputMode="decimal"
                           min="0"
                           max="100"
                           value={porcentajeDescuento}
                           onChange={(e) => setPorcentajeDescuento(parseFloat(e.target.value) || 0)}
-                          className="w-12 h-6 px-1 text-center rounded bg-white dark:bg-black border border-zinc-300 dark:border-white/10 text-xs font-normal"
+                          className="w-14 sm:w-12 h-8 sm:h-6 px-1.5 sm:px-1 text-center rounded-lg sm:rounded bg-white dark:bg-black border border-zinc-300 dark:border-white/10 text-base sm:text-xs font-normal"
                         />
                         <span className="text-[10px]">%</span>
                       </div>
@@ -4909,7 +5495,7 @@ export default function PaginaDetallePropuesta() {
                         <select
                           value={porcentajeIva}
                           onChange={(e) => setPorcentajeIva(Number(e.target.value))}
-                          className="h-6 px-1 rounded bg-white dark:bg-black border border-zinc-300 dark:border-white/10 text-[11px]"
+                          className="h-8 sm:h-6 px-1.5 sm:px-1 rounded-lg sm:rounded bg-white dark:bg-black border border-zinc-300 dark:border-white/10 text-base sm:text-[11px]"
                         >
                           <option value={15}>15%</option>
                           <option value={12}>12%</option>
@@ -4934,26 +5520,17 @@ export default function PaginaDetallePropuesta() {
                     </span>
                   </div>
 
-                  {/* RENTABILIDAD / MARGEN TALLER (Solo visible internamente) */}
-                  <div className="p-3 rounded-xl bg-emerald-500/[0.08] border border-emerald-500/25 flex items-center justify-between text-xs print:hidden">
-                    <span className="font-normal text-emerald-800 dark:text-emerald-300">
-                      Utilidad:
-                    </span>
-                    <span className="font-medium text-emerald-600 dark:text-emerald-400">
-                      ${calculos.margenNetoTaller.toFixed(2)} ({calculos.margenPorcentaje}%)
-                    </span>
-                  </div>
                 </div>
               </div>
 
               {/* BARRA DE CIERRE FINAL: TÍTULOS DE 1 PALABRA + ICONO */}
-              <div className="print:hidden pt-5 border-t border-zinc-200 dark:border-white/10 flex flex-col md:flex-row items-stretch md:items-center justify-end gap-4">
-                <div className="flex items-center gap-2.5 flex-wrap justify-end">
+              <div className="print:hidden pt-5 border-t border-zinc-200 dark:border-white/10 flex flex-col md:flex-row items-stretch md:items-center justify-end gap-4 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] sm:pb-0">
+                <div className="flex items-center gap-2.5 flex-wrap justify-end w-full sm:w-auto">
                   <button
                     type="button"
                     disabled={cambiandoEstado}
                     onClick={handleTogglePagado}
-                    className={`h-10 px-4 rounded-xl border text-xs font-normal shadow-sm transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 ${esPagado
+                    className={`flex-1 sm:flex-initial h-11 sm:h-10 px-4 rounded-xl border text-sm sm:text-xs font-medium sm:font-normal shadow-sm transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 ${esPagado
                       ? "bg-sky-600 hover:bg-sky-500 border-sky-500 text-white"
                       : "bg-sky-500/15 hover:bg-sky-500/25 border-sky-500/35 text-sky-600 dark:text-sky-300"
                       }`}
@@ -4965,13 +5542,14 @@ export default function PaginaDetallePropuesta() {
                     type="button"
                     disabled={autorizando}
                     onClick={handleAutorizarYEnviarAPos}
-                    className="h-10 px-5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-normal shadow-sm transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50"
+                    className="flex-1 sm:flex-initial h-11 sm:h-10 px-5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm sm:text-xs font-medium sm:font-normal shadow-sm transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50"
                   >
                     <span>🛒</span>
                     <span>{autorizando ? "..." : "POS"}</span>
                   </button>
                 </div>
               </div>
+
             </div>
           </div>
 
@@ -5079,6 +5657,7 @@ export default function PaginaDetallePropuesta() {
                   </button>
                 </div>
               </div>
+
             </div>
           </div>
         </div>
@@ -5392,6 +5971,7 @@ export default function PaginaDetallePropuesta() {
                   </div>
                 )}
               </div>
+
             </div>
 
             {/* Footer minimalista con apertura directa del Catálogo del Proveedor + WhatsApp */}
@@ -5427,6 +6007,7 @@ export default function PaginaDetallePropuesta() {
                   <span>Abrir Catálogo del Proveedor ↗</span>
                 </button>
               </div>
+
             </div>
           </div>
         </div>
@@ -5640,6 +6221,7 @@ export default function PaginaDetallePropuesta() {
                   Agregar Repuesto
                 </button>
               </div>
+
             </div>
           </div>
         </div>
@@ -5800,6 +6382,7 @@ export default function PaginaDetallePropuesta() {
                   Agregar Servicio
                 </button>
               </div>
+
             </div>
           </div>
         </div>
@@ -5849,6 +6432,7 @@ export default function PaginaDetallePropuesta() {
                   ✕
                 </button>
               </div>
+
             </div>
 
             {/* Imagen principal */}
@@ -6210,6 +6794,7 @@ export default function PaginaDetallePropuesta() {
                   <span>💾 Guardar Cambios en Neon</span>
                 </button>
               </div>
+
             </div>
           </div>
         </div>
@@ -6332,6 +6917,7 @@ export default function PaginaDetallePropuesta() {
                   </button>
                 </div>
               </div>
+
             </div>
           </div>
         </div>
@@ -6476,6 +7062,7 @@ export default function PaginaDetallePropuesta() {
                   <span>💾 Registrar Hallazgo en Neon PostgreSQL</span>
                 </button>
               </div>
+
             </div>
           </div>
         </div>
@@ -6761,6 +7348,7 @@ export default function PaginaDetallePropuesta() {
                   ✓ Listo
                 </button>
               </div>
+
             </div>
           </div>
         );
@@ -6778,7 +7366,7 @@ export default function PaginaDetallePropuesta() {
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="relative w-full max-w-2xl max-h-[85dvh] overflow-y-auto rounded-2xl bg-white dark:bg-[#111113] border border-zinc-200 dark:border-white/10 p-4 shadow-2xl space-y-3"
+            className="relative w-full max-w-2xl max-h-[85dvh] overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden rounded-2xl bg-white dark:bg-[#111113] border border-zinc-200 dark:border-white/10 p-4 shadow-2xl space-y-3"
           >
             <div className="flex items-center justify-between pb-1">
               <div className="flex items-center gap-2">
@@ -6816,6 +7404,8 @@ export default function PaginaDetallePropuesta() {
                   if (target) void handleDeleteItem(target.id);
                 }
               }}
+              serviciosCatalogo={catalogoServiciosState}
+              productosCatalogo={catalogoProductosState}
               titulo="Catálogo"
               siempreAbierto={true}
               mostrarChipsSeleccionados={false}
@@ -7023,6 +7613,7 @@ export default function PaginaDetallePropuesta() {
                   );
                 })}
               </div>
+
             </div>
           </div>
         );
