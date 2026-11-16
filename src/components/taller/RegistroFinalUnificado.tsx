@@ -404,7 +404,7 @@ function MiniAudioPlayer({
         ref={audioRef}
         src={src}
         playsInline
-        preload="metadata"
+        preload="auto"
         onPlay={() => setReproduciendo(true)}
         onPause={() => setReproduciendo(false)}
         onEnded={() => {
@@ -767,8 +767,8 @@ export default function RegistroFinalUnificado({
         type: browserBlob.mime,
       });
       const uploadedUrl = await subirArchivoEvidencia(file, "audio", omitirBorrador);
-      if (uploadedUrl && duracionGrabadaSeg > 0) {
-        setCachedAudioDuration(uploadedUrl, duracionGrabadaSeg);
+      if (uploadedUrl) {
+        setCachedAudioDuration(uploadedUrl, Math.max(1, duracionGrabadaSeg));
       }
       return uploadedUrl;
     }
@@ -814,8 +814,8 @@ export default function RegistroFinalUnificado({
         type: browserBlob.mime,
       });
       const uploadedUrl = await subirArchivoEvidencia(file, "audio", omitirBorrador);
-      if (uploadedUrl && duracionGrabadaSeg > 0) {
-        setCachedAudioDuration(uploadedUrl, duracionGrabadaSeg);
+      if (uploadedUrl) {
+        setCachedAudioDuration(uploadedUrl, Math.max(1, duracionGrabadaSeg));
       }
       return uploadedUrl;
     }

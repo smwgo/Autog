@@ -122,9 +122,9 @@ async function ensureTallerSchema() {
           `UPDATE "WorkshopOrder" SET "quoteToken" = $2 WHERE "id" = $1`,
           row.id,
           qt
-        ).catch(() => {});
+        ).catch(() => { });
       }
-    } catch {}
+    } catch { }
   } catch (err) {
     console.warn("Aviso al verificar esquema de Taller:", err);
   } finally {
@@ -289,7 +289,7 @@ async function getNextOrderCorrelative(): Promise<string> {
         (mirrorData?.clientQuote || []).forEach((r: any) => extractNum(r?.quoteNumber));
         (mirrorData?.orderRequest || []).forEach((r: any) => extractNum(r?.requestNumber));
       }
-    } catch {}
+    } catch { }
 
     let nextNum = Math.max(1, maxCorrelativo + 1);
     while (usedNumbers.has(nextNum)) {
@@ -322,23 +322,23 @@ function mapOrderRow(r: any) {
     rawItems.length > 0
       ? rawItems
       : legacyServices.map((srvName, idx) => ({
-          id: `legacy-${r.id}-${idx}`,
-          type: "SERVICE",
-          category: "Mecánica Rápida",
-          code: `SRV-0${idx + 1}`,
-          name: srvName,
-          price:
-            legacyServices.length > 0 && r.totalCost
-              ? Number((Number(r.totalCost) / legacyServices.length).toFixed(2))
-              : 25,
-          qty: 1,
-          status:
-            r.status === "Listo para Entregar" || r.status === "LISTO_PARA_COBRO"
-              ? "Listo"
-              : r.status === "Reparando" || r.status === "En Proceso"
+        id: `legacy-${r.id}-${idx}`,
+        type: "SERVICE",
+        category: "Mecánica Rápida",
+        code: `SRV-0${idx + 1}`,
+        name: srvName,
+        price:
+          legacyServices.length > 0 && r.totalCost
+            ? Number((Number(r.totalCost) / legacyServices.length).toFixed(2))
+            : 25,
+        qty: 1,
+        status:
+          r.status === "Listo para Entregar" || r.status === "LISTO_PARA_COBRO"
+            ? "Listo"
+            : r.status === "Reparando" || r.status === "En Proceso"
               ? "En Proceso"
               : "Pendiente",
-        }));
+      }));
 
   const receptionPhotos = safeParseJson<string[]>(r.receptionPhotosJson, []);
   const evidencePhotos = safeParseJson<string[]>(r.evidencePhotosJson, []);
@@ -350,14 +350,14 @@ function mapOrderRow(r: any) {
     rawAssignedTechs.length > 0
       ? rawAssignedTechs
       : (r.mechanic || "Hernan Marquez")
-          .split(",")
-          .map((m: string) => m.trim())
-          .filter(Boolean)
-          .map((name: string) => ({
-            name,
-            notified: true,
-            notifiedAt: r.dateIn || new Date().toISOString(),
-          }));
+        .split(",")
+        .map((m: string) => m.trim())
+        .filter(Boolean)
+        .map((name: string) => ({
+          name,
+          notified: true,
+          notifiedAt: r.dateIn || new Date().toISOString(),
+        }));
   const internalChat = safeParseJson<any[]>(r.internalChatJson, []);
   const technicianHours = safeParseJson<any[]>(r.technicianHoursJson, []);
   const customStatuses = safeParseJson<any[]>(r.customStatusesJson, []);
@@ -388,8 +388,8 @@ function mapOrderRow(r: any) {
     r.totalCost && Number(r.totalCost) > 0 && items.length === 0
       ? Number(r.totalCost)
       : r.quoteNumber
-      ? calculatedTotalWithTax
-      : subtotalFromItems;
+        ? calculatedTotalWithTax
+        : subtotalFromItems;
 
   const totalPaid = Number(
     payments
@@ -451,8 +451,8 @@ function mapOrderRow(r: any) {
     nextOilChangeKm: r.nextOilChangeKm
       ? Number(r.nextOilChangeKm)
       : r.mileage
-      ? Number(r.mileage) + 5000
-      : null,
+        ? Number(r.mileage) + 5000
+        : null,
     fuelLevel: r.fuelLevel || "1/2",
     generalCondition: r.generalCondition || "Bueno",
     receptionInventory,
@@ -594,17 +594,17 @@ export async function GET(request: Request) {
         const isStaff = isStaffSession(getVerifiedSessionFromRequest(request));
         const rows: any[] = isStaff
           ? await prisma.$queryRawUnsafe(
-              `SELECT * FROM "WorkshopOrder"
+            `SELECT * FROM "WorkshopOrder"
                WHERE "quoteToken" = $1 OR "orderNumber" = $1 OR "id" = $1
                ORDER BY "updatedAt" DESC LIMIT 1`,
-              quoteTokenParam
-            )
+            quoteTokenParam
+          )
           : await prisma.$queryRawUnsafe(
-              `SELECT * FROM "WorkshopOrder"
+            `SELECT * FROM "WorkshopOrder"
                WHERE "quoteToken" = $1
                ORDER BY "updatedAt" DESC LIMIT 1`,
-              quoteTokenParam
-            );
+            quoteTokenParam
+          );
 
         if (rows.length === 0) {
           return NextResponse.json(
@@ -621,8 +621,8 @@ export async function GET(request: Request) {
           ordRow.vehicleId
             ? prisma.vehicle.findUnique({ where: { id: ordRow.vehicleId } }).catch(() => null)
             : ordRow.plate
-            ? prisma.vehicle.findUnique({ where: { plate: String(ordRow.plate).toUpperCase() } }).catch(() => null)
-            : null,
+              ? prisma.vehicle.findUnique({ where: { plate: String(ordRow.plate).toUpperCase() } }).catch(() => null)
+              : null,
         ]);
         if (!customer && ordRow.clientIdDoc) {
           customer = await prisma.customer
@@ -642,8 +642,8 @@ export async function GET(request: Request) {
         const safeCustomer = isStaff
           ? customer
           : customer
-          ? { id: customer.id, name: customer.name, phone: customer.phone, email: customer.email }
-          : null;
+            ? { id: customer.id, name: customer.name, phone: customer.phone, email: customer.email }
+            : null;
         return NextResponse.json({
           success: true,
           order: mapOrderRow(ordRow),
@@ -1014,9 +1014,9 @@ export async function GET(request: Request) {
             found: true,
             vehicle: matchedVehicle
               ? {
-                  ...matchedVehicle,
-                  photos: safeParseJson<string[]>((matchedVehicle as any).photosJson, []),
-                }
+                ...matchedVehicle,
+                photos: safeParseJson<string[]>((matchedVehicle as any).photosJson, []),
+              }
               : null,
             customer: matchedCustomer,
             customerVehicles: matchedCustomer?.vehicles || [],
@@ -1220,8 +1220,8 @@ export async function GET(request: Request) {
         userBranchParam === "SUCURSAL" || sedeParam === "SUCURSAL"
           ? allClientes.filter((c: any) => c.branch === "SUCURSAL" || Boolean(c.assignedToSucursal))
           : sedeParam === "PRINCIPAL"
-          ? allClientes.filter((c: any) => c.branch === "PRINCIPAL")
-          : allClientes;
+            ? allClientes.filter((c: any) => c.branch === "PRINCIPAL")
+            : allClientes;
 
       const finalEmployeesRows = employeesRows;
       const mecanicosList = finalEmployeesRows.map((e: any) => e.name).filter(Boolean);
@@ -1385,7 +1385,7 @@ export async function POST(request: Request) {
           kmNum,
           nextKmNum,
           vehicle.id
-        ).catch(() => {});
+        ).catch(() => { });
 
         // 3. Mecánicos involucrados únicos
         const mecanicosUnicos = Array.from(
@@ -1420,11 +1420,11 @@ export async function POST(request: Request) {
           );
           const matchedSrv = !matchedProd
             ? (catalogServicesExpress as any[]).find(
-                (srv) =>
-                  (s.serviceId && srv.id === s.serviceId) ||
-                  (s.id && srv.id === s.id) ||
-                  (srv.name && srv.name.trim().toLowerCase() === itemName.toLowerCase())
-              )
+              (srv) =>
+                (s.serviceId && srv.id === s.serviceId) ||
+                (s.id && srv.id === s.id) ||
+                (srv.name && srv.name.trim().toLowerCase() === itemName.toLowerCase())
+            )
             : null;
           const resolvedPrice =
             Number(s.price) > 0
@@ -1440,8 +1440,8 @@ export async function POST(request: Request) {
               nextBranchStock <= 0
                 ? "Agotado"
                 : nextBranchStock <= minStock
-                ? "Bajo Stock"
-                : "En Stock";
+                  ? "Bajo Stock"
+                  : "En Stock";
             await prisma.$executeRawUnsafe(
               `UPDATE "Product"
                SET "${stockCol}" = GREATEST(0, COALESCE("${stockCol}", 0) - $2),
@@ -1451,7 +1451,7 @@ export async function POST(request: Request) {
               matchedProd.id,
               itemQty,
               nextStatus
-            ).catch(() => {});
+            ).catch(() => { });
             stockExpressDeducted = true;
           }
 
@@ -1699,7 +1699,7 @@ export async function POST(request: Request) {
               cleanAddress || customer.address || null,
               dbType
             );
-          } catch {}
+          } catch { }
         }
 
         return NextResponse.json({
@@ -1896,8 +1896,8 @@ export async function POST(request: Request) {
         const finalVehicleTitle = vehicle
           ? `${vehicle.brand} ${vehicle.model}${vehicle.year ? " " + vehicle.year : ""}`
           : marca || modelo
-          ? `${marca || ""} ${modelo || ""}`.trim()
-          : `Vehículo de ${customer.name}`;
+            ? `${marca || ""} ${modelo || ""}`.trim()
+            : `Vehículo de ${customer.name}`;
 
         const kmNum = kilometraje
           ? parseInt(String(kilometraje), 10) || 0
@@ -1969,7 +1969,7 @@ export async function POST(request: Request) {
               custAvatarCreate,
               custAvatarCreate
             );
-          } catch {}
+          } catch { }
         }
         const vehicleImgCreate = (body.vehicleImageUrl || body.vehiculoFoto || vehicle?.imageUrl || "").toString().trim() || null;
         if (vehicle?.id) {
@@ -1995,26 +1995,26 @@ export async function POST(request: Request) {
               kmNum || 0,
               vehicleImgCreate
             );
-          } catch {}
+          } catch { }
         }
 
         const incomingAssignedTechs = Array.isArray(body.assignedTechnicians)
           ? body.assignedTechnicians
-              .map((t: any) => ({
-                name: String(t?.name || t?.nombre || "").trim(),
-                tarea: String(t?.tarea || t?.labor || "").trim(),
-                role: String(t?.role || "Técnico").trim(),
-              }))
-              .filter((t: any) => t.name)
+            .map((t: any) => ({
+              name: String(t?.name || t?.nombre || "").trim(),
+              tarea: String(t?.tarea || t?.labor || "").trim(),
+              role: String(t?.role || "Técnico").trim(),
+            }))
+            .filter((t: any) => t.name)
           : [];
         const assignedTechsCreateJson = JSON.stringify(
           incomingAssignedTechs.length > 0
             ? incomingAssignedTechs
             : String(mechanic || "Hernan Marquez")
-                .split(",")
-                .map((m: string) => m.trim())
-                .filter(Boolean)
-                .map((m: string) => ({ name: m, tarea: "", role: "Técnico" }))
+              .split(",")
+              .map((m: string) => m.trim())
+              .filter(Boolean)
+              .map((m: string) => ({ name: m, tarea: "", role: "Técnico" }))
         );
 
         try {
@@ -2160,7 +2160,7 @@ export async function POST(request: Request) {
       }
 
       // =========================================================================
-      
+
       // =========================================================================
       // ACCIÓN 0.25: EDITAR ORDEN EXISTENTE DESDE EL FORMULARIO DE ORDEN
       // =========================================================================
@@ -2308,7 +2308,7 @@ export async function POST(request: Request) {
               custAvatarEdit,
               customer.id
             );
-          } catch {}
+          } catch { }
         }
 
         const cleanPlateInput = (placa || existingOrder.plate || "").trim().toUpperCase();
@@ -2359,8 +2359,8 @@ export async function POST(request: Request) {
         const finalVehicleTitle = vehicle
           ? `${vehicle.brand} ${vehicle.model}${vehicle.year ? " " + vehicle.year : ""}`
           : marca || modelo
-          ? `${marca || ""} ${modelo || ""}${yearNum ? " " + yearNum : ""}`.trim()
-          : existingOrder.vehicle;
+            ? `${marca || ""} ${modelo || ""}${yearNum ? " " + yearNum : ""}`.trim()
+            : existingOrder.vehicle;
 
         const kmNum =
           kilometraje !== undefined && kilometraje !== null && kilometraje !== ""
@@ -2392,7 +2392,7 @@ export async function POST(request: Request) {
               kmNum,
               vehicleImg
             );
-          } catch {}
+          } catch { }
         }
 
         const notesFormatted = [
@@ -2414,21 +2414,21 @@ export async function POST(request: Request) {
         const finalMechanicEdit = mechanic || existingOrder.mechanic || "Hernan Marquez";
         const incomingAssignedTechsEdit = Array.isArray(body.assignedTechnicians)
           ? body.assignedTechnicians
-              .map((t: any) => ({
-                name: String(t?.name || t?.nombre || "").trim(),
-                tarea: String(t?.tarea || t?.labor || "").trim(),
-                role: String(t?.role || "Técnico").trim(),
-              }))
-              .filter((t: any) => t.name)
+            .map((t: any) => ({
+              name: String(t?.name || t?.nombre || "").trim(),
+              tarea: String(t?.tarea || t?.labor || "").trim(),
+              role: String(t?.role || "Técnico").trim(),
+            }))
+            .filter((t: any) => t.name)
           : [];
         const assignedTechsEditJson = JSON.stringify(
           incomingAssignedTechsEdit.length > 0
             ? incomingAssignedTechsEdit
             : String(finalMechanicEdit)
-                .split(",")
-                .map((m: string) => m.trim())
-                .filter(Boolean)
-                .map((m: string) => ({ name: m, tarea: "", role: "Técnico" }))
+              .split(",")
+              .map((m: string) => m.trim())
+              .filter(Boolean)
+              .map((m: string) => ({ name: m, tarea: "", role: "Técnico" }))
         );
         const finalEmailOrderEdit = hasEmailField ? cleanEmail : (customer.email || existingOrder.clientEmail || null);
         const finalAddressOrderEdit = hasAddressField ? (cleanAddress ?? null) : (customer.address || existingOrder.clientAddress || null);
@@ -2807,7 +2807,7 @@ export async function POST(request: Request) {
             }),
             estadoGeneralResumen
           )
-          .catch(() => {});
+          .catch(() => { });
 
         const updatedOrderRows: any[] = await prisma.$queryRawUnsafe(
           `SELECT * FROM "WorkshopOrder" WHERE "id" = $1`,
@@ -2880,9 +2880,9 @@ export async function POST(request: Request) {
         const findingsSummary =
           findingsArr.length > 0
             ? `Inspección 5 Vistas (${findingsArr.length} hallazgos): ` +
-              findingsArr
-                .map((f: any, idx: number) => `#${idx + 1} [${f.vistaLabel || f.vista}] ${f.tipo}: ${f.descripcion || f.zona}`)
-                .join("; ")
+            findingsArr
+              .map((f: any, idx: number) => `#${idx + 1} [${f.vistaLabel || f.vista}] ${f.tipo}: ${f.descripcion || f.zona}`)
+              .join("; ")
             : "Inspección 5 Vistas: Sin daños ni hallazgos reportados.";
 
         // Limpiar cualquier resumen anterior de 'Inspección 5 Vistas' para no acumular repeticiones
@@ -2948,7 +2948,7 @@ export async function POST(request: Request) {
             }),
             findingsSummary
           )
-          .catch(() => {});
+          .catch(() => { });
 
         const updatedRows: any[] = await prisma.$queryRawUnsafe(
           `SELECT * FROM "WorkshopOrder" WHERE "id" = $1`,
@@ -3029,11 +3029,11 @@ export async function POST(request: Request) {
         const quoteNumber = esBorradorSinPropuesta
           ? null
           : current.quoteNumber ||
-            `PRE-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+          `PRE-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
         const quoteToken = esBorradorSinPropuesta
           ? null
           : current.quoteToken ||
-            `${quoteNumber}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
+          `${quoteNumber}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
 
         const finalQuoteStatus = esBorradorSinPropuesta
           ? current.quoteStatus || "Borrador"
@@ -3042,8 +3042,8 @@ export async function POST(request: Request) {
 
         const updatedNotes = notesPresupuesto?.trim()
           ? [current.notes, `Presupuesto ${quoteNumber}: ${notesPresupuesto.trim()}`]
-              .filter(Boolean)
-              .join(" • ")
+            .filter(Boolean)
+            .join(" • ")
           : current.notes || "";
 
         await prisma.$executeRawUnsafe(
@@ -3108,7 +3108,7 @@ export async function POST(request: Request) {
               totalFinal,
               `Link: /taller/presupuesto/${quoteToken} | Descuento: $${discountAmount.toFixed(2)} | IVA (${taxRateNum}%): $${taxAmount.toFixed(2)}`
             )
-            .catch(() => {});
+            .catch(() => { });
         }
 
         const updatedRows: any[] = await prisma.$queryRawUnsafe(
@@ -3141,18 +3141,18 @@ export async function POST(request: Request) {
 
         const rows: any[] = isStaff
           ? await prisma.$queryRawUnsafe(
-              `SELECT * FROM "WorkshopOrder"
+            `SELECT * FROM "WorkshopOrder"
                WHERE "quoteToken" = $1 OR "id" = $2 OR "orderNumber" = $1
                ORDER BY "updatedAt" DESC LIMIT 1`,
-              cleanToken,
-              orderId || ""
-            )
+            cleanToken,
+            orderId || ""
+          )
           : await prisma.$queryRawUnsafe(
-              `SELECT * FROM "WorkshopOrder"
+            `SELECT * FROM "WorkshopOrder"
                WHERE "quoteToken" = $1
                ORDER BY "updatedAt" DESC LIMIT 1`,
-              cleanToken
-            );
+            cleanToken
+          );
 
         if (rows.length === 0) {
           return NextResponse.json(
@@ -3197,7 +3197,7 @@ export async function POST(request: Request) {
               current.quoteNumber,
               aprobar ? "Aprobada" : "En Revisión"
             )
-            .catch(() => {});
+            .catch(() => { });
         }
 
         const updatedRows: any[] = await prisma.$queryRawUnsafe(
@@ -3300,8 +3300,8 @@ export async function POST(request: Request) {
         const nextStatus = allDone
           ? "Listo para Entregar"
           : current.status === "En Diagnóstico"
-          ? "En Reparación"
-          : current.status;
+            ? "En Reparación"
+            : current.status;
 
         await prisma.$executeRawUnsafe(
           `UPDATE "WorkshopOrder"
@@ -3356,7 +3356,7 @@ export async function POST(request: Request) {
                 techName,
                 `Aviso enviado al técnico ${techName}`
               )
-              .catch(() => {});
+              .catch(() => { });
           }
         }
 
@@ -3392,7 +3392,7 @@ export async function POST(request: Request) {
               Number(current.totalCost || 0),
               `Registro de horas Etapa 5 (${h.technician})`
             )
-            .catch(() => {});
+            .catch(() => { });
         }
 
         const updatedRows: any[] = await prisma.$queryRawUnsafe(
@@ -3607,7 +3607,7 @@ export async function POST(request: Request) {
                 ...(nextEmail ? { email: nextEmail } : {}),
               },
             })
-            .catch(() => {});
+            .catch(() => { });
         }
 
         const updatedRows: any[] = await prisma.$queryRawUnsafe(
@@ -3651,18 +3651,18 @@ export async function POST(request: Request) {
 
         const existingRows: any[] = isStaff
           ? await prisma.$queryRawUnsafe(
-              `SELECT * FROM "WorkshopOrder"
+            `SELECT * FROM "WorkshopOrder"
                WHERE "id" = $1 OR "orderNumber" = $1 OR "quoteToken" = $2
                ORDER BY "updatedAt" DESC LIMIT 1`,
-              orderId || "",
-              cleanToken || orderId || ""
-            )
+            orderId || "",
+            cleanToken || orderId || ""
+          )
           : await prisma.$queryRawUnsafe(
-              `SELECT * FROM "WorkshopOrder"
+            `SELECT * FROM "WorkshopOrder"
                WHERE "quoteToken" = $1
                ORDER BY "updatedAt" DESC LIMIT 1`,
-              cleanToken
-            );
+            cleanToken
+          );
 
         if (existingRows.length === 0) {
           return NextResponse.json(
@@ -3910,8 +3910,8 @@ export async function POST(request: Request) {
         const nextStatus = pagadoCompleto
           ? "Entregado"
           : totalAbonado > 0
-          ? "Listo para Entregar"
-          : current.status;
+            ? "Listo para Entregar"
+            : current.status;
 
         await prisma.$executeRawUnsafe(
           `UPDATE "WorkshopOrder"
@@ -3949,7 +3949,7 @@ export async function POST(request: Request) {
               Number(newPayment.amount),
               newPayment.method || "Efectivo"
             )
-            .catch(() => {});
+            .catch(() => { });
         }
 
         const updatedRows: any[] = await prisma.$queryRawUnsafe(
@@ -4402,8 +4402,8 @@ export async function POST(request: Request) {
           nextOilChangeKm !== undefined && nextOilChangeKm !== null && nextOilChangeKm !== ""
             ? parseInt(String(nextOilChangeKm), 10)
             : finalMileage
-            ? Number(finalMileage) + 5000
-            : current.nextOilChangeKm;
+              ? Number(finalMileage) + 5000
+              : current.nextOilChangeKm;
 
         let finalStatus = status || current.status;
         if (
@@ -4466,7 +4466,7 @@ export async function POST(request: Request) {
             `UPDATE "WorkshopOrder" SET "voiceNotesJson" = $2 WHERE "id" = $1`,
             current.id,
             JSON.stringify(body.voiceNotes)
-          ).catch(() => {});
+          ).catch(() => { });
         }
 
         // Sincronizar kilometraje y fotos con el expediente del vehículo (Oficina / Clientes)
@@ -4482,7 +4482,7 @@ export async function POST(request: Request) {
             finalMileage ?? null,
             finalNextOilKm ?? null,
             JSON.stringify([...finalReceptionPhotos, ...finalEvidencePhotos].slice(0, 12))
-          ).catch(() => {});
+          ).catch(() => { });
         }
 
         const updatedRows: any[] = await prisma.$queryRawUnsafe(
@@ -4659,8 +4659,8 @@ export async function POST(request: Request) {
                   totalAfter <= 0
                     ? "Agotado"
                     : totalAfter <= minStock
-                    ? "Bajo Stock"
-                    : "En Stock";
+                      ? "Bajo Stock"
+                      : "En Stock";
 
                 await prisma.$executeRawUnsafe(
                   `UPDATE "Product"
@@ -4671,7 +4671,7 @@ export async function POST(request: Request) {
                   prod.id,
                   usedQty,
                   newStatus
-                ).catch(() => {});
+                ).catch(() => { });
               }
             }
           }
@@ -4973,10 +4973,10 @@ export async function POST(request: Request) {
           Number(order.totalCost) > 0
             ? Number(order.totalCost)
             : Number(
-                completedItems
-                  .reduce((acc: number, it: any) => acc + (Number(it.price) || 0) * (Number(it.qty) || 1), 0)
-                  .toFixed(2)
-              );
+              completedItems
+                .reduce((acc: number, it: any) => acc + (Number(it.price) || 0) * (Number(it.qty) || 1), 0)
+                .toFixed(2)
+            );
 
         const now = new Date();
         const dateStr = now.toISOString().split("T")[0];
@@ -5004,7 +5004,7 @@ export async function POST(request: Request) {
               JSON.stringify(allPhotos),
               order.notes || ""
             )
-            .catch(() => {});
+            .catch(() => { });
         } else {
           const hstId = "hst_" + Math.random().toString(36).substring(2, 9) + Date.now().toString(36);
           const serviceCode = `SRV-${Date.now().toString().slice(-5)}`;
@@ -5034,7 +5034,7 @@ export async function POST(request: Request) {
               order.notes || "",
               order.orderNumber
             )
-            .catch(() => {});
+            .catch(() => { });
         }
 
         await prisma.$executeRawUnsafe(
@@ -5130,8 +5130,8 @@ export async function POST(request: Request) {
             ? "SUCURSAL"
             : "PRINCIPAL"
           : currentBranch === "SUCURSAL"
-          ? "PRINCIPAL"
-          : "SUCURSAL";
+            ? "PRINCIPAL"
+            : "SUCURSAL";
 
         const historyArr = safeParseJson<any[]>(current.statusHistoryJson, []);
         historyArr.unshift({
@@ -5160,12 +5160,12 @@ export async function POST(request: Request) {
             await prisma.$executeRawUnsafe(
               `UPDATE "Customer" SET "assignedToSucursal" = true WHERE "id" = $1`,
               current.customerId
-            ).catch(() => {});
+            ).catch(() => { });
           } else if (current.client) {
             await prisma.$executeRawUnsafe(
               `UPDATE "Customer" SET "assignedToSucursal" = true WHERE LOWER("name") = LOWER($1)`,
               current.client
-            ).catch(() => {});
+            ).catch(() => { });
           }
         }
 
@@ -5218,8 +5218,8 @@ export async function POST(request: Request) {
 
         const espKey: "taller" | "lubricentro" | "carwash" | "tecnicentro" =
           especialidad === "lubricentro" ||
-          especialidad === "carwash" ||
-          especialidad === "tecnicentro"
+            especialidad === "carwash" ||
+            especialidad === "tecnicentro"
             ? especialidad
             : "taller";
 
@@ -5294,25 +5294,25 @@ export async function POST(request: Request) {
 
               const prod = existingProd
                 ? await tx.product.update({
-                    where: { id: existingProd.id },
-                    data: {
-                      category: `Lubricentro - ${catRaw || "General"}`,
-                      price: unitPrice > 0 ? unitPrice : existingProd.price,
-                      brand: subRaw || existingProd.brand || "Lubricentro",
-                    },
-                  })
+                  where: { id: existingProd.id },
+                  data: {
+                    category: `Lubricentro - ${catRaw || "General"}`,
+                    price: unitPrice > 0 ? unitPrice : existingProd.price,
+                    brand: subRaw || existingProd.brand || "Lubricentro",
+                  },
+                })
                 : await tx.product.create({
-                    data: {
-                      code: itemCode,
-                      name: cleanName,
-                      brand: subRaw || "Lubricentro",
-                      category: `Lubricentro - ${catRaw || "General"}`,
-                      price: unitPrice,
-                      stock: 20,
-                      minStock: 5,
-                      status: "En Stock",
-                    },
-                  });
+                  data: {
+                    code: itemCode,
+                    name: cleanName,
+                    brand: subRaw || "Lubricentro",
+                    category: `Lubricentro - ${catRaw || "General"}`,
+                    price: unitPrice,
+                    stock: 20,
+                    minStock: 5,
+                    status: "En Stock",
+                  },
+                });
 
               savedCatalogItems.push(prod);
             } else {
@@ -5493,14 +5493,14 @@ export async function POST(request: Request) {
         const deliveryStatusStr = String(rawOrder?.deliveryStatus || "").toLowerCase();
         const isCurrentCyclePaid = Boolean(
           rawOrder &&
-            (orderStatusStr.includes("pagad") ||
-              orderStatusStr.includes("factur") ||
-              orderStatusStr.includes("cobrad") ||
-              quoteStatusStr.includes("pagad") ||
-              quoteStatusStr.includes("factur") ||
-              deliveryStatusStr.includes("pagad") ||
-              deliveryStatusStr.includes("factur") ||
-              (currentPosReq && PAID_REQ_SET.has(String(currentPosReq.status || "").toUpperCase())))
+          (orderStatusStr.includes("pagad") ||
+            orderStatusStr.includes("factur") ||
+            orderStatusStr.includes("cobrad") ||
+            quoteStatusStr.includes("pagad") ||
+            quoteStatusStr.includes("factur") ||
+            deliveryStatusStr.includes("pagad") ||
+            deliveryStatusStr.includes("factur") ||
+            (currentPosReq && PAID_REQ_SET.has(String(currentPosReq.status || "").toUpperCase())))
         );
 
         const baseQuoteNumber =
@@ -5524,7 +5524,10 @@ export async function POST(request: Request) {
             suffix++;
           }
         }
-        const quoteStatus = body.quoteStatus || "Pendiente";
+        const statusActualLower = String(rawOrder?.status || body.status || "").trim().toLowerCase();
+        const estaPausadaActual = statusActualLower === "pausada" || statusActualLower === "pausa";
+        const nuevoEstadoTaller = estaPausadaActual ? "Pausada" : "Trabajando";
+        const quoteStatus = body.quoteStatus || "Aprobado";
 
         const itemsTotal = incomingItems.reduce(
           (acc: number, it: any) => acc + (Number(it.price || 0) * Number(it.qty || 1)),
@@ -5534,8 +5537,8 @@ export async function POST(request: Request) {
           body.totalCost !== undefined && Number(body.totalCost) > 0
             ? Number(body.totalCost)
             : itemsTotal > 0
-            ? itemsTotal
-            : Number(rawOrder?.totalCost || 0);
+              ? itemsTotal
+              : Number(rawOrder?.totalCost || 0);
 
         if (!rawOrder) {
           const finalId = orderId || `ord_${Date.now()}`;
@@ -5594,8 +5597,8 @@ export async function POST(request: Request) {
             body.services && Array.isArray(body.services)
               ? JSON.stringify(body.services)
               : incomingItems.length > 0
-              ? JSON.stringify(incomingItems.map((i: any) => i.name || "Servicio"))
-              : rawOrder.servicesJson;
+                ? JSON.stringify(incomingItems.map((i: any) => i.name || "Servicio"))
+                : rawOrder.servicesJson;
 
           await prisma.$executeRawUnsafe(
             `UPDATE "WorkshopOrder"
@@ -5607,7 +5610,7 @@ export async function POST(request: Request) {
                  "totalCost" = $7,
                  "itemsJson" = COALESCE($8, "itemsJson"),
                  "servicesJson" = COALESCE($9, "servicesJson"),
-                 "status" = CASE WHEN $10 THEN 'En Diagnóstico' ELSE "status" END,
+                 "status" = CASE WHEN $10 THEN 'En Diagnóstico' ELSE $11 END,
                  "deliveryStatus" = CASE WHEN $10 THEN 'Pendiente de Firma' ELSE "deliveryStatus" END,
                  "posRequestId" = CASE WHEN $10 THEN NULL ELSE "posRequestId" END,
                  "stockDeducted" = CASE WHEN $10 THEN false ELSE "stockDeducted" END,
@@ -5622,20 +5625,22 @@ export async function POST(request: Request) {
             finalTotalCost,
             itemsJson,
             servicesJson,
-            isCurrentCyclePaid
+            isCurrentCyclePaid,
+            nuevoEstadoTaller
           );
 
           rawOrder = {
             ...rawOrder,
             quoteNumber,
             quoteStatus,
+            status: isCurrentCyclePaid ? "En Diagnóstico" : nuevoEstadoTaller,
             ...(isCurrentCyclePaid
               ? {
-                  status: "En Diagnóstico",
-                  deliveryStatus: "Pendiente de Firma",
-                  posRequestId: null,
-                  stockDeducted: false,
-                }
+                status: "En Diagnóstico",
+                deliveryStatus: "Pendiente de Firma",
+                posRequestId: null,
+                stockDeducted: false,
+              }
               : {}),
             totalCost: finalTotalCost,
             itemsJson,
@@ -5672,7 +5677,7 @@ export async function POST(request: Request) {
               notes: mapped.notes || "",
             },
           });
-        } catch {}
+        } catch { }
 
         return NextResponse.json({
           success: true,
@@ -5692,10 +5697,10 @@ export async function POST(request: Request) {
       const rtAction = actStr.includes("ELIMINAR")
         ? "deleted"
         : actStr.startsWith("CREAR_") || actStr.startsWith("REGISTRAR_") || actStr.startsWith("ABRIR_")
-        ? "created"
-        : actStr.includes("INICIAR") || actStr.includes("FINALIZAR") || actStr.includes("PASAR_") || actStr.includes("ENVIAR_A_POS")
-        ? "status_changed"
-        : "updated";
+          ? "created"
+          : actStr.includes("INICIAR") || actStr.includes("FINALIZAR") || actStr.includes("PASAR_") || actStr.includes("ENVIAR_A_POS")
+            ? "status_changed"
+            : "updated";
       const entityId = (body?.orderId || body?.id || undefined) as string | undefined;
 
       emitRealtimeEvent({ channel: "taller", action: rtAction, entityId });
