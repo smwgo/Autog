@@ -4227,7 +4227,7 @@ export default function PaginaDetallePropuesta() {
                 <div className="flex items-center gap-2.5 min-w-0">
                   <span className="min-w-0">
                     <span className="block text-base sm:text-sm font-bold sm:font-semibold leading-tight text-zinc-900 dark:text-white">
-                      Orden de Servicio
+                      Orden de Propuesta
                     </span>
                     <span className="block text-sm sm:text-sm font-mono font-bold dark:font-normal leading-tight text-black dark:text-white mt-0.5">
                       #{limpiarNumeroOrden(orden.orderNumber || orden.quoteNumber)}
@@ -4707,8 +4707,8 @@ export default function PaginaDetallePropuesta() {
                 type="button"
                 onClick={() => router.push(`/presupuestos/${encodeURIComponent(orden.id)}/pedir`)}
                 className={`h-9 px-3.5 rounded-xl text-xs sm:text-sm transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-95 border backdrop-blur-sm font-semibold relative ${itemsMarcadosProveedor.length > 0
-                  ? "bg-purple-500/15 hover:bg-purple-500/25 text-purple-700 dark:text-purple-200 border-purple-400/50 dark:border-purple-400/40 shadow-sm shadow-purple-500/15"
-                  : "bg-purple-500/10 hover:bg-purple-500/15 border-purple-300/60 dark:border-purple-400/25 text-purple-700 dark:text-purple-300"
+                  ? "bg-zinc-100/80 hover:bg-zinc-200/80 dark:bg-white/[0.10] dark:hover:bg-white/[0.16] text-zinc-800 dark:text-white border-zinc-300/80 dark:border-white/25 shadow-sm shadow-white/5"
+                  : "bg-zinc-100/50 hover:bg-zinc-100/80 dark:bg-white/[0.06] dark:hover:bg-white/[0.12] text-zinc-700 dark:text-zinc-200 border-zinc-200/80 dark:border-white/15"
                   }`}
                 title="Abrir página de pedidos marcados para asignar proveedores"
               >
@@ -4720,8 +4720,8 @@ export default function PaginaDetallePropuesta() {
                 <span className="whitespace-nowrap">Pedir</span>
                 <span
                   className={`min-w-5 h-5 px-1.5 rounded-full text-[11px] font-bold inline-flex items-center justify-center transition-all ${itemsMarcadosProveedor.length > 0
-                    ? "bg-purple-500/25 text-purple-800 dark:bg-purple-400/25 dark:text-purple-100"
-                    : "bg-purple-500/15 text-purple-700 dark:bg-purple-400/15 dark:text-purple-300"
+                    ? "bg-zinc-900/15 text-zinc-900 dark:bg-white/20 dark:text-white"
+                    : "bg-zinc-900/10 text-zinc-600 dark:bg-white/10 dark:text-zinc-300"
                     }`}
                 >
                   {itemsMarcadosProveedor.length}
@@ -4916,12 +4916,12 @@ export default function PaginaDetallePropuesta() {
                                       <input
                                         type="number"
                                         inputMode="decimal"
-                                        step="0.01"
+                                        step="any"
                                         min="0"
-                                        placeholder="0.00"
+                                        placeholder="0"
                                         value={it.price || ""}
                                         onChange={(e) => handleUpdateServicePrice(it.id, e.target.value)}
-                                        className="w-full bg-transparent text-right text-base sm:text-xs font-bold font-mono text-zinc-800 dark:text-zinc-100 focus:outline-none"
+                                        className="w-full bg-transparent text-right text-base sm:text-xs font-bold font-mono text-zinc-800 dark:text-zinc-100 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                       />
                                     </div>
                                   ) : (
@@ -5079,12 +5079,13 @@ export default function PaginaDetallePropuesta() {
                                         <span className="text-[11px] text-zinc-400 font-semibold">$</span>
                                         <input
                                           type="number"
-                                          step="0.01"
+                                          inputMode="decimal"
+                                          step="any"
                                           min="0"
-                                          placeholder="0.00"
+                                          placeholder="0"
                                           value={it.price || ""}
                                           onChange={(e) => handleUpdateServicePrice(it.id, e.target.value)}
-                                          className="w-full bg-transparent text-right text-xs font-bold font-mono text-zinc-800 dark:text-zinc-100 focus:outline-none"
+                                          className="w-full bg-transparent text-right text-xs font-bold font-mono text-zinc-800 dark:text-zinc-100 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                         />
                                       </div>
                                     ) : (
@@ -5236,12 +5237,12 @@ export default function PaginaDetallePropuesta() {
                                       <input
                                         type="number"
                                         inputMode="decimal"
-                                        step="0.01"
+                                        step="any"
                                         min="0"
-                                        placeholder="0.00"
+                                        placeholder="0"
                                         value={it.price || ""}
                                         onChange={(e) => handleUpdatePrice(it.id, "price", e.target.value)}
-                                        className="w-full bg-transparent text-right text-base sm:text-xs font-bold font-mono text-zinc-800 dark:text-zinc-100 focus:outline-none"
+                                        className="w-full bg-transparent text-right text-base sm:text-xs font-bold font-mono text-zinc-800 dark:text-zinc-100 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                       />
                                     </div>
                                   ) : (
@@ -5399,12 +5400,13 @@ export default function PaginaDetallePropuesta() {
                                         <span className="text-[11px] text-zinc-400 font-semibold">$</span>
                                         <input
                                           type="number"
-                                          step="0.01"
+                                          inputMode="decimal"
+                                          step="any"
                                           min="0"
-                                          placeholder="0.00"
+                                          placeholder="0"
                                           value={it.price || ""}
                                           onChange={(e) => handleUpdatePrice(it.id, "price", e.target.value)}
-                                          className="w-full bg-transparent text-right text-xs font-bold font-mono text-zinc-800 dark:text-zinc-100 focus:outline-none"
+                                          className="w-full bg-transparent text-right text-xs font-bold font-mono text-zinc-800 dark:text-zinc-100 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                         />
                                       </div>
                                     ) : (

@@ -41,6 +41,7 @@ export default function ComprasProveedores() {
     name: "",
     ruc: "",
     contact: "",
+    phone: "",
     email: "",
     categories: "",
     balance: "",
@@ -75,6 +76,7 @@ export default function ComprasProveedores() {
       name: "",
       ruc: "",
       contact: "",
+      phone: "",
       email: "",
       categories: "",
       balance: "",
@@ -101,6 +103,7 @@ export default function ComprasProveedores() {
       name: row.name || "",
       ruc: row.ruc || "",
       contact: row.contact || "",
+      phone: row.phone || "",
       email: row.email || "",
       categories: catsStr,
       balance: row.balance !== undefined && row.balance !== null ? String(row.balance) : "",
@@ -723,7 +726,6 @@ export default function ComprasProveedores() {
                   <div>
                     <label className="block text-xs font-semibold text-zinc-500 mb-1">Proveedor</label>
                     <input
-                      required
                       type="text"
                       value={form.name}
                       onChange={(e) => setForm({ ...form, name: e.target.value })}
@@ -735,7 +737,6 @@ export default function ComprasProveedores() {
                     <div>
                       <label className="block text-xs font-semibold text-zinc-500 mb-1">RUC</label>
                       <input
-                        required
                         type="text"
                         value={form.ruc}
                         onChange={(e) => setForm({ ...form, ruc: e.target.value })}
@@ -759,7 +760,6 @@ export default function ComprasProveedores() {
                     <div>
                       <label className="block text-xs font-semibold text-zinc-500 mb-1">Contacto</label>
                       <input
-                        required
                         type="text"
                         value={form.contact}
                         onChange={(e) => setForm({ ...form, contact: e.target.value })}
@@ -778,15 +778,27 @@ export default function ComprasProveedores() {
                       />
                     </div>
                   </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-zinc-500 mb-1">Categorías</label>
-                    <input
-                      type="text"
-                      value={form.categories}
-                      onChange={(e) => setForm({ ...form, categories: e.target.value })}
-                      placeholder="Lubricantes, Filtros..."
-                      className="w-full h-11 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-transparent text-base sm:text-sm"
-                    />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-zinc-500 mb-1">WhatsApp</label>
+                      <input
+                        type="tel"
+                        value={form.phone}
+                        onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                        placeholder="593991234567"
+                        className="w-full h-11 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-transparent text-base sm:text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-zinc-500 mb-1">Categorías</label>
+                      <input
+                        type="text"
+                        value={form.categories}
+                        onChange={(e) => setForm({ ...form, categories: e.target.value })}
+                        placeholder="Lubricantes, Filtros..."
+                        className="w-full h-11 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-transparent text-base sm:text-sm"
+                      />
+                    </div>
                   </div>
                 </>
               ) : (

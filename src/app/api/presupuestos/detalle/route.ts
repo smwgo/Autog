@@ -600,12 +600,12 @@ export async function GET(request: Request) {
       let proveedores: any[] = [];
       try {
         proveedores = await prisma.supplier.findMany({
-          where: { status: "Activo" },
+          where: { status: { notIn: ["Inactivo", "Eliminado"] } },
           orderBy: { name: "asc" },
         });
       } catch {
         proveedores = ((await prisma.$queryRawUnsafe(
-          `SELECT "id", "name", "contact", "phone", "email" FROM "Supplier" WHERE "status" = 'Activo' ORDER BY "name" ASC`
+          `SELECT "id", "name", "contact", "phone", "email" FROM "Supplier" WHERE COALESCE("status", '') NOT IN ('Inactivo', 'Eliminado') ORDER BY "name" ASC`
         ).catch(() => [])) as any[]) || [];
       }
 

@@ -13,7 +13,7 @@ export async function GET() {
       const rows = ((await prisma.$queryRawUnsafe(
         `SELECT "id", "name", "contact", "phone", "email", "categories" 
          FROM "Supplier" 
-         WHERE "status" = 'Activo' 
+         WHERE COALESCE("status", '') NOT IN ('Inactivo', 'Eliminado') 
          ORDER BY "name" ASC`
       ).catch(() => [])) as any[]) || [];
 
