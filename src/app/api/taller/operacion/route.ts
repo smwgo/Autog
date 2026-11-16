@@ -5524,10 +5524,7 @@ export async function POST(request: Request) {
             suffix++;
           }
         }
-        const statusActualLower = String(rawOrder?.status || body.status || "").trim().toLowerCase();
-        const estaPausadaActual = statusActualLower === "pausada" || statusActualLower === "pausa";
-        const nuevoEstadoTaller = estaPausadaActual ? "Pausada" : "Trabajando";
-        const quoteStatus = body.quoteStatus || "Aprobado";
+        const quoteStatus = body.quoteStatus || "Pendiente";
 
         const itemsTotal = incomingItems.reduce(
           (acc: number, it: any) => acc + (Number(it.price || 0) * Number(it.qty || 1)),
@@ -5610,7 +5607,7 @@ export async function POST(request: Request) {
                  "totalCost" = $7,
                  "itemsJson" = COALESCE($8, "itemsJson"),
                  "servicesJson" = COALESCE($9, "servicesJson"),
-                 "status" = CASE WHEN $10 THEN 'En Diagnóstico' ELSE $11 END,
+                 "status" = CASE WHEN $10 THEN 'En Diagnóstico' ELSE "status" END,
                  "deliveryStatus" = CASE WHEN $10 THEN 'Pendiente de Firma' ELSE "deliveryStatus" END,
                  "posRequestId" = CASE WHEN $10 THEN NULL ELSE "posRequestId" END,
                  "stockDeducted" = CASE WHEN $10 THEN false ELSE "stockDeducted" END,
@@ -5625,15 +5622,13 @@ export async function POST(request: Request) {
             finalTotalCost,
             itemsJson,
             servicesJson,
-            isCurrentCyclePaid,
-            nuevoEstadoTaller
+            isCurrentCyclePaid
           );
 
           rawOrder = {
             ...rawOrder,
             quoteNumber,
             quoteStatus,
-            status: isCurrentCyclePaid ? "En Diagnóstico" : nuevoEstadoTaller,
             ...(isCurrentCyclePaid
               ? {
                 status: "En Diagnóstico",

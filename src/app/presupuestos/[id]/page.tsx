@@ -5,11 +5,16 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { Header } from "@/components/Header";
+import { MiniAudioPlayer } from "@/components/taller/MiniAudioPlayer";
 const CatalogoProductosServiciosTaller = dynamic(
   () => import("@/components/taller/CatalogoProductosServiciosTaller"),
   { ssr: false }
 );
 import { useRealtimeSync } from "@/hooks/useRealtimeSync";
+import {
+  SERVICIOS_RAPIDOS_POR_MODULO,
+  getServicioRapidoMeta,
+} from "@/components/taller/RegistroFinalUnificado";
 
 // ============================================================================
 // INTERFACES & CONSTANTES
@@ -704,6 +709,8 @@ export default function PaginaDetallePropuesta() {
     origen: EspecialidadTipo;
   }>({ abierto: false, origen: "TALLER" });
   const [busquedaAccesoRapido, setBusquedaAccesoRapido] = useState("");
+  const [modoManualRapidoPropuesta, setModoManualRapidoPropuesta] = useState(false);
+  const [textoManualRapidoPropuesta, setTextoManualRapidoPropuesta] = useState("");
   const [itemTiempoEnvioModal, setItemTiempoEnvioModal] = useState<{
     id: string;
     isService: boolean;
@@ -4944,42 +4951,6 @@ export default function PaginaDetallePropuesta() {
                 <div className="flex items-center gap-2.5 flex-wrap justify-end">
                   <button
                     type="button"
-                    disabled={guardando}
-                    onClick={handleGuardarBorrador}
-                    className="h-10 px-4 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 border border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-200 text-xs font-normal transition-all active:scale-95 cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
-                  >
-                    <span>💾</span>
-                    <span>{guardando ? "..." : "Guardar"}</span>
-                  </button>
-
-                  {!esPagado && (
-                    <button
-                      type="button"
-                      disabled={cambiandoEstado}
-                      onClick={() => {
-                        const siguienteEstado =
-                          esAprobado && !esPausado
-                            ? "Pausada"
-                            : esPausado
-                              ? "Pendiente"
-                              : "Aprobado";
-                        void handleCambiarEstadoTaller(siguienteEstado);
-                      }}
-                      className={`h-10 px-4 rounded-xl border text-xs font-normal shadow-sm transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 ${esAprobado && !esPausado
-                        ? "bg-emerald-600 hover:bg-emerald-500 border-emerald-500 text-white"
-                        : esPausado
-                          ? "bg-amber-500 hover:bg-amber-400 border-amber-500 text-white"
-                          : "bg-amber-500/15 hover:bg-amber-500/25 border-amber-500/35 text-amber-700 dark:text-amber-300"
-                        }`}
-                      title="Clic para cambiar estado (Trabajando → Pausa → En espera)"
-                    >
-                      <span className={`w-2 h-2 rounded-full ${esAprobado && !esPausado ? "bg-white" : esPausado ? "bg-white" : "bg-amber-500"}`} />
-                      <span>{esAprobado && !esPausado ? "Trabajando" : esPausado ? "Pausa" : "En espera"}</span>
-                    </button>
-                  )}
-
-                  <button
-                    type="button"
                     disabled={cambiandoEstado}
                     onClick={handleTogglePagado}
                     className={`h-10 px-4 rounded-xl border text-xs font-normal shadow-sm transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 ${esPagado
@@ -5963,63 +5934,41 @@ export default function PaginaDetallePropuesta() {
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="bg-white dark:bg-[#121216] border border-zinc-200 dark:border-white/10 rounded-3xl max-w-md w-full p-5 space-y-4 shadow-2xl animate-scale-up text-zinc-900 dark:text-white"
+            className="bg-white dark:bg-[#121216] border border-zinc-200 dark:border-white/10 rounded-3xl max-w-md w-full p-4 shadow-2xl animate-scale-up text-zinc-900 dark:text-white"
           >
-            {/* Header del modal */}
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-9 h-9 rounded-2xl bg-amber-500/10 border border-amber-500/25 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
-                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
-                    <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-                    <line x1="12" x2="12" y1="19" y2="22" />
-                  </svg>
-                </div>
-                <div className="min-w-0">
-                  <h3 className="text-sm font-bold text-zinc-900 dark:text-white truncate">
-                    Audios de Evidencia #{flotanteAudios.pin.numeroEvidencia || flotanteAudios.pin.pinNumber || 1}
-                  </h3>
-                  <p className="text-[11px] text-zinc-500 dark:text-zinc-400 truncate">
-                    {flotanteAudios.pin.tipo ? formatoPrimeraMayuscula(flotanteAudios.pin.tipo) : (flotanteAudios.pin.descripcion || "Nota de voz")}
-                  </p>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setFlotanteAudios(null)}
-                className="w-8 h-8 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white flex items-center justify-center cursor-pointer transition-colors shrink-0"
-              >
-                ✕
-              </button>
-            </div>
-
             {/* Lista de audios */}
             {flotanteAudios.audios.length > 0 ? (
-              <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
+              <div className="space-y-3 max-h-[60vh] overflow-y-auto">
                 {flotanteAudios.audios.map((aud, aIdx) => (
                   <div
                     key={aud.id || `aud-${aIdx}`}
                     className="p-3.5 rounded-2xl bg-amber-500/5 border border-amber-500/20 space-y-2.5"
                   >
-                    <div className="flex items-center justify-between text-xs">
+                    <div className="flex items-center justify-between text-xs gap-2">
                       <span className="font-semibold text-amber-700 dark:text-amber-300 flex items-center gap-1.5">
                         <span className="inline-block w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
                         Audio #{aIdx + 1}
                       </span>
-                      {aud.durationSeconds && (
-                        <span className="text-[11px] font-mono text-zinc-500 dark:text-zinc-400">
-                          {Math.floor(aud.durationSeconds / 60)}:{(aud.durationSeconds % 60).toString().padStart(2, "0")}
-                        </span>
-                      )}
+                      <div className="flex items-center gap-2">
+                        {aud.durationSeconds && (
+                          <span className="text-[11px] font-mono text-zinc-500 dark:text-zinc-400">
+                            {Math.floor(aud.durationSeconds / 60)}:{(aud.durationSeconds % 60).toString().padStart(2, "0")}
+                          </span>
+                        )}
+                        {aIdx === 0 && (
+                          <button
+                            type="button"
+                            onClick={() => setFlotanteAudios(null)}
+                            className="w-7 h-7 rounded-lg bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white flex items-center justify-center cursor-pointer transition-colors shrink-0"
+                            title="Cerrar"
+                          >
+                            ✕
+                          </button>
+                        )}
+                      </div>
                     </div>
 
-                    <audio
-                      controls
-                      src={aud.url}
-                      className="w-full h-9 accent-amber-500 rounded-xl"
-                      preload="metadata"
-                    />
+                    <MiniAudioPlayer src={aud.url} initialDuration={aud.durationSeconds} />
 
                     {aud.transcriptionText && (
                       <div className="p-2.5 rounded-xl bg-white dark:bg-black/40 border border-zinc-200 dark:border-white/5 text-xs text-zinc-700 dark:text-zinc-300 italic">
@@ -6033,7 +5982,15 @@ export default function PaginaDetallePropuesta() {
                 ))}
               </div>
             ) : (
-              <div className="p-8 text-center rounded-2xl bg-zinc-50 dark:bg-white/[0.02] border border-dashed border-zinc-200 dark:border-white/10 space-y-1">
+              <div className="relative p-8 text-center rounded-2xl bg-zinc-50 dark:bg-white/[0.02] border border-dashed border-zinc-200 dark:border-white/10 space-y-1">
+                <button
+                  type="button"
+                  onClick={() => setFlotanteAudios(null)}
+                  className="absolute top-2.5 right-2.5 w-7 h-7 rounded-lg bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white flex items-center justify-center cursor-pointer transition-colors"
+                  title="Cerrar"
+                >
+                  ✕
+                </button>
                 <span className="text-2xl">🎙️</span>
                 <p className="text-xs text-zinc-500 dark:text-zinc-400 font-medium">
                   No se grabaron audios para esta evidencia.
@@ -6827,7 +6784,7 @@ export default function PaginaDetallePropuesta() {
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-emerald-500" />
                 <span className="text-sm font-bold text-zinc-900 dark:text-white">
-                  Catálogo · {modalCatalogoTallerAbierto.origen}
+                  Todos los Productos y Servicios
                 </span>
               </div>
               <button
@@ -6859,9 +6816,11 @@ export default function PaginaDetallePropuesta() {
                   if (target) void handleDeleteItem(target.id);
                 }
               }}
-              siempreAbierto
-              mostrarPrecios
-              mostrarChipsSeleccionados
+              titulo="Catálogo"
+              siempreAbierto={true}
+              mostrarChipsSeleccionados={false}
+              ocultarCabeceraYCategoria={true}
+              limitarDosFilasInicial={true}
             />
           </div>
         </div>
@@ -6870,85 +6829,204 @@ export default function PaginaDetallePropuesta() {
       {/* ================================================================= */}
       {/* MODAL: SERVICIOS RÁPIDOS 1-CLIC POR ESPECIALIDAD                  */}
       {/* ================================================================= */}
-      {modalAccesosRapidosAbierto.abierto && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 animate-in fade-in duration-150"
-          onClick={() =>
-            setModalAccesosRapidosAbierto({ abierto: false, origen: "TALLER" })
+      {modalAccesosRapidosAbierto.abierto && (() => {
+        const modKeyRaw = String(modalAccesosRapidosAbierto.origen || "TALLER").toLowerCase();
+        const modKey =
+          modKeyRaw.includes("lubri")
+            ? "lubricentro"
+            : modKeyRaw.includes("car") || modKeyRaw.includes("lav")
+            ? "carwash"
+            : modKeyRaw.includes("tecni")
+            ? "tecnicentro"
+            : "taller";
+        const modLabel =
+          modKey === "lubricentro"
+            ? "Lubricentro"
+            : modKey === "carwash"
+            ? "Car Wash"
+            : modKey === "tecnicentro"
+            ? "Tecnicentro"
+            : "Taller";
+        const listaBase = (SERVICIOS_RAPIDOS_POR_MODULO[modKey] || SERVICIOS_RAPIDOS_POR_MODULO.taller).map(
+          (nombre) => {
+            const matchCatalogo = (
+              SERVICIOS_RAPIDOS_POR_ESPECIALIDAD[modalAccesosRapidosAbierto.origen] ||
+              SERVICIOS_RAPIDOS_POR_ESPECIALIDAD.TALLER
+            ).find((x) => x.nombre.toLowerCase() === nombre.toLowerCase());
+            return { nombre, precio: matchCatalogo?.precio ?? 0 };
           }
-        >
+        );
+        const listaFiltrada = listaBase.filter((s) =>
+          !busquedaAccesoRapido.trim()
+            ? true
+            : s.nombre.toLowerCase().includes(busquedaAccesoRapido.trim().toLowerCase())
+        );
+
+        return (
           <div
-            className="w-full max-w-md rounded-2xl border border-slate-800 bg-[#0d1322] p-5 shadow-2xl space-y-4"
-            onClick={(e) => e.stopPropagation()}
+            className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-3 animate-fade-in"
+            onClick={() =>
+              setModalAccesosRapidosAbierto({ abierto: false, origen: "TALLER" })
+            }
           >
-            <div className="flex items-center justify-between border-b border-slate-800/80 pb-3">
-              <div className="flex items-center gap-2">
-                <span className="text-base">⚡</span>
-                <h4 className="text-sm font-black text-white">
-                  Rápidos · {modalAccesosRapidosAbierto.origen}
-                </h4>
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className="relative w-full max-w-lg rounded-2xl bg-white dark:bg-[#111113] border border-zinc-200 dark:border-white/10 p-4 shadow-2xl space-y-3"
+            >
+              <div className="flex items-center justify-between border-b border-zinc-200 dark:border-white/10 pb-2.5">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="w-2 h-2 rounded-full bg-violet-500 shrink-0" />
+                  <span className="text-sm font-bold text-zinc-900 dark:text-white truncate">
+                    Accesos rápidos ({modLabel})
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setModalAccesosRapidosAbierto({ abierto: false, origen: "TALLER" })
+                  }
+                  className="w-7 h-7 rounded-lg flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-xs font-bold transition-colors cursor-pointer shrink-0"
+                  title="Cerrar"
+                >
+                  ✕
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={() =>
-                  setModalAccesosRapidosAbierto({ abierto: false, origen: "TALLER" })
-                }
-                className="w-8 h-8 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center text-xs font-bold cursor-pointer"
-              >
-                ✕
-              </button>
-            </div>
 
-            <input
-              type="text"
-              value={busquedaAccesoRapido}
-              onChange={(e) => setBusquedaAccesoRapido(e.target.value)}
-              placeholder="🔍 Filtrar..."
-              className="w-full h-9 rounded-xl bg-slate-900 border border-slate-800 px-3 text-xs text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-blue-500"
-            />
-
-            <div className="max-h-72 overflow-y-auto space-y-1.5 pr-1">
-              {(
-                SERVICIOS_RAPIDOS_POR_ESPECIALIDAD[modalAccesosRapidosAbierto.origen] ||
-                SERVICIOS_RAPIDOS_POR_ESPECIALIDAD.TALLER
-              )
-                .filter((s) =>
-                  !busquedaAccesoRapido.trim()
-                    ? true
-                    : s.nombre.toLowerCase().includes(busquedaAccesoRapido.toLowerCase())
-                )
-                .map((srv, idx) => (
-                  <div
-                    key={idx}
-                    className="flex items-center justify-between gap-2 p-2.5 rounded-xl bg-slate-900/60 border border-slate-800/80 hover:border-slate-700 transition-all"
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={busquedaAccesoRapido}
+                  onChange={(e) => setBusquedaAccesoRapido(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && busquedaAccesoRapido.trim()) {
+                      e.preventDefault();
+                      const limpio = busquedaAccesoRapido.trim();
+                      const exacto = listaFiltrada.find(
+                        (s) => s.nombre.toLowerCase() === limpio.toLowerCase()
+                      );
+                      handleAgregarAccesoRapido(
+                        exacto ? exacto.nombre : limpio,
+                        exacto ? exacto.precio : 0,
+                        modalAccesosRapidosAbierto.origen
+                      );
+                      setBusquedaAccesoRapido("");
+                      setModalAccesosRapidosAbierto({ abierto: false, origen: "TALLER" });
+                    }
+                  }}
+                  placeholder="Buscar o añadir..."
+                  autoFocus
+                  className="flex-1 min-w-0 rounded-xl bg-zinc-50 dark:bg-white/[0.04] border border-zinc-200 dark:border-white/10 px-3 py-2 text-base sm:text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-violet-500"
+                />
+                <button
+                  type="button"
+                  onClick={() => setModoManualRapidoPropuesta((prev) => !prev)}
+                  className={`px-3 py-2 rounded-xl border text-xs font-semibold flex items-center gap-1.5 shrink-0 cursor-pointer transition-all active:scale-95 ${
+                    modoManualRapidoPropuesta
+                      ? "bg-amber-500/20 border-amber-500/50 text-amber-700 dark:text-amber-300"
+                      : "bg-zinc-100 dark:bg-white/[0.05] border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200/70 dark:hover:bg-white/10"
+                  }`}
+                  title="Marcar para añadir servicios manuales"
+                >
+                  <span
+                    className={`w-3.5 h-3.5 rounded flex items-center justify-center text-[10px] border ${
+                      modoManualRapidoPropuesta
+                        ? "bg-amber-500 border-amber-500 text-black font-black"
+                        : "border-zinc-400 dark:border-zinc-500"
+                    }`}
                   >
-                    <div className="min-w-0">
-                      <p className="text-xs font-bold text-slate-200 truncate">
-                        {srv.nombre}
-                      </p>
-                      <span className="text-[10px] font-semibold text-emerald-400">
-                        ${srv.precio.toFixed(2)}
-                      </span>
-                    </div>
+                    {modoManualRapidoPropuesta ? "✓" : ""}
+                  </span>
+                  <span>Manual</span>
+                </button>
+              </div>
+
+              {modoManualRapidoPropuesta && (
+                <div className="p-2.5 rounded-xl border border-amber-500/35 bg-amber-500/10 space-y-2 animate-fade-in">
+                  <div className="flex items-stretch gap-2">
+                    <input
+                      type="text"
+                      value={textoManualRapidoPropuesta}
+                      onChange={(e) => setTextoManualRapidoPropuesta(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && textoManualRapidoPropuesta.trim()) {
+                          e.preventDefault();
+                          const limpio = textoManualRapidoPropuesta.trim();
+                          handleAgregarAccesoRapido(limpio, 0, modalAccesosRapidosAbierto.origen);
+                          setTextoManualRapidoPropuesta("");
+                          setModalAccesosRapidosAbierto({ abierto: false, origen: "TALLER" });
+                        }
+                      }}
+                      placeholder="Escribe servicio manual..."
+                      className="flex-1 min-w-0 rounded-xl bg-white dark:bg-black/40 border border-amber-500/30 px-3 py-2 text-base sm:text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-amber-500"
+                    />
                     <button
                       type="button"
-                      onClick={() =>
-                        handleAgregarAccesoRapido(
-                          srv.nombre,
-                          srv.precio,
-                          modalAccesosRapidosAbierto.origen
-                        )
-                      }
-                      className="h-7 px-3 rounded-lg bg-purple-600/20 hover:bg-purple-600 text-purple-300 hover:text-white border border-purple-500/40 text-xs font-bold transition-all cursor-pointer shrink-0"
+                      disabled={!textoManualRapidoPropuesta.trim()}
+                      onClick={() => {
+                        const limpio = textoManualRapidoPropuesta.trim();
+                        if (!limpio) return;
+                        handleAgregarAccesoRapido(limpio, 0, modalAccesosRapidosAbierto.origen);
+                        setTextoManualRapidoPropuesta("");
+                        setModalAccesosRapidosAbierto({ abierto: false, origen: "TALLER" });
+                      }}
+                      className="px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 disabled:opacity-40 text-black text-xs font-bold shrink-0 cursor-pointer disabled:cursor-not-allowed active:scale-95 transition-all"
                     >
                       + Añadir
                     </button>
                   </div>
-                ))}
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-72 overflow-y-auto pr-0.5">
+                {listaFiltrada.map((srv, idx) => {
+                  const meta = getServicioRapidoMeta(srv.nombre, modLabel);
+                  return (
+                    <div
+                      key={`${srv.nombre}-${idx}`}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => {
+                        handleAgregarAccesoRapido(
+                          srv.nombre,
+                          srv.precio,
+                          modalAccesosRapidosAbierto.origen
+                        );
+                        setModalAccesosRapidosAbierto({ abierto: false, origen: "TALLER" });
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          handleAgregarAccesoRapido(
+                            srv.nombre,
+                            srv.precio,
+                            modalAccesosRapidosAbierto.origen
+                          );
+                          setModalAccesosRapidosAbierto({ abierto: false, origen: "TALLER" });
+                        }
+                      }}
+                      className="group p-2.5 rounded-xl border border-zinc-200/90 dark:border-white/10 bg-zinc-50/70 hover:bg-zinc-100/90 dark:bg-white/[0.03] dark:hover:bg-white/[0.08] text-left text-xs transition-all cursor-pointer flex items-center justify-between gap-2 active:scale-[0.98] shadow-2xs hover:shadow-xs hover:border-zinc-300 dark:hover:border-white/20"
+                    >
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <div
+                          className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border ${meta.iconBoxClass}`}
+                        >
+                          {meta.icon}
+                        </div>
+                        <span className="font-medium text-zinc-900 dark:text-zinc-100 text-xs sm:text-[13px] leading-snug break-words group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors flex-1 min-w-0">
+                          {srv.nombre}
+                        </span>
+                      </div>
+                      <span className="w-6 h-6 rounded-lg bg-zinc-200/60 dark:bg-white/10 group-hover:bg-violet-600 group-hover:text-white dark:group-hover:bg-violet-500 text-violet-600 dark:text-violet-400 flex items-center justify-center text-xs font-bold shrink-0 transition-colors">
+                        +
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 }

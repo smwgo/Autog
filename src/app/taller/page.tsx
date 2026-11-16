@@ -3881,8 +3881,7 @@ Hola *${clienteNom}*, actualización de su vehículo *${vehiculoDesc}* (Placa: *
           services: (ordenActiva as any).services || [],
           totalCost: ordenActiva.totalCost,
           notes: ordenActiva.notes,
-          status: ordenActiva.status === "Pausada" ? "Pausada" : "Trabajando",
-          quoteStatus: "Aprobado",
+          quoteStatus: "Pendiente",
           quoteSignatureUrl: modoFirma === "ACEPTACION" ? firmaDataUrl : undefined,
           deliverySignatureUrl: modoFirma === "ENTREGA" ? firmaDataUrl : undefined,
           signedBy: ordenActiva.client || "Cliente",
@@ -5878,11 +5877,16 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
                   {/* Columna Izquierda: Estado y Notificación */}
                   <div className="lg:col-span-5 space-y-3">
-                    {/* Estado */}
+                    {/* Estado (solo lectura en Taller; se cambia únicamente en Propuesta) */}
                     <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-black/40 border border-zinc-200 dark:border-white/5 space-y-2">
-                      <span className="text-xs font-normal text-zinc-700 dark:text-zinc-300 block">
-                        Estado:
-                      </span>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-xs font-normal text-zinc-700 dark:text-zinc-300 block">
+                          Estado:
+                        </span>
+                        <span className="text-[10px] text-zinc-400 dark:text-zinc-500">
+                          Solo lectura (editar en Propuesta)
+                        </span>
+                      </div>
                       <div className="grid grid-cols-2 gap-2 sm:gap-2.5">
                         {etapa6EstadosLista
                           .filter((st) => !st.name.toLowerCase().includes("pendiente"))
@@ -5900,19 +5904,18 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                               amber: "bg-amber-500/25 text-amber-800 dark:text-amber-200 border-amber-400/60 ring-1 ring-amber-400/40 font-medium shadow-sm",
                             };
                             const estiloActivo = colorMap[st.color] || colorMap.blue;
-                            const estiloPlomo = "bg-white dark:bg-white/[0.03] hover:bg-zinc-100 dark:hover:bg-white/[0.07] text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white border border-zinc-200 dark:border-white/10 font-normal";
+                            const estiloPlomo = "bg-white/60 dark:bg-white/[0.02] text-zinc-400 dark:text-zinc-500 border border-zinc-200/70 dark:border-white/5 font-normal opacity-75";
 
                             return (
-                              <button
+                              <div
                                 key={st.id}
-                                type="button"
-                                onClick={() => handleSeleccionarEstadoEtapa6(st)}
-                                className={`py-2.5 px-3 min-h-[42px] rounded-xl text-xs sm:text-sm border transition-all cursor-pointer text-center flex items-center justify-center active:scale-95 ${
+                                aria-disabled="true"
+                                className={`py-2.5 px-3 min-h-[42px] rounded-xl text-xs sm:text-sm border text-center flex items-center justify-center select-none ${
                                   sel ? estiloActivo : estiloPlomo
                                 }`}
                               >
                                 {st.name}
-                              </button>
+                              </div>
                             );
                           })}
                       </div>
@@ -6472,31 +6475,58 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
           ===================================================================== */}
       {modalPropuestaEnviada && (
         <div
-          onClick={() => setModalPropuestaEnviada(false)}
-          className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in"
+          onClick={() => {
+            setModalPropuestaEnviada(false);
+            setEtapaActiva(2);
+            if (typeof window !== "undefined") {
+              window.scrollTo({ top: 0, behavior: "smooth" });
+            }
+          }}
+          className="fixed inset-0 z-50 bg-black/75 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in"
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="bg-[#111113] border border-emerald-500/30 rounded-2xl max-w-xs w-full p-5 space-y-3 text-center shadow-2xl animate-scale-up"
+            className="bg-white dark:bg-[#111113] border border-emerald-500/30 rounded-3xl max-w-sm w-full p-6 space-y-4 text-center shadow-2xl animate-scale-up"
           >
-            <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 flex items-center justify-center mx-auto text-xl font-bold shadow-lg shadow-emerald-500/10">
-              ✓
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500/25 to-teal-500/15 border border-emerald-500/40 text-emerald-500 dark:text-emerald-400 flex items-center justify-center mx-auto shadow-lg shadow-emerald-500/15">
+              <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+              </svg>
             </div>
-            <div className="space-y-1">
-              <h3 className="text-sm sm:text-base font-bold text-white">
-                Su propuesta fue enviada
+            <div className="space-y-1.5">
+              <h3 className="text-base sm:text-lg font-bold text-zinc-900 dark:text-white">
+                ¡Propuesta enviada con éxito!
               </h3>
-              <p className="text-xs text-zinc-400">
-                Placa <strong className="text-zinc-200 font-mono">{ordenActiva?.plate || "registrada"}</strong>
+              <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                La orden{" "}
+                {ordenActiva?.orderNumber && (
+                  <strong className="text-emerald-600 dark:text-emerald-400 font-mono">
+                    {limpiarNumeroOrden(ordenActiva.orderNumber)}
+                  </strong>
+                )}{" "}
+                • Placa{" "}
+                <strong className="text-zinc-900 dark:text-zinc-100 font-mono">
+                  {ordenActiva?.plate || "registrada"}
+                </strong>{" "}
+                ya está disponible en Propuestas.
               </p>
             </div>
             <div className="pt-1">
               <button
                 type="button"
-                onClick={() => setModalPropuestaEnviada(false)}
-                className="w-full h-9 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold cursor-pointer transition-all active:scale-95 shadow-md shadow-emerald-600/30"
+                onClick={() => {
+                  setModalPropuestaEnviada(false);
+                  setEtapaActiva(2);
+                  if (typeof window !== "undefined") {
+                    window.scrollTo({ top: 0, behavior: "smooth" });
+                  }
+                }}
+                className="w-full h-11 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-sm font-bold cursor-pointer transition-all active:scale-95 shadow-lg shadow-emerald-600/25 flex items-center justify-center gap-2"
               >
-                Aceptar
+                <span>Aceptar</span>
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.4}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 10.5 12 3m0 0 7.5 7.5M12 3v18" />
+                </svg>
               </button>
             </div>
           </div>
