@@ -426,6 +426,7 @@ export default function PedirProveedoresPage() {
 
   // Asignar proveedor a UN solo pedido
   const handleAsignarProveedorItem = async (item: PedidoItem, provId: string) => {
+    setTodoProveedorActivo(false);
     const prov = proveedores.find((p) => p.id === provId);
     const actualizar = (arr: PedidoItem[]) =>
       arr.map((it) =>
@@ -586,11 +587,19 @@ export default function PedirProveedoresPage() {
 
   const enviarWhatsAppGrupo = (itemsGrupo: PedidoItem[], prov?: Proveedor) => {
     if (!orden || itemsGrupo.length === 0) return;
+    const ahora = new Date();
+    const fechaHora = ahora.toLocaleString("es-EC", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
     const link = construirLinkCatalogo(itemsGrupo, prov);
     const vehiculoInfo = `${orden.vehicle || "Vehículo"} (Placa: ${orden.plate || "N/A"})`;
     const detalle = itemsGrupo.map((it) => `• ${it.qty || 1}x ${it.name}`).join("\n");
     const mensaje = encodeURIComponent(
-      `Hola${prov?.name ? ` ${prov.name}` : ""}, solicito cotización para el vehículo ${vehiculoInfo}:\n${detalle}\n\nAbre el catálogo del proveedor para confirmar disponibilidad, precio y tiempo de entrega:\n${link}`
+      `Hola${prov?.name ? ` ${prov.name}` : ""}, solicito cotización para el vehículo ${vehiculoInfo}\nFecha y hora: ${fechaHora}\n\nLo que necesito:\n${detalle}\n\nAbre el catálogo del proveedor para confirmar disponibilidad, precio y tiempo de entrega:\n${link}`
     );
     const phoneClean = (prov?.phone || "").replace(/[^0-9]/g, "");
     const url = phoneClean
@@ -603,9 +612,6 @@ export default function PedirProveedoresPage() {
     const marcados = listaVisible.filter((it) => Boolean(seleccionadosIds[it.id]));
     if (marcados.length > 0) {
       return marcados;
-    }
-    if (todoProveedorActivo && listaVisible.length > 1) {
-      return listaVisible;
     }
     return [item];
   };
@@ -747,26 +753,57 @@ export default function PedirProveedoresPage() {
               <h3 className="text-sm font-semibold text-zinc-900 dark:text-white">
                 Pedidos ({listaVisible.length})
               </h3>
-              {listaVisible.length > 0 && proveedores.length > 0 && (
-                <div className="w-full sm:w-64 shrink-0">
-                  <ProveedorRowDropdown
-                    proveedores={proveedores}
-                    valueId={
-                      gruposPorProveedor.length === 1
-                        ? gruposPorProveedor[0]?.prov?.id
-                        : undefined
-                    }
-                    valueName={
-                      gruposPorProveedor.length === 1 && gruposPorProveedor[0]?.prov
-                        ? `Todos: ${gruposPorProveedor[0].prov.name}`
-                        : undefined
-                    }
-                    placeholder="Todo Proveedor"
-                    alignRight
-                    onSelect={(provId) => void handleAplicarProveedorATodos(provId)}
-                  />
-                </div>
-              )}
+              {listaVisible.length > 0 && proveedores.length > 0 && (() => {
+                const proveedorUnicoTodos =
+                  gruposPorProveedor.length === 1 && gruposPorProveedor[0]?.prov
+                    ? gruposPorProveedor[0].prov
+                    : undefined;
+                return (
+                  <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
+                    <div className="flex-1 sm:w-64">
+                      <ProveedorRowDropdown
+                        proveedores={proveedores}
+                        valueId={proveedorUnicoTodos?.id}
+                        valueName={
+                          proveedorUnicoTodos
+                            ? `Todo Proveedor: ${proveedorUnicoTodos.name}`
+                            : undefined
+                        }
+                        placeholder="Todo Proveedor"
+                        alignRight
+                        onSelect={(provId) => void handleAplicarProveedorATodos(provId)}
+                      />
+                    </div>
+                    {proveedorUnicoTodos && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => enviarWhatsAppGrupo(listaVisible, proveedorUnicoTodos)}
+                          title={`Enviar los ${listaVisible.length} pedidos en un solo WhatsApp a ${proveedorUnicoTodos.name}`}
+                          className="h-9 px-3 rounded-full bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/35 text-emerald-700 dark:text-emerald-300 text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer transition-colors shrink-0"
+                        >
+                          <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                            <path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91C21.95 6.45 17.5 2 12.04 2Zm5.76 14.12c-.24.68-1.41 1.3-1.95 1.38-.5.07-1.13.1-1.82-.12-.42-.13-.96-.31-1.65-.61-2.9-1.25-4.79-4.17-4.94-4.37-.14-.2-1.18-1.57-1.18-3 0-1.43.75-2.13 1.01-2.42.26-.29.58-.36.77-.36.19 0 .38 0 .55.01.18.01.42-.07.65.49.24.58.82 2 .89 2.14.07.14.12.31.02.5-.1.19-.15.31-.29.48-.14.17-.3.38-.43.51-.14.14-.29.29-.12.58.17.29.74 1.22 1.59 1.98 1.09.97 2.01 1.27 2.3 1.41.29.14.46.12.63-.07.17-.19.72-.84.91-1.13.19-.29.38-.24.65-.14.27.1 1.68.79 1.97.94.29.14.48.22.55.34.07.12.07.69-.17 1.37Z" />
+                          </svg>
+                          <span>Enviar todo ({listaVisible.length})</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const url = construirLinkCatalogo(listaVisible, proveedorUnicoTodos);
+                            if (url) window.open(url, "_blank");
+                          }}
+                          title="Abrir enlace consolidado de todos los pedidos"
+                          aria-label="Abrir enlace consolidado"
+                          className="h-9 w-9 rounded-full bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/35 text-purple-700 dark:text-purple-200 inline-flex items-center justify-center cursor-pointer transition-colors shrink-0"
+                        >
+                          🔗
+                        </button>
+                      </>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
 
             {listaVisible.length === 0 ? (

@@ -11,6 +11,10 @@ const CatalogoProductosServiciosTaller = dynamic(
   () => import("@/components/taller/CatalogoProductosServiciosTaller"),
   { ssr: false }
 );
+const ModalNuevaOrdenTrabajo = dynamic(
+  () => import("@/components/taller/ModalNuevaOrdenTrabajo"),
+  { ssr: false }
+);
 import { useRealtimeSync } from "@/hooks/useRealtimeSync";
 import {
   SERVICIOS_RAPIDOS_POR_MODULO,
@@ -414,6 +418,8 @@ export default function PaginaDetallePropuesta() {
   const [subiendoFotoVehiculoPrincipal, setSubiendoFotoVehiculoPrincipal] = useState(false);
   const [fotoVehiculoError, setFotoVehiculoError] = useState(false);
   const [fotoClienteError, setFotoClienteError] = useState(false);
+  const [modalEditarPropuestaOpen, setModalEditarPropuestaOpen] = useState(false);
+  const [propuestaEditId, setPropuestaEditId] = useState<string>("");
 
   // Carrusel de propuestas en el encabezado morado (estilo Taller)
   const [listaPropuestas, setListaPropuestas] = useState<any[]>([]);
@@ -3283,7 +3289,7 @@ export default function PaginaDetallePropuesta() {
     }
   }, [orden?.id, listaPropuestasCarrusel.length]);
 
-  // Doble clic / doble toque -> Abrir Datos de Ingreso (/taller/nueva-orden?editId=...)
+  // Doble clic / doble toque / botón Editar -> Abrir modal de edición sin salir de Propuesta
   const handleAbrirDatosIngreso = useCallback(
     (auto: any) => {
       const target = auto?.id === orden?.id ? orden : auto;
@@ -3298,9 +3304,10 @@ export default function PaginaDetallePropuesta() {
           })
         );
       } catch { }
-      router.push(`/taller/nueva-orden?editId=${encodeURIComponent(target.id)}`);
+      setPropuestaEditId(String(target.id));
+      setModalEditarPropuestaOpen(true);
     },
-    [orden, router]
+    [orden]
   );
 
   // Ir a otra propuesta al deslizar o hacer clic simple (instantáneo, sin pantalla de carga)
@@ -4236,6 +4243,17 @@ export default function PaginaDetallePropuesta() {
                 </div>
               </div>
 
+              <button
+                type="button"
+                onClick={() => handleAbrirDatosIngreso(orden)}
+                title="Editar datos de ingreso de esta propuesta"
+                className="ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-zinc-200 dark:border-white/10 bg-white dark:bg-zinc-900 hover:border-purple-300 dark:hover:border-purple-500/40 hover:bg-purple-50 dark:hover:bg-purple-500/10 text-xs font-semibold text-zinc-700 dark:text-zinc-200 shadow-sm transition active:scale-95 cursor-pointer shrink-0"
+              >
+                <svg className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125" />
+                </svg>
+                <span>Editar</span>
+              </button>
             </div>
 
             {/* FILA 2: CARRUSEL MORADO DE PROPUESTAS (CLIC DESLIZA A OTRA PROPUESTA / DOBLE CLIC ABRE DATOS DE INGRESO) */}
@@ -7620,6 +7638,29 @@ export default function PaginaDetallePropuesta() {
           </div>
         );
       })()}
+
+      {/* MODAL: EDITAR DATOS DE PROPUESTA SIN SALIR DE PROPUESTA */}
+      {modalEditarPropuestaOpen && propuestaEditId && (
+        <ModalNuevaOrdenTrabajo
+          isOpen={modalEditarPropuestaOpen}
+          isPageMode={false}
+          editOrderId={propuestaEditId}
+          clientesCatalogo={clientesCatalogo}
+          mostrarToast={mostrarToast}
+          onClose={() => {
+            setModalEditarPropuestaOpen(false);
+            setPropuestaEditId("");
+          }}
+          onOrdenCreada={(ordenActualizada) => {
+            const targetId = String(ordenActualizada?.id || propuestaEditId || orden?.id || "");
+            if (targetId) {
+              void cargarDetallePorId(targetId, true);
+            }
+            setModalEditarPropuestaOpen(false);
+            setPropuestaEditId("");
+          }}
+        />
+      )}
     </div>
   );
 }
