@@ -126,6 +126,8 @@ export async function GET(request: Request) {
       if (estado !== "TODOS") {
         if (estado === "PENDIENTE") {
           query += ` AND (o."quoteStatus" IS NULL OR o."quoteStatus" = 'Borrador' OR o."quoteStatus" = 'Pendiente' OR o."quoteStatus" = '')`;
+        } else if (estado === "PAUSADA") {
+          query += ` AND (o."quoteStatus" ILIKE 'Pausad%' OR o."status" ILIKE 'Pausad%')`;
         } else if (estado === "APROBADO") {
           query += ` AND (o."quoteStatus" = 'Aprobado' OR o."quoteStatus" = 'AUTORIZADO')`;
         } else if (estado === "EN_CAJA") {

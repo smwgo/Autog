@@ -825,6 +825,12 @@ export default function TallerPanel() {
   const [cargandoInicial, setCargandoInicial] = useState(true);
   const [mounted, setMounted] = useState(false);
   const [isPanelSelectorAdmin, setIsPanelSelectorAdmin] = useState(false);
+  // Vista de lista inicial al ingresar a /taller (estilo Propuestas)
+  const [vistaListaTaller, setVistaListaTaller] = useState(true);
+  const [busquedaListaTaller, setBusquedaListaTaller] = useState("");
+  const [filtroEstadoListaTaller, setFiltroEstadoListaTaller] = useState<"TODOS" | "ESPERA" | "TRABAJANDO" | "PAUSADA">("TODOS");
+  const [menuFiltroListaTaller, setMenuFiltroListaTaller] = useState(false);
+  const [metricasMovilListaTaller, setMetricasMovilListaTaller] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -5257,6 +5263,441 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
   const vistaActivaConfig =
     VISTAS_INSPECCION.find((v) => v.id === etapa3VistaActiva) || VISTAS_INSPECCION[0];
 
+  const metricasListaTaller = useMemo(() => {
+    let trabajando = 0;
+    let esperaOPausa = 0;
+    for (const o of autosEnPista) {
+      if (o.status !== "Pausada" && esPropuestaAprobadaOrden(o)) {
+        trabajando += 1;
+      } else {
+        esperaOPausa += 1;
+      }
+    }
+    return {
+      total: autosEnPista.length,
+      trabajando,
+      esperaOPausa,
+    };
+  }, [autosEnPista]);
+
+  const ordenesListaTallerFiltradas = useMemo(() => {
+    const q = busquedaListaTaller.trim().toLowerCase();
+    return autosEnPista.filter((o) => {
+      const estaPausada = o.status === "Pausada";
+      const aprobada = esPropuestaAprobadaOrden(o);
+      if (filtroEstadoListaTaller === "TRABAJANDO" && (estaPausada || !aprobada)) return false;
+      if (filtroEstadoListaTaller === "ESPERA" && (estaPausada || aprobada)) return false;
+      if (filtroEstadoListaTaller === "PAUSADA" && !estaPausada) return false;
+      if (!q) return true;
+      return (
+        String(o.orderNumber || "").toLowerCase().includes(q) ||
+        String(o.client || "").toLowerCase().includes(q) ||
+        String(o.vehicle || "").toLowerCase().includes(q) ||
+        String(o.plate || "").toLowerCase().includes(q)
+      );
+    });
+  }, [autosEnPista, busquedaListaTaller, filtroEstadoListaTaller]);
+
+  if (vistaListaTaller) {
+    const abrirOrdenEnTaller = (auto: UnifiedOrder) => {
+      handleSeleccionarAutoYVolver(auto);
+      setVistaListaTaller(false);
+    };
+
+    const OPCIONES_FILTRO_TALLER = [
+      { id: "TODOS" as const, label: "Todas", dot: "bg-zinc-400" },
+      { id: "TRABAJANDO" as const, label: "Trabajando", dot: "bg-emerald-400" },
+      { id: "ESPERA" as const, label: "En espera", dot: "bg-amber-400" },
+      { id: "PAUSADA" as const, label: "Pausada", dot: "bg-amber-500" },
+    ];
+
+    return (
+      <div className="flex flex-col min-h-dvh bg-zinc-50 dark:bg-black font-sans pb-[calc(env(safe-area-inset-bottom)+5.5rem)] md:pb-8 text-zinc-900 dark:text-white selection:bg-blue-500/30">
+        <Header />
+
+        <main className="flex-grow p-4 md:p-8 max-w-7xl mx-auto w-full">
+          <div className="flex flex-col">
+            {/* Cabecera estilo Propuestas */}
+            <div className="order-1 mb-4 sm:mb-8 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+                <Link
+                  href={isPanelSelectorAdmin ? "/modulos" : "/acceso"}
+                  title={isPanelSelectorAdmin ? "Volver a los paneles" : "Volver al inicio"}
+                  className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center justify-center text-zinc-600 dark:text-zinc-300 hover:text-blue-600 dark:hover:text-blue-400 hover:border-blue-500 transition-all shadow-sm active:scale-95 group shrink-0"
+                >
+                  <svg className="w-5 h-5 transition-transform group-hover:-translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                  </svg>
+                </Link>
+                <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50 truncate">
+                  Taller
+                </h1>
+                <span className="inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold bg-blue-600 text-white shadow-sm shadow-blue-500/20 shrink-0">
+                  {autosEnPista.length}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => void cargarOperacionInicial(false)}
+                  className="h-9 sm:h-10 px-3 sm:px-4 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 text-zinc-700 dark:text-zinc-300 active:scale-95 font-semibold text-xs sm:text-sm shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                  title="Actualizar lista"
+                >
+                  <span className={cargandoInicial ? "animate-spin" : ""}>🔄</span>
+                  <span className="hidden sm:inline">Actualizar</span>
+                </button>
+                <Link
+                  href="/taller/nueva-orden"
+                  className="h-9 sm:h-10 px-3.5 sm:px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white active:scale-95 font-semibold text-xs sm:text-sm shadow-sm shadow-blue-600/20 transition-all flex items-center justify-center gap-1.5"
+                >
+                  <span>+</span>
+                  <span>Nueva Orden</span>
+                </Link>
+              </div>
+            </div>
+
+            {/* Exactamente 3 Métricas (en escritorio siempre, en móvil con botón Métrica) */}
+            <div className={`order-3 sm:order-2 mb-2 sm:mb-8 ${metricasMovilListaTaller ? "block animate-in fade-in duration-200" : "hidden sm:block"}`}>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-3 sm:mb-8">
+                <div className="bg-white dark:bg-zinc-900/80 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3.5 sm:gap-4 backdrop-blur-sm">
+                  <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-blue-500/15 border border-blue-500/25 text-blue-500 dark:text-blue-400 flex items-center justify-center text-xl shrink-0">
+                    🔧
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-2xl font-bold text-zinc-900 dark:text-white">
+                      {metricasListaTaller.total}
+                    </p>
+                    <h3 className="text-zinc-500 dark:text-zinc-400 text-sm font-medium truncate">
+                      En Pista
+                    </h3>
+                  </div>
+                </div>
+
+                <div className="bg-white dark:bg-zinc-900/80 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3.5 sm:gap-4 backdrop-blur-sm">
+                  <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-emerald-500/15 border border-emerald-500/25 text-emerald-500 dark:text-emerald-400 flex items-center justify-center text-xl shrink-0">
+                    ⚡
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+                      {metricasListaTaller.trabajando}
+                    </p>
+                    <h3 className="text-zinc-500 dark:text-zinc-400 text-sm font-medium truncate">
+                      Trabajando
+                    </h3>
+                  </div>
+                </div>
+
+                <div className="bg-white dark:bg-zinc-900/80 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3.5 sm:gap-4 backdrop-blur-sm">
+                  <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-amber-500/15 border border-amber-500/25 text-amber-500 dark:text-amber-400 flex items-center justify-center text-xl shrink-0">
+                    ⏳
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">
+                      {metricasListaTaller.esperaOPausa}
+                    </p>
+                    <h3 className="text-zinc-500 dark:text-zinc-400 text-sm font-medium truncate">
+                      En Espera / Pausa
+                    </h3>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Buscador + Filtro + Botón Métrica móvil */}
+            <div className="order-2 sm:order-3 flex flex-row items-center justify-between gap-2 sm:gap-4 mb-2 sm:mb-6">
+              <div className="relative flex-1 min-w-0">
+                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400 select-none">
+                  🔍
+                </span>
+                <input
+                  type="text"
+                  value={busquedaListaTaller}
+                  onChange={(e) => setBusquedaListaTaller(e.target.value)}
+                  placeholder="Buscar por orden, cliente, vehículo o placa..."
+                  className="w-full h-11 pl-10 pr-4 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-base sm:text-sm text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:border-blue-500 shadow-xs"
+                />
+              </div>
+
+              <div className="relative shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setMenuFiltroListaTaller((v) => !v)}
+                  className="h-11 px-3.5 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-sm font-medium text-zinc-700 dark:text-zinc-200 flex items-center gap-2 cursor-pointer shadow-xs"
+                >
+                  <span>{OPCIONES_FILTRO_TALLER.find((o) => o.id === filtroEstadoListaTaller)?.label || "Filtro"}</span>
+                  <span className="text-xs text-zinc-400">▾</span>
+                </button>
+                {menuFiltroListaTaller && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setMenuFiltroListaTaller(false)} />
+                    <div className="absolute right-0 mt-1.5 w-44 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-xl overflow-hidden z-50 py-1">
+                      {OPCIONES_FILTRO_TALLER.map((op) => (
+                        <button
+                          key={op.id}
+                          type="button"
+                          onClick={() => {
+                            setFiltroEstadoListaTaller(op.id);
+                            setMenuFiltroListaTaller(false);
+                          }}
+                          className={`w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 cursor-pointer ${
+                            filtroEstadoListaTaller === op.id
+                              ? "bg-blue-50 dark:bg-blue-600/15 text-blue-600 dark:text-blue-400 font-semibold"
+                              : "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                          }`}
+                        >
+                          <span className={`w-2 h-2 rounded-full ${op.dot}`} />
+                          <span>{op.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setMetricasMovilListaTaller((v) => !v)}
+                aria-label="Mostrar u ocultar métricas"
+                title="Métricas"
+                className={`sm:hidden w-11 h-11 rounded-xl border flex items-center justify-center transition-all cursor-pointer shadow-sm active:scale-95 shrink-0 ${
+                  metricasMovilListaTaller
+                    ? "bg-blue-500/15 border-blue-500/40 text-blue-600 dark:text-blue-300"
+                    : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300"
+                }`}
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.9}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Lista de Órdenes */}
+            <div className="order-4">
+              {cargandoInicial ? (
+                <div className="p-12 text-center text-zinc-500 dark:text-zinc-400 text-sm bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
+                  <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+                  Cargando órdenes de taller...
+                </div>
+              ) : ordenesListaTallerFiltradas.length === 0 ? (
+                <div className="p-12 text-center text-zinc-500 dark:text-zinc-400 text-sm bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
+                  Sin órdenes en pista
+                </div>
+              ) : (
+                <>
+                  {/* Vista Móvil (letras grandes y claras para Android e iOS) */}
+                  <div className="md:hidden space-y-2.5">
+                    {ordenesListaTallerFiltradas.map((auto, idx) => {
+                      const estaPausada = auto.status === "Pausada";
+                      const aprobada = esPropuestaAprobadaOrden(auto);
+                      const esActiva = ordenActiva?.id === auto.id;
+                      return (
+                        <div
+                          key={`taller-movil-${auto.id || idx}`}
+                          onClick={() => abrirOrdenEnTaller(auto)}
+                          className={`rounded-2xl border p-3.5 space-y-2.5 shadow-xs transition-all cursor-pointer active:scale-[0.99] ${
+                            esActiva
+                              ? "bg-blue-50/40 dark:bg-blue-950/20 border-blue-500/50 ring-1 ring-blue-500/30"
+                              : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800"
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-2.5">
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-2 min-w-0">
+                                <span className="font-mono font-bold text-sm text-blue-600 dark:text-blue-400 shrink-0">
+                                  {limpiarNumeroOrden(auto.orderNumber)}
+                                </span>
+                                <span className="font-bold text-base text-zinc-900 dark:text-zinc-100 truncate">
+                                  {auto.client || "Cliente"}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-1.5 text-sm text-zinc-600 dark:text-zinc-300 mt-1 min-w-0">
+                                <span className="truncate font-medium">{auto.vehicle}</span>
+                                {auto.plate && (
+                                  <>
+                                    <span className="shrink-0 text-zinc-300 dark:text-zinc-600">·</span>
+                                    <span className="shrink-0 font-mono text-xs font-bold text-blue-500 dark:text-blue-400">
+                                      {auto.plate}
+                                    </span>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center justify-between pt-2.5 border-t border-zinc-100 dark:border-zinc-800/80 text-sm gap-2">
+                            <div onClick={(e) => e.stopPropagation()}>
+                              {estaPausada ? (
+                                <button
+                                  type="button"
+                                  onClick={(e) => handleReanudarOrden(auto, e)}
+                                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-sm font-semibold border bg-amber-500/15 border-amber-500/30 text-amber-700 dark:text-amber-300 cursor-pointer"
+                                >
+                                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                                  <span>Pausada</span>
+                                </button>
+                              ) : !aprobada ? (
+                                <button
+                                  type="button"
+                                  onClick={(e) => handleAprobarPropuestaDirecta(auto, e)}
+                                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-sm font-semibold border bg-amber-500/15 border-amber-500/30 text-amber-700 dark:text-amber-300 cursor-pointer"
+                                >
+                                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                                  <span>En espera</span>
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={(e) => handlePausarOrden(auto, e)}
+                                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-sm font-semibold border bg-emerald-500/15 border-emerald-500/30 text-emerald-700 dark:text-emerald-300 cursor-pointer"
+                                >
+                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                                  <span>Trabajando</span>
+                                </button>
+                              )}
+                            </div>
+
+                            <div className="flex items-center gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
+                              <button
+                                type="button"
+                                onClick={(e) => void handleFinalizarOrdenAHistorial(auto, e)}
+                                className="w-9 h-9 rounded-xl bg-rose-50 dark:bg-rose-500/10 hover:bg-rose-100 dark:hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 flex items-center justify-center cursor-pointer"
+                                title="Enviar a historial"
+                              >
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => abrirOrdenEnTaller(auto)}
+                                className="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-500/10 hover:bg-blue-100 dark:hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 text-sm font-semibold flex items-center justify-center cursor-pointer"
+                                title="Abrir orden"
+                              >
+                                →
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Vista Escritorio */}
+                  <div className="hidden md:block bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl overflow-hidden shadow-sm">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left border-collapse">
+                        <thead>
+                          <tr className="border-b border-zinc-200 dark:border-zinc-800 text-xs font-medium text-zinc-500 dark:text-zinc-400 bg-zinc-50/70 dark:bg-zinc-900/50">
+                            <th className="py-3 px-4">Orden</th>
+                            <th className="py-3 px-4">Ingreso</th>
+                            <th className="py-3 px-4">Cliente</th>
+                            <th className="py-3 px-4">Vehículo</th>
+                            <th className="py-3 px-4">Placa</th>
+                            <th className="py-3 px-4">Estado</th>
+                            <th className="py-3 px-4 text-right">Acción</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-zinc-200/70 dark:divide-zinc-800/80 text-sm">
+                          {ordenesListaTallerFiltradas.map((auto, idx) => {
+                            const estaPausada = auto.status === "Pausada";
+                            const aprobada = esPropuestaAprobadaOrden(auto);
+                            const esActiva = ordenActiva?.id === auto.id;
+                            return (
+                              <tr
+                                key={`taller-desk-${auto.id || idx}`}
+                                onClick={() => abrirOrdenEnTaller(auto)}
+                                className={`transition-colors cursor-pointer ${
+                                  esActiva
+                                    ? "bg-blue-50/50 dark:bg-blue-500/10"
+                                    : "hover:bg-zinc-50 dark:hover:bg-white/[0.03]"
+                                }`}
+                              >
+                                <td className="py-3 px-4 font-mono font-semibold text-blue-600 dark:text-blue-400">
+                                  {limpiarNumeroOrden(auto.orderNumber)}
+                                </td>
+                                <td className="py-3 px-4 text-zinc-600 dark:text-zinc-300">
+                                  {formatearFechaIngreso(auto.dateIn || auto.startedAt)}
+                                </td>
+                                <td className="py-3 px-4 font-medium text-zinc-900 dark:text-white">
+                                  {auto.client || "Cliente"}
+                                </td>
+                                <td className="py-3 px-4 text-zinc-700 dark:text-zinc-200">
+                                  {auto.vehicle}
+                                </td>
+                                <td className="py-3 px-4 font-mono text-xs font-bold text-blue-500 dark:text-blue-400">
+                                  {auto.plate || "—"}
+                                </td>
+                                <td className="py-3 px-4" onClick={(e) => e.stopPropagation()}>
+                                  {estaPausada ? (
+                                    <button
+                                      type="button"
+                                      onClick={(e) => handleReanudarOrden(auto, e)}
+                                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border bg-amber-500/15 border-amber-500/30 text-amber-700 dark:text-amber-300 cursor-pointer"
+                                    >
+                                      <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                                      <span>Pausada</span>
+                                    </button>
+                                  ) : !aprobada ? (
+                                    <button
+                                      type="button"
+                                      onClick={(e) => handleAprobarPropuestaDirecta(auto, e)}
+                                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border bg-amber-500/15 border-amber-500/30 text-amber-700 dark:text-amber-300 cursor-pointer"
+                                    >
+                                      <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                                      <span>En espera</span>
+                                    </button>
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      onClick={(e) => handlePausarOrden(auto, e)}
+                                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border bg-emerald-500/15 border-emerald-500/30 text-emerald-700 dark:text-emerald-300 cursor-pointer"
+                                    >
+                                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                                      <span>Trabajando</span>
+                                    </button>
+                                  )}
+                                </td>
+                                <td className="py-3 px-4 text-right" onClick={(e) => e.stopPropagation()}>
+                                  <div className="inline-flex items-center gap-1.5">
+                                    <button
+                                      type="button"
+                                      onClick={(e) => void handleFinalizarOrdenAHistorial(auto, e)}
+                                      className="w-8 h-8 rounded-lg bg-rose-50 dark:bg-rose-500/10 hover:bg-rose-100 dark:hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 inline-flex items-center justify-center cursor-pointer"
+                                      title="Enviar a historial"
+                                    >
+                                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                      </svg>
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => abrirOrdenEnTaller(auto)}
+                                      className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-500/10 hover:bg-blue-100 dark:hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 text-xs font-semibold inline-flex items-center justify-center cursor-pointer"
+                                      title="Abrir orden"
+                                    >
+                                      →
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </main>
+
+        <TallerMobileNav />
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col min-h-dvh bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-white font-sans pb-[max(2rem,env(safe-area-inset-bottom))] sm:pb-12 selection:bg-blue-500/30 overflow-x-hidden max-w-full">
       <Header />
@@ -5272,17 +5713,18 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
             =================================================================== */}
         <div className="flex flex-col items-stretch gap-2.5 sm:gap-3 px-2 py-2 sm:px-0 sm:py-1 rounded-2xl sm:rounded-none bg-cyan-50 dark:bg-blue-900/10">
           <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
-            <Link
-              href={isPanelSelectorAdmin ? "/modulos" : "/acceso"}
-              aria-label="Volver a los paneles"
-              title="Volver a los paneles"
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-600 shadow-sm transition hover:border-blue-300 hover:bg-blue-50 hover:text-blue-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:border-blue-700 dark:hover:bg-blue-950/40 dark:hover:text-blue-400"
+            <button
+              type="button"
+              onClick={() => setVistaListaTaller(true)}
+              aria-label="Volver a lista de Taller"
+              title="Volver a lista de Taller"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-600 shadow-sm transition hover:border-blue-300 hover:bg-blue-50 hover:text-blue-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:border-blue-700 dark:hover:bg-blue-950/40 dark:hover:text-blue-400 cursor-pointer"
             >
               <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <path d="m15 18-6-6 6-6" />
                 <path d="M20 12H9" />
               </svg>
-            </Link>
+            </button>
             {ordenActiva ? (
               <div className="flex items-center gap-2 min-w-0 flex-1">
                 <div className="flex items-center gap-2.5 min-w-0">

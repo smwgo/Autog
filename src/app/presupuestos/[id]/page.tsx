@@ -4446,13 +4446,6 @@ export default function PaginaDetallePropuesta() {
                               return;
                             }
                             ultimoToqueAutoRef.current = { id: auto.id, time: ahora };
-                            if (clickSimpleTimerRef.current) {
-                              clearTimeout(clickSimpleTimerRef.current);
-                            }
-                            clickSimpleTimerRef.current = setTimeout(() => {
-                              clickSimpleTimerRef.current = null;
-                              avanzarSiguientePropuesta(auto);
-                            }, 280);
                           }}
                           onDoubleClick={(e) => {
                             e.preventDefault();

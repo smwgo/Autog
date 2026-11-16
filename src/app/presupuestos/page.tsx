@@ -110,10 +110,10 @@ const OPCIONES_TIPO = [
 
 const OPCIONES_ESTADO = [
   { id: "TODOS", label: "Todas", short: "Todas", icon: "📋", dot: "bg-zinc-400" },
-  { id: "PENDIENTE", label: "Pendientes", short: "Pendientes", icon: "⏳", dot: "bg-amber-400" },
-  { id: "APROBADO", label: "Aprobadas", short: "Aprobadas", icon: "✅", dot: "bg-emerald-400" },
-  { id: "EN_CAJA", label: "Caja", short: "Caja", icon: "💳", dot: "bg-sky-400" },
-  { id: "PAGADO", label: "Pagadas", short: "Pagadas", icon: "✓", dot: "bg-blue-400" },
+  { id: "PENDIENTE", label: "En Espera", short: "En Espera", icon: "⏳", dot: "bg-amber-400" },
+  { id: "PAUSADA", label: "Pausa", short: "Pausa", icon: "⏸️", dot: "bg-rose-400" },
+  { id: "APROBADO", label: "Trabajando", short: "Trabajando", icon: "🔧", dot: "bg-emerald-400" },
+  { id: "PAGADO", label: "Pagado", short: "Pagado", icon: "✓", dot: "bg-blue-400" },
 ];
 
 function limpiarNumeroOrden(val?: string | number | null): string {
@@ -279,30 +279,52 @@ export default function PanelPresupuestosPage() {
     return { utilidadTotal, margenPromedio, enCajaPagadas, pedidosTotal, respuestasTotal };
   }, [ordenes]);
 
-  // Casillero de verificación: orden con la que se está trabajando actualmente
-  const [ordenTrabajandoId, setOrdenTrabajandoId] = useState<string | null>(null);
+  // Casillero de verificación múltiple: órdenes marcadas en trabajo
+  const [ordenesTrabajandoIds, setOrdenesTrabajandoIds] = useState<string[]>([]);
   const [menuTallerFilaId, setMenuTallerFilaId] = useState<string | null>(null);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      const guardada = localStorage.getItem("taller_orden_activa_id");
-      if (guardada) setOrdenTrabajandoId(guardada);
+      try {
+        const rawLista = localStorage.getItem("taller_ordenes_trabajando_ids");
+        if (rawLista) {
+          const parsed = JSON.parse(rawLista);
+          if (Array.isArray(parsed)) {
+            setOrdenesTrabajandoIds(parsed.map(String));
+            return;
+          }
+        }
+        const guardada = localStorage.getItem("taller_orden_activa_id");
+        if (guardada) setOrdenesTrabajandoIds([guardada]);
+      } catch {}
     }
   }, []);
 
   const toggleOrdenTrabajando = (id: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
-    const estabaMarcada = ordenTrabajandoId === id;
-    const nuevo = estabaMarcada ? null : id;
-    setOrdenTrabajandoId(nuevo);
-    if (typeof window !== "undefined") {
-      if (nuevo) {
-        localStorage.setItem("taller_orden_activa_id", nuevo);
-      } else {
-        localStorage.removeItem("taller_orden_activa_id");
+    const ordenObjetivo = ordenes.find((o) => o.id === id || o.orderNumber === id);
+    const yaAprobada = String(ordenObjetivo?.quoteStatus || "").toLowerCase() === "aprobado";
+    const estabaMarcada = ordenesTrabajandoIds.includes(id) || yaAprobada;
+    const nuevoMarcado = !estabaMarcada;
+
+    setOrdenesTrabajandoIds((prev) => {
+      const next = nuevoMarcado
+        ? Array.from(new Set([...prev, id]))
+        : prev.filter((item) => item !== id && item !== ordenObjetivo?.orderNumber);
+      if (typeof window !== "undefined") {
+        try {
+          localStorage.setItem("taller_ordenes_trabajando_ids", JSON.stringify(next));
+          if (nuevoMarcado) {
+            localStorage.setItem("taller_orden_activa_id", id);
+          } else if (localStorage.getItem("taller_orden_activa_id") === id) {
+            if (next.length > 0) localStorage.setItem("taller_orden_activa_id", next[next.length - 1]);
+            else localStorage.removeItem("taller_orden_activa_id");
+          }
+        } catch {}
       }
-    }
-    void handleCambiarEstadoPropuesta(id, nuevo ? "Aprobado" : "Pendiente");
+      return next;
+    });
+    void handleCambiarEstadoPropuesta(id, nuevoMarcado ? "Aprobado" : "Pendiente");
   };
 
   // Cambiar estado directo de propuesta (Aprobar / Pausar / Esperar) para que impacte en Taller
@@ -342,11 +364,17 @@ export default function PanelPresupuestosPage() {
       }
       if (data.success) {
         mostrarToast(data.message, "ok");
-        if (nuevoEstado === "Pagado" && ordenTrabajandoId === orderId) {
-          setOrdenTrabajandoId(null);
-          try {
-            localStorage.removeItem("taller_orden_activa_id");
-          } catch { }
+        if (nuevoEstado === "Pagado" && ordenesTrabajandoIds.includes(orderId)) {
+          setOrdenesTrabajandoIds((prev) => {
+            const next = prev.filter((item) => item !== orderId);
+            try {
+              localStorage.setItem("taller_ordenes_trabajando_ids", JSON.stringify(next));
+              if (localStorage.getItem("taller_orden_activa_id") === orderId) {
+                localStorage.removeItem("taller_orden_activa_id");
+              }
+            } catch { }
+            return next;
+          });
         }
         // Actualizar estado local inmediatamente solo para la orden modificada
         setOrdenes((prev) =>
@@ -412,16 +440,19 @@ export default function PanelPresupuestosPage() {
         mostrarToast(data.error || "No se pudo eliminar la propuesta.", "err");
       }
 
-      if (
-        ordenTrabajandoId === targetId ||
-        ordenTrabajandoId === targetNum ||
-        ordenTrabajandoId === ordenAEliminar.id ||
-        ordenTrabajandoId === ordenAEliminar.orderNumber
-      ) {
-        setOrdenTrabajandoId(null);
-        try {
-          localStorage.removeItem("taller_orden_activa_id");
-        } catch { }
+      const idsEliminar = new Set([targetId, targetNum, ordenAEliminar.id, ordenAEliminar.orderNumber].filter(Boolean));
+      if (ordenesTrabajandoIds.some((tid) => idsEliminar.has(tid))) {
+        setOrdenesTrabajandoIds((prev) => {
+          const next = prev.filter((tid) => !idsEliminar.has(tid));
+          try {
+            localStorage.setItem("taller_ordenes_trabajando_ids", JSON.stringify(next));
+            const active = localStorage.getItem("taller_orden_activa_id");
+            if (active && idsEliminar.has(active)) {
+              localStorage.removeItem("taller_orden_activa_id");
+            }
+          } catch { }
+          return next;
+        });
       }
 
       // Remover inmediatamente del estado local de la tabla
@@ -581,10 +612,10 @@ export default function PanelPresupuestosPage() {
                   💰
                 </div>
                 <div className="min-w-0">
-                  <p className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white truncate">
+                  <p className="text-2xl font-bold text-zinc-900 dark:text-white truncate">
                     ${kpis.totalValorizado.toLocaleString("en-US", { minimumFractionDigits: 2 })}
                   </p>
-                  <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium truncate">
+                  <h3 className="text-zinc-500 dark:text-zinc-400 text-sm font-medium truncate">
                     Total ({kpis.total})
                   </h3>
                 </div>
@@ -596,10 +627,10 @@ export default function PanelPresupuestosPage() {
                   🚚
                 </div>
                 <div className="min-w-0">
-                  <p className="text-xl sm:text-2xl font-bold text-amber-600 dark:text-amber-400">
+                  <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">
                     {metricasExtra.pedidosTotal}
                   </p>
-                  <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium truncate">
+                  <h3 className="text-zinc-500 dark:text-zinc-400 text-sm font-medium truncate">
                     Pedidos
                   </h3>
                 </div>
@@ -611,11 +642,11 @@ export default function PanelPresupuestosPage() {
                   ✅
                 </div>
                 <div className="min-w-0">
-                  <p className="text-xl sm:text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+                  <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
                     {metricasExtra.respuestasTotal}
                   </p>
-                  <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium truncate">
-                    Respuesta del proveedor
+                  <h3 className="text-zinc-500 dark:text-zinc-400 text-sm font-medium truncate">
+                    Respuestas
                   </h3>
                 </div>
               </div>
@@ -672,13 +703,13 @@ export default function PanelPresupuestosPage() {
               >
                 <span>
                   {filtroEstado === "PENDIENTE"
-                    ? "Pendientes"
-                    : filtroEstado === "APROBADO"
-                      ? "Aprobadas"
-                      : filtroEstado === "EN_CAJA"
-                        ? "Caja"
+                    ? "En Espera"
+                    : filtroEstado === "PAUSADA"
+                      ? "Pausa"
+                      : filtroEstado === "APROBADO"
+                        ? "Trabajando"
                         : filtroEstado === "PAGADO"
-                          ? "Pagadas"
+                          ? "Pagado"
                           : "Filtro"}
                 </span>
                 <svg className={`w-4 h-4 text-zinc-400 transition-transform ${menuEstadoAbierto ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -756,7 +787,10 @@ export default function PanelPresupuestosPage() {
                 {/* Vista Móvil Compacta (optimizada iOS y Android) */}
                 <div className="md:hidden space-y-2.5">
                   {ordenes.map((orden, idx) => {
-                    const estaTrabajando = ordenTrabajandoId === orden.id || ordenTrabajandoId === orden.orderNumber;
+                    const estaTrabajando =
+                      ordenesTrabajandoIds.includes(orden.id) ||
+                      ordenesTrabajandoIds.includes(orden.orderNumber) ||
+                      String(orden.quoteStatus || "").toLowerCase() === "aprobado";
                     const stTaller = getEstadoTallerPropuesta(orden, estaTrabajando);
                     const { fecha, hora } = formatearFechaHora(orden.createdAt, orden.dateIn);
                     return (
@@ -784,29 +818,29 @@ export default function PanelPresupuestosPage() {
                               </svg>
                             </button>
                             <div className="min-w-0 flex-1">
-                              <div className="flex items-center gap-1.5 min-w-0">
-                                <span className="font-mono font-semibold text-xs text-purple-600 dark:text-purple-400 shrink-0">
+                              <div className="flex items-center gap-2 min-w-0">
+                                <span className="font-mono font-bold text-sm text-purple-600 dark:text-purple-400 shrink-0">
                                   #{limpiarNumeroOrden(orden.orderNumber)}
                                 </span>
-                                <span className="font-semibold text-sm text-zinc-900 dark:text-zinc-100 truncate">
+                                <span className="font-bold text-base text-zinc-900 dark:text-zinc-100 truncate">
                                   {orden.client}
                                 </span>
                               </div>
-                              <div className="flex items-center gap-1.5 text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 min-w-0">
-                                <span className="truncate">{orden.vehicle}</span>
+                              <div className="flex items-center gap-1.5 text-sm text-zinc-600 dark:text-zinc-300 mt-1 min-w-0">
+                                <span className="truncate font-medium">{orden.vehicle}</span>
                                 <span className="shrink-0 text-zinc-300 dark:text-zinc-600">·</span>
-                                <span className="shrink-0 text-[11px] text-zinc-400">
+                                <span className="shrink-0 text-xs text-zinc-500 dark:text-zinc-400">
                                   {fecha}{hora ? ` ${hora}` : ""}
                                 </span>
                               </div>
                             </div>
                           </div>
-                          <span className="font-semibold text-sm tabular-nums text-zinc-900 dark:text-white shrink-0 pt-0.5">
+                          <span className="font-bold text-base tabular-nums text-zinc-900 dark:text-white shrink-0 pt-0.5">
                             ${orden.totalVentaEstimada.toFixed(2)}
                           </span>
                         </div>
 
-                        <div className="flex items-center justify-between pt-2 border-t border-zinc-100 dark:border-zinc-800/80 text-xs gap-2">
+                        <div className="flex items-center justify-between pt-2.5 border-t border-zinc-100 dark:border-zinc-800/80 text-sm gap-2">
                           <div onClick={(e) => e.stopPropagation()}>
                             <button
                               type="button"
@@ -823,7 +857,7 @@ export default function PanelPresupuestosPage() {
                                         : "Pagado";
                                 handleCambiarEstadoPropuesta(orden.id, siguienteEstado);
                               }}
-                              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border transition-all hover:brightness-110 active:scale-95 cursor-pointer disabled:opacity-50 ${stTaller.badgeClass}`}
+                              className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-sm font-semibold border transition-all hover:brightness-110 active:scale-95 cursor-pointer disabled:opacity-50 ${stTaller.badgeClass}`}
                               title="Clic para cambiar estado (En espera → Trabajando → Pausa → Pagado)"
                             >
                               <span className={`w-1.5 h-1.5 rounded-full ${stTaller.dotClass}`} />
@@ -880,7 +914,10 @@ export default function PanelPresupuestosPage() {
                       </thead>
                       <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800 text-xs font-normal">
                         {ordenes.map((orden, idx) => {
-                          const estaTrabajando = ordenTrabajandoId === orden.id || ordenTrabajandoId === orden.orderNumber;
+                          const estaTrabajando =
+                            ordenesTrabajandoIds.includes(orden.id) ||
+                            ordenesTrabajandoIds.includes(orden.orderNumber) ||
+                            String(orden.quoteStatus || "").toLowerCase() === "aprobado";
                           const stTaller = getEstadoTallerPropuesta(orden, estaTrabajando);
                           const { fecha, hora } = formatearFechaHora(orden.createdAt, orden.dateIn);
                           return (
@@ -888,7 +925,7 @@ export default function PanelPresupuestosPage() {
                               key={`desk-${orden.id || idx}`}
                               onClick={() => irAPropuesta(orden.id)}
                               className={`transition-colors cursor-pointer ${estaTrabajando
-                                ? "bg-purple-500/10 dark:bg-purple-500/15 hover:bg-purple-500/20 border-l-4 border-l-purple-500"
+                                ? "bg-purple-500/[0.06] dark:bg-purple-500/[0.08] hover:bg-purple-500/[0.12] border-l-2 border-l-purple-500/70"
                                 : "hover:bg-zinc-50 dark:hover:bg-zinc-800/40"
                                 }`}
                             >
