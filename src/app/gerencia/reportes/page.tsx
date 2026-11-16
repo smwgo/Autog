@@ -5,7 +5,6 @@ import { Header } from "@/components/Header";
 import { GerenciaMobileNav } from "@/components/GerenciaMobileNav";
 import { CollapsibleMetrics } from "@/components/CollapsibleMetrics";
 import { useEffect, useRef, useState } from "react";
-import * as XLSX from "xlsx";
 
 const categoryOptions = [
   { value: "Todos", label: "Todas" },
@@ -221,7 +220,8 @@ export default function ReportesFinancieros() {
     await loadData();
   };
 
-  const handleExport = () => {
+  const handleExport = async () => {
+    const XLSX = await import("xlsx");
     const data = transactions.map((t) => ({
       Fecha: t.dateLabel || "",
       Descripción: t.description || "",

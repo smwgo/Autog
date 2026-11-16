@@ -435,7 +435,9 @@ export default function PanelPresupuestosPage() {
       if (filtroEstado !== "TODOS") params.set("estado", filtroEstado);
       if (filtroTipo !== "TODOS") params.set("tipo", filtroTipo);
 
-      const res = await fetch(`/api/presupuestos/ordenes?${params.toString()}`);
+      const res = await fetch(`/api/presupuestos/ordenes?${params.toString()}`, {
+        cache: "no-store",
+      });
       if (!res.ok) {
         if (!isSilent) {
           let errText = `Error al consultar órdenes (${res.status})`;

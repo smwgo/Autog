@@ -5,7 +5,6 @@ import { Header } from "@/components/Header";
 import { GerenciaMobileNav } from "@/components/GerenciaMobileNav";
 import { CollapsibleMetrics } from "@/components/CollapsibleMetrics";
 import { useEffect, useRef, useState } from "react";
-import * as XLSX from "xlsx";
 
 const departmentOptions = [
   { value: "Todos", label: "Todos" },
@@ -139,7 +138,8 @@ export default function GestionPersonal() {
     };
   }, [deptMenuOpen]);
 
-  const handleExport = () => {
+  const handleExport = async () => {
+    const XLSX = await import("xlsx");
     const data = employees.map((e) => ({
       Nombre: e.name || "",
       Email: e.email || "",

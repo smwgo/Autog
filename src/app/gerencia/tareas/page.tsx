@@ -5,7 +5,6 @@ import { Header } from "@/components/Header";
 import { GerenciaMobileNav } from "@/components/GerenciaMobileNav";
 import { CollapsibleMetrics } from "@/components/CollapsibleMetrics";
 import { useEffect, useState, useMemo, useRef } from "react";
-import * as XLSX from "xlsx";
 
 interface CeoTask {
   id: string;
@@ -722,7 +721,8 @@ export default function CeoTareasPage() {
     }
   };
 
-  const handleExport = () => {
+  const handleExport = async () => {
+    const XLSX = await import("xlsx");
     const data = tasks.map((t) => ({
       Título: t.title,
       Área: getCategoryInfo(t.category).label,

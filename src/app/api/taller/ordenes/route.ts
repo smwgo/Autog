@@ -662,11 +662,16 @@ export async function DELETE(request: Request) {
 
       // 6. Eliminar la orden de taller y/o propuesta (ClientQuote) en Neon PostgreSQL
       for (const num of candidateNums) {
+        await prisma.$executeRawUnsafe(
+          'DELETE FROM "WorkshopOrder" WHERE id = $1 OR "orderNumber" = $1',
+          num
+        );
         await prisma
-          .$executeRawUnsafe('DELETE FROM "WorkshopOrder" WHERE id = $1 OR "orderNumber" = $1', num)
-          .catch(() => {});
-        await prisma
-          .$executeRawUnsafe('DELETE FROM "ClientQuote" WHERE id = $1 OR "quoteNumber" = $1', num)
+          .$executeRawUnsafe(
+            'DELETE FROM "ClientQuote" WHERE id = $1 OR id = $2 OR "quoteNumber" = $1',
+            num,
+            `cq_${num}`
+          )
           .catch(() => {});
       }
 

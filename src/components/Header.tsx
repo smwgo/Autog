@@ -20,6 +20,15 @@ interface CurrentUser {
   accessTaller?: boolean;
 }
 
+type NotificationItem = { id: string | number; text: string; date: string; read: boolean };
+
+let cachedHeaderUser: CurrentUser | null = null;
+let lastHeaderUserFetchAt = 0;
+let cachedHeaderNotifications: NotificationItem[] | null = null;
+let lastHeaderNotifFetchAt = 0;
+const HEADER_USER_TTL_MS = 60000;
+const HEADER_NOTIF_TTL_MS = 30000;
+
 export function Header() {
   const pathname = usePathname() || "";
   const [mounted, setMounted] = useState(false);
@@ -43,6 +52,11 @@ export function Header() {
   };
 
   useEffect(() => {
+    const now = Date.now();
+    if (cachedHeaderNotifications && now - lastHeaderNotifFetchAt < HEADER_NOTIF_TTL_MS) {
+      setNotifications(cachedHeaderNotifications);
+      return;
+    }
     fetch("/api/notificaciones", {
       headers: getAuthHeaders(),
       credentials: "include",
@@ -50,6 +64,8 @@ export function Header() {
       .then((res) => res.json())
       .then((data) => {
         if (data?.success && Array.isArray(data.notificaciones)) {
+          cachedHeaderNotifications = data.notificaciones;
+          lastHeaderNotifFetchAt = Date.now();
           setNotifications(data.notificaciones);
         }
       })
@@ -89,6 +105,18 @@ export function Header() {
   };
 
   useEffect(() => {
+    const now = Date.now();
+    if (cachedHeaderUser && now - lastHeaderUserFetchAt < HEADER_USER_TTL_MS) {
+      setCurrentUser(cachedHeaderUser);
+      if (
+        cachedHeaderUser.branch &&
+        getClientUserBranch() !== normalizeSede(cachedHeaderUser.branch)
+      ) {
+        setClientUserBranch(normalizeSede(cachedHeaderUser.branch));
+      }
+      return;
+    }
+
     // 1. Cargar desde localStorage si existe
     if (typeof window !== "undefined") {
       try {
@@ -113,6 +141,8 @@ export function Header() {
       .then((res) => res.json())
       .then((data) => {
         if (data?.success && data?.user) {
+          cachedHeaderUser = data.user;
+          lastHeaderUserFetchAt = Date.now();
           setCurrentUser(data.user);
           if (
             data.user.branch &&
@@ -144,6 +174,10 @@ export function Header() {
   }, []);
 
   const handleLogout = async () => {
+    cachedHeaderUser = null;
+    lastHeaderUserFetchAt = 0;
+    cachedHeaderNotifications = null;
+    lastHeaderNotifFetchAt = 0;
     try {
       await fetch("/api/auth/logout", { method: "POST" });
     } catch {}

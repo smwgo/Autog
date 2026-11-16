@@ -154,30 +154,6 @@ export async function GET(request: Request) {
         }).catch(() => [])) as any[];
       }
 
-      // Fusionar órdenes almacenadas en el mirror local si no están en PostgreSQL
-      try {
-        const mirrorPath = path.join(process.cwd(), "prisma", "neon-local-mirror.json");
-        if (fs.existsSync(mirrorPath)) {
-          const mirrorData = JSON.parse(fs.readFileSync(mirrorPath, "utf-8"));
-          if (Array.isArray(mirrorData?.workshopOrder)) {
-            const normNum = (v: any) => String(v || "").replace(/^(?:ot|ord)[-\s#]*/gi, "").replace(/^#+/, "").trim().toUpperCase();
-            const existingIds = new Set(rows.map((r: any) => r.id));
-            const existingNumbers = new Set(rows.map((r: any) => normNum(r.orderNumber)).filter(Boolean));
-            for (const mo of mirrorData.workshopOrder) {
-              const moNorm = normNum(mo?.orderNumber);
-              if (mo?.id && !existingIds.has(mo.id) && (!moNorm || !existingNumbers.has(moNorm))) {
-                // Aplicar filtros básicos si corresponden
-                if (busqueda) {
-                  const bStr = `${mo.plate || ""} ${mo.client || ""} ${mo.orderNumber || ""} ${mo.vehicle || ""}`.toLowerCase();
-                  if (!bStr.includes(busqueda)) continue;
-                }
-                rows.push(mo);
-              }
-            }
-          }
-        }
-      } catch {}
-
       // Ordenar por fecha de creación descendente
       rows.sort((a, b) => {
         const timeA = new Date(a.createdAt || 0).getTime();
@@ -194,7 +170,31 @@ export async function GET(request: Request) {
       });
 
       // Mapear órdenes con cálculo de totales y desglose de repuestos y servicios
-      const ordenes = rowsUnicas.map((r: any) => {
+      // Excluir órdenes que solo fueron ingresadas en recepción y aún no tienen trabajos ni propuesta creada en el panel taller
+      const ordenes = rowsUnicas
+        .filter((r: any) => {
+          let items: any[] = [];
+          let services: any[] = [];
+          try {
+            items = typeof r.itemsJson === "string" ? JSON.parse(r.itemsJson) : (r.itemsJson || []);
+          } catch { items = []; }
+          try {
+            services = typeof r.servicesJson === "string" ? JSON.parse(r.servicesJson) : (r.servicesJson || []);
+          } catch { services = []; }
+
+          const tieneItemsOServicios =
+            (Array.isArray(items) && items.length > 0) ||
+            (Array.isArray(services) && services.length > 0);
+          const qtLower = String(r.quoteStatus || "").trim().toLowerCase();
+          const tienePropuestaOCaja =
+            Boolean(r.quoteNumber) ||
+            Boolean(r.posRequestId) ||
+            Number(r.totalCost || 0) > 0 ||
+            (Boolean(qtLower) && qtLower !== "borrador" && qtLower !== "draft");
+
+          return tieneItemsOServicios || tienePropuestaOCaja;
+        })
+        .map((r: any) => {
         let items: any[] = [];
         let services: any[] = [];
         let findings: any[] = [];

@@ -3,47 +3,77 @@ import { prisma, withRetry } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
+let cachedNotifPayload: { notificaciones: any[]; unreadCount: number } | null = null;
+let lastNotifCacheTime = 0;
+const NOTIF_CACHE_TTL_MS = 15000;
+
 export async function GET() {
   try {
+    const now = Date.now();
+    if (cachedNotifPayload && now - lastNotifCacheTime < NOTIF_CACHE_TTL_MS) {
+      return NextResponse.json({
+        success: true,
+        ...cachedNotifPayload,
+      });
+    }
+
     return await withRetry(async () => {
       const companyConfig = await (prisma as any).companyConfig
-        ?.findUnique({ where: { id: "default" } })
+        ?.findUnique({
+          where: { id: "default" },
+          select: { alertasStockBajo: true, umbralStockBajo: true },
+        })
         .catch(() => null);
       const alertasStockActivas = companyConfig ? companyConfig.alertasStockBajo !== false : true;
       const umbralStock = Number(companyConfig?.umbralStockBajo ?? 5);
 
-      // 1. Obtener productos con stock bajo o agotados en Neon
-      const lowStockProducts = alertasStockActivas
-        ? await prisma.product.findMany({
-            where: {
-              OR: [{ status: "Bajo Stock" }, { status: "Agotado" }, { stock: { lte: umbralStock } }],
+      const [lowStockProducts, pendingRequests, activeWorkshopOrders, urgentTasks] =
+        await Promise.all([
+          alertasStockActivas
+            ? prisma.product.findMany({
+                where: {
+                  OR: [{ status: "Bajo Stock" }, { status: "Agotado" }, { stock: { lte: umbralStock } }],
+                },
+                select: { id: true, name: true, code: true, stock: true },
+                take: 3,
+                orderBy: { stock: "asc" },
+              })
+            : Promise.resolve([]),
+          (prisma as any).orderRequest.findMany({
+            where: { status: "PENDIENTE" },
+            select: { id: true, type: true, customerName: true, itemsSummary: true, createdAt: true },
+            take: 3,
+            orderBy: { createdAt: "desc" },
+          }),
+          (prisma as any).workshopOrder.findMany({
+            select: {
+              id: true,
+              orderNumber: true,
+              vehicle: true,
+              plate: true,
+              status: true,
+              mechanic: true,
+              updatedAt: true,
             },
             take: 3,
-            orderBy: { stock: "asc" },
-          })
-        : [];
-
-      // 2. Obtener solicitudes web pendientes en Neon
-      const pendingRequests = await (prisma as any).orderRequest.findMany({
-        where: { status: "PENDIENTE" },
-        take: 3,
-        orderBy: { createdAt: "desc" },
-      });
-
-      // 3. Obtener órdenes de taller activas en Neon
-      const activeWorkshopOrders = await (prisma as any).workshopOrder.findMany({
-        take: 3,
-        orderBy: { updatedAt: "desc" },
-      });
-
-      // 4. Obtener tareas gerenciales urgentes pendientes en Neon
-      const urgentTasks = await (prisma as any).managementTask
-        ?.findMany({
-          where: { status: "PENDIENTE" },
-          take: 3,
-          orderBy: { createdAt: "desc" },
-        })
-        .catch(() => []);
+            orderBy: { updatedAt: "desc" },
+          }),
+          (prisma as any).managementTask
+            ?.findMany({
+              where: { status: "PENDIENTE" },
+              select: {
+                id: true,
+                title: true,
+                priority: true,
+                area: true,
+                assignee: true,
+                dueDateLabel: true,
+              },
+              take: 3,
+              orderBy: { createdAt: "desc" },
+            })
+            .catch(() => []),
+        ]);
 
       // Construir notificaciones en tiempo real basadas en la base de datos
       const items: any[] = [];
@@ -100,10 +130,16 @@ export async function GET() {
         });
       });
 
-      return NextResponse.json({
-        success: true,
+      const payload = {
         notificaciones: items,
         unreadCount: items.filter((i) => !i.read).length,
+      };
+      cachedNotifPayload = payload;
+      lastNotifCacheTime = Date.now();
+
+      return NextResponse.json({
+        success: true,
+        ...payload,
       });
     });
   } catch (error: any) {

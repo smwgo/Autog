@@ -54,6 +54,13 @@ async function ensureColumnTipo() {
   }
 }
 
+const SERVICES_CACHE_TTL_MS = 10000;
+const servicesCache = new Map<string, { payload: any; timestamp: number }>();
+
+function invalidateServicesCache() {
+  servicesCache.clear();
+}
+
 // GET: Listar servicios REALES directamente desde Neon
 export async function GET(request: Request) {
   try {
@@ -62,6 +69,12 @@ export async function GET(request: Request) {
     const busqueda = searchParams.get("busqueda");
     const modulo = (searchParams.get("modulo") || searchParams.get("tipo") || "").trim().toLowerCase();
     const soloActivos = searchParams.get("activos") !== "false";
+
+    const cacheKey = `${soloActivos}|${categoria || ""}|${busqueda || ""}|${modulo}`;
+    const cached = servicesCache.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < SERVICES_CACHE_TTL_MS) {
+      return NextResponse.json(cached.payload);
+    }
 
     await ensureColumnTipo();
 
@@ -80,12 +93,22 @@ export async function GET(request: Request) {
           ];
         }
 
-        const servicios = await db.model.findMany({
-          where,
-          orderBy: [{ category: "asc" }, { name: "asc" }],
-        });
+        const needSeparateCategories = Boolean((categoria && categoria !== "TODAS") || busqueda || soloActivos);
 
-        const rawTipos: any = await prisma.$queryRawUnsafe('SELECT "id", "tipo" FROM "WorkshopService"').catch(() => []);
+        const [servicios, rawTipos, categoriesRaw] = await Promise.all([
+          db.model.findMany({
+            where,
+            orderBy: [{ category: "asc" }, { name: "asc" }],
+          }),
+          prisma.$queryRawUnsafe('SELECT "id", "tipo" FROM "WorkshopService"').catch(() => []),
+          needSeparateCategories
+            ? db.model.findMany({
+                select: { category: true },
+                distinct: ["category"],
+              })
+            : Promise.resolve(null),
+        ]);
+
         const tiposMap: Record<string, string> = {};
         if (Array.isArray(rawTipos)) {
           rawTipos.forEach((r: any) => {
@@ -93,19 +116,20 @@ export async function GET(request: Request) {
           });
         }
 
-        const categoriesRaw = await db.model.findMany({
-          select: { category: true },
-          distinct: ["category"],
-        });
-        const categories = Array.from(new Set(categoriesRaw.map((c: any) => c.category).filter(Boolean)));
+        const categories = Array.from(
+          new Set((categoriesRaw || servicios).map((c: any) => c.category).filter(Boolean))
+        );
 
-        return NextResponse.json({
+        const payload = {
           success: true,
           servicios: servicios.map((s: any) => ({ ...s, tipo: s.tipo || tiposMap[s.id] || "Taller" })),
           categories,
           total: servicios.length,
           connectedToNeon: true,
-        });
+        };
+        servicesCache.set(cacheKey, { payload, timestamp: Date.now() });
+
+        return NextResponse.json(payload);
       } else {
         let query = 'SELECT * FROM "WorkshopService" WHERE 1=1';
         const params: any[] = [];
@@ -207,6 +231,7 @@ export async function POST(request: Request) {
         finalTipo
       ).catch(() => {});
       (nuevoServicio as any).tipo = finalTipo;
+      invalidateServicesCache();
 
       return NextResponse.json({
         success: true,
@@ -231,6 +256,7 @@ export async function POST(request: Request) {
       );
 
       const rows: any = await prisma.$queryRawUnsafe('SELECT * FROM "WorkshopService" WHERE id = $1', id);
+      invalidateServicesCache();
 
       return NextResponse.json({
         success: true,
@@ -292,6 +318,8 @@ export async function PUT(request: Request) {
         (servicioActualizado as any).tipo = finalTipo;
       }
 
+      invalidateServicesCache();
+
       return NextResponse.json({
         success: true,
         servicio: servicioActualizado,
@@ -324,6 +352,7 @@ export async function PUT(request: Request) {
       );
 
       const rows: any = await prisma.$queryRawUnsafe('SELECT * FROM "WorkshopService" WHERE id = $1', id);
+      invalidateServicesCache();
 
       return NextResponse.json({
         success: true,
@@ -362,6 +391,8 @@ export async function DELETE(request: Request) {
     } else {
       await prisma.$executeRawUnsafe('DELETE FROM "WorkshopService" WHERE id = $1', id);
     }
+
+    invalidateServicesCache();
 
     return NextResponse.json({
       success: true,

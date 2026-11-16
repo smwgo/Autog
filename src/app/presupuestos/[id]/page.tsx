@@ -3,8 +3,12 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { Header } from "@/components/Header";
-import CatalogoProductosServiciosTaller from "@/components/taller/CatalogoProductosServiciosTaller";
+const CatalogoProductosServiciosTaller = dynamic(
+  () => import("@/components/taller/CatalogoProductosServiciosTaller"),
+  { ssr: false }
+);
 import { useRealtimeSync } from "@/hooks/useRealtimeSync";
 
 // ============================================================================

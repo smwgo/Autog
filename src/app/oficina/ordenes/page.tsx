@@ -5,7 +5,6 @@ import Link from "next/link";
 import { Header } from "@/components/Header";
 import { OficinaMobileNav } from "@/components/OficinaMobileNav";
 import { CollapsibleMetrics } from "@/components/CollapsibleMetrics";
-import * as XLSX from "xlsx";
 
 function MinimalSelect<T extends string>({
   label,
@@ -229,7 +228,8 @@ export default function OrdenesCotizaciones() {
     }
   };
 
-  const handleExport = () => {
+  const handleExport = async () => {
+    const XLSX = await import("xlsx");
     const isQuotes = view === "cotizaciones";
     const data = isQuotes
       ? quotes.map((q) => ({

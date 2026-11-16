@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic";
 
 let cachedProducts: any[] | null = null;
 let lastCacheTime = 0;
-const CACHE_TTL_MS = 1000; // 1 segundo para reflejar cambios reales de inmediato
+const CACHE_TTL_MS = 10000; // 10s en memoria, invalidado inmediatamente en POST/PUT/DELETE
 
 function calcularEstado(stock: number, minStock: number = 5): string {
   if (stock <= 0) return "Agotado";
@@ -59,13 +59,19 @@ export async function GET(request: Request) {
       });
     }
 
-    const products = await prisma.product.findMany({
-      orderBy: {
-        createdAt: "desc",
-      },
-    });
-    cachedProducts = products;
-    lastCacheTime = Date.now();
+    const now = Date.now();
+    const products =
+      cachedProducts && now - lastCacheTime < CACHE_TTL_MS
+        ? cachedProducts
+        : await prisma.product.findMany({
+            orderBy: {
+              createdAt: "desc",
+            },
+          });
+    if (!cachedProducts || now - lastCacheTime >= CACHE_TTL_MS) {
+      cachedProducts = products;
+      lastCacheTime = now;
+    }
 
     // Extraer todas las categorías únicas disponibles en Neon
     const categoriesSet = new Set<string>();
