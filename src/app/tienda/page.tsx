@@ -16,6 +16,7 @@ interface Product {
   description?: string | null;
   price: number | string;
   stock?: number;
+  imageUrl?: string | null;
   photoUrl?: string | null;
 }
 
@@ -43,72 +44,16 @@ export default function TiendaPage() {
   const [solicitudExitosa, setSolicitudExitosa] = useState<any | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
 
-  // Cargar productos
+  // Cargar productos reales desde Neon PostgreSQL
   useEffect(() => {
     async function load() {
       try {
-        const res = await fetch("/api/productos?modulo=Tienda");
+        const res = await fetch("/api/productos?modulo=Tienda", { cache: "no-store" });
         const data = await res.json();
-        if (res.ok && data.success && data.productos?.length > 0) {
+        if (res.ok && data.success && Array.isArray(data.productos)) {
           setProducts(data.productos);
         } else {
-          // Si no hay productos en Neon DB aún, sembrarlos realmente en la base de datos
-          const initialSeed = [
-            {
-              name: "Filtro de Aceite Sintético Premium",
-              code: "FLT-AC-001",
-              brand: "Bosch",
-              category: "Filtros",
-              price: 15.99,
-              stock: 25,
-              minStock: 5,
-              location: "Pasillo A-1",
-            },
-            {
-              name: "Pastillas de Freno Delanteras (Set de 4)",
-              code: "FRN-PAS-022",
-              brand: "Brembo",
-              category: "Frenos",
-              price: 45.5,
-              stock: 18,
-              minStock: 4,
-              location: "Estante B-3",
-            },
-            {
-              name: "Batería 12V 75Ah Libre de Mantenimiento",
-              code: "BAT-12V-75",
-              brand: "Moura",
-              category: "Eléctrico",
-              price: 120.0,
-              stock: 12,
-              minStock: 3,
-              location: "Bodega C-2",
-            },
-            {
-              name: "Aceite 5W-30 Sintético Full 4L",
-              code: "LUB-5W30-4L",
-              brand: "Mobil 1",
-              category: "Lubricantes",
-              price: 38.0,
-              stock: 30,
-              minStock: 6,
-              location: "Pasillo A-2",
-            },
-          ];
-
-          for (const item of initialSeed) {
-            await fetch("/api/productos", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(item),
-            }).catch(() => {});
-          }
-
-          const reloadRes = await fetch("/api/productos?modulo=Tienda");
-          const reloadData = await reloadRes.json();
-          if (reloadRes.ok && reloadData.success && reloadData.productos?.length > 0) {
-            setProducts(reloadData.productos);
-          }
+          setProducts([]);
         }
       } catch (e) {
         console.error("Error al cargar productos de tienda:", e);
@@ -267,9 +212,6 @@ export default function TiendaPage() {
               <h1 className="text-2xl sm:text-3xl md:text-4xl font-black tracking-tight text-zinc-900 dark:text-zinc-50">
                 Tienda
               </h1>
-              <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 mt-1">
-                Repuestos, accesorios y suministros de alta calidad para tu vehículo.
-              </p>
             </div>
           </div>
 
@@ -327,9 +269,9 @@ export default function TiendaPage() {
                 >
                   {/* Foto o Icono */}
                   <div className="relative h-48 w-full bg-zinc-100 dark:bg-zinc-800/60 flex items-center justify-center p-4 overflow-hidden">
-                    {product.photoUrl ? (
+                    {(product.imageUrl || product.photoUrl) ? (
                       <img
-                        src={product.photoUrl}
+                        src={product.imageUrl || product.photoUrl || ""}
                         alt={product.name}
                         className="h-full w-full object-contain transition-transform duration-300 group-hover:scale-105"
                       />
@@ -380,11 +322,10 @@ export default function TiendaPage() {
 
                       <button
                         onClick={() => handleComprar(product)}
-                        className={`px-4 py-2.5 rounded-xl text-sm font-bold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer ${
-                          isAdded
-                            ? "bg-emerald-600 text-white scale-105"
-                            : "bg-zinc-900 hover:bg-blue-600 dark:bg-zinc-100 dark:hover:bg-blue-500 text-white dark:text-zinc-900 dark:hover:text-white"
-                        }`}
+                        className={`px-4 py-2.5 rounded-xl text-sm font-bold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer ${isAdded
+                          ? "bg-emerald-600 text-white scale-105"
+                          : "bg-zinc-900 hover:bg-blue-600 dark:bg-zinc-100 dark:hover:bg-blue-500 text-white dark:text-zinc-900 dark:hover:text-white"
+                          }`}
                       >
                         {isAdded ? (
                           <>
@@ -446,9 +387,8 @@ export default function TiendaPage() {
                     <p className="text-xs text-zinc-500 dark:text-zinc-400">
                       {totalItemsCount === 0
                         ? "0 artículos"
-                        : `${totalItemsCount} ${
-                            totalItemsCount === 1 ? "artículo" : "artículos"
-                          } seleccionados`}
+                        : `${totalItemsCount} ${totalItemsCount === 1 ? "artículo" : "artículos"
+                        } seleccionados`}
                     </p>
                   </div>
                 </div>

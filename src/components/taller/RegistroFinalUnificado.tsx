@@ -1,7 +1,12 @@
 "use client";
 
-import React, { useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import CatalogoProductosServiciosTaller from "@/components/taller/CatalogoProductosServiciosTaller";
+import {
+  getCachedAudioDuration,
+  resolveAudioDuration,
+  setCachedAudioDuration,
+} from "@/lib/audio-duration";
 
 export type ModuloEspecialidad = "taller" | "lubricentro" | "carwash" | "tecnicentro";
 
@@ -352,9 +357,28 @@ function MiniAudioPlayer({
   compact?: boolean;
 }) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const resolvingInfinityRef = useRef(false);
   const [reproduciendo, setReproduciendo] = useState(false);
   const [tiempoActual, setTiempoActual] = useState(0);
-  const [duracion, setDuracion] = useState(0);
+  const [duracion, setDuracion] = useState(() => getCachedAudioDuration(src));
+
+  useEffect(() => {
+    let active = true;
+    const cached = getCachedAudioDuration(src);
+    setDuracion(cached);
+    setTiempoActual(0);
+    resolvingInfinityRef.current = false;
+    if (cached <= 0) {
+      void resolveAudioDuration(src).then((d) => {
+        if (active && d > 0) {
+          setDuracion((prev) => (prev > 0 ? prev : d));
+        }
+      });
+    }
+    return () => {
+      active = false;
+    };
+  }, [src]);
 
   const togglePlay = () => {
     const el = audioRef.current;
@@ -388,17 +412,46 @@ function MiniAudioPlayer({
           setTiempoActual(0);
         }}
         onLoadedMetadata={(e) => {
-          const d = e.currentTarget.duration;
-          if (Number.isFinite(d) && d > 0) setDuracion(d);
+          const el = e.currentTarget;
+          const d = el.duration;
+          if (Number.isFinite(d) && d > 0) {
+            setCachedAudioDuration(src, d);
+            setDuracion(d);
+          } else if (d === Infinity && !resolvingInfinityRef.current) {
+            resolvingInfinityRef.current = true;
+            el.currentTime = 1e101;
+          }
         }}
         onDurationChange={(e) => {
-          const d = e.currentTarget.duration;
-          if (Number.isFinite(d) && d > 0) setDuracion(d);
+          const el = e.currentTarget;
+          const d = el.duration;
+          if (Number.isFinite(d) && d > 0) {
+            setCachedAudioDuration(src, d);
+            setDuracion(d);
+            if (resolvingInfinityRef.current) {
+              resolvingInfinityRef.current = false;
+              el.currentTime = 0;
+            }
+          }
         }}
         onTimeUpdate={(e) => {
-          setTiempoActual(e.currentTarget.currentTime || 0);
-          const d = e.currentTarget.duration;
-          if (Number.isFinite(d) && d > 0 && d !== duracion) setDuracion(d);
+          const el = e.currentTarget;
+          const d = el.duration;
+          if (resolvingInfinityRef.current) {
+            if (Number.isFinite(d) && d > 0) {
+              setCachedAudioDuration(src, d);
+              setDuracion(d);
+            }
+            resolvingInfinityRef.current = false;
+            el.currentTime = 0;
+            setTiempoActual(0);
+            return;
+          }
+          setTiempoActual(el.currentTime || 0);
+          if (Number.isFinite(d) && d > 0 && d !== duracion) {
+            setCachedAudioDuration(src, d);
+            setDuracion(d);
+          }
         }}
         className="hidden"
       />
@@ -439,8 +492,9 @@ function MiniAudioPlayer({
       </div>
 
       <span className="text-[11px] font-mono text-zinc-500 dark:text-zinc-400 tabular-nums shrink-0">
-        {formatearTiempoAudio(tiempoActual)}
-        {duracion > 0 ? ` / ${formatearTiempoAudio(duracion)}` : ""}
+        {!reproduciendo && tiempoActual === 0 && duracion > 0
+          ? formatearTiempoAudio(duracion)
+          : `${formatearTiempoAudio(tiempoActual)}${duracion > 0 ? ` / ${formatearTiempoAudio(duracion)}` : ""}`}
       </span>
 
       {onRemove && (
@@ -534,6 +588,8 @@ export default function RegistroFinalUnificado({
             orderId: ordenActiva.id,
             items: nuevosItems,
             totalCost,
+            quoteStatus: ordenActiva.quoteStatus || "Borrador",
+            soloGuardarItems: true,
           }),
         });
         const data = await res.json().catch(() => null);
@@ -665,6 +721,7 @@ export default function RegistroFinalUnificado({
       clearInterval(audioTimerRef.current);
       audioTimerRef.current = null;
     }
+    const duracionGrabadaSeg = segundosAudio;
     setGrabandoAudio(false);
     setSegundosAudio(0);
 
@@ -709,7 +766,11 @@ export default function RegistroFinalUnificado({
       const file = new File([browserBlob.blob], `audio_${Date.now()}.${ext}`, {
         type: browserBlob.mime,
       });
-      return await subirArchivoEvidencia(file, "audio", omitirBorrador);
+      const uploadedUrl = await subirArchivoEvidencia(file, "audio", omitirBorrador);
+      if (uploadedUrl && duracionGrabadaSeg > 0) {
+        setCachedAudioDuration(uploadedUrl, duracionGrabadaSeg);
+      }
+      return uploadedUrl;
     }
 
     if (activePcSessionId) {
@@ -752,7 +813,11 @@ export default function RegistroFinalUnificado({
       const file = new File([browserBlob.blob], `audio_${Date.now()}.${ext}`, {
         type: browserBlob.mime,
       });
-      return await subirArchivoEvidencia(file, "audio", omitirBorrador);
+      const uploadedUrl = await subirArchivoEvidencia(file, "audio", omitirBorrador);
+      if (uploadedUrl && duracionGrabadaSeg > 0) {
+        setCachedAudioDuration(uploadedUrl, duracionGrabadaSeg);
+      }
+      return uploadedUrl;
     }
 
     return null;

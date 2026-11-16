@@ -1181,6 +1181,8 @@ export default function InspeccionVehiculo({
               orderId: ordenActiva.id,
               items: itemsRestantes,
               totalCost: nuevoTotalCost,
+              quoteStatus: ordenActiva.quoteStatus || "Borrador",
+              soloGuardarItems: true,
             }),
           });
         } catch (err) {
@@ -1397,6 +1399,8 @@ export default function InspeccionVehiculo({
             orderId: ordenActiva.id,
             items: itemsOrden,
             totalCost: nuevoTotalCost,
+            quoteStatus: ordenActiva.quoteStatus || "Borrador",
+            soloGuardarItems: true,
           }),
         });
       } catch (err) {
@@ -1447,6 +1451,8 @@ export default function InspeccionVehiculo({
             orderId: ordenActiva.id,
             items: itemsOrden,
             totalCost: nuevoTotalCost,
+            quoteStatus: ordenActiva.quoteStatus || "Borrador",
+            soloGuardarItems: true,
           }),
         });
       } catch (err) {

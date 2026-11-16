@@ -95,7 +95,15 @@ export async function GET(request: Request) {
           WHERE e."uploadStatus" = 'COMPLETED'
           GROUP BY resolved_order_id
         ) ev ON ev.resolved_order_id = o."id"
-        WHERE 1=1
+        WHERE (
+          (o."quoteNumber" IS NOT NULL AND TRIM(o."quoteNumber") <> '')
+          OR (
+            o."quoteStatus" IS NOT NULL
+            AND TRIM(o."quoteStatus") <> ''
+            AND LOWER(TRIM(o."quoteStatus")) <> 'borrador'
+          )
+          OR o."posRequestId" IS NOT NULL
+        )
       `;
 
       const params: any[] = [];
@@ -149,6 +157,20 @@ export async function GET(request: Request) {
         rows = (await prisma.$queryRawUnsafe(query, ...params)) as any[];
       } catch {
         rows = (await prisma.workshopOrder.findMany({
+          where: {
+            OR: [
+              { quoteNumber: { not: null } },
+              {
+                AND: [
+                  { quoteStatus: { not: null } },
+                  { quoteStatus: { not: "Borrador" } },
+                  { quoteStatus: { not: "borrador" } },
+                  { quoteStatus: { not: "" } },
+                ],
+              },
+              { posRequestId: { not: null } },
+            ],
+          },
           orderBy: { createdAt: "desc" },
           take: 150,
         }).catch(() => [])) as any[];
@@ -170,29 +192,16 @@ export async function GET(request: Request) {
       });
 
       // Mapear órdenes con cálculo de totales y desglose de repuestos y servicios
-      // Excluir órdenes que solo fueron ingresadas en recepción y aún no tienen trabajos ni propuesta creada en el panel taller
+      // Excluir órdenes en borrador que solo fueron ingresadas o están en edición en taller antes de pasar a propuesta
       const ordenes = rowsUnicas
         .filter((r: any) => {
-          let items: any[] = [];
-          let services: any[] = [];
-          try {
-            items = typeof r.itemsJson === "string" ? JSON.parse(r.itemsJson) : (r.itemsJson || []);
-          } catch { items = []; }
-          try {
-            services = typeof r.servicesJson === "string" ? JSON.parse(r.servicesJson) : (r.servicesJson || []);
-          } catch { services = []; }
-
-          const tieneItemsOServicios =
-            (Array.isArray(items) && items.length > 0) ||
-            (Array.isArray(services) && services.length > 0);
           const qtLower = String(r.quoteStatus || "").trim().toLowerCase();
           const tienePropuestaOCaja =
             Boolean(r.quoteNumber) ||
             Boolean(r.posRequestId) ||
-            Number(r.totalCost || 0) > 0 ||
             (Boolean(qtLower) && qtLower !== "borrador" && qtLower !== "draft");
 
-          return tieneItemsOServicios || tienePropuestaOCaja;
+          return tienePropuestaOCaja;
         })
         .map((r: any) => {
         let items: any[] = [];

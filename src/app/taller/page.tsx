@@ -6071,7 +6071,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                 className="h-10 sm:h-11 px-5 sm:px-6 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs sm:text-sm font-bold shadow-sm shadow-blue-500/20 active:scale-95 transition-all flex items-center gap-1.5 ml-auto shrink-0 cursor-pointer disabled:opacity-50"
               >
                 <span>📋</span>
-                <span>{guardandoEtapa7 ? "Guardando..." : "Presupuesto"}</span>
+                <span>{guardandoEtapa7 ? "Guardando..." : "Crear Orden"}</span>
                 <span>→</span>
               </button>
             ) : (

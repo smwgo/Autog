@@ -98,9 +98,11 @@ export async function GET(request: Request) {
       const prodTipo = (p.tipo || "Todos").toLowerCase();
       const matchModulo =
         !modulo ||
-        prodTipo === "todos" ||
-        prodTipo.includes("todos") ||
-        prodTipo.includes(modulo);
+        (modulo === "tienda"
+          ? prodTipo.includes("tienda")
+          : prodTipo === "todos" ||
+            prodTipo.includes("todos") ||
+            prodTipo.includes(modulo));
       const matchSucursalStock = sede !== "SUCURSAL" || Number(p.stockNorte || 0) > 0;
 
       return matchSearch && matchCategory && matchModulo && matchSucursalStock;

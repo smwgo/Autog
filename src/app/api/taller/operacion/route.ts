@@ -3019,14 +3019,25 @@ export async function POST(request: Request) {
         const taxAmount = Number(((baseImponible * taxRateNum) / 100).toFixed(2));
         const totalFinal = Number((baseImponible + taxAmount).toFixed(2));
 
-        const quoteNumber =
-          current.quoteNumber ||
-          `PRE-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
-        const quoteToken =
-          current.quoteToken ||
-          `${quoteNumber}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
+        const soloGuardarItems = Boolean(body.soloGuardarItems);
+        const esBorradorSinPropuesta =
+          soloGuardarItems &&
+          !current.quoteNumber &&
+          (!current.quoteStatus ||
+            String(current.quoteStatus).trim().toLowerCase() === "borrador");
 
-        const finalQuoteStatus = quoteStatus || current.quoteStatus || "Pendiente de Aprobación";
+        const quoteNumber = esBorradorSinPropuesta
+          ? null
+          : current.quoteNumber ||
+            `PRE-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+        const quoteToken = esBorradorSinPropuesta
+          ? null
+          : current.quoteToken ||
+            `${quoteNumber}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
+
+        const finalQuoteStatus = esBorradorSinPropuesta
+          ? current.quoteStatus || "Borrador"
+          : quoteStatus || current.quoteStatus || "Pendiente de Aprobación";
         const isApproved = finalQuoteStatus === "Aprobado por Cliente";
 
         const updatedNotes = notesPresupuesto?.trim()
@@ -3066,37 +3077,39 @@ export async function POST(request: Request) {
           isApproved
         );
 
-        // Sincronizar también en ClientQuote para que el portal de Clientes y POS lo vean en vivo
-        const quoteId = `cq_${current.id}`;
-        await prisma
-          .$executeRawUnsafe(
-            `INSERT INTO "ClientQuote" (
-              "id", "quoteNumber", "date", "vehicle", "plate", "clientName",
-              "status", "itemsJson", "subtotal", "total", "notes", "createdAt", "updatedAt"
-            ) VALUES (
-              $1, $2, $3, $4, $5, $6,
-              $7, $8, $9, $10, $11, NOW(), NOW()
+        // Sincronizar también en ClientQuote solo cuando ya es una propuesta enviada (no en borrador de taller)
+        if (!esBorradorSinPropuesta && quoteNumber) {
+          const quoteId = `cq_${current.id}`;
+          await prisma
+            .$executeRawUnsafe(
+              `INSERT INTO "ClientQuote" (
+                "id", "quoteNumber", "date", "vehicle", "plate", "clientName",
+                "status", "itemsJson", "subtotal", "total", "notes", "createdAt", "updatedAt"
+              ) VALUES (
+                $1, $2, $3, $4, $5, $6,
+                $7, $8, $9, $10, $11, NOW(), NOW()
+              )
+              ON CONFLICT ("quoteNumber") DO UPDATE SET
+                "status" = EXCLUDED."status",
+                "itemsJson" = EXCLUDED."itemsJson",
+                "subtotal" = EXCLUDED."subtotal",
+                "total" = EXCLUDED."total",
+                "notes" = EXCLUDED."notes",
+                "updatedAt" = NOW()`,
+              quoteId,
+              quoteNumber,
+              new Date().toLocaleDateString("es-EC"),
+              current.vehicle,
+              current.plate,
+              current.client,
+              isApproved ? "Aprobada" : finalQuoteStatus,
+              JSON.stringify(itemsArr),
+              subtotalNum,
+              totalFinal,
+              `Link: /taller/presupuesto/${quoteToken} | Descuento: $${discountAmount.toFixed(2)} | IVA (${taxRateNum}%): $${taxAmount.toFixed(2)}`
             )
-            ON CONFLICT ("quoteNumber") DO UPDATE SET
-              "status" = EXCLUDED."status",
-              "itemsJson" = EXCLUDED."itemsJson",
-              "subtotal" = EXCLUDED."subtotal",
-              "total" = EXCLUDED."total",
-              "notes" = EXCLUDED."notes",
-              "updatedAt" = NOW()`,
-            quoteId,
-            quoteNumber,
-            new Date().toLocaleDateString("es-EC"),
-            current.vehicle,
-            current.plate,
-            current.client,
-            isApproved ? "Aprobada" : finalQuoteStatus,
-            JSON.stringify(itemsArr),
-            subtotalNum,
-            totalFinal,
-            `Link: /taller/presupuesto/${quoteToken} | Descuento: $${discountAmount.toFixed(2)} | IVA (${taxRateNum}%): $${taxAmount.toFixed(2)}`
-          )
-          .catch(() => {});
+            .catch(() => {});
+        }
 
         const updatedRows: any[] = await prisma.$queryRawUnsafe(
           `SELECT * FROM "WorkshopOrder" WHERE "id" = $1`,

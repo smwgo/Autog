@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useParams, useSearchParams } from "next/navigation";
+import { resolveAudioDuration } from "@/lib/audio-duration";
 
 interface AudioEvidencia {
   id: string;
@@ -82,6 +83,20 @@ function MiniAudioPlayerProveedor({
   const [tiempoActual, setTiempoActual] = useState(0);
   const [duracion, setDuracion] = useState(0);
 
+  useEffect(() => {
+    let active = true;
+    setDuracion(0);
+    setTiempoActual(0);
+    void resolveAudioDuration(src).then((d) => {
+      if (active && d > 0) {
+        setDuracion((prev) => (prev > 0 ? prev : d));
+      }
+    });
+    return () => {
+      active = false;
+    };
+  }, [src]);
+
   const togglePlay = () => {
     const el = audioRef.current;
     if (!el) return;
@@ -152,8 +167,9 @@ function MiniAudioPlayerProveedor({
               <span>Audio #{index + 1}</span>
             </span>
             <span className="font-mono text-slate-400 tabular-nums">
-              {formatearTiempoAudio(tiempoActual)}
-              {duracion > 0 ? ` / ${formatearTiempoAudio(duracion)}` : ""}
+              {!reproduciendo && tiempoActual === 0 && duracion > 0
+                ? formatearTiempoAudio(duracion)
+                : `${formatearTiempoAudio(tiempoActual)}${duracion > 0 ? ` / ${formatearTiempoAudio(duracion)}` : ""}`}
             </span>
           </div>
           <div
