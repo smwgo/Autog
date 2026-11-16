@@ -232,9 +232,9 @@ export async function POST(req: Request) {
 
       const permanentDownloadUrl = `/api/storage/download?key=${encodeURIComponent(result.key)}`;
 
-      // Persistir registro verificado en Neon DB
-      try {
-        await prisma.$executeRawUnsafe(
+      // Persistir registro de metadatos en segundo plano para no retrasar la respuesta al cliente
+      void prisma
+        .$executeRawUnsafe(
           `INSERT INTO "WorkshopEvidence" (
             "id", "orderId", "orderNumber", "vehicleId", "plate",
             "type", "r2Key", "mimeType", "fileSizeBytes",
@@ -266,10 +266,10 @@ export async function POST(req: Request) {
           clientTempId,
           branch,
           JSON.stringify({ originalName: file.name })
-        );
-      } catch (dbErr) {
-        console.error("Error al persistir evidencia en base de datos tras subida a R2:", dbErr);
-      }
+        )
+        .catch((dbErr: any) => {
+          console.error("Error al persistir evidencia en base de datos tras subida a R2:", dbErr);
+        });
 
       return NextResponse.json({
         success: true,

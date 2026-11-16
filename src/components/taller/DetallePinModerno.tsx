@@ -1133,8 +1133,11 @@ export function DetallePinModerno({
                       </div>
 
                       <CatalogoProductosServiciosTaller
-                        itemsSeleccionados={bloque.linkedItems || []}
-                        onAgregarItem={(item, delta) => onAgregarItemPin?.(item, bloque.id, delta)}
+                        itemsSeleccionados={[]}
+                        onAgregarItem={(item, delta) => {
+                          onAgregarItemPin?.(item, bloque.id, delta);
+                          setManualBloqueId(null);
+                        }}
                         onEliminarItem={(itemId) => onEliminarItemPin?.(itemId, bloque.id)}
                         serviciosCatalogo={serviciosCatalogo}
                         productosCatalogo={productosCatalogo}

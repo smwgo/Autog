@@ -1,4 +1,4 @@
-﻿import "server-only";
+import "server-only";
 import { PrismaClient } from "@prisma/client";
 import fs from "fs";
 import path from "path";
@@ -894,6 +894,23 @@ export function getNeonPrismaClient(): PrismaClient {
   return getRawPrisma();
 }
 
+async function runDirectNeon<T>(fn: () => Promise<T>): Promise<T> {
+  const delays = [400, 1200];
+  let lastErr: any;
+  for (let attempt = 0; attempt <= delays.length; attempt++) {
+    try {
+      return await fn();
+    } catch (err: any) {
+      lastErr = err;
+      if (!isNeonConnectionOrQuotaError(err) || attempt === delays.length) {
+        throw err;
+      }
+      await new Promise((r) => setTimeout(r, delays[attempt]));
+    }
+  }
+  throw lastErr;
+}
+
 function createModelProxy(modelName: string) {
   return new Proxy(
     {},
@@ -901,33 +918,13 @@ function createModelProxy(modelName: string) {
       get(_target, methodProp) {
         const method = String(methodProp);
         return async (args?: any) => {
-          const now = Date.now();
-          const circuitOpen =
-            globalForPrisma.neonCircuitOpenUntil && now < globalForPrisma.neonCircuitOpenUntil;
-
-          if (!circuitOpen) {
-            try {
-              const rawClient = getRawPrisma() as any;
-              if (rawClient[modelName] && typeof rawClient[modelName][method] === "function") {
-                const res = await rawClient[modelName][method](args);
-                if (method === "delete" || method === "deleteMany") {
-                  const mirrorRes = executeMirrorOperation(modelName, method, args);
-                  if (method === "deleteMany" && res && typeof res === "object") {
-                    res.count = (res.count || 0) + (mirrorRes?.count || 0);
-                  }
-                }
-                syncNeonResultToMirror(modelName, method, res, args);
-                return res;
-              }
-            } catch (err: any) {
-              if (isNeonConnectionOrQuotaError(err)) {
-                globalForPrisma.neonCircuitOpenUntil = Date.now() + CIRCUIT_BREAKER_TTL_MS;
-              }
-              return executeMirrorOperation(modelName, method, args);
+          return runDirectNeon(async () => {
+            const rawClient = getRawPrisma() as any;
+            if (!rawClient[modelName] || typeof rawClient[modelName][method] !== "function") {
+              throw new Error(`Método Prisma inválido: ${modelName}.${method}`);
             }
-          }
-
-          return executeMirrorOperation(modelName, method, args);
+            return await rawClient[modelName][method](args);
+          });
         };
       },
     }
@@ -941,40 +938,16 @@ export const prisma: PrismaClient = new Proxy({} as PrismaClient, {
     if (key === "$transaction") {
       return async (fnOrArray: any, options?: any) => {
         if (Array.isArray(fnOrArray)) {
-          const now = Date.now();
-          const circuitOpen =
-            globalForPrisma.neonCircuitOpenUntil && now < globalForPrisma.neonCircuitOpenUntil;
-          if (!circuitOpen) {
-            try {
-              const rawClient = getRawPrisma();
-              return await rawClient.$transaction(fnOrArray, options);
-            } catch (err: any) {
-              if (isNeonConnectionOrQuotaError(err)) {
-                globalForPrisma.neonCircuitOpenUntil = Date.now() + CIRCUIT_BREAKER_TTL_MS;
-                return Promise.all(fnOrArray);
-              }
-              throw err;
-            }
-          }
-          return Promise.all(fnOrArray);
+          return runDirectNeon(async () => {
+            const rawClient = getRawPrisma();
+            return await rawClient.$transaction(fnOrArray, options);
+          });
         }
         if (typeof fnOrArray === "function") {
-          const now = Date.now();
-          const circuitOpen =
-            globalForPrisma.neonCircuitOpenUntil && now < globalForPrisma.neonCircuitOpenUntil;
-          if (!circuitOpen) {
-            try {
-              const rawClient = getRawPrisma();
-              return await rawClient.$transaction(fnOrArray, options);
-            } catch (err: any) {
-              if (isNeonConnectionOrQuotaError(err)) {
-                globalForPrisma.neonCircuitOpenUntil = Date.now() + CIRCUIT_BREAKER_TTL_MS;
-                return await fnOrArray(prisma);
-              }
-              throw err;
-            }
-          }
-          return await fnOrArray(prisma);
+          return runDirectNeon(async () => {
+            const rawClient = getRawPrisma();
+            return await rawClient.$transaction(fnOrArray, options);
+          });
         }
         return null;
       };
@@ -982,40 +955,19 @@ export const prisma: PrismaClient = new Proxy({} as PrismaClient, {
 
     if (key === "$executeRawUnsafe" || key === "$executeRaw") {
       return async (...args: any[]) => {
-        const now = Date.now();
-        if (globalForPrisma.neonCircuitOpenUntil && now < globalForPrisma.neonCircuitOpenUntil) {
-          return executeMirrorRawExecute(args[0], args.slice(1));
-        }
-        try {
+        return runDirectNeon(async () => {
           const rawClient = getRawPrisma() as any;
-          const res = await rawClient[key](...args);
-          return res;
-        } catch (err: any) {
-          if (isNeonConnectionOrQuotaError(err)) {
-            globalForPrisma.neonCircuitOpenUntil = Date.now() + CIRCUIT_BREAKER_TTL_MS;
-            return executeMirrorRawExecute(args[0], args.slice(1));
-          }
-          throw err;
-        }
+          return await rawClient[key](...args);
+        });
       };
     }
 
     if (key === "$queryRawUnsafe" || key === "$queryRaw") {
       return async (...args: any[]) => {
-        const now = Date.now();
-        if (globalForPrisma.neonCircuitOpenUntil && now < globalForPrisma.neonCircuitOpenUntil) {
-          return executeMirrorRawQuery(args[0], args.slice(1));
-        }
-        try {
+        return runDirectNeon(async () => {
           const rawClient = getRawPrisma() as any;
           return await rawClient[key](...args);
-        } catch (err: any) {
-          if (isNeonConnectionOrQuotaError(err)) {
-            globalForPrisma.neonCircuitOpenUntil = Date.now() + CIRCUIT_BREAKER_TTL_MS;
-            return executeMirrorRawQuery(args[0], args.slice(1));
-          }
-          throw err;
-        }
+        });
       };
     }
 
@@ -1043,15 +995,6 @@ export async function withRetry<T>(fn: () => Promise<T>, retries = 1, delayMs = 
       return await fn();
     } catch (err: any) {
       lastError = err;
-      if (isNeonConnectionOrQuotaError(err)) {
-        globalForPrisma.neonCircuitOpenUntil = Date.now() + CIRCUIT_BREAKER_TTL_MS;
-        try {
-          return await fn();
-        } catch (innerErr) {
-          lastError = innerErr;
-          break;
-        }
-      }
       if (i < retries) {
         await new Promise((r) => setTimeout(r, delayMs * (i + 1)));
       }

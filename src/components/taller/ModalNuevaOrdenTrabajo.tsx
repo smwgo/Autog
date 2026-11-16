@@ -2952,7 +2952,7 @@ export default function ModalNuevaOrdenTrabajo({
                 <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-200/80 dark:border-white/10 pb-3">
                   <div className="flex items-center gap-2">
                     <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
-                    <h4 className="text-sm font-bold text-zinc-900 dark:text-white">
+                    <h4 className="text-sm font-bold text-zinc-500 dark:text-zinc-500">
                       Datos del Cliente
                     </h4>
                   </div>
@@ -2974,22 +2974,78 @@ export default function ModalNuevaOrdenTrabajo({
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                  <div className="sm:col-span-2">
-                    <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1 block">
-                      {tipoCliente === "Empresa" ? "Razón Social" : "Nombre y Apellidos"} <span className="text-rose-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={nuevoClienteNombre}
-                      onChange={(e) => setNuevoClienteNombre(e.target.value)}
-                      placeholder={tipoCliente === "Empresa" ? "Ej: Transportes Andinos S.A." : "Ej: Juan Carlos Pérez"}
-                      className="w-full h-11 px-3.5 rounded-xl bg-white dark:bg-black/50 border border-zinc-300 dark:border-white/15 focus:border-amber-500 text-zinc-900 dark:text-white text-sm font-semibold focus:outline-none"
-                      autoFocus
-                    />
+                  <div className="sm:col-span-2 flex items-end gap-3">
+                    <div className="relative shrink-0">
+                      <label
+                        title="Subir o cambiar foto de perfil del cliente"
+                        className="relative w-14 h-14 rounded-2xl border-2 border-dashed border-emerald-500/50 hover:border-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 dark:text-emerald-300 flex flex-col items-center justify-center transition-all cursor-pointer overflow-hidden group shadow-md active:scale-95"
+                      >
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={handleFotoClienteSeleccionada}
+                        />
+                        {nuevoClienteFoto ? (
+                          <div className="relative w-full h-full">
+                            <img
+                              src={nuevoClienteFoto}
+                              alt="Foto perfil cliente"
+                              className="w-full h-full object-cover"
+                            />
+                            {subiendoFotoCliente && (
+                              <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                                <div className="animate-spin rounded-full h-5 w-5 border-2 border-emerald-400 border-t-transparent" />
+                              </div>
+                            )}
+                            <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                              <span className="text-[10px] font-bold text-white bg-black/60 px-1.5 py-0.5 rounded">Cambiar</span>
+                            </div>
+                          </div>
+                        ) : subiendoFotoCliente ? (
+                          <div className="animate-spin rounded-full h-5 w-5 border-2 border-emerald-400 border-t-transparent" />
+                        ) : (
+                          <div className="flex flex-col items-center justify-center text-emerald-400 dark:text-emerald-300 group-hover:scale-105 transition-transform">
+                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                            <span className="text-[9px] font-bold mt-0.5 uppercase tracking-tighter">Foto</span>
+                          </div>
+                        )}
+                      </label>
+                      {nuevoClienteFoto && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setNuevoClienteFoto(null);
+                          }}
+                          title="Quitar foto de cliente"
+                          className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-rose-500 hover:bg-rose-600 text-white text-[10px] font-bold flex items-center justify-center shadow cursor-pointer transition-transform hover:scale-110 z-10"
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <label className="text-xs font-bold text-zinc-500 dark:text-zinc-500 mb-1 block">
+                        {tipoCliente === "Empresa" ? "Razón Social" : "Nombre y Apellidos"} <span className="text-rose-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={nuevoClienteNombre}
+                        onChange={(e) => setNuevoClienteNombre(e.target.value)}
+                        placeholder={tipoCliente === "Empresa" ? "Ej: Transportes Andinos S.A." : "Ej: Juan Carlos Pérez"}
+                        className="w-full h-11 px-3.5 rounded-xl bg-white dark:bg-black/50 border border-zinc-300 dark:border-white/15 focus:border-amber-500 text-zinc-900 dark:text-white text-sm font-semibold focus:outline-none"
+                        autoFocus
+                      />
+                    </div>
                   </div>
 
                   <div>
-                    <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1 block">
+                    <label className="text-xs font-bold text-zinc-500 dark:text-zinc-500 mb-1 block">
                       {tipoCliente === "Empresa" ? "RUC" : "Cédula / Documento"}
                     </label>
                     <input
@@ -3002,7 +3058,7 @@ export default function ModalNuevaOrdenTrabajo({
                   </div>
 
                   <div>
-                    <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1 block">
+                    <label className="text-xs font-bold text-zinc-500 dark:text-zinc-500 mb-1 block">
                       WhatsApp
                     </label>
                     <input
@@ -3015,7 +3071,7 @@ export default function ModalNuevaOrdenTrabajo({
                   </div>
 
                   <div>
-                    <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1 block">
+                    <label className="text-xs font-bold text-zinc-500 dark:text-zinc-500 mb-1 block">
                       Correo Electrónico
                     </label>
                     <input
@@ -3031,7 +3087,7 @@ export default function ModalNuevaOrdenTrabajo({
                   </div>
 
                   <div>
-                    <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1 block">
+                    <label className="text-xs font-bold text-zinc-500 dark:text-zinc-500 mb-1 block">
                       Dirección
                     </label>
                     <input
@@ -3040,73 +3096,6 @@ export default function ModalNuevaOrdenTrabajo({
                       onChange={(e) => setNuevoClienteDireccion(e.target.value)}
                       placeholder="Av. Principal y Calle Secundaria"
                       className="w-full h-11 px-3.5 rounded-xl bg-white dark:bg-black/50 border border-zinc-300 dark:border-white/15 focus:border-amber-500 text-zinc-900 dark:text-white text-sm font-medium focus:outline-none"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Tarjeta 2: Edición Directa de Vehículo en la misma vista */}
-              <div className="p-4 sm:p-5 rounded-2xl bg-zinc-50/90 dark:bg-zinc-900/40 border border-zinc-200/80 dark:border-white/10 space-y-4 shadow-xs">
-                <div className="flex items-center justify-between border-b border-zinc-200/80 dark:border-white/10 pb-3">
-                  <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-blue-500" />
-                    <h4 className="text-sm font-bold text-zinc-900 dark:text-white">
-                      Datos del Vehículo
-                    </h4>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
-                  <div>
-                    <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1 block">
-                      Placa <span className="text-rose-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={vehiculoPlaca}
-                      onChange={(e) => setVehiculoPlaca(e.target.value.toUpperCase())}
-                      placeholder="ABC-1234"
-                      className="w-full h-11 px-3.5 rounded-xl bg-white dark:bg-black/50 border border-zinc-300 dark:border-white/15 focus:border-amber-500 text-zinc-900 dark:text-white font-mono text-sm font-bold uppercase tracking-wider focus:outline-none"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1 block">
-                      Marca
-                    </label>
-                    <input
-                      type="text"
-                      value={vehiculoMarca}
-                      onChange={(e) => setVehiculoMarca(e.target.value)}
-                      placeholder="Ej: Skoda, Toyota..."
-                      className="w-full h-11 px-3.5 rounded-xl bg-white dark:bg-black/50 border border-zinc-300 dark:border-white/15 focus:border-amber-500 text-zinc-900 dark:text-white text-sm font-semibold focus:outline-none"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1 block">
-                      Modelo
-                    </label>
-                    <input
-                      type="text"
-                      value={vehiculoModelo}
-                      onChange={(e) => setVehiculoModelo(e.target.value)}
-                      placeholder="Ej: Fabia, Hilux..."
-                      className="w-full h-11 px-3.5 rounded-xl bg-white dark:bg-black/50 border border-zinc-300 dark:border-white/15 focus:border-amber-500 text-zinc-900 dark:text-white text-sm font-semibold focus:outline-none"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1 block">
-                      Año
-                    </label>
-                    <input
-                      type="text"
-                      value={vehiculoAnio}
-                      onChange={(e) => setVehiculoAnio(e.target.value)}
-                      placeholder="2026"
-                      maxLength={4}
-                      className="w-full h-11 px-3.5 rounded-xl bg-white dark:bg-black/50 border border-zinc-300 dark:border-white/15 focus:border-amber-500 text-zinc-900 dark:text-white font-mono text-sm font-bold focus:outline-none"
                     />
                   </div>
                 </div>
@@ -3903,102 +3892,151 @@ export default function ModalNuevaOrdenTrabajo({
               <div className="flex items-center justify-between border-b border-zinc-200/80 dark:border-white/10 pb-3">
                 <div className="flex items-center gap-2">
                   <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
-                  <h4 className="text-sm font-bold text-zinc-900 dark:text-white">
+                  <h4 className="text-sm font-bold text-zinc-500 dark:text-zinc-500">
                     Editar Vehículo de la Orden
                   </h4>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => abrirFlotanteVehiculo("marca")}
-                  className="text-xs text-blue-600 dark:text-blue-400 hover:underline font-semibold cursor-pointer"
-                >
-                  Elegir de catálogo →
-                </button>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
-                <div>
-                  <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1 block">
-                    🔢 Placa del Vehículo <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={vehiculoPlaca}
-                    onChange={(e) => setVehiculoPlaca(e.target.value.toUpperCase())}
-                    placeholder="Ej: ABC-1234"
-                    className="w-full h-11 px-3.5 rounded-xl bg-white dark:bg-black/50 border border-zinc-300 dark:border-white/15 focus:border-amber-500 text-zinc-900 dark:text-white font-mono text-sm font-bold uppercase tracking-wider focus:outline-none"
-                    autoFocus
-                  />
-                </div>
-
-                <div>
-                  <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1 block">
-                    🏷️ Marca
-                  </label>
-                  <input
-                    type="text"
-                    value={vehiculoMarca}
-                    onChange={(e) => setVehiculoMarca(e.target.value)}
-                    placeholder="Ej: Skoda, Toyota..."
-                    className="w-full h-11 px-3.5 rounded-xl bg-white dark:bg-black/50 border border-zinc-300 dark:border-white/15 focus:border-amber-500 text-zinc-900 dark:text-white text-sm font-semibold focus:outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1 block">
-                    🚘 Modelo
-                  </label>
-                  <input
-                    type="text"
-                    value={vehiculoModelo}
-                    onChange={(e) => setVehiculoModelo(e.target.value)}
-                    placeholder="Ej: Fabia, Hilux..."
-                    className="w-full h-11 px-3.5 rounded-xl bg-white dark:bg-black/50 border border-zinc-300 dark:border-white/15 focus:border-amber-500 text-zinc-900 dark:text-white text-sm font-semibold focus:outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1 block">
-                    📅 Año
-                  </label>
-                  <input
-                    type="text"
-                    value={vehiculoAnio}
-                    onChange={(e) => setVehiculoAnio(e.target.value)}
-                    placeholder="2026"
-                    maxLength={4}
-                    className="w-full h-11 px-3.5 rounded-xl bg-white dark:bg-black/50 border border-zinc-300 dark:border-white/15 focus:border-amber-500 text-zinc-900 dark:text-white font-mono text-sm font-bold focus:outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1 block">
-                    🛣️ Kilometraje (km)
-                  </label>
-                  <input
-                    type="number"
-                    value={vehiculoKm}
-                    onChange={(e) => setVehiculoKm(e.target.value)}
-                    placeholder="Ej: 45000"
-                    className="w-full h-11 px-3.5 rounded-xl bg-white dark:bg-black/50 border border-zinc-300 dark:border-white/15 focus:border-amber-500 text-zinc-900 dark:text-white font-mono text-sm font-bold focus:outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1 block">
-                    🚗 Tipo de Vehículo
-                  </label>
-                  <select
-                    value={vehiculoTipo}
-                    onChange={(e) => setVehiculoTipo(e.target.value)}
-                    className="w-full h-11 px-3.5 rounded-xl bg-white dark:bg-black/50 border border-zinc-300 dark:border-white/15 focus:border-amber-500 text-zinc-900 dark:text-white text-sm font-semibold focus:outline-none"
+              <div className="flex flex-col sm:flex-row sm:items-start gap-4">
+                <div className="relative shrink-0 self-start">
+                  <label
+                    title="Subir o cambiar foto del vehículo"
+                    className="relative w-16 h-16 rounded-2xl border-2 border-dashed border-blue-500/50 hover:border-blue-400 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 dark:text-blue-300 flex flex-col items-center justify-center transition-all cursor-pointer overflow-hidden group shadow-md active:scale-95"
                   >
-                    {["Auto", "SUV", "Camioneta", "Moto", "Camión"].map((t) => (
-                      <option key={t} value={t}>
-                        {t}
-                      </option>
-                    ))}
-                  </select>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleFotoVehiculoSeleccionada}
+                    />
+                    {vehiculoFoto ? (
+                      <div className="relative w-full h-full">
+                        <img
+                          src={vehiculoFoto}
+                          alt="Foto perfil vehículo"
+                          className="w-full h-full object-cover"
+                        />
+                        {subiendoFotoVehiculo && (
+                          <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                            <div className="animate-spin rounded-full h-5 w-5 border-2 border-blue-400 border-t-transparent" />
+                          </div>
+                        )}
+                        <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                          <span className="text-[10px] font-bold text-white bg-black/60 px-1.5 py-0.5 rounded">Cambiar</span>
+                        </div>
+                      </div>
+                    ) : subiendoFotoVehiculo ? (
+                      <div className="animate-spin rounded-full h-5 w-5 border-2 border-blue-400 border-t-transparent" />
+                    ) : (
+                      <div className="flex flex-col items-center justify-center text-blue-400 dark:text-blue-300 group-hover:scale-105 transition-transform">
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        <span className="text-[9px] font-bold mt-0.5 uppercase tracking-tighter">Foto</span>
+                      </div>
+                    )}
+                  </label>
+                  {vehiculoFoto && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setVehiculoFoto(null);
+                      }}
+                      title="Quitar foto de vehículo"
+                      className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-rose-500 hover:bg-rose-600 text-white text-[10px] font-bold flex items-center justify-center shadow cursor-pointer transition-transform hover:scale-110 z-10"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+                  <div>
+                    <label className="text-xs font-bold text-zinc-500 dark:text-zinc-500 mb-1 block">
+                      🔢 Placa del Vehículo <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={vehiculoPlaca}
+                      onChange={(e) => setVehiculoPlaca(e.target.value.toUpperCase())}
+                      placeholder="Ej: ABC-1234"
+                      className="w-full h-11 px-3.5 rounded-xl bg-white dark:bg-black/50 border border-zinc-300 dark:border-white/15 focus:border-amber-500 text-zinc-900 dark:text-white font-mono text-sm font-bold uppercase tracking-wider focus:outline-none"
+                      autoFocus
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-bold text-zinc-500 dark:text-zinc-500 mb-1 block">
+                      🏷️ Marca
+                    </label>
+                    <input
+                      type="text"
+                      value={vehiculoMarca}
+                      onChange={(e) => setVehiculoMarca(e.target.value)}
+                      placeholder="Ej: Skoda, Toyota..."
+                      className="w-full h-11 px-3.5 rounded-xl bg-white dark:bg-black/50 border border-zinc-300 dark:border-white/15 focus:border-amber-500 text-zinc-900 dark:text-white text-sm font-semibold focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-bold text-zinc-500 dark:text-zinc-500 mb-1 block">
+                      🚘 Modelo
+                    </label>
+                    <input
+                      type="text"
+                      value={vehiculoModelo}
+                      onChange={(e) => setVehiculoModelo(e.target.value)}
+                      placeholder="Ej: Fabia, Hilux..."
+                      className="w-full h-11 px-3.5 rounded-xl bg-white dark:bg-black/50 border border-zinc-300 dark:border-white/15 focus:border-amber-500 text-zinc-900 dark:text-white text-sm font-semibold focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-bold text-zinc-500 dark:text-zinc-500 mb-1 block">
+                      📅 Año
+                    </label>
+                    <input
+                      type="text"
+                      value={vehiculoAnio}
+                      onChange={(e) => setVehiculoAnio(e.target.value)}
+                      placeholder="2026"
+                      maxLength={4}
+                      className="w-full h-11 px-3.5 rounded-xl bg-white dark:bg-black/50 border border-zinc-300 dark:border-white/15 focus:border-amber-500 text-zinc-900 dark:text-white font-mono text-sm font-bold focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-bold text-zinc-500 dark:text-zinc-500 mb-1 block">
+                      🛣️ Kilometraje (km)
+                    </label>
+                    <input
+                      type="number"
+                      value={vehiculoKm}
+                      onChange={(e) => setVehiculoKm(e.target.value)}
+                      placeholder="Ej: 45000"
+                      className="w-full h-11 px-3.5 rounded-xl bg-white dark:bg-black/50 border border-zinc-300 dark:border-white/15 focus:border-amber-500 text-zinc-900 dark:text-white font-mono text-sm font-bold focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-bold text-zinc-500 dark:text-zinc-500 mb-1 block">
+                      🚗 Tipo de Vehículo
+                    </label>
+                    <select
+                      value={vehiculoTipo}
+                      onChange={(e) => setVehiculoTipo(e.target.value)}
+                      className="w-full h-11 px-3.5 rounded-xl bg-white dark:bg-black/50 border border-zinc-300 dark:border-white/15 focus:border-amber-500 text-zinc-900 dark:text-white text-sm font-semibold focus:outline-none"
+                    >
+                      {["Auto", "SUV", "Camioneta", "Moto", "Camión"].map((t) => (
+                        <option key={t} value={t}>
+                          {t}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
               </div>
             </div>
@@ -5817,17 +5855,19 @@ export default function ModalNuevaOrdenTrabajo({
 
               </div>
 
-              {/* Botón para continuar al Paso 4 */}
-              <div className="pt-1 flex justify-end">
-                <button
-                  type="button"
-                  onClick={() => irAPaso(4)}
-                  className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs sm:text-sm transition-all cursor-pointer flex items-center gap-2 shadow-lg shadow-blue-600/30 active:scale-95"
-                >
-                  <span>Continuar</span>
-                  <span>→</span>
-                </button>
-              </div>
+              {/* Botón para continuar al Paso 4 (oculto en Editar Ingreso) */}
+              {!editOrderId && (
+                <div className="pt-1 flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => irAPaso(4)}
+                    className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs sm:text-sm transition-all cursor-pointer flex items-center gap-2 shadow-lg shadow-blue-600/30 active:scale-95"
+                  >
+                    <span>Continuar</span>
+                    <span>→</span>
+                  </button>
+                </div>
+              )}
             </div>
           )}
 
@@ -5836,87 +5876,6 @@ export default function ModalNuevaOrdenTrabajo({
               ================================================================= */}
           {pasoActivo === 4 && (
             <div className="space-y-5 animate-fade-in">
-              {/* Tarjeta Resumen Consolidada de Cliente, Auto e Ingreso */}
-              <div className="p-4 rounded-2xl bg-zinc-50/70 dark:bg-white/[0.03] border border-zinc-200 dark:border-white/10 space-y-3 text-xs shadow-xs">
-                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-200 dark:border-white/10 pb-2.5">
-                  <div className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500 dark:bg-emerald-400" />
-                    <span className="font-bold text-zinc-900 dark:text-white uppercase text-[11px] tracking-wider">
-                      Resumen
-                    </span>
-                  </div>
-
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => irAPaso(1)}
-                      title="Editar cliente"
-                      className="px-2 py-0.5 rounded-lg bg-zinc-200/70 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-[10px] font-medium text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white cursor-pointer transition-colors"
-                    >
-                      👤 Cliente
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => irAPaso(2)}
-                      title="Editar vehículo"
-                      className="px-2 py-0.5 rounded-lg bg-zinc-200/70 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-[10px] font-medium text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white cursor-pointer transition-colors"
-                    >
-                      🚗 Auto
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => irAPaso(3)}
-                      title="Editar motivo/ingreso"
-                      className="px-2 py-0.5 rounded-lg bg-zinc-200/70 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-[10px] font-medium text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white cursor-pointer transition-colors"
-                    >
-                      📝 Ingreso
-                    </button>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div className="space-y-0.5">
-                    <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400 block">Cliente</span>
-                    <strong className="text-sm sm:text-base font-bold text-zinc-900 dark:text-white block truncate">
-                      {(() => {
-                        const raw = (clienteSeleccionado?.name || nuevoClienteNombre || "").trim();
-                        return !raw || raw.toLowerCase().includes("consumidor final") || raw.toLowerCase().includes("cliente mostrador")
-                          ? "Sin cliente"
-                          : raw;
-                      })()}
-                    </strong>
-                    <span className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-400 font-mono block">
-                      {(() => {
-                        const rawId = (clienteSeleccionado?.identification || nuevoClienteIdentificacion || "").trim();
-                        return !rawId || rawId === "9999999999" || rawId === "9999999999999" ? "Sin cédula/RUC" : rawId;
-                      })()}
-                    </span>
-                  </div>
-
-                  <div className="space-y-0.5">
-                    <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400 block">Vehículo</span>
-                    <strong className="text-sm sm:text-base font-bold text-zinc-900 dark:text-white block truncate">
-                      {(() => {
-                        const marca = vehiculoMarca && !vehiculoMarca.toLowerCase().includes("atención rápida") && !vehiculoMarca.toLowerCase().includes("atencion rapida") && vehiculoMarca !== "EXPRESS" ? vehiculoMarca : "";
-                        const modelo = vehiculoModelo && !vehiculoModelo.toLowerCase().includes("atención rápida") && !vehiculoModelo.toLowerCase().includes("atencion rapida") && vehiculoModelo !== "EXPRESS" ? vehiculoModelo : "";
-                        const combo = `${marca} ${modelo}`.trim();
-                        return combo || "Sin vehículo";
-                      })()}
-                    </strong>
-                    <span className="text-xs sm:text-sm text-emerald-600 dark:text-emerald-400 font-mono font-bold block">
-                      {vehiculoPlaca && vehiculoPlaca !== "EXPRESS" ? vehiculoPlaca : "SIN PLACA"} {vehiculoKm ? `• ${vehiculoKm} Km` : ""}
-                    </span>
-                  </div>
-
-                  <div className="space-y-0.5">
-                    <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400 block">Motivo / Trabajo</span>
-                    <p className="text-xs sm:text-sm font-medium text-zinc-800 dark:text-zinc-200 line-clamp-2">
-                      {motivoIngreso || "Ingreso a revisión / servicio"}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
               {/* Formulario de Asignación de Técnicos */}
               <div className="space-y-2 text-xs">
                 <div className="flex items-center justify-between">
@@ -6019,11 +5978,14 @@ export default function ModalNuevaOrdenTrabajo({
                       type="text"
                       value={busquedaTecnico}
                       onChange={(e) => {
-                        setBusquedaTecnico(e.target.value);
-                        setMostrarDropdownTecnicos(true);
+                        const val = e.target.value;
+                        setBusquedaTecnico(val);
+                        setMostrarDropdownTecnicos(val.trim().length > 0);
                       }}
                       onFocus={() => {
-                        setMostrarDropdownTecnicos(true);
+                        if (busquedaTecnico.trim().length > 0) {
+                          setMostrarDropdownTecnicos(true);
+                        }
                       }}
                       placeholder="Buscar..."
                       className="w-full h-11 pl-10 pr-16 rounded-xl bg-white dark:bg-black/40 border border-zinc-300 dark:border-white/15 focus:border-blue-500 text-zinc-900 dark:text-white text-xs sm:text-sm placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none transition-all cursor-text shadow-xs"
@@ -6049,7 +6011,7 @@ export default function ModalNuevaOrdenTrabajo({
                           onClick={() => {
                             setBusquedaTecnico("");
                             setFlotanteTecnicoSeleccionado("");
-                            setMostrarDropdownTecnicos(true);
+                            setMostrarDropdownTecnicos(false);
                           }}
                           className="text-zinc-400 hover:text-zinc-900 dark:hover:text-white cursor-pointer p-1 text-xs"
                           title="Borrar nombre"
@@ -6074,8 +6036,8 @@ export default function ModalNuevaOrdenTrabajo({
                     </div>
                   </div>
 
-                  {/* Dropdown flotante con los técnicos */}
-                  {mostrarDropdownTecnicos && (
+                  {/* Dropdown flotante con los técnicos (solo al buscar) */}
+                  {mostrarDropdownTecnicos && busquedaTecnico.trim().length > 0 && (
                     <div className="absolute left-0 right-0 top-full mt-1.5 z-50 bg-white dark:bg-[#16161b] border border-zinc-200 dark:border-white/15 rounded-2xl shadow-2xl overflow-hidden max-h-48 overflow-y-auto">
                       {mecanicosFiltrados.length > 0 ? (
                         <div className="p-1 space-y-0.5">

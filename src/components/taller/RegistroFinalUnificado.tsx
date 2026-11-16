@@ -58,40 +58,40 @@ const ORDEN_CICLO_MODULOS: ModuloEspecialidad[] = [
 
 const SERVICIOS_RAPIDOS_POR_MODULO: Record<ModuloEspecialidad, string[]> = {
   taller: [
-    "Cambio de aceite",
-    "Cambio de amortiguadores delanteros",
-    "Cambio de amortiguadores posteriores",
-    "Cambio de ruliman delantero",
-    "Cambio de ruliman posterior",
-    "Cambio de aceite de caja",
-    "Cambio de aceite corona",
+    "Aceite motor",
+    "Amort. delanteros",
+    "Amort. posteriores",
+    "Rulimán delantero",
+    "Rulimán posterior",
+    "Aceite de caja",
+    "Aceite corona",
   ],
   lubricentro: [
-    "Cambio de aceite",
-    "Cambio de aceite de caja",
-    "Cambio de aceite corona",
+    "Aceite motor",
+    "Aceite de caja",
+    "Aceite corona",
     "Lavado completo",
-    "Lavado completo mas grafito",
+    "Lavado + grafito",
     "Lavado exterior",
-    "Aspirador interior",
-    "Limpieza tapicería más lavado",
+    "Aspirado",
+    "Tapicería + lavado",
     "Lavado chasis",
   ],
   carwash: [
     "Lavado completo",
-    "Lavado completo mas grafito",
+    "Lavado + grafito",
     "Lavado exterior",
-    "Aspirador interior",
-    "Limpieza tapicería más lavado",
+    "Aspirado",
+    "Tapicería + lavado",
     "Lavado chasis",
   ],
   tecnicentro: [
     "Alineación",
     "Balanceo",
     "Rotación",
-    "Corrección caída",
-    "Corrección camber",
-    "Corrección caster",
+    "Caída",
+    "Camber",
+    "Caster",
   ],
 };
 
@@ -472,6 +472,17 @@ export default function RegistroFinalUnificado({
   const [modalCarritoAbierto, setModalCarritoAbierto] = useState(false);
   const [modalRapidoAbierto, setModalRapidoAbierto] = useState(false);
   const [busquedaRapido, setBusquedaRapido] = useState("");
+  const [modoManualRapido, setModoManualRapido] = useState(false);
+  const [textoManualRapido, setTextoManualRapido] = useState("");
+  const [customRapidosPorModulo, setCustomRapidosPorModulo] = useState<Record<string, string[]>>(() => {
+    if (typeof window === "undefined") return {};
+    try {
+      const raw = localStorage.getItem("autog_rapidos_custom_v1");
+      return raw ? JSON.parse(raw) : {};
+    } catch {
+      return {};
+    }
+  });
   const [subiendoArchivo, setSubiendoArchivo] = useState(false);
   const [grabandoAudio, setGrabandoAudio] = useState(false);
   const [segundosAudio, setSegundosAudio] = useState(0);
@@ -489,6 +500,7 @@ export default function RegistroFinalUnificado({
   const audioChunksRef = useRef<Blob[]>([]);
   const audioTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const pcMicSessionIdRef = useRef<string | null>(null);
+  const persistItemsSeqRef = useRef<number>(0);
 
   const metaModulo = MODULO_META[moduloActivo] || MODULO_META.taller;
   const itemsOrden: any[] = Array.isArray(ordenActiva?.items) ? ordenActiva.items : [];
@@ -500,6 +512,11 @@ export default function RegistroFinalUnificado({
 
   const persistirItems = async (nuevosItems: any[]) => {
     if (!ordenActiva) return;
+    const seq = ++persistItemsSeqRef.current;
+    const ordenAnterior = ordenActiva;
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("autog-local-mutation"));
+    }
     const totalCost = nuevosItems.reduce(
       (sum: number, it: any) => sum + (Number(it.price) || 0) * (Number(it.qty) || 1),
       0
@@ -520,11 +537,24 @@ export default function RegistroFinalUnificado({
           }),
         });
         const data = await res.json().catch(() => null);
-        if (data?.success && data.activeOrder) {
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("autog-local-mutation"));
+        }
+        if (seq !== persistItemsSeqRef.current) {
+          return;
+        }
+        if (res.ok && data?.success && data.activeOrder) {
           onUpdateOrden(data.activeOrder);
+        } else {
+          onUpdateOrden(ordenAnterior);
+          mostrarToast?.(data?.error || "Error al guardar los ítems en Neon", "err");
         }
       } catch (err) {
         console.error("Error al sincronizar ítems:", err);
+        if (seq === persistItemsSeqRef.current) {
+          onUpdateOrden(ordenAnterior);
+          mostrarToast?.("Error de conexión con Neon al guardar los ítems", "err");
+        }
       }
     }
   };
@@ -799,6 +829,77 @@ export default function RegistroFinalUnificado({
     mostrarToast?.(`Agregado (${metaModulo.label}): ${item.name}`, "ok");
   };
 
+  const handleAgregarVariosRapidos = async (
+    items: Array<{ id?: string; code?: string; name: string; price?: number; isManual?: boolean }>
+  ) => {
+    if (items.length === 0) return;
+    let nuevosItems = [...itemsOrden];
+    for (const item of items) {
+      const idxExistente = nuevosItems.findIndex(
+        (x: any) =>
+          x.type === "SERVICE" &&
+          ((item.id && (x.productId === item.id || x.id === item.id)) ||
+            (item.code && x.code === item.code) ||
+            x.name?.toLowerCase() === item.name.toLowerCase()) &&
+          (x.category || metaModulo.label) === metaModulo.label
+      );
+      if (idxExistente >= 0) {
+        nuevosItems = nuevosItems.map((x: any, i: number) =>
+          i === idxExistente ? { ...x, qty: (Number(x.qty) || 1) + 1 } : x
+        );
+      } else {
+        nuevosItems.push({
+          id: `${item.isManual ? "reg" : "srv"}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+          code: item.code || `SRV-${Date.now().toString(36).slice(-4).toUpperCase()}`,
+          name: item.name,
+          category: metaModulo.label,
+          type: "SERVICE",
+          price: Number(item.price) || 0,
+          qty: 1,
+          status: "Pendiente",
+          isManual: Boolean(item.isManual),
+        });
+      }
+    }
+    await persistirItems(nuevosItems);
+    mostrarToast?.(
+      items.length === 1
+        ? `Agregado (${metaModulo.label}): ${items[0].name}`
+        : `${items.length} servicios agregados (${metaModulo.label})`,
+      "ok"
+    );
+  };
+
+  const guardarCustomRapido = (nombre: string) => {
+    const limpio = nombre.trim();
+    if (!limpio) return;
+    setCustomRapidosPorModulo((prev) => {
+      const actuales = Array.isArray(prev[moduloActivo]) ? prev[moduloActivo] : [];
+      if (actuales.some((x) => x.toLowerCase() === limpio.toLowerCase())) return prev;
+      const base = SERVICIOS_RAPIDOS_POR_MODULO[moduloActivo] || [];
+      if (base.some((x) => x.toLowerCase() === limpio.toLowerCase())) return prev;
+      const next = { ...prev, [moduloActivo]: [...actuales, limpio] };
+      try {
+        localStorage.setItem("autog_rapidos_custom_v1", JSON.stringify(next));
+      } catch { }
+      return next;
+    });
+  };
+
+  const eliminarCustomRapido = (nombre: string) => {
+    setCustomRapidosPorModulo((prev) => {
+      const actuales = Array.isArray(prev[moduloActivo]) ? prev[moduloActivo] : [];
+      const next = {
+        ...prev,
+        [moduloActivo]: actuales.filter((x) => x.toLowerCase() !== nombre.toLowerCase()),
+      };
+      try {
+        localStorage.setItem("autog_rapidos_custom_v1", JSON.stringify(next));
+      } catch { }
+      return next;
+    });
+  };
+
   const detenerCamaraPc = () => {
     if (streamCamaraPcRef.current) {
       streamCamaraPcRef.current.getTracks().forEach((t) => t.stop());
@@ -866,33 +967,20 @@ export default function RegistroFinalUnificado({
     let inicioBrowserOk = false;
     let inicioPcNatOk = false;
 
-    // 1. En PC Windows, iniciar grabador nativo del servidor como respaldo / canal directo
-    if (!esMovil) {
-      const sessionId = `rfu_${Date.now()}`;
-      try {
-        const res = await fetch("/api/taller/pc-mic", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ action: "start", sessionId, skipTranscribe: true }),
-        });
-        const data = await res.json();
-        if (res.ok && data?.success) {
-          pcMicSessionIdRef.current = sessionId;
-          inicioPcNatOk = true;
-        }
-      } catch {
-        // Ignorar si no es servidor Windows local
-      }
-    }
-
-    // 2. Intentar MediaRecorder del navegador (PC y Móvil)
+    // 1. Intentar MediaRecorder del navegador primero (PC y Móvil, sin latencia de red)
     if (
       typeof navigator !== "undefined" &&
       navigator.mediaDevices?.getUserMedia &&
       typeof MediaRecorder !== "undefined"
     ) {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            channelCount: 1,
+          },
+        });
         const candidatosMime = [
           "audio/webm;codecs=opus",
           "audio/webm",
@@ -908,9 +996,18 @@ export default function RegistroFinalUnificado({
             }
           }) || "";
 
-        const recorder = mimeSoportado
-          ? new MediaRecorder(stream, { mimeType: mimeSoportado })
-          : new MediaRecorder(stream);
+        // Bitrate optimizado para voz (24 kbps) para reducir peso y acelerar subida
+        let recorder: MediaRecorder;
+        try {
+          recorder = new MediaRecorder(stream, {
+            ...(mimeSoportado ? { mimeType: mimeSoportado } : {}),
+            audioBitsPerSecond: 24000,
+          });
+        } catch {
+          recorder = mimeSoportado
+            ? new MediaRecorder(stream, { mimeType: mimeSoportado })
+            : new MediaRecorder(stream);
+        }
         audioChunksRef.current = [];
 
         recorder.ondataavailable = (ev) => {
@@ -918,10 +1015,29 @@ export default function RegistroFinalUnificado({
         };
 
         mediaRecorderRef.current = recorder;
-        recorder.start(250);
+        recorder.start(500);
         inicioBrowserOk = true;
       } catch {
-        // Si falla getUserMedia en PC pero inicioPcNatOk es true, sigue con el micrófono nativo de PC
+        // Si falla getUserMedia en PC, intentar grabador nativo del servidor como respaldo
+      }
+    }
+
+    // 2. Respaldo en PC Windows solo si el navegador no pudo abrir el micrófono
+    if (!inicioBrowserOk && !esMovil) {
+      const sessionId = `rfu_${Date.now()}`;
+      try {
+        const res = await fetch("/api/taller/pc-mic", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "start", sessionId, skipTranscribe: true }),
+        });
+        const data = await res.json();
+        if (res.ok && data?.success) {
+          pcMicSessionIdRef.current = sessionId;
+          inicioPcNatOk = true;
+        }
+      } catch {
+        // Ignorar si no es servidor Windows local
       }
     }
 
@@ -957,9 +1073,12 @@ export default function RegistroFinalUnificado({
   };
 
   const handleEliminarItem = async (it: any) => {
-    const nuevos = itemsOrden.filter(
-      (x: any) => !(x.id === it.id && x.code === it.code && x.name === it.name)
-    );
+    const nuevos = itemsOrden.filter((x: any) => {
+      if (x === it) return false;
+      if (it.id && x.id === it.id) return false;
+      if (it.code && x.code === it.code && x.name === it.name) return false;
+      return true;
+    });
     await persistirItems(nuevos);
     mostrarToast?.(`Eliminado: ${it.name || it.fullName}`, "ok");
   };
@@ -984,18 +1103,28 @@ export default function RegistroFinalUnificado({
 
   const serviciosRapidosFiltrados = useMemo(() => {
     const PRECIOS_RAPIDOS: Record<string, number> = {
+      "aceite motor": 10,
       "cambio de aceite": 10,
+      "amort. delanteros": 25,
       "cambio de amortiguadores delanteros": 25,
+      "amort. posteriores": 20,
       "cambio de amortiguadores posteriores": 20,
+      "rulimán delantero": 20,
       "cambio de ruliman delantero": 20,
+      "rulimán posterior": 20,
       "cambio de ruliman posterior": 20,
+      "aceite de caja": 10,
       "cambio de aceite de caja": 10,
+      "aceite corona": 10,
       "cambio de aceite corona": 10,
       "lavado completo": 12,
+      "lavado + grafito": 15,
       "lavado completo mas grafito": 15,
       "lavado completo más grafito": 15,
       "lavado exterior": 6,
+      "aspirado": 5,
       "aspirador interior": 5,
+      "tapicería + lavado": 45,
       "limpieza tapicería más lavado": 45,
       "limpieza tapiceria mas lavado": 45,
       "lavado chasis": 10,
@@ -1004,15 +1133,26 @@ export default function RegistroFinalUnificado({
       "balanceo": 12,
       "rotación": 8,
       "rotacion": 8,
+      "caída": 20,
       "corrección caída": 20,
       "correccion caida": 20,
+      "camber": 20,
       "corrección camber": 20,
       "correccion camber": 20,
+      "caster": 20,
       "corrección caster": 20,
       "correccion caster": 20,
     };
     const q = busquedaRapido.trim().toLowerCase();
-    const presets = (SERVICIOS_RAPIDOS_POR_MODULO[moduloActivo] || []).map((name, i) => {
+    const baseList = SERVICIOS_RAPIDOS_POR_MODULO[moduloActivo] || [];
+    const customList = Array.isArray(customRapidosPorModulo[moduloActivo])
+      ? customRapidosPorModulo[moduloActivo]
+      : [];
+    const combinados = [
+      ...baseList.map((name) => ({ name, isCustom: false })),
+      ...customList.map((name) => ({ name, isCustom: true })),
+    ];
+    const presets = combinados.map(({ name, isCustom }, i) => {
       const norm = name.trim().toLowerCase();
       const enCat = Array.isArray(serviciosCatalogo)
         ? serviciosCatalogo.find((s: any) => String(s?.name || "").trim().toLowerCase() === norm)
@@ -1023,10 +1163,11 @@ export default function RegistroFinalUnificado({
         name,
         code: `RAP-${i + 1}`,
         price: precioFinal,
+        isCustom,
       };
     });
     return presets.filter((s) => !q || s.name.toLowerCase().includes(q));
-  }, [busquedaRapido, moduloActivo, serviciosCatalogo]);
+  }, [busquedaRapido, moduloActivo, serviciosCatalogo, customRapidosPorModulo]);
 
   if (!ordenActiva) return null;
 
@@ -1279,13 +1420,13 @@ export default function RegistroFinalUnificado({
               </div>
 
               <CatalogoProductosServiciosTaller
-                itemsSeleccionados={itemsOrden}
+                itemsSeleccionados={[]}
                 onAgregarItem={(item, delta = 1) => {
                   const idxExistente = itemsOrden.findIndex(
                     (x: any) =>
                       (item.id && (x.id === item.id || x.productId === item.id)) ||
                       (item.code && x.code === item.code) ||
-                      x.name?.toLowerCase() === item.name?.toLowerCase()
+                      (!item.id && !item.code && x.name?.toLowerCase() === item.name?.toLowerCase())
                   );
                   let nuevosItems: any[];
                   if (idxExistente >= 0) {
@@ -1302,8 +1443,8 @@ export default function RegistroFinalUnificado({
                       item.category && item.category !== "General"
                         ? item.category
                         : item.type === "PART"
-                        ? "Taller"
-                        : metaModulo.label;
+                          ? "Taller"
+                          : metaModulo.label;
                     nuevosItems = [
                       ...itemsOrden,
                       {
@@ -1319,6 +1460,7 @@ export default function RegistroFinalUnificado({
                     return;
                   }
                   void persistirItems(nuevosItems);
+                  setModalCarritoAbierto(false);
                 }}
                 onEliminarItem={(itemId) => {
                   const nuevos = itemsOrden.filter(
@@ -1365,22 +1507,118 @@ export default function RegistroFinalUnificado({
                 </button>
               </div>
 
-              <input
-                type="text"
-                value={busquedaRapido}
-                onChange={(e) => setBusquedaRapido(e.target.value)}
-                placeholder="Buscar servicio rápido..."
-                autoFocus
-                className="w-full rounded-xl bg-zinc-50 dark:bg-white/[0.04] border border-zinc-200 dark:border-white/10 px-3 py-2 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-violet-500"
-              />
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={busquedaRapido}
+                  onChange={(e) => setBusquedaRapido(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && busquedaRapido.trim()) {
+                      e.preventDefault();
+                      const limpio = busquedaRapido.trim();
+                      const exacto = serviciosRapidosFiltrados.find(
+                        (s: any) => String(s.name || "").trim().toLowerCase() === limpio.toLowerCase()
+                      );
+                      void handleAgregarVariosRapidos([
+                        exacto
+                          ? { id: exacto.id, code: exacto.code, name: exacto.name, price: exacto.price }
+                          : { name: limpio, price: 0, isManual: true },
+                      ]);
+                      if (!exacto) guardarCustomRapido(limpio);
+                      setBusquedaRapido("");
+                    }
+                  }}
+                  placeholder="Buscar o añadir..."
+                  autoFocus
+                  className="flex-1 min-w-0 rounded-xl bg-zinc-50 dark:bg-white/[0.04] border border-zinc-200 dark:border-white/10 px-3 py-2 text-base sm:text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-violet-500"
+                />
+                <button
+                  type="button"
+                  onClick={() => setModoManualRapido((prev) => !prev)}
+                  className={`px-3 py-2 rounded-xl border text-xs font-semibold flex items-center gap-1.5 shrink-0 cursor-pointer transition-all active:scale-95 ${modoManualRapido
+                    ? "bg-amber-500/20 border-amber-500/50 text-amber-700 dark:text-amber-300"
+                    : "bg-zinc-100 dark:bg-white/[0.05] border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200/70 dark:hover:bg-white/10"
+                    }`}
+                  title="Marcar para añadir servicios manuales"
+                >
+                  <span
+                    className={`w-3.5 h-3.5 rounded flex items-center justify-center text-[10px] border ${modoManualRapido
+                      ? "bg-amber-500 border-amber-500 text-black font-black"
+                      : "border-zinc-400 dark:border-zinc-500"
+                      }`}
+                  >
+                    {modoManualRapido ? "✓" : ""}
+                  </span>
+                  <span>Manual</span>
+                </button>
+              </div>
+
+              {modoManualRapido && (
+                <div className="p-2.5 rounded-xl border border-amber-500/35 bg-amber-500/10 space-y-2 animate-fade-in">
+                  <div className="flex items-stretch gap-2">
+                    <input
+                      type="text"
+                      value={textoManualRapido}
+                      onChange={(e) => setTextoManualRapido(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && textoManualRapido.trim()) {
+                          e.preventDefault();
+                          const limpio = textoManualRapido.trim();
+                          void handleAgregarVariosRapidos([{ name: limpio, price: 0, isManual: true }]);
+                          guardarCustomRapido(limpio);
+                          setTextoManualRapido("");
+                        }
+                      }}
+                      placeholder="Escribe servicio manual..."
+                      className="flex-1 min-w-0 rounded-xl bg-white dark:bg-black/40 border border-amber-500/30 px-3 py-2 text-base sm:text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-amber-500"
+                    />
+                    <button
+                      type="button"
+                      disabled={!textoManualRapido.trim()}
+                      onClick={() => {
+                        const limpio = textoManualRapido.trim();
+                        if (!limpio) return;
+                        void handleAgregarVariosRapidos([{ name: limpio, price: 0, isManual: true }]);
+                        guardarCustomRapido(limpio);
+                        setTextoManualRapido("");
+                      }}
+                      className="px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 disabled:opacity-40 text-black text-xs font-bold shrink-0 cursor-pointer disabled:cursor-not-allowed active:scale-95 transition-all"
+                    >
+                      + Poner más
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {busquedaRapido.trim() &&
+                !serviciosRapidosFiltrados.some(
+                  (s: any) => String(s.name || "").trim().toLowerCase() === busquedaRapido.trim().toLowerCase()
+                ) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const limpio = busquedaRapido.trim();
+                      void handleAgregarVariosRapidos([{ name: limpio, price: 0, isManual: true }]);
+                      guardarCustomRapido(limpio);
+                      setBusquedaRapido("");
+                    }}
+                    className="w-full p-2.5 rounded-xl border border-violet-500/40 bg-violet-500/10 hover:bg-violet-500/20 text-violet-700 dark:text-violet-300 text-xs font-semibold flex items-center justify-between gap-2 cursor-pointer transition-all active:scale-[0.99]"
+                  >
+                    <span className="truncate">+ Añadir &ldquo;{busquedaRapido.trim()}&rdquo;</span>
+                    <span className="px-2 py-0.5 rounded-md bg-violet-600 text-white text-[10px] font-bold shrink-0">
+                      Manual
+                    </span>
+                  </button>
+                )}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-72 overflow-y-auto">
                 {serviciosRapidosFiltrados.map((it: any, idx: number) => {
                   const meta = getServicioRapidoMeta(it.name, metaModulo.label);
                   return (
-                    <button
+                    <div
                       key={it.id || `${it.name}-${idx}`}
-                      type="button"
+                      role="button"
+                      tabIndex={0}
                       onClick={() => {
                         void handleAgregarDesdeSelector(
                           {
@@ -1391,10 +1629,26 @@ export default function RegistroFinalUnificado({
                           },
                           "SERVICE"
                         );
+                        setModalRapidoAbierto(false);
                       }}
-                      className="group p-2.5 rounded-xl border border-zinc-200/90 dark:border-white/10 bg-zinc-50/70 hover:bg-zinc-100/90 dark:bg-white/[0.03] dark:hover:bg-white/[0.08] text-left text-xs transition-all cursor-pointer flex items-center justify-between gap-2.5 active:scale-[0.98] shadow-2xs hover:shadow-xs hover:border-zinc-300 dark:hover:border-white/20"
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          void handleAgregarDesdeSelector(
+                            {
+                              id: it.id,
+                              code: it.code,
+                              name: it.name,
+                              price: it.price,
+                            },
+                            "SERVICE"
+                          );
+                          setModalRapidoAbierto(false);
+                        }
+                      }}
+                      className="group p-2.5 rounded-xl border border-zinc-200/90 dark:border-white/10 bg-zinc-50/70 hover:bg-zinc-100/90 dark:bg-white/[0.03] dark:hover:bg-white/[0.08] text-left text-xs transition-all cursor-pointer flex items-center justify-between gap-2 active:scale-[0.98] shadow-2xs hover:shadow-xs hover:border-zinc-300 dark:hover:border-white/20"
                     >
-                      <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
                         <div
                           className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border ${meta.iconBoxClass}`}
                         >
@@ -1404,10 +1658,25 @@ export default function RegistroFinalUnificado({
                           {it.name}
                         </span>
                       </div>
-                      <span className="w-6 h-6 rounded-lg bg-zinc-200/60 dark:bg-white/10 group-hover:bg-violet-600 group-hover:text-white dark:group-hover:bg-violet-500 text-violet-600 dark:text-violet-400 flex items-center justify-center text-xs font-bold shrink-0 transition-colors">
-                        +
-                      </span>
-                    </button>
+                      <div className="flex items-center gap-1 shrink-0">
+                        {it.isCustom && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              eliminarCustomRapido(it.name);
+                            }}
+                            title="Quitar acceso rápido"
+                            className="w-6 h-6 rounded-lg text-zinc-400 hover:text-rose-500 hover:bg-rose-500/10 flex items-center justify-center text-xs cursor-pointer"
+                          >
+                            ×
+                          </button>
+                        )}
+                        <span className="w-6 h-6 rounded-lg bg-zinc-200/60 dark:bg-white/10 group-hover:bg-violet-600 group-hover:text-white dark:group-hover:bg-violet-500 text-violet-600 dark:text-violet-400 flex items-center justify-center text-xs font-bold shrink-0 transition-colors">
+                          +
+                        </span>
+                      </div>
+                    </div>
                   );
                 })}
               </div>

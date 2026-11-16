@@ -674,6 +674,26 @@ function formatearFechaCompleta(dateStr?: string | null): string {
   }
 }
 
+function formatearFechaHoraOrden(dateStr?: string | null): string {
+  if (!dateStr) return "Sin fecha";
+  try {
+    const ingreso = new Date(dateStr);
+    if (isNaN(ingreso.getTime())) return String(dateStr);
+
+    const dias = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+    const meses = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+    const diaSemana = dias[ingreso.getDay()];
+    const dia = ingreso.getDate();
+    const mes = meses[ingreso.getMonth()];
+    const anio = ingreso.getFullYear();
+    const hora = String(ingreso.getHours()).padStart(2, "0");
+    const min = String(ingreso.getMinutes()).padStart(2, "0");
+    return `${diaSemana} ${dia} ${mes}, ${anio} • ${hora}:${min}`;
+  } catch {
+    return String(dateStr);
+  }
+}
+
 function formatearFechaIngreso(dateStr?: string | null): string {
   if (!dateStr) return "Hoy";
   try {
@@ -681,36 +701,19 @@ function formatearFechaIngreso(dateStr?: string | null): string {
     if (isNaN(ingreso.getTime())) return String(dateStr);
 
     const ahora = new Date();
-    // Cálculo de días calendario exactos entre la fecha de ingreso y hoy
     const fechaIngresoZero = new Date(ingreso.getFullYear(), ingreso.getMonth(), ingreso.getDate());
     const fechaAhoraZero = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate());
     const diffDias = Math.round((fechaAhoraZero.getTime() - fechaIngresoZero.getTime()) / (1000 * 60 * 60 * 24));
 
-    if (diffDias <= 0) {
-      return "Hoy";
-    }
-    if (diffDias === 1) {
-      return "Ayer";
-    }
-    if (diffDias >= 2 && diffDias <= 6) {
-      return `${diffDias} días`;
-    }
-    if (diffDias >= 7 && diffDias <= 13) {
-      return "1 semana";
-    }
-    if (diffDias >= 14 && diffDias <= 20) {
-      return "Quincena";
-    }
-    if (diffDias >= 21 && diffDias <= 27) {
-      return "3 semanas";
-    }
+    if (diffDias <= 0) return "Hoy";
+    if (diffDias === 1) return "Ayer";
+    if (diffDias >= 2 && diffDias <= 6) return `${diffDias} días`;
+    if (diffDias >= 7 && diffDias <= 13) return "1 semana";
+    if (diffDias >= 14 && diffDias <= 20) return "Quincena";
+    if (diffDias >= 21 && diffDias <= 27) return "3 semanas";
     const diffMeses = Math.floor(diffDias / 30);
-    if (diffMeses <= 1) {
-      return "1 mes";
-    }
-    if (diffMeses < 12) {
-      return `${diffMeses} meses`;
-    }
+    if (diffMeses <= 1) return "1 mes";
+    if (diffMeses < 12) return `${diffMeses} meses`;
     const diffAnios = Math.floor(diffDias / 365);
     return diffAnios === 1 ? "1 año" : `${diffAnios} años`;
   } catch {
@@ -1639,7 +1642,21 @@ export default function TallerPanel() {
   // ==========================================================================
   // CARGA INICIAL DE AUTOS EN PISTA, CLIENTES, INVENTARIO Y MECÁNICOS DESDE NEON
   // ==========================================================================
+  const lastLocalMutationAtRef = useRef<number>(0);
+
+  useEffect(() => {
+    const markMutation = () => {
+      lastLocalMutationAtRef.current = Date.now();
+    };
+    window.addEventListener("autog-local-mutation", markMutation);
+    return () => window.removeEventListener("autog-local-mutation", markMutation);
+  }, []);
+
   const cargarOperacionInicial = useCallback(async (selectFirstIfNone = true) => {
+    const fetchStartedAt = Date.now();
+    if (!selectFirstIfNone && fetchStartedAt - lastLocalMutationAtRef.current < 3000) {
+      return false;
+    }
     try {
       setCargandoInicial(true);
       const uBranch = getClientUserBranch();
@@ -1652,6 +1669,9 @@ export default function TallerPanel() {
         return false;
       }
       const data = await res.json();
+      if (!selectFirstIfNone && lastLocalMutationAtRef.current >= fetchStartedAt - 1000) {
+        return false;
+      }
       if (data.success) {
         const pista: UnifiedOrder[] = data.autosEnPista || [];
         setAutosEnPista(pista);
@@ -5762,6 +5782,14 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
               })()}
             </div>
           </div>
+          {ordenActiva && (
+            <span
+              className="inline-flex items-center px-3 py-1.5 rounded-xl bg-white dark:bg-[#0d0d0e] border border-zinc-200 dark:border-white/10 text-xs font-medium text-zinc-600 dark:text-zinc-300 whitespace-nowrap ml-auto shadow-sm"
+              title={formatearFechaCompleta(ordenActiva.dateIn || ordenActiva.startedAt)}
+            >
+              {formatearFechaHoraOrden(ordenActiva.dateIn || ordenActiva.startedAt)}
+            </span>
+          )}
         </div>
         {/* ===================================================================
             CONTENEDOR PRINCIPAL: CABECERA COMÚN (PLACA, VEHÍCULO, CLIENTE, VECES ATENDIDO Y MODO)
@@ -5802,6 +5830,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
               productosCatalogo={productosInventario}
               serviciosCatalogo={serviciosDb}
               onUpdateOrden={(updated) => {
+                lastLocalMutationAtRef.current = Date.now();
                 setOrdenActiva(updated);
                 setAutosEnPista((prev) =>
                   prev.map((o) => (o.id === updated.id ? updated : o))
@@ -6927,6 +6956,11 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                               • Tel: {auto.clientPhone}
                             </span>
                           )}
+                        </p>
+
+                        {/* 5. Fecha y hora exacta de ingreso por orden */}
+                        <p className="text-[11px] text-zinc-400 font-normal truncate">
+                          Ingreso: {formatearFechaHoraOrden(auto.dateIn || auto.startedAt)}
                         </p>
                       </div>
 

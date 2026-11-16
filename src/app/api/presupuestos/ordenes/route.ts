@@ -249,6 +249,7 @@ export async function GET(request: Request) {
           createdAt: r.createdAt,
           tipoNegocio,
           quoteNumber: r.quoteNumber || `COT-${r.orderNumber}`,
+          _rawQuoteStatus: r.quoteStatus || "",
           quoteStatus:
             r.status === "Pagado" || r.status === "PAGADO" || r.quoteStatus === "Pagado" || r.quoteStatus === "PAGADO"
               ? "Pagado"
@@ -305,6 +306,7 @@ export async function GET(request: Request) {
                 createdAt: q.createdAt,
                 tipoNegocio: "Taller",
                 quoteNumber: q.quoteNumber || `COT-${q.id.slice(-4)}`,
+                _rawQuoteStatus: q.status || "",
                 quoteStatus: q.status === "Aprobada" ? "Aprobado" : (q.status || "Pendiente"),
                 quoteApprovedAt: q.status === "Aprobada" || q.status === "Aprobado" ? q.updatedAt : null,
                 posRequestId: null,
@@ -330,8 +332,17 @@ export async function GET(request: Request) {
         } catch {}
       }
 
-      // Filtrado exacto en memoria para búsquedas y estados
-      let ordenesFiltradas = ordenes;
+      // Excluir órdenes que solo tienen Ingreso en Taller sin ítems/servicios ni propuesta enviada aún
+      let ordenesFiltradas = ordenes.filter((o: any) => {
+        const rawQs = String(o._rawQuoteStatus || "").trim().toLowerCase();
+        const st = String(o.status || "").trim().toUpperCase();
+        const tieneItems = (o.itemsCount || 0) > 0 || (o.servicesCount || 0) > 0 || (o.totalVentaEstimada || 0) > 0;
+        const esBorradorSinEnviar = !rawQs || rawQs === "borrador";
+        if (!tieneItems && !o.posRequestId && esBorradorSinEnviar && st !== "EN_CAJA" && st !== "PAGADO" && st !== "FACTURADO") {
+          return false;
+        }
+        return true;
+      });
       if (busqueda) {
         ordenesFiltradas = ordenesFiltradas.filter(
           (o) =>
