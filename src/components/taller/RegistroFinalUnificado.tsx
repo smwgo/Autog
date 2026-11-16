@@ -1762,8 +1762,102 @@ export default function RegistroFinalUnificado({
                   <span>🔧</span>
                   <span>Servicios ({totalServicios}):</span>
                 </span>
-                <div className="overflow-x-auto rounded-xl border border-zinc-200/80 dark:border-white/10 bg-white dark:bg-black/20 shadow-2xs">
-                  <table className="w-full text-left text-xs border-collapse">
+                <div className="rounded-xl border border-zinc-200/80 dark:border-white/10 bg-white dark:bg-black/20 shadow-2xs overflow-hidden">
+                  {/* Vista Móvil (sin scroll horizontal) */}
+                  <div className="sm:hidden divide-y divide-zinc-200/60 dark:divide-white/5">
+                    {serviciosSeleccionados.map((it: any, idx: number) => {
+                      const cant = Number(it.qty) || 1;
+                      const origen = it.category || "Taller";
+                      return (
+                        <div key={it.id || it.code || `srv-m-${idx}`} className="p-3 space-y-2">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex flex-wrap items-center gap-1.5 min-w-0 flex-1 text-xs font-medium text-zinc-800 dark:text-zinc-200">
+                              <span className="break-words">{formatearPrimeraMayuscula(it.name || it.fullName)}</span>
+                              {(it.isManual || String(it.id || "").startsWith("reg-")) && (
+                                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/35 shrink-0">
+                                  Manual
+                                </span>
+                              )}
+                              {Array.isArray(it.fotos) && it.fotos.length > 0 && (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setModalFotosAbierto({
+                                      titulo: formatearPrimeraMayuscula(it.name || it.fullName),
+                                      fotos: it.fotos,
+                                    })
+                                  }
+                                  className="h-7 px-2 rounded-lg border bg-indigo-50/80 hover:bg-indigo-100 dark:bg-indigo-500/15 dark:hover:bg-indigo-500/25 border-indigo-200 dark:border-indigo-500/30 text-indigo-600 dark:text-indigo-300 inline-flex items-center gap-1 text-[11px] font-medium cursor-pointer active:scale-95 transition-all shrink-0"
+                                  title={`Ver ${it.fotos.length} foto(s)`}
+                                >
+                                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
+                                  </svg>
+                                  {it.fotos.length > 1 && <span>{it.fotos.length}</span>}
+                                </button>
+                              )}
+                              {Array.isArray(it.audios) && it.audios.length > 0 && (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setModalAudiosAbierto({
+                                      titulo: formatearPrimeraMayuscula(it.name || it.fullName),
+                                      audios: it.audios,
+                                    })
+                                  }
+                                  className="h-7 px-2 rounded-lg border bg-amber-50/80 hover:bg-amber-100 dark:bg-amber-500/15 dark:hover:bg-amber-500/25 border-amber-200 dark:border-amber-500/30 text-amber-600 dark:text-amber-300 inline-flex items-center gap-1 text-[11px] font-medium cursor-pointer active:scale-95 transition-all shrink-0"
+                                  title={`Escuchar ${it.audios.length} audio(s)`}
+                                >
+                                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 0 0 6-6v-1.5m-6 7.5a6 6 0 0 1-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 0 1-3-3V4.5a3 3 0 1 1 6 0v8.25a3 3 0 0 1-3 3Z" />
+                                  </svg>
+                                  {it.audios.length > 1 && <span>{it.audios.length}</span>}
+                                </button>
+                              )}
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => void handleEliminarItem(it)}
+                              className="w-7 h-7 inline-flex items-center justify-center rounded-lg text-zinc-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10 text-base font-bold cursor-pointer shrink-0"
+                              title="Eliminar"
+                            >
+                              ×
+                            </button>
+                          </div>
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="inline-flex items-center border border-zinc-200 dark:border-white/10 rounded-lg overflow-hidden bg-zinc-50 dark:bg-white/[0.04]">
+                              <button
+                                type="button"
+                                onClick={() => void handleAjustarCantidad(it, -1)}
+                                className="w-7 h-7 flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-white text-xs font-bold cursor-pointer"
+                              >
+                                −
+                              </button>
+                              <span className="w-7 text-center text-xs font-bold text-zinc-800 dark:text-zinc-200">
+                                {cant}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => void handleAjustarCantidad(it, 1)}
+                                className="w-7 h-7 flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-white text-xs font-bold cursor-pointer"
+                              >
+                                +
+                              </button>
+                            </div>
+                            <span
+                              className={`inline-block px-2 py-0.5 rounded-md text-[10px] font-semibold border ${getBadgeClasePorModulo(origen)}`}
+                            >
+                              {formatearPrimeraMayuscula(origen)}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Vista Escritorio */}
+                  <div className="hidden sm:block overflow-x-auto">
+                    <table className="w-full text-left text-xs border-collapse">
                     <thead>
                       <tr className="border-b border-zinc-200/80 dark:border-white/10 bg-zinc-50/80 dark:bg-white/[0.03] text-zinc-500 dark:text-zinc-400 text-[11px] font-semibold">
                         <th className="py-2 px-3 w-24 text-center">Cant.</th>
@@ -1867,6 +1961,7 @@ export default function RegistroFinalUnificado({
                       })}
                     </tbody>
                   </table>
+                  </div>
                 </div>
               </div>
             )}
@@ -1878,8 +1973,74 @@ export default function RegistroFinalUnificado({
                   <span>📦</span>
                   <span>Productos ({totalProductos}):</span>
                 </span>
-                <div className="overflow-x-auto rounded-xl border border-zinc-200/80 dark:border-white/10 bg-white dark:bg-black/20 shadow-2xs">
-                  <table className="w-full text-left text-xs border-collapse">
+                <div className="rounded-xl border border-zinc-200/80 dark:border-white/10 bg-white dark:bg-black/20 shadow-2xs overflow-hidden">
+                  {/* Vista Móvil (sin scroll horizontal) */}
+                  <div className="sm:hidden divide-y divide-zinc-200/60 dark:divide-white/5">
+                    {productosSeleccionados.map((it: any, idx: number) => {
+                      const cant = Number(it.qty) || 1;
+                      const origen = it.category || "Taller";
+                      const extra = it.presentation || it.viscosity || "";
+                      return (
+                        <div key={it.id || it.code || `prod-m-${idx}`} className="p-3 space-y-2">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex flex-wrap items-center gap-1.5 min-w-0 flex-1 text-xs font-medium text-zinc-800 dark:text-zinc-200">
+                              <span className="break-words">{formatearPrimeraMayuscula(it.name || it.fullName)}</span>
+                              {(it.isManual || String(it.id || "").startsWith("reg-")) && (
+                                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/35 shrink-0">
+                                  Manual
+                                </span>
+                              )}
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => void handleEliminarItem(it)}
+                              className="w-7 h-7 inline-flex items-center justify-center rounded-lg text-zinc-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10 text-base font-bold cursor-pointer shrink-0"
+                              title="Eliminar"
+                            >
+                              ×
+                            </button>
+                          </div>
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="inline-flex items-center border border-zinc-200 dark:border-white/10 rounded-lg overflow-hidden bg-zinc-50 dark:bg-white/[0.04]">
+                              <button
+                                type="button"
+                                onClick={() => void handleAjustarCantidad(it, -1)}
+                                className="w-7 h-7 flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-white text-xs font-bold cursor-pointer"
+                              >
+                                −
+                              </button>
+                              <span className="w-7 text-center text-xs font-bold text-zinc-800 dark:text-zinc-200">
+                                {cant}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => void handleAjustarCantidad(it, 1)}
+                                className="w-7 h-7 flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-white text-xs font-bold cursor-pointer"
+                              >
+                                +
+                              </button>
+                            </div>
+                            <div className="flex flex-wrap items-center gap-1">
+                              <span
+                                className={`inline-block px-2 py-0.5 rounded-md text-[10px] font-semibold border ${getBadgeClasePorModulo(origen)}`}
+                              >
+                                {formatearPrimeraMayuscula(origen)}
+                              </span>
+                              {extra && (
+                                <span className="inline-block px-2 py-0.5 rounded-md text-[10px] font-medium bg-zinc-100 dark:bg-white/10 text-zinc-600 dark:text-zinc-300">
+                                  {formatearPrimeraMayuscula(extra)}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Vista Escritorio */}
+                  <div className="hidden sm:block overflow-x-auto">
+                    <table className="w-full text-left text-xs border-collapse">
                     <thead>
                       <tr className="border-b border-zinc-200/80 dark:border-white/10 bg-zinc-50/80 dark:bg-white/[0.03] text-zinc-500 dark:text-zinc-400 text-[11px] font-semibold">
                         <th className="py-2 px-3 w-24 text-center">Cant.</th>
@@ -1991,6 +2152,7 @@ export default function RegistroFinalUnificado({
                       })}
                     </tbody>
                   </table>
+                  </div>
                 </div>
               </div>
             )}

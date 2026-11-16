@@ -2451,8 +2451,13 @@ export default function TallerPanel() {
       const n = (nombre || "").trim();
       const nLower = n.toLowerCase();
       if (!n || nLower.includes("pendiente")) return "";
-      if (nLower.includes("diagn")) return "Diagnóstico";
-      if (nLower.includes("repara")) return "Reparación";
+      if (nLower.includes("pausa")) return "Pausada";
+      if (nLower.includes("diagn") || nLower.includes("espera") || nLower.includes("pista")) {
+        return "Diagnóstico";
+      }
+      if (nLower.includes("repara") || nLower.includes("trabaj")) {
+        return "Reparación";
+      }
       if (nLower.includes("listo")) return "Listo";
       if (nLower.includes("entregad")) return "Entregada";
       // Si es un estado personalizado, tomar la palabra principal sin números
@@ -2462,32 +2467,36 @@ export default function TallerPanel() {
     // Sincronizar Etapa 6: Estado y Aviso
     const pinOrden = ordenActiva.trackingPin || "4821";
     const propuestaAprobada = esPropuestaAprobadaOrden(ordenActiva);
-    const estaPausada = ordenActiva.status === "Pausada";
+    const statusLower = String(ordenActiva.status || "").toLowerCase();
+    const estaPausada = statusLower.includes("pausa");
 
     const normalizado = normalizarUnaPalabra(ordenActiva.status || "");
     const ultimaEtapaHistorial = Array.isArray(ordenActiva.statusHistory) && ordenActiva.statusHistory.length > 0
       ? normalizarUnaPalabra(ordenActiva.statusHistory[0].status)
       : "";
 
-    // Si la orden está en espera (!propuestaAprobada && !estaPausada), debe estar en Diagnóstico
-    let estadoOrden = normalizado && normalizado !== "Pausada" && normalizado !== "En Proceso"
-      ? normalizado
-      : (ultimaEtapaHistorial || "");
+    // Si está en pausa no cambiar nada; si está en espera -> Diagnóstico; si está trabajando -> Reparación; Listo/Entregada son manuales
+    let estadoOrden = estaPausada
+      ? "Pausada"
+      : normalizado && normalizado !== "En Proceso"
+        ? normalizado
+        : (ultimaEtapaHistorial || "");
 
     let colorOrden = (ordenActiva.statusColor as CustomOrderStatus["color"]) || "blue";
     let progresoOrden = ordenActiva.progress ?? 30;
 
-    if (!propuestaAprobada && !estaPausada) {
-      if (estadoOrden === "Reparación" || estadoOrden === "Pagado" || !estadoOrden) {
+    if (!estaPausada) {
+      if (estadoOrden === "Diagnóstico" || !estadoOrden) {
         estadoOrden = "Diagnóstico";
         colorOrden = "blue";
         progresoOrden = 30;
-      }
-    } else if (propuestaAprobada && !estaPausada) {
-      if (estadoOrden === "Diagnóstico" || !estadoOrden) {
-        estadoOrden = "Reparación";
+      } else if (estadoOrden === "Reparación") {
         colorOrden = "rose";
         progresoOrden = 60;
+      } else if (!propuestaAprobada && estadoOrden === "Pagado") {
+        estadoOrden = "Diagnóstico";
+        colorOrden = "blue";
+        progresoOrden = 30;
       }
     }
 
