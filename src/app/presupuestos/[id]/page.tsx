@@ -4418,6 +4418,35 @@ export default function PaginaDetallePropuesta() {
                           (c.name && auto.client && c.name.toLowerCase() === String(auto.client).toLowerCase())
                       );
                       const rawClient = auto.client || auto.customer?.name || clienteCatalogo?.name || "";
+                  const vehiculosDelCliente = Array.isArray(clienteCatalogo?.vehicles) ? clienteCatalogo.vehicles : [];
+                  let totalVehiculosCliente = vehiculosDelCliente.length;
+                  let numeroVehiculoCliente = 0;
+                  if (totalVehiculosCliente >= 1) {
+                    const idxV = vehiculosDelCliente.findIndex(
+                      (v: any) =>
+                        (auto.vehicleId && v.id === auto.vehicleId) ||
+                        (auto.plate && v.plate && String(v.plate).trim().toLowerCase() === String(auto.plate).trim().toLowerCase())
+                    );
+                    numeroVehiculoCliente = idxV >= 0 ? idxV + 1 : 1;
+                  } else if (rawClient) {
+                    const clientNorm = String(rawClient).trim().toLowerCase();
+                    const claves = Array.from(
+                      new Set(
+                        listaPropuestasCarrusel
+                          .filter((o) => String(o.client || o.customer?.name || "").trim().toLowerCase() === clientNorm)
+                          .map((o) => String(o.plate || o.vehicleId || o.vehicle || o.id).trim().toLowerCase())
+                      )
+                    );
+                    if (claves.length >= 1) {
+                      totalVehiculosCliente = claves.length;
+                      const claveActual = String(auto.plate || auto.vehicleId || auto.vehicle || auto.id).trim().toLowerCase();
+                      const idxV = claves.indexOf(claveActual);
+                      numeroVehiculoCliente = idxV >= 0 ? idxV + 1 : 1;
+                    }
+                  } else if (auto.plate || auto.vehicle) {
+                    totalVehiculosCliente = 1;
+                    numeroVehiculoCliente = 1;
+                  }
                       const nombreClienteDisplay =
                         rawClient &&
                           !String(rawClient).toLowerCase().includes("consumidor final") &&
@@ -4519,6 +4548,14 @@ export default function PaginaDetallePropuesta() {
                                   {anioVehiculo}
                                 </span>
                               )}
+                              {numeroVehiculoCliente > 0 && (
+                                <span
+                                  className="shrink-0 px-1.5 py-0.5 rounded-md bg-emerald-500/15 border border-emerald-500/30 text-[10px] font-mono font-bold text-emerald-600 dark:text-emerald-300"
+                                  title={`Vehículo ${numeroVehiculoCliente} de ${totalVehiculosCliente || 1} de ${nombreClienteDisplay || "este cliente"}`}
+                                >
+                                  {numeroVehiculoCliente}
+                                </span>
+                              )}
                             </span>
                           </span>
 
@@ -4561,6 +4598,13 @@ export default function PaginaDetallePropuesta() {
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
                               </svg>
                             </span>
+
+                            {listaPropuestasCarrusel.length > 1 && (
+                              <span className="text-[11px] sm:text-xs font-mono font-bold px-1 select-none whitespace-nowrap">
+                                <span className="text-blue-600 dark:text-blue-400">{index + 1}</span>
+                                <span className="text-zinc-400 dark:text-zinc-500">/{listaPropuestasCarrusel.length}</span>
+                              </span>
+                            )}
 
                             <span
                               role="button"
@@ -7735,12 +7779,9 @@ export default function PaginaDetallePropuesta() {
 
             <div className="p-4 overflow-y-auto space-y-2.5">
               {itemsRespondidosProveedor.length === 0 ? (
-                <div className="py-10 text-center space-y-1.5">
+                <div className="py-10 text-center">
                   <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">
-                    Aún no llega ninguna respuesta del proveedor.
-                  </p>
-                  <p className="text-xs text-zinc-400 dark:text-zinc-500">
-                    Cuando el proveedor confirme desde el enlace, aparecerá aquí automáticamente.
+                    Sin respuestas aún.
                   </p>
                 </div>
               ) : (

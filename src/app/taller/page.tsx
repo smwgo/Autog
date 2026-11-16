@@ -1607,6 +1607,22 @@ export default function TallerPanel() {
   const fileInputEvidenciaRef = useRef<HTMLInputElement | null>(null);
   const ordenesCarouselRef = useRef<HTMLDivElement | null>(null);
   const ordenesCarouselScrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const ignorarScrollProgramaticoRef = useRef<boolean>(false);
+
+  useEffect(() => {
+    if (vistaListaTaller || !ordenActiva?.id || !ordenesCarouselRef.current) return;
+    const idx = autosEnPista.findIndex((item) => item.id === ordenActiva.id);
+    if (idx >= 0) {
+      ignorarScrollProgramaticoRef.current = true;
+      const container = ordenesCarouselRef.current;
+      const step = container.clientWidth + 8;
+      container.scrollTo({ left: idx * step, behavior: "auto" });
+      const timer = setTimeout(() => {
+        ignorarScrollProgramaticoRef.current = false;
+      }, 350);
+      return () => clearTimeout(timer);
+    }
+  }, [vistaListaTaller, ordenActiva?.id, autosEnPista.length]);
 
   const mostrarToast = useCallback((_texto: string, _tipo?: string) => {
     // Desactivado: sin etiquetas flotantes verde ni roja al realizar acciones
@@ -5338,15 +5354,6 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
               </div>
 
               <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-                <button
-                  type="button"
-                  onClick={() => void cargarOperacionInicial(false)}
-                  className="h-9 sm:h-10 px-3 sm:px-4 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 text-zinc-700 dark:text-zinc-300 active:scale-95 font-semibold text-xs sm:text-sm shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-                  title="Actualizar lista"
-                >
-                  <span className={cargandoInicial ? "animate-spin" : ""}>🔄</span>
-                  <span className="hidden sm:inline">Actualizar</span>
-                </button>
                 <Link
                   href="/taller/nueva-orden"
                   className="h-9 sm:h-10 px-3.5 sm:px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white active:scale-95 font-semibold text-xs sm:text-sm shadow-sm shadow-blue-600/20 transition-all flex items-center justify-center gap-1.5"
@@ -5423,7 +5430,21 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                 <button
                   type="button"
                   onClick={() => setMenuFiltroListaTaller((v) => !v)}
-                  className="h-11 px-3.5 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-sm font-medium text-zinc-700 dark:text-zinc-200 flex items-center gap-2 cursor-pointer shadow-xs"
+                  aria-label="Filtrar órdenes"
+                  title="Filtrar órdenes"
+                  className={`sm:hidden w-11 h-11 rounded-xl border flex items-center justify-center transition-all cursor-pointer shadow-xs active:scale-95 ${filtroEstadoListaTaller !== "TODOS"
+                    ? "bg-blue-500/15 border-blue-500/40 text-blue-600 dark:text-blue-300"
+                    : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300"
+                    }`}
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.9}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 4.5h18l-6.75 7.5v5.25l-4.5 2.25V12L3 4.5Z" />
+                  </svg>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMenuFiltroListaTaller((v) => !v)}
+                  className="hidden sm:flex h-11 px-3.5 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-sm font-medium text-zinc-700 dark:text-zinc-200 items-center gap-2 cursor-pointer shadow-xs"
                 >
                   <span>{OPCIONES_FILTRO_TALLER.find((o) => o.id === filtroEstadoListaTaller)?.label || "Filtro"}</span>
                   <span className="text-xs text-zinc-400">▾</span>
@@ -5440,11 +5461,10 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                             setFiltroEstadoListaTaller(op.id);
                             setMenuFiltroListaTaller(false);
                           }}
-                          className={`w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 cursor-pointer ${
-                            filtroEstadoListaTaller === op.id
-                              ? "bg-blue-50 dark:bg-blue-600/15 text-blue-600 dark:text-blue-400 font-semibold"
-                              : "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-                          }`}
+                          className={`w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 cursor-pointer ${filtroEstadoListaTaller === op.id
+                            ? "bg-blue-50 dark:bg-blue-600/15 text-blue-600 dark:text-blue-400 font-semibold"
+                            : "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                            }`}
                         >
                           <span className={`w-2 h-2 rounded-full ${op.dot}`} />
                           <span>{op.label}</span>
@@ -5460,11 +5480,10 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                 onClick={() => setMetricasMovilListaTaller((v) => !v)}
                 aria-label="Mostrar u ocultar métricas"
                 title="Métricas"
-                className={`sm:hidden w-11 h-11 rounded-xl border flex items-center justify-center transition-all cursor-pointer shadow-sm active:scale-95 shrink-0 ${
-                  metricasMovilListaTaller
-                    ? "bg-blue-500/15 border-blue-500/40 text-blue-600 dark:text-blue-300"
-                    : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300"
-                }`}
+                className={`sm:hidden w-11 h-11 rounded-xl border flex items-center justify-center transition-all cursor-pointer shadow-sm active:scale-95 shrink-0 ${metricasMovilListaTaller
+                  ? "bg-blue-500/15 border-blue-500/40 text-blue-600 dark:text-blue-300"
+                  : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300"
+                  }`}
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.9}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z" />
@@ -5490,37 +5509,61 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                     {ordenesListaTallerFiltradas.map((auto, idx) => {
                       const estaPausada = auto.status === "Pausada";
                       const aprobada = esPropuestaAprobadaOrden(auto);
+                      const estaTrabajando = !estaPausada && aprobada;
                       const esActiva = ordenActiva?.id === auto.id;
                       return (
                         <div
                           key={`taller-movil-${auto.id || idx}`}
                           onClick={() => abrirOrdenEnTaller(auto)}
-                          className={`rounded-2xl border p-3.5 space-y-2.5 shadow-xs transition-all cursor-pointer active:scale-[0.99] ${
-                            esActiva
-                              ? "bg-blue-50/40 dark:bg-blue-950/20 border-blue-500/50 ring-1 ring-blue-500/30"
-                              : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800"
-                          }`}
+                          className={`rounded-2xl border p-3.5 space-y-2.5 shadow-xs transition-all cursor-pointer active:scale-[0.99] ${estaTrabajando || esActiva
+                            ? "bg-blue-50/40 dark:bg-blue-950/20 border-blue-500/50 ring-1 ring-blue-500/30"
+                            : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800"
+                            }`}
                         >
                           <div className="flex items-start justify-between gap-2.5">
-                            <div className="min-w-0 flex-1">
-                              <div className="flex items-center gap-2 min-w-0">
-                                <span className="font-mono font-bold text-sm text-blue-600 dark:text-blue-400 shrink-0">
-                                  {limpiarNumeroOrden(auto.orderNumber)}
-                                </span>
-                                <span className="font-bold text-base text-zinc-900 dark:text-zinc-100 truncate">
-                                  {auto.client || "Cliente"}
-                                </span>
-                              </div>
-                              <div className="flex items-center gap-1.5 text-sm text-zinc-600 dark:text-zinc-300 mt-1 min-w-0">
-                                <span className="truncate font-medium">{auto.vehicle}</span>
-                                {auto.plate && (
-                                  <>
-                                    <span className="shrink-0 text-zinc-300 dark:text-zinc-600">·</span>
-                                    <span className="shrink-0 font-mono text-xs font-bold text-blue-500 dark:text-blue-400">
-                                      {auto.plate}
-                                    </span>
-                                  </>
-                                )}
+                            <div className="flex items-start gap-2.5 min-w-0 flex-1">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (estaTrabajando) {
+                                    void handlePausarOrden(auto, e);
+                                  } else if (estaPausada) {
+                                    void handleReanudarOrden(auto, e);
+                                  } else {
+                                    void handleAprobarPropuestaDirecta(auto, e);
+                                  }
+                                }}
+                                title={estaTrabajando ? "Trabajando (clic para pausar)" : "Marcar como trabajando"}
+                                className={`mt-0.5 w-6 h-6 rounded-lg border flex items-center justify-center transition-all cursor-pointer shrink-0 ${estaTrabajando
+                                  ? "bg-blue-600 border-blue-500 text-white"
+                                  : "border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800/80 text-transparent"
+                                  }`}
+                              >
+                                <svg className="w-3.5 h-3.5 stroke-[3]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                </svg>
+                              </button>
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <span className="font-mono font-bold text-sm text-blue-600 dark:text-blue-400 shrink-0">
+                                    {limpiarNumeroOrden(auto.orderNumber)}
+                                  </span>
+                                  <span className="font-bold text-base text-zinc-900 dark:text-zinc-100 truncate">
+                                    {auto.client || "Cliente"}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-1.5 text-sm text-zinc-600 dark:text-zinc-300 mt-1 min-w-0">
+                                  <span className="truncate font-medium">{auto.vehicle}</span>
+                                  {auto.plate && (
+                                    <>
+                                      <span className="shrink-0 text-zinc-300 dark:text-zinc-600">·</span>
+                                      <span className="shrink-0 font-mono text-xs font-bold text-blue-500 dark:text-blue-400">
+                                        {auto.plate}
+                                      </span>
+                                    </>
+                                  )}
+                                </div>
                               </div>
                             </div>
                           </div>
@@ -5588,82 +5631,106 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                     <div className="overflow-x-auto">
                       <table className="w-full text-left border-collapse">
                         <thead>
-                          <tr className="border-b border-zinc-200 dark:border-zinc-800 text-xs font-medium text-zinc-500 dark:text-zinc-400 bg-zinc-50/70 dark:bg-zinc-900/50">
-                            <th className="py-3 px-4">Orden</th>
-                            <th className="py-3 px-4">Ingreso</th>
-                            <th className="py-3 px-4">Cliente</th>
-                            <th className="py-3 px-4">Vehículo</th>
-                            <th className="py-3 px-4">Placa</th>
-                            <th className="py-3 px-4">Estado</th>
-                            <th className="py-3 px-4 text-right">Acción</th>
+                          <tr className="border-b border-zinc-200 dark:border-zinc-800 text-sm font-semibold text-zinc-500 dark:text-zinc-400 bg-zinc-50/70 dark:bg-zinc-900/50">
+                            <th className="py-3.5 px-3 w-12 text-center">✓</th>
+                            <th className="py-3.5 px-4">Orden</th>
+                            <th className="py-3.5 px-4">Ingreso</th>
+                            <th className="py-3.5 px-4">Cliente</th>
+                            <th className="py-3.5 px-4">Vehículo</th>
+                            <th className="py-3.5 px-4">Placa</th>
+                            <th className="py-3.5 px-4">Estado</th>
+                            <th className="py-3.5 px-4 text-right">Acción</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-zinc-200/70 dark:divide-zinc-800/80 text-sm">
+                        <tbody className="divide-y divide-zinc-200/70 dark:divide-zinc-800/80 text-base">
                           {ordenesListaTallerFiltradas.map((auto, idx) => {
                             const estaPausada = auto.status === "Pausada";
                             const aprobada = esPropuestaAprobadaOrden(auto);
+                            const estaTrabajando = !estaPausada && aprobada;
                             const esActiva = ordenActiva?.id === auto.id;
                             return (
                               <tr
                                 key={`taller-desk-${auto.id || idx}`}
                                 onClick={() => abrirOrdenEnTaller(auto)}
-                                className={`transition-colors cursor-pointer ${
-                                  esActiva
-                                    ? "bg-blue-50/50 dark:bg-blue-500/10"
-                                    : "hover:bg-zinc-50 dark:hover:bg-white/[0.03]"
-                                }`}
+                                className={`transition-colors cursor-pointer ${estaTrabajando || esActiva
+                                  ? "bg-blue-500/[0.06] dark:bg-blue-500/[0.08] hover:bg-blue-500/[0.12] border-l-2 border-l-blue-500/70"
+                                  : "hover:bg-zinc-50 dark:hover:bg-white/[0.03]"
+                                  }`}
                               >
-                                <td className="py-3 px-4 font-mono font-semibold text-blue-600 dark:text-blue-400">
+                                <td className="py-3.5 px-3 text-center whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      if (estaTrabajando) {
+                                        void handlePausarOrden(auto, e);
+                                      } else if (estaPausada) {
+                                        void handleReanudarOrden(auto, e);
+                                      } else {
+                                        void handleAprobarPropuestaDirecta(auto, e);
+                                      }
+                                    }}
+                                    title={estaTrabajando ? "Trabajando (clic para pausar)" : "Marcar como trabajando"}
+                                    className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all cursor-pointer mx-auto ${estaTrabajando
+                                      ? "bg-blue-600 border-blue-500 text-white shadow-xs"
+                                      : "border-zinc-300 dark:border-zinc-700 bg-white/50 dark:bg-zinc-800/60 hover:border-blue-400 text-transparent"
+                                      }`}
+                                  >
+                                    <svg className="w-3.5 h-3.5 stroke-[2.5]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                    </svg>
+                                  </button>
+                                </td>
+                                <td className="py-3.5 px-4 font-mono font-bold text-blue-600 dark:text-blue-400">
                                   {limpiarNumeroOrden(auto.orderNumber)}
                                 </td>
-                                <td className="py-3 px-4 text-zinc-600 dark:text-zinc-300">
+                                <td className="py-3.5 px-4 text-sm text-zinc-600 dark:text-zinc-300">
                                   {formatearFechaIngreso(auto.dateIn || auto.startedAt)}
                                 </td>
-                                <td className="py-3 px-4 font-medium text-zinc-900 dark:text-white">
+                                <td className="py-3.5 px-4 font-semibold text-zinc-900 dark:text-white">
                                   {auto.client || "Cliente"}
                                 </td>
-                                <td className="py-3 px-4 text-zinc-700 dark:text-zinc-200">
+                                <td className="py-3.5 px-4 text-zinc-700 dark:text-zinc-200">
                                   {auto.vehicle}
                                 </td>
-                                <td className="py-3 px-4 font-mono text-xs font-bold text-blue-500 dark:text-blue-400">
+                                <td className="py-3.5 px-4 font-mono text-sm font-bold text-blue-500 dark:text-blue-400">
                                   {auto.plate || "—"}
                                 </td>
-                                <td className="py-3 px-4" onClick={(e) => e.stopPropagation()}>
+                                <td className="py-3.5 px-4" onClick={(e) => e.stopPropagation()}>
                                   {estaPausada ? (
                                     <button
                                       type="button"
                                       onClick={(e) => handleReanudarOrden(auto, e)}
-                                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border bg-amber-500/15 border-amber-500/30 text-amber-700 dark:text-amber-300 cursor-pointer"
+                                      className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-sm font-semibold border bg-amber-500/15 border-amber-500/30 text-amber-700 dark:text-amber-300 cursor-pointer"
                                     >
-                                      <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                                      <span className="w-2 h-2 rounded-full bg-amber-400" />
                                       <span>Pausada</span>
                                     </button>
                                   ) : !aprobada ? (
                                     <button
                                       type="button"
                                       onClick={(e) => handleAprobarPropuestaDirecta(auto, e)}
-                                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border bg-amber-500/15 border-amber-500/30 text-amber-700 dark:text-amber-300 cursor-pointer"
+                                      className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-sm font-semibold border bg-amber-500/15 border-amber-500/30 text-amber-700 dark:text-amber-300 cursor-pointer"
                                     >
-                                      <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                                      <span className="w-2 h-2 rounded-full bg-amber-400" />
                                       <span>En espera</span>
                                     </button>
                                   ) : (
                                     <button
                                       type="button"
                                       onClick={(e) => handlePausarOrden(auto, e)}
-                                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border bg-emerald-500/15 border-emerald-500/30 text-emerald-700 dark:text-emerald-300 cursor-pointer"
+                                      className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-sm font-semibold border bg-emerald-500/15 border-emerald-500/30 text-emerald-700 dark:text-emerald-300 cursor-pointer"
                                     >
-                                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                                      <span className="w-2 h-2 rounded-full bg-emerald-400" />
                                       <span>Trabajando</span>
                                     </button>
                                   )}
                                 </td>
-                                <td className="py-3 px-4 text-right" onClick={(e) => e.stopPropagation()}>
-                                  <div className="inline-flex items-center gap-1.5">
+                                <td className="py-3.5 px-4 text-right" onClick={(e) => e.stopPropagation()}>
+                                  <div className="inline-flex items-center gap-2">
                                     <button
                                       type="button"
                                       onClick={(e) => void handleFinalizarOrdenAHistorial(auto, e)}
-                                      className="w-8 h-8 rounded-lg bg-rose-50 dark:bg-rose-500/10 hover:bg-rose-100 dark:hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 inline-flex items-center justify-center cursor-pointer"
+                                      className="w-9 h-9 rounded-xl bg-rose-50 dark:bg-rose-500/10 hover:bg-rose-100 dark:hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 inline-flex items-center justify-center cursor-pointer"
                                       title="Enviar a historial"
                                     >
                                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -5673,7 +5740,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                                     <button
                                       type="button"
                                       onClick={() => abrirOrdenEnTaller(auto)}
-                                      className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-500/10 hover:bg-blue-100 dark:hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 text-xs font-semibold inline-flex items-center justify-center cursor-pointer"
+                                      className="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-500/10 hover:bg-blue-100 dark:hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 text-sm font-bold inline-flex items-center justify-center cursor-pointer"
                                       title="Abrir orden"
                                     >
                                       →
@@ -5827,11 +5894,13 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                   }
                 }}
                 onScroll={(event: React.UIEvent<HTMLDivElement>) => {
+                  if (ignorarScrollProgramaticoRef.current) return;
                   const container = event.currentTarget;
                   if (ordenesCarouselScrollTimeoutRef.current) {
                     clearTimeout(ordenesCarouselScrollTimeoutRef.current);
                   }
                   ordenesCarouselScrollTimeoutRef.current = setTimeout(() => {
+                    if (ignorarScrollProgramaticoRef.current) return;
                     const center = container.getBoundingClientRect().left + container.clientWidth / 2;
                     const cards = Array.from(
                       container.querySelectorAll<HTMLButtonElement>("[data-order-carousel-card]")
@@ -5866,7 +5935,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                   const rawPerfilVehiculo = (auto as any).vehicleImageUrl || vehiculoCatalogo?.imageUrl || "";
                   const fotoPerfilVehiculo =
                     typeof rawPerfilVehiculo === "string" &&
-                    /^(data:image\/|https?:\/\/|\/|blob:)/i.test(rawPerfilVehiculo.trim())
+                      /^(data:image\/|https?:\/\/|\/|blob:)/i.test(rawPerfilVehiculo.trim())
                       ? rawPerfilVehiculo.trim()
                       : undefined;
                   const todasLasFotos = fotoPerfilVehiculo ? [fotoPerfilVehiculo] : [];
@@ -5882,12 +5951,46 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                       (c.name && auto.client && c.name.toLowerCase() === auto.client.toLowerCase())
                   );
                   const rawClient = auto.client || (auto as any).customer?.name || clienteCatalogo?.name || "";
+                  const vehiculosDelCliente = Array.isArray(clienteCatalogo?.vehicles) ? clienteCatalogo.vehicles : [];
+                  let totalVehiculosCliente = vehiculosDelCliente.length;
+                  let numeroVehiculoCliente = 0;
+                  if (totalVehiculosCliente > 1) {
+                    const idxV = vehiculosDelCliente.findIndex(
+                      (v: any) =>
+                        (auto.vehicleId && v.id === auto.vehicleId) ||
+                        (auto.plate && v.plate && String(v.plate).trim().toLowerCase() === String(auto.plate).trim().toLowerCase())
+                    );
+                    numeroVehiculoCliente = idxV >= 0 ? idxV + 1 : 1;
+                  } else if (rawClient) {
+                    const clientNorm = String(rawClient).trim().toLowerCase();
+                    const claves = Array.from(
+                      new Set(
+                        autosEnPista
+                          .filter((o) => String(o.client || "").trim().toLowerCase() === clientNorm)
+                          .map((o) => String(o.plate || o.vehicleId || o.vehicle || o.id).trim().toLowerCase())
+                      )
+                    );
+                    if (claves.length > 1) {
+                      totalVehiculosCliente = claves.length;
+                      const claveActual = String(auto.plate || auto.vehicleId || auto.vehicle || auto.id).trim().toLowerCase();
+                      const idxV = claves.indexOf(claveActual);
+                      numeroVehiculoCliente = idxV >= 0 ? idxV + 1 : 1;
+                    }
+                  }
                   const nombreClienteDisplay =
                     rawClient &&
                       !rawClient.toLowerCase().includes("consumidor final") &&
                       !rawClient.toLowerCase().includes("cliente mostrador")
                       ? rawClient
                       : "";
+                  const vehiculosClienteCatalogo = Array.isArray(clienteCatalogo?.vehicles)
+                    ? clienteCatalogo.vehicles
+                    : [];
+                  const idxVehiculoEnCliente = vehiculosClienteCatalogo.findIndex(
+                    (v: any) =>
+                      (auto.vehicleId && v.id === auto.vehicleId) ||
+                      (auto.plate && v.plate && String(v.plate).toUpperCase() === String(auto.plate).toUpperCase())
+                  );
                   return (
                     <button
                       key={auto.id}
@@ -5905,22 +6008,6 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                           return;
                         }
                         ultimoToqueAutoRef.current = { id: auto.id, time: ahora };
-
-                        if (autosEnPista.length < 2) return;
-                        const index = autosEnPista.findIndex((item) => item.id === auto.id);
-                        const nextIndex = (index + 1) % autosEnPista.length;
-                        const targetAuto = autosEnPista[nextIndex];
-                        handleSeleccionarAutoYVolver(targetAuto);
-                        const container = ordenesCarouselRef.current;
-                        const targetCard = container?.querySelector(`[data-order-id="${targetAuto.id}"]`);
-                        if (targetCard) {
-                          targetCard.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
-                        } else if (container) {
-                          container.scrollTo({
-                            left: nextIndex * (container.clientWidth + 8),
-                            behavior: "smooth",
-                          });
-                        }
                       }}
                       onDoubleClick={(e) => {
                         e.preventDefault();
@@ -5996,6 +6083,11 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                                 {anioVehiculo}
                               </span>
                             )}
+                            {(idxVehiculoEnCliente >= 0 || auto.plate || auto.vehicle) && (
+                              <span className="shrink-0 px-1.5 py-0.5 rounded-md bg-emerald-500/15 border border-emerald-500/30 text-[10px] font-mono font-bold text-emerald-600 dark:text-emerald-300">
+                                {idxVehiculoEnCliente >= 0 ? idxVehiculoEnCliente + 1 : 1}
+                              </span>
+                            )}
                           </span>
                         </span>
                       </div>
@@ -6012,85 +6104,86 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                           )}
                         </div>
 
-                      {autosEnPista.length > 1 ? (
-                        <div className="flex items-center gap-1 shrink-0 ml-auto bg-zinc-100 dark:bg-white/5 rounded-xl p-1 border border-zinc-200 dark:border-white/10">
+                        {autosEnPista.length > 1 ? (
+                          <div className="flex items-center gap-1 shrink-0 ml-auto bg-zinc-100 dark:bg-white/5 rounded-xl p-1 border border-zinc-200 dark:border-white/10">
+                            <span
+                              role="button"
+                              tabIndex={0}
+                              title={`Auto anterior (${index === 0 ? autosEnPista.length : index} de ${autosEnPista.length})`}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const prevIndex = (index - 1 + autosEnPista.length) % autosEnPista.length;
+                                const targetAuto = autosEnPista[prevIndex];
+                                handleSeleccionarAutoYVolver(targetAuto);
+                                const container = ordenesCarouselRef.current;
+                                const targetCard = container?.querySelector(`[data-order-id="${targetAuto.id}"]`);
+                                if (targetCard) {
+                                  targetCard.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+                                } else if (container) {
+                                  container.scrollTo({
+                                    left: prevIndex * (container.clientWidth + 8),
+                                    behavior: "smooth",
+                                  });
+                                }
+                              }}
+                              className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg hover:bg-blue-500/10 hover:text-blue-500 text-zinc-400 dark:text-zinc-400 flex items-center justify-center transition-all cursor-pointer select-none active:scale-90"
+                            >
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+                              </svg>
+                            </span>
+                            <span className="text-[11px] sm:text-xs font-mono font-bold px-1 select-none whitespace-nowrap">
+                              <span className="text-blue-600 dark:text-blue-400">{index + 1}</span>
+                              <span className="text-zinc-400 dark:text-zinc-500">/{autosEnPista.length}</span>
+                            </span>
+                            <span
+                              role="button"
+                              tabIndex={0}
+                              title={`Siguiente auto (${((index + 1) % autosEnPista.length) + 1} de ${autosEnPista.length})`}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const nextIndex = (index + 1) % autosEnPista.length;
+                                const targetAuto = autosEnPista[nextIndex];
+                                handleSeleccionarAutoYVolver(targetAuto);
+                                const container = ordenesCarouselRef.current;
+                                const targetCard = container?.querySelector(`[data-order-id="${targetAuto.id}"]`);
+                                if (targetCard) {
+                                  targetCard.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+                                } else if (container) {
+                                  container.scrollTo({
+                                    left: nextIndex * (container.clientWidth + 8),
+                                    behavior: "smooth",
+                                  });
+                                }
+                              }}
+                              className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg hover:bg-blue-500/10 hover:text-blue-500 text-zinc-400 dark:text-zinc-400 flex items-center justify-center transition-all cursor-pointer select-none active:scale-90"
+                            >
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                              </svg>
+                            </span>
+                          </div>
+                        ) : (
                           <span
                             role="button"
                             tabIndex={0}
-                            title={`Auto anterior (${index === 0 ? autosEnPista.length : index} de ${autosEnPista.length})`}
+                            title="Auto actual en atención"
                             onClick={(e) => {
                               e.stopPropagation();
-                              const prevIndex = (index - 1 + autosEnPista.length) % autosEnPista.length;
-                              const targetAuto = autosEnPista[prevIndex];
-                              handleSeleccionarAutoYVolver(targetAuto);
-                              const container = ordenesCarouselRef.current;
-                              const targetCard = container?.querySelector(`[data-order-id="${targetAuto.id}"]`);
-                              if (targetCard) {
-                                targetCard.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
-                              } else if (container) {
-                                container.scrollTo({
-                                  left: prevIndex * (container.clientWidth + 8),
-                                  behavior: "smooth",
-                                });
-                              }
                             }}
-                            className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg hover:bg-blue-500/10 hover:text-blue-500 text-zinc-400 dark:text-zinc-400 flex items-center justify-center transition-all cursor-pointer select-none active:scale-90"
+                            className="p-2 sm:p-2.5 rounded-xl text-zinc-400 dark:text-zinc-500 shrink-0 ml-auto flex items-center justify-center select-none"
                           >
-                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
-                            </svg>
-                          </span>
-                          <span className="text-[11px] sm:text-xs font-mono font-bold text-blue-600 dark:text-blue-400 px-1 select-none whitespace-nowrap">
-                            {index + 1}/{autosEnPista.length}
-                          </span>
-                          <span
-                            role="button"
-                            tabIndex={0}
-                            title={`Siguiente auto (${((index + 1) % autosEnPista.length) + 1} de ${autosEnPista.length})`}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              const nextIndex = (index + 1) % autosEnPista.length;
-                              const targetAuto = autosEnPista[nextIndex];
-                              handleSeleccionarAutoYVolver(targetAuto);
-                              const container = ordenesCarouselRef.current;
-                              const targetCard = container?.querySelector(`[data-order-id="${targetAuto.id}"]`);
-                              if (targetCard) {
-                                targetCard.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
-                              } else if (container) {
-                                container.scrollTo({
-                                  left: nextIndex * (container.clientWidth + 8),
-                                  behavior: "smooth",
-                                });
-                              }
-                            }}
-                            className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg hover:bg-blue-500/10 hover:text-blue-500 text-zinc-400 dark:text-zinc-400 flex items-center justify-center transition-all cursor-pointer select-none active:scale-90"
-                          >
-                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                            <svg
+                              className="w-5 h-5 sm:w-6 sm:h-6 text-zinc-400 dark:text-zinc-600"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                              strokeWidth={2}
+                            >
                               <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
                             </svg>
                           </span>
-                        </div>
-                      ) : (
-                        <span
-                          role="button"
-                          tabIndex={0}
-                          title="Auto actual en atención"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                          }}
-                          className="p-2 sm:p-2.5 rounded-xl text-zinc-400 dark:text-zinc-500 shrink-0 ml-auto flex items-center justify-center select-none"
-                        >
-                          <svg
-                            className="w-5 h-5 sm:w-6 sm:h-6 text-zinc-400 dark:text-zinc-600"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                            strokeWidth={2}
-                          >
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
-                          </svg>
-                        </span>
-                      )}
+                        )}
                       </div>
                     </button>
                   );
@@ -6352,9 +6445,8 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                               <div
                                 key={st.id}
                                 aria-disabled="true"
-                                className={`py-2.5 px-3 min-h-[42px] rounded-xl text-xs sm:text-sm border text-center flex items-center justify-center select-none ${
-                                  sel ? estiloActivo : estiloPlomo
-                                }`}
+                                className={`py-2.5 px-3 min-h-[42px] rounded-xl text-xs sm:text-sm border text-center flex items-center justify-center select-none ${sel ? estiloActivo : estiloPlomo
+                                  }`}
                               >
                                 {st.name}
                               </div>
