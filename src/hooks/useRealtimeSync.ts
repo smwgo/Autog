@@ -275,7 +275,7 @@ export function useRealtimeSync({
     void verifyOnFocusOrVisible();
     pollTimer = setInterval(() => {
       void verifyOnFocusOrVisible();
-    }, 3500);
+    }, 1500);
 
     const handleVisibility = () => {
       if (document.visibilityState === "visible") {

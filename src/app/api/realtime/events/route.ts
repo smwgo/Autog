@@ -148,7 +148,7 @@ export async function GET(request: NextRequest) {
             lastKnownFingerprints.all = sharedFingerprints.all;
           }
         });
-      }, 4000);
+      }, 1500);
 
       const heartbeat = setInterval(() => {
         safeEnqueue(`: ping ${Date.now()}\n\n`);
