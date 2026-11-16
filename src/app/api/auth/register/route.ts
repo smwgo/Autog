@@ -11,6 +11,15 @@ import {
 
 export const dynamic = "force-dynamic";
 
+const VehicleInputSchema = z.object({
+  plate: z.string().min(2, "La placa debe tener al menos 2 caracteres").max(20),
+  brand: z.string().min(1, "La marca es requerida").max(60),
+  model: z.string().min(1, "El modelo es requerido").max(60),
+  year: z.union([z.number(), z.string()]).optional().nullable(),
+  vehicleType: z.string().max(30).optional().nullable(),
+  color: z.string().max(40).optional().nullable(),
+});
+
 const RegisterSchema = z.object({
   nombre: z.string().min(2, "El nombre debe tener al menos 2 caracteres").max(100),
   email: z.string().email("Correo electrónico inválido").max(100),
@@ -18,6 +27,7 @@ const RegisterSchema = z.object({
   whatsapp: z.string().max(30).optional().nullable(),
   tipoFactura: z.string().max(30).optional().nullable(),
   direccion: z.string().max(255).optional().nullable(),
+  vehiculos: z.array(VehicleInputSchema).max(10).optional(),
 });
 
 export async function POST(req: Request) {
@@ -30,7 +40,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: firstError }, { status: 400 });
     }
 
-    const { nombre, email, password, whatsapp, tipoFactura, direccion } = parseResult.data;
+    const { nombre, email, password, whatsapp, tipoFactura, direccion, vehiculos } = parseResult.data;
 
     const cleanEmail = email.trim().toLowerCase();
 
@@ -102,6 +112,47 @@ export async function POST(req: Request) {
               },
             });
 
+        if (Array.isArray(vehiculos) && vehiculos.length > 0) {
+          for (const v of vehiculos) {
+            const cleanPlate = v.plate.trim().toUpperCase();
+            if (!cleanPlate) continue;
+            const parsedYear = v.year ? parseInt(String(v.year), 10) : null;
+            const validYear = parsedYear && Number.isFinite(parsedYear) ? parsedYear : null;
+            const existingVehicle = await tx.vehicle.findUnique({
+              where: { plate: cleanPlate },
+            });
+            if (existingVehicle && existingVehicle.customerId !== customer.id) {
+              throw new Error(
+                `CONFLICT_PLATE:La placa ${cleanPlate} ya está registrada en otra cuenta.`
+              );
+            }
+            if (existingVehicle) {
+              await tx.vehicle.update({
+                where: { id: existingVehicle.id },
+                data: {
+                  brand: v.brand.trim(),
+                  model: v.model.trim(),
+                  year: validYear ?? existingVehicle.year,
+                  vehicleType: v.vehicleType?.trim() || existingVehicle.vehicleType || "Auto",
+                  color: v.color?.trim() || existingVehicle.color,
+                },
+              });
+            } else {
+              await tx.vehicle.create({
+                data: {
+                  customerId: customer.id,
+                  plate: cleanPlate,
+                  brand: v.brand.trim(),
+                  model: v.model.trim(),
+                  year: validYear,
+                  vehicleType: v.vehicleType?.trim() || "Auto",
+                  color: v.color?.trim() || null,
+                },
+              });
+            }
+          }
+        }
+
         return { user, customer };
       })
     );
@@ -146,9 +197,10 @@ export async function POST(req: Request) {
 
     return response;
   } catch (error: any) {
-    if (String(error?.message || "").startsWith("CONFLICT_IDENT:")) {
+    const msg = String(error?.message || "");
+    if (msg.startsWith("CONFLICT_IDENT:") || msg.startsWith("CONFLICT_PLATE:")) {
       return NextResponse.json(
-        { success: false, error: String(error.message).replace("CONFLICT_IDENT:", "") },
+        { success: false, error: msg.replace(/^CONFLICT_(IDENT|PLATE):/, "") },
         { status: 409 }
       );
     }

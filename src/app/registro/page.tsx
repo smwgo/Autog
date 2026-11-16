@@ -4,6 +4,14 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
+interface VehicleDraft {
+  plate: string;
+  brand: string;
+  model: string;
+  year: string;
+  vehicleType: string;
+}
+
 export default function RegistroPage() {
   const [tipoFactura, setTipoFactura] = useState('persona');
   const [nombre, setNombre] = useState('');
@@ -11,10 +19,30 @@ export default function RegistroPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [direccion, setDireccion] = useState('');
+  const [vehiculos, setVehiculos] = useState<VehicleDraft[]>([
+    { plate: '', brand: '', model: '', year: '', vehicleType: 'Auto' },
+  ]);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const router = useRouter();
+
+  const updateVehiculo = (idx: number, field: keyof VehicleDraft, value: string) => {
+    setVehiculos((prev) =>
+      prev.map((v, i) => (i === idx ? { ...v, [field]: field === 'plate' ? value.toUpperCase() : value } : v))
+    );
+  };
+
+  const addVehiculo = () => {
+    setVehiculos((prev) => [
+      ...prev,
+      { plate: '', brand: '', model: '', year: '', vehicleType: 'Auto' },
+    ]);
+  };
+
+  const removeVehiculo = (idx: number) => {
+    setVehiculos((prev) => (prev.length > 1 ? prev.filter((_, i) => i !== idx) : prev));
+  };
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,6 +50,22 @@ export default function RegistroPage() {
     setLoading(true);
 
     try {
+      const vehiculosValidos = vehiculos
+        .filter((v) => v.plate.trim() || v.brand.trim() || v.model.trim())
+        .map((v) => ({
+          plate: v.plate.trim().toUpperCase(),
+          brand: v.brand.trim(),
+          model: v.model.trim(),
+          year: v.year.trim() || null,
+          vehicleType: v.vehicleType || 'Auto',
+        }));
+
+      for (const v of vehiculosValidos) {
+        if (!v.plate || !v.brand || !v.model) {
+          throw new Error('Completa Placa, Marca y Modelo para cada vehículo ingresado.');
+        }
+      }
+
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -32,6 +76,7 @@ export default function RegistroPage() {
           password,
           tipoFactura,
           direccion,
+          vehiculos: vehiculosValidos,
         }),
       });
 
@@ -226,6 +271,94 @@ export default function RegistroPage() {
                     className="appearance-none block w-full px-4 py-3 border-2 border-zinc-200 dark:border-zinc-700 rounded-xl shadow-sm placeholder-zinc-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-base sm:text-sm bg-zinc-50 dark:bg-zinc-800 dark:text-white transition-colors"
                   ></textarea>
                 </div>
+              </div>
+
+              {/* Registro de Vehículo(s) */}
+              <div className="md:col-span-2 border-t border-zinc-200 dark:border-zinc-800 pt-5 sm:pt-6 space-y-4">
+                <div className="flex items-center justify-between gap-2">
+                  <div>
+                    <h3 className="text-sm font-bold text-zinc-900 dark:text-white">
+                      Registra tu vehículo
+                    </h3>
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                      Asocia tu auto desde ahora para agilizar tus citas y pedidos.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={addVehiculo}
+                    className="px-3 py-1.5 rounded-xl bg-blue-50 dark:bg-blue-500/15 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-500/25 text-xs font-bold transition-colors cursor-pointer shrink-0"
+                  >
+                    + Agregar otro
+                  </button>
+                </div>
+
+                {vehiculos.map((v, idx) => (
+                  <div
+                    key={idx}
+                    className="p-3.5 sm:p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-800/40 space-y-3"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-zinc-600 dark:text-zinc-300">
+                        Vehículo #{idx + 1}
+                      </span>
+                      {vehiculos.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeVehiculo(idx)}
+                          className="text-xs font-semibold text-rose-500 hover:text-rose-600 cursor-pointer"
+                        >
+                          Quitar
+                        </button>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <input
+                        type="text"
+                        value={v.plate}
+                        onChange={(e) => updateVehiculo(idx, 'plate', e.target.value)}
+                        placeholder="Placa (ej. ABC-1234)"
+                        className="appearance-none block w-full px-3.5 h-11 border border-zinc-200 dark:border-zinc-700 rounded-xl placeholder-zinc-400 focus:outline-none focus:border-blue-500 text-sm bg-white dark:bg-zinc-900 dark:text-white uppercase"
+                      />
+                      <select
+                        value={v.vehicleType}
+                        onChange={(e) => updateVehiculo(idx, 'vehicleType', e.target.value)}
+                        className="block w-full px-3.5 h-11 border border-zinc-200 dark:border-zinc-700 rounded-xl focus:outline-none focus:border-blue-500 text-sm bg-white dark:bg-zinc-900 dark:text-white"
+                      >
+                        <option value="Auto">Auto</option>
+                        <option value="SUV">SUV</option>
+                        <option value="Camioneta">Camioneta</option>
+                        <option value="Moto">Moto</option>
+                        <option value="Furgoneta">Furgoneta</option>
+                      </select>
+                      <input
+                        type="text"
+                        value={v.brand}
+                        onChange={(e) => updateVehiculo(idx, 'brand', e.target.value)}
+                        placeholder="Marca (ej. Hyundai)"
+                        className="appearance-none block w-full px-3.5 h-11 border border-zinc-200 dark:border-zinc-700 rounded-xl placeholder-zinc-400 focus:outline-none focus:border-blue-500 text-sm bg-white dark:bg-zinc-900 dark:text-white"
+                      />
+                      <div className="grid grid-cols-2 gap-2">
+                        <input
+                          type="text"
+                          value={v.model}
+                          onChange={(e) => updateVehiculo(idx, 'model', e.target.value)}
+                          placeholder="Modelo (ej. Accent)"
+                          className="appearance-none block w-full px-3.5 h-11 border border-zinc-200 dark:border-zinc-700 rounded-xl placeholder-zinc-400 focus:outline-none focus:border-blue-500 text-sm bg-white dark:bg-zinc-900 dark:text-white"
+                        />
+                        <input
+                          type="number"
+                          value={v.year}
+                          onChange={(e) => updateVehiculo(idx, 'year', e.target.value)}
+                          placeholder="Año"
+                          min="1950"
+                          max="2035"
+                          className="appearance-none block w-full px-3.5 h-11 border border-zinc-200 dark:border-zinc-700 rounded-xl placeholder-zinc-400 focus:outline-none focus:border-blue-500 text-sm bg-white dark:bg-zinc-900 dark:text-white"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
 

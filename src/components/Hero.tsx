@@ -23,13 +23,13 @@ export function Hero() {
             <span className="text-sm font-medium text-zinc-300 group-hover:text-white transition-colors">Tienda</span>
           </Link>
           
-          {/* Card 2: Registrarse (Estático) */}
-          <div className="flex items-center gap-4 p-4 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm cursor-default select-none">
-            <div className="flex-shrink-0 w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-zinc-400">
+          {/* Card 2: Registrarse */}
+          <Link href="/registro" className="group flex items-center gap-4 p-4 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 transition-all duration-300 backdrop-blur-sm">
+            <div className="flex-shrink-0 w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-zinc-400 group-hover:text-blue-400 group-hover:bg-blue-500/20 transition-colors">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" /></svg>
             </div>
-            <span className="text-sm font-medium text-zinc-300">Registrarse</span>
-          </div>
+            <span className="text-sm font-medium text-zinc-300 group-hover:text-white transition-colors">Registrarse</span>
+          </Link>
         </div>
       </div>
     </section>

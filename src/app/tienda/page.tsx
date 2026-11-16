@@ -25,6 +25,12 @@ interface CartItem {
   quantity: number;
 }
 
+function formatearPrimeraMayuscula(texto?: string | null): string {
+  const s = String(texto || "").trim();
+  if (!s) return "";
+  return s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
+}
+
 export default function TiendaPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [cargando, setCargando] = useState(true);
@@ -256,10 +262,6 @@ export default function TiendaPage() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {products.map((product) => {
-              const priceNum =
-                typeof product.price === "number"
-                  ? product.price
-                  : parseFloat(product.price) || 0;
               const isAdded = justAddedId === product.id;
 
               return (
@@ -302,7 +304,7 @@ export default function TiendaPage() {
                     </div>
 
                     <h3 className="text-base font-bold text-zinc-900 dark:text-zinc-100 leading-snug mb-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                      {product.name}
+                      {formatearPrimeraMayuscula(product.name)}
                     </h3>
 
                     {product.description && (
@@ -311,19 +313,12 @@ export default function TiendaPage() {
                       </p>
                     )}
 
-                    {/* Precio y Botón Comprar */}
-                    <div className="mt-auto pt-4 border-t border-zinc-100 dark:border-zinc-800/80 flex items-center justify-between">
-                      <div className="flex flex-col">
-                        <span className="text-[11px] text-zinc-400 font-medium">Precio</span>
-                        <span className="text-xl font-black text-blue-600 dark:text-blue-400">
-                          ${priceNum.toFixed(2)}
-                        </span>
-                      </div>
-
+                    {/* Botón Comprar */}
+                    <div className="mt-auto pt-4 border-t border-zinc-100 dark:border-zinc-800/80 flex items-center justify-end">
                       <button
                         onClick={() => handleComprar(product)}
-                        className={`px-4 py-2.5 rounded-xl text-sm font-bold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer ${isAdded
-                          ? "bg-emerald-600 text-white scale-105"
+                        className={`w-full justify-center px-4 py-2.5 rounded-xl text-sm font-bold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer ${isAdded
+                          ? "bg-emerald-600 text-white scale-[1.02]"
                           : "bg-zinc-900 hover:bg-blue-600 dark:bg-zinc-100 dark:hover:bg-blue-500 text-white dark:text-zinc-900 dark:hover:text-white"
                           }`}
                       >
@@ -343,25 +338,6 @@ export default function TiendaPage() {
           </div>
         )}
       </main>
-
-      {/* Botón Flotante del Carrito (Mobile y Desktop) */}
-      <button
-        onClick={() => setIsCartOpen(true)}
-        className="fixed bottom-6 right-4 sm:right-6 z-40 bg-zinc-900 dark:bg-blue-600 hover:bg-zinc-800 dark:hover:bg-blue-700 text-white p-3.5 sm:px-5 sm:py-3.5 rounded-full shadow-2xl flex items-center gap-3 transition-transform hover:scale-105 cursor-pointer border border-white/10 min-h-[48px] min-w-[48px]"
-        aria-label="Abrir Carrito de Compras"
-      >
-        <div className="relative">
-          <span className="text-xl">🛒</span>
-          {totalItemsCount > 0 && (
-            <span className="absolute -top-2 -right-2.5 bg-red-500 text-white text-[10px] font-black w-4 h-4 rounded-full flex items-center justify-center">
-              {totalItemsCount}
-            </span>
-          )}
-        </div>
-        <span className="hidden sm:inline font-bold text-sm">
-          {totalItemsCount > 0 ? `$${totalMonto.toFixed(2)}` : "Carrito"}
-        </span>
-      </button>
 
       {/* ============================================================== */}
       {/* CARRITO DE COMPRAS A UN COSTADO (SLIDE-OVER DRAWER)              */}
@@ -521,7 +497,7 @@ export default function TiendaPage() {
                               {/* Título y Precio Unitario */}
                               <div className="flex-1 min-w-0">
                                 <h4 className="text-xs font-bold text-zinc-900 dark:text-zinc-100 truncate">
-                                  {product.name}
+                                  {formatearPrimeraMayuscula(product.name)}
                                 </h4>
                                 <div className="flex items-center gap-2 text-[11px] text-zinc-500 dark:text-zinc-400">
                                   <span>${p.toFixed(2)} c/u</span>

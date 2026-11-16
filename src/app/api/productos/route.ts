@@ -325,16 +325,18 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ success: true, message: "El producto ya había sido eliminado." });
     }
 
-    // Limpieza en transacción de registros dependientes para asegurar borrado completo
-    await prisma.$transaction(async (tx) => {
-      await tx.$executeRawUnsafe(`DELETE FROM "InventoryMovement" WHERE "productId" = $1`, id).catch(() => {});
-      await tx.$executeRawUnsafe(`DELETE FROM "PhysicalCountItem" WHERE "productId" = $1`, id).catch(() => {});
-      await tx.$executeRawUnsafe(`DELETE FROM "StockTransferItem" WHERE "productId" = $1`, id).catch(() => {});
-      await tx.$executeRawUnsafe(`DELETE FROM "BranchStock" WHERE "productId" = $1`, id).catch(() => {});
-      await tx.$executeRawUnsafe(`DELETE FROM "ProductLot" WHERE "productId" = $1`, id).catch(() => {});
-      await tx.product.delete({
-        where: { id },
-      });
+    // Desvincular ítems de venta y limpiar tablas auxiliares si existieran sin abortar transacción
+    await Promise.allSettled([
+      prisma.saleItem.updateMany({ where: { productId: id }, data: { productId: null } }),
+      prisma.$executeRawUnsafe(`DELETE FROM "InventoryMovement" WHERE "productId" = $1`, id),
+      prisma.$executeRawUnsafe(`DELETE FROM "PhysicalCountItem" WHERE "productId" = $1`, id),
+      prisma.$executeRawUnsafe(`DELETE FROM "StockTransferItem" WHERE "productId" = $1`, id),
+      prisma.$executeRawUnsafe(`DELETE FROM "BranchStock" WHERE "productId" = $1`, id),
+      prisma.$executeRawUnsafe(`DELETE FROM "ProductLot" WHERE "productId" = $1`, id),
+    ]);
+
+    await prisma.product.delete({
+      where: { id },
     });
 
     cachedProducts = null;

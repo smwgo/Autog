@@ -29,6 +29,12 @@ interface Product {
   createdAt: string;
 }
 
+function formatearPrimeraMayuscula(texto?: string | null): string {
+  const s = String(texto || "").trim();
+  if (!s) return "";
+  return s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
+}
+
 export default function CatalogoPage() {
   const [productos, setProductos] = useState<Product[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
@@ -634,7 +640,7 @@ export default function CatalogoPage() {
                         <div className="min-w-0">
                           <div className="flex items-center gap-1.5 flex-wrap">
                             <p className="font-bold text-sm text-zinc-900 dark:text-zinc-100 truncate">
-                              {item.name}
+                              {formatearPrimeraMayuscula(item.name)}
                             </p>
                             <span
                               className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${getStatusColor(
@@ -752,7 +758,7 @@ export default function CatalogoPage() {
                                 )}
                               </div>
                               <div>
-                                <div className="font-bold text-zinc-900 dark:text-white mb-0.5">{item.name}</div>
+                                <div className="font-bold text-zinc-900 dark:text-white mb-0.5">{formatearPrimeraMayuscula(item.name)}</div>
                                 <div className="flex items-center gap-2">
                                   <span className="text-xs font-mono bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700">
                                     {item.code}
