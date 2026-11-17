@@ -8,6 +8,7 @@ import { Header } from "@/components/Header";
 import { MiniAudioPlayer } from "@/components/taller/MiniAudioPlayer";
 import { abrirWhatsAppCompatible } from "@/lib/whatsapp";
 import { setCachedAudioDuration } from "@/lib/audio-duration";
+import { procesarYNormalizarAudioBlob } from "@/lib/taller-audio-processor";
 const CatalogoProductosServiciosTaller = dynamic(
   () => import("@/components/taller/CatalogoProductosServiciosTaller"),
   { ssr: false }
@@ -1709,17 +1710,13 @@ export default function PaginaDetallePropuesta() {
           body: JSON.stringify({ action: "stop", sessionId: activePcSessionId, skipTranscribe: true }),
         }).catch(() => { });
       }
-      const ext = blobRes.mime.includes("mp4")
-        ? "m4a"
-        : blobRes.mime.includes("ogg")
-          ? "ogg"
-          : "webm";
-      const file = new File([blobRes.blob], `audio_${Date.now()}.${ext}`, {
-        type: blobRes.mime,
-      });
-      const uploadedUrl = await subirArchivoAudioGrabadoPropuesta(file);
+      const processed = await procesarYNormalizarAudioBlob(blobRes.blob, `audio_${Date.now()}`);
+      const uploadedUrl = await subirArchivoAudioGrabadoPropuesta(processed.file);
       if (uploadedUrl) {
-        setCachedAudioDuration(uploadedUrl, Math.max(1, duracionGrabadaSeg));
+        setCachedAudioDuration(
+          uploadedUrl,
+          Math.max(1, processed.durationSeconds || duracionGrabadaSeg)
+        );
       }
       return uploadedUrl;
     }
@@ -1780,6 +1777,7 @@ export default function PaginaDetallePropuesta() {
           audio: {
             echoCancellation: true,
             noiseSuppression: true,
+            autoGainControl: true,
             channelCount: 1,
           },
         });
@@ -1801,7 +1799,7 @@ export default function PaginaDetallePropuesta() {
         try {
           recorder = new MediaRecorder(stream, {
             ...(mimeSoportado ? { mimeType: mimeSoportado } : {}),
-            audioBitsPerSecond: 24000,
+            audioBitsPerSecond: 96000,
           });
         } catch {
           recorder = mimeSoportado
@@ -1813,7 +1811,7 @@ export default function PaginaDetallePropuesta() {
           if (ev.data && ev.data.size > 0) audioChunksRapidoRef.current.push(ev.data);
         };
         mediaRecorderRapidoRef.current = recorder;
-        recorder.start(500);
+        recorder.start(250);
         setGrabandoAudioRapido(true);
         setSegundosAudioRapido(0);
         if (audioTimerRapidoRef.current) clearInterval(audioTimerRapidoRef.current);

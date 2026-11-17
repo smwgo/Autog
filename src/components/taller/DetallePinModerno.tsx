@@ -588,7 +588,13 @@ export function DetallePinModerno({
       audioClipPlayerRef.current.pause();
       audioClipPlayerRef.current = null;
     }
-    const audio = new Audio(url);
+    const streamUrl =
+      url.startsWith("/api/storage/download") && !url.includes("inline=")
+        ? `${url}${url.includes("?") ? "&" : "?"}inline=1`
+        : url;
+    const audio = new Audio(streamUrl);
+    (audio as any).playsInline = true;
+    audio.volume = 1.0;
     audioClipPlayerRef.current = audio;
     audio.onended = () => setAudioClipReproduciendoUrl(null);
     audio.onerror = () => setAudioClipReproduciendoUrl(null);

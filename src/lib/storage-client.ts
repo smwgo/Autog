@@ -192,18 +192,32 @@ export async function subirEvidenciaSegura(
 
   const mimeType =
     archivo.type ||
-    (tipo === "video" ? "video/webm" : tipo === "audio" ? "audio/webm" : "image/jpeg");
+    (tipo === "video" ? "video/webm" : tipo === "audio" ? "audio/wav" : "image/jpeg");
 
-  const ext = mimeType.includes("webm")
+  const ext = mimeType.includes("wav")
+    ? "wav"
+    : mimeType.includes("mpeg") || mimeType.includes("mp3")
+    ? "mp3"
+    : mimeType.includes("m4a")
+    ? "m4a"
+    : mimeType.includes("aac")
+    ? "aac"
+    : mimeType.includes("ogg")
+    ? "ogg"
+    : mimeType.includes("webm")
     ? "webm"
     : mimeType.includes("mp4")
-    ? "mp4"
+    ? tipo === "audio"
+      ? "m4a"
+      : "mp4"
     : mimeType.includes("quicktime")
     ? "mov"
     : mimeType.includes("png")
     ? "png"
     : mimeType.includes("webp")
     ? "webp"
+    : tipo === "audio"
+    ? "wav"
     : "jpg";
 
   const safeFileName =

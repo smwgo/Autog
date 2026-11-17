@@ -100,7 +100,13 @@ export function proxy(request: NextRequest) {
     }
 
     if (pathname.startsWith("/api/gerencia/")) {
-      if (!isAdminSession(session)) {
+      // Lectura compartida para módulos operativos (POS/Taller/Oficina):
+      // configuración de empresa (secretos enmascarados) y listado de personal (sin salarios).
+      const staffReadable =
+        method === "GET" &&
+        (pathname === "/api/gerencia/configuracion" || pathname === "/api/gerencia/personal");
+      const allowed = staffReadable ? isStaffSession(session) : isAdminSession(session);
+      if (!allowed) {
         return NextResponse.json(
           {
             success: false,
@@ -123,6 +129,26 @@ export function proxy(request: NextRequest) {
           { status: 403 }
         );
       }
+    }
+  }
+
+  // Panel de Gerencia: si hay una sesión válida pero sin permisos de gerencia,
+  // redirigir al módulo que le corresponde en lugar de mostrar errores 403.
+  if (pathname === "/gerencia" || pathname.startsWith("/gerencia/")) {
+    const pageSession = verifySignedSessionCookie(
+      request.cookies.get(SESSION_COOKIE_NAME)?.value,
+      request.cookies.get(SESSION_SIG_COOKIE_NAME)?.value
+    );
+    if (pageSession && !isAdminSession(pageSession)) {
+      const roleUpper = String(pageSession.role || "").toUpperCase();
+      const target = !isStaffSession(pageSession)
+        ? "/cliente"
+        : roleUpper === "TALLER" || (pageSession as any).accessTaller
+          ? "/taller"
+          : roleUpper === "OFICINA" || (pageSession as any).accessOficina
+            ? "/oficina"
+            : "/pos";
+      return NextResponse.redirect(new URL(target, request.url));
     }
   }
 

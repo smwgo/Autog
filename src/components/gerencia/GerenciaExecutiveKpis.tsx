@@ -101,7 +101,16 @@ export function GerenciaExecutiveKpis({ onDataLoaded, className = "", backHref =
         url += `&sucursal=${encodeURIComponent(b)}`;
       }
       const res = await fetch(url);
-      const data = await res.json();
+      const data = await res.json().catch(() => null);
+      if (res.status === 401 || res.status === 403) {
+        setMetrics(null);
+        setErrorCarga(
+          res.status === 401
+            ? "Tu sesión expiró. Vuelve a iniciar sesión."
+            : "Tu usuario no tiene permisos de Gerencia. Inicia sesión con una cuenta de administrador."
+        );
+        return;
+      }
       if (!res.ok || !data?.success || !data?.metrics) {
         throw new Error(data?.error || "No se pudieron cargar las métricas.");
       }

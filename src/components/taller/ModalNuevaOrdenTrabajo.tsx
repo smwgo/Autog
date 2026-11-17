@@ -17,6 +17,10 @@ import {
   BrowserSpeechRecognitionProvider,
   getBestSupportedAudioMimeType,
 } from "@/lib/transcription";
+import {
+  procesarYNormalizarAudioBlob,
+  esDispositivoMovilAudio,
+} from "@/lib/taller-audio-processor";
 
 export interface ModalNuevaOrdenProps {
   isOpen?: boolean;
@@ -460,6 +464,7 @@ export default function ModalNuevaOrdenTrabajo({
   >([]);
   const [subiendoFoto, setSubiendoFoto] = useState(false);
   const fileInputFotosRef = useRef<HTMLInputElement | null>(null);
+  const fileInputFotosCamaraRef = useRef<HTMLInputElement | null>(null);
 
   const toggleInventario = (item: string) => {
     setInventarioTrae((prev) =>
@@ -609,7 +614,7 @@ export default function ModalNuevaOrdenTrabajo({
   };
 
   // =========================================================================
-  // FOTOGRAFÍAS: CÁMARA DIRECTA, COMPRESIÓN Y SUBIDA SEGURA R2
+  // FOTOGRAFÍAS: CÁMARA DIRECTA (PC WEBCAM + MÓVIL NATIVO), COMPRESIÓN Y R2
   // =========================================================================
   const iniciarCamaraFoto = async () => {
     try {
@@ -617,21 +622,62 @@ export default function ModalNuevaOrdenTrabajo({
         mostrarToast(`Límite de ${MULTIMEDIA_CONFIG.MAX_PHOTOS} fotografías alcanzado (5/5)`, "err");
         return;
       }
-      detenerTracksMedia();
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: { ideal: "environment" },
-          width: { ideal: MULTIMEDIA_CONFIG.VIDEO_TARGET_WIDTH },
-          height: { ideal: MULTIMEDIA_CONFIG.VIDEO_TARGET_HEIGHT },
-        },
-      });
-      camaraFotoStreamRef.current = stream;
-      setCamaraFotoActiva(true);
-    } catch (err: any) {
-      mostrarToast(
-        "No se pudo acceder a la cámara en el navegador. Puedes adjuntar fotos desde archivos.",
-        "err"
-      );
+
+      // Detección precisa de dispositivo móvil o tableta
+      const esDispositivoMovil =
+        typeof window !== "undefined" &&
+        (/Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+          (navigator.maxTouchPoints > 0 && window.innerWidth < 1024));
+
+      // En móviles (Apple iOS / Android): abrir directamente la app de cámara nativa con flash y autoenfoque
+      if (esDispositivoMovil) {
+        if (fileInputFotosCamaraRef.current) {
+          fileInputFotosCamaraRef.current.value = "";
+          fileInputFotosCamaraRef.current.click();
+          return;
+        }
+      }
+
+      // En PC / Laptop: intentar abrir el visor de cámara web en vivo primero
+      if (navigator.mediaDevices && typeof navigator.mediaDevices.getUserMedia === "function") {
+        detenerTracksMedia();
+        let stream: MediaStream | null = null;
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: {
+              facingMode: { ideal: "environment" },
+              width: { ideal: MULTIMEDIA_CONFIG.VIDEO_TARGET_WIDTH },
+              height: { ideal: MULTIMEDIA_CONFIG.VIDEO_TARGET_HEIGHT },
+            },
+          });
+        } catch {
+          // Fallback con constraints básicos para webcams integradas o USB de PC
+          try {
+            stream = await navigator.mediaDevices.getUserMedia({ video: true });
+          } catch {}
+        }
+
+        if (stream) {
+          camaraFotoStreamRef.current = stream;
+          setCamaraFotoActiva(true);
+          return;
+        }
+      }
+
+      // Si la PC no tiene webcam disponible o denegó permisos, abrir selector / cámara del sistema
+      if (fileInputFotosCamaraRef.current) {
+        fileInputFotosCamaraRef.current.value = "";
+        fileInputFotosCamaraRef.current.click();
+      } else if (fileInputFotosRef.current) {
+        fileInputFotosRef.current.click();
+      }
+    } catch {
+      if (fileInputFotosCamaraRef.current) {
+        fileInputFotosCamaraRef.current.value = "";
+        fileInputFotosCamaraRef.current.click();
+      } else {
+        mostrarToast("No se pudo iniciar la cámara en el dispositivo.", "err");
+      }
     }
   };
 
@@ -727,11 +773,13 @@ export default function ModalNuevaOrdenTrabajo({
     if (fotosIniciales.length >= MULTIMEDIA_CONFIG.MAX_PHOTOS) {
       mostrarToast(`Máximo ${MULTIMEDIA_CONFIG.MAX_PHOTOS} fotos iniciales permitidas (5/5)`, "err");
       if (fileInputFotosRef.current) fileInputFotosRef.current.value = "";
+      if (fileInputFotosCamaraRef.current) fileInputFotosCamaraRef.current.value = "";
       return;
     }
 
     const archivos = Array.from(files);
     if (fileInputFotosRef.current) fileInputFotosRef.current.value = "";
+    if (fileInputFotosCamaraRef.current) fileInputFotosCamaraRef.current.value = "";
     const espacio = MULTIMEDIA_CONFIG.MAX_PHOTOS - fotosIniciales.length;
     const aSubir = archivos.slice(0, espacio);
 
@@ -1108,11 +1156,16 @@ export default function ModalNuevaOrdenTrabajo({
 
       const selectedMime = getBestSupportedAudioMimeType();
       const options: MediaRecorderOptions = {
-        audioBitsPerSecond: 64000,
+        audioBitsPerSecond: 96000,
       };
       if (selectedMime) options.mimeType = selectedMime;
 
-      const recorder = new MediaRecorder(stream, options);
+      let recorder: MediaRecorder;
+      try {
+        recorder = new MediaRecorder(stream, options);
+      } catch {
+        recorder = new MediaRecorder(stream);
+      }
       audioRecorderRef.current = recorder;
       audioChunksRef.current = [];
 
@@ -1122,22 +1175,25 @@ export default function ModalNuevaOrdenTrabajo({
         }
       };
 
-      recorder.onstop = () => {
-        const audioBlob = new Blob(audioChunksRef.current, {
+      recorder.onstop = async () => {
+        const rawBlob = new Blob(audioChunksRef.current, {
           type: recorder.mimeType || selectedMime || "audio/webm",
         });
-        setAudioBlobTemp(audioBlob);
-        const url = URL.createObjectURL(audioBlob);
-        setAudioUrlTemp(url);
 
         // Liberar el micrófono inmediatamente para optimizar recursos
         if (audioStreamRef.current) {
           audioStreamRef.current.getTracks().forEach((t) => t.stop());
           audioStreamRef.current = null;
         }
+
+        // Normalizar volumen y convertir a WAV universal para reproducción en PC, Android e iPhone
+        const processed = await procesarYNormalizarAudioBlob(rawBlob, `voice_${Date.now()}`);
+        setAudioBlobTemp(processed.blob);
+        const url = URL.createObjectURL(processed.blob);
+        setAudioUrlTemp(url);
       };
 
-      recorder.start();
+      recorder.start(250);
       setGrabandoAudio(true);
       grabandoAudioRef.current = true;
       setSegundosAudio(0);
@@ -1159,9 +1215,9 @@ export default function ModalNuevaOrdenTrabajo({
         });
       }, 1000);
 
-      // Web Speech API como proveedor de dictado desacoplado y seguro
+      // En móviles Android/iOS evitar que SpeechRecognition le quite el micrófono a MediaRecorder simultáneamente
       const speechProvider = new BrowserSpeechRecognitionProvider();
-      if (speechProvider.isSupported()) {
+      if (!esDispositivoMovilAudio() && speechProvider.isSupported()) {
         const liveRec = speechProvider.startLiveRecognition(
           (text, isFinal) => {
             const limpio = text.trim();
@@ -1277,23 +1333,24 @@ export default function ModalNuevaOrdenTrabajo({
       setSubiendoAudio(true);
       setErrorSubidaAudio(null);
 
-      const mime = audioBlobTemp.type || "audio/webm";
-      const ext = mime.includes("mp4") ? "mp4" : mime.includes("ogg") ? "ogg" : "webm";
-      const fileName = `voice_${Date.now()}.${ext}`;
+      const processed = await procesarYNormalizarAudioBlob(audioBlobTemp, `voice_${Date.now()}`);
+      const mime = processed.mimeType;
+      const fileName = processed.file.name;
 
       // Subida segura al bucket de Cloudflare R2
       const res = await subirEvidenciaSegura({
-        archivo: audioBlobTemp,
+        archivo: processed.file,
         tipo: "audio",
         carpeta: "taller_audio",
         nombreArchivo: fileName,
+        durationSeconds: processed.durationSeconds || segundosAudio || 1,
         plate: vehiculoPlaca.trim().toUpperCase() || undefined,
         uploadedBy: ingresadoPor.trim() || empleadoLogueado.nombre,
         branch: getClientActiveBranch("/taller") === "SUCURSAL" ? "SUCURSAL" : "PRINCIPAL",
         onProgress: (p) => setProgresoSubida(p),
       });
 
-      const duracion = segundosAudio || 1;
+      const duracion = processed.durationSeconds || segundosAudio || 1;
       const textoFinal = transcripcionVoz.trim();
 
       // Determinar estado de la transcripción
@@ -3235,9 +3292,17 @@ export default function ModalNuevaOrdenTrabajo({
                                   className="p-3 rounded-xl hover:bg-zinc-100 dark:hover:bg-white/10 cursor-pointer transition-all flex items-center justify-between gap-3 group bg-zinc-50/70 dark:bg-white/[0.02] border border-zinc-200/60 dark:border-white/5"
                                 >
                                   <div className="flex items-center gap-3 min-w-0">
-                                    <div className="w-10 h-10 rounded-2xl bg-blue-500/15 text-blue-700 dark:text-blue-300 font-bold flex items-center justify-center text-sm shrink-0 border border-blue-500/25 group-hover:scale-105 transition-transform">
-                                      {(c.name || "C").charAt(0).toUpperCase()}
-                                    </div>
+                                    {c.avatar || c.imageUrl ? (
+                                      <img
+                                        src={c.avatar || c.imageUrl}
+                                        alt={c.name}
+                                        className="w-10 h-10 rounded-2xl object-cover shrink-0 border border-zinc-200 dark:border-white/10 shadow-xs group-hover:scale-105 transition-transform"
+                                      />
+                                    ) : (
+                                      <div className="w-10 h-10 rounded-2xl bg-blue-500/15 text-blue-700 dark:text-blue-300 font-bold flex items-center justify-center text-sm shrink-0 border border-blue-500/25 group-hover:scale-105 transition-transform">
+                                        {(c.name || "C").charAt(0).toUpperCase()}
+                                      </div>
+                                    )}
                                     <div className="min-w-0">
                                       <p className="text-sm font-semibold text-zinc-900 dark:text-white truncate">{c.name}</p>
                                       <div className="flex flex-wrap items-center gap-x-2 text-xs text-zinc-600 dark:text-zinc-400 font-medium">
@@ -4074,16 +4139,29 @@ export default function ModalNuevaOrdenTrabajo({
                                 : "bg-zinc-50/80 hover:bg-zinc-100 dark:bg-white/[0.03] dark:hover:bg-white/[0.07] border-zinc-200 dark:border-white/10"
                                 }`}
                             >
-                              <div className="space-y-1">
-                                <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 leading-tight">
-                                  {[v.brand, v.model].filter(Boolean).join(" ")
-                                    ? `${[v.brand, v.model].filter(Boolean).join(" ")} ${v.year ? `(${v.year})` : ""}`.trim()
-                                    : v.plate}
-                                </p>
-                                <div>
-                                  <span className="px-2 py-0.5 rounded-lg bg-zinc-100 dark:bg-black/60 border border-zinc-300 dark:border-white/10 font-mono text-xs font-bold text-zinc-900 dark:text-zinc-200 inline-block">
-                                    {v.plate}
-                                  </span>
+                              <div className="flex items-center gap-3 min-w-0">
+                                {v.imageUrl ? (
+                                  <img
+                                    src={v.imageUrl}
+                                    alt={v.plate}
+                                    className="w-11 h-11 rounded-xl object-cover shrink-0 border border-zinc-200 dark:border-white/10 shadow-xs"
+                                  />
+                                ) : (
+                                  <div className="w-11 h-11 rounded-xl bg-zinc-200 dark:bg-white/5 text-zinc-500 font-bold flex items-center justify-center text-sm shrink-0 border border-zinc-300 dark:border-white/10">
+                                    🚗
+                                  </div>
+                                )}
+                                <div className="space-y-1 min-w-0">
+                                  <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 leading-tight truncate">
+                                    {[v.brand, v.model].filter(Boolean).join(" ")
+                                      ? `${[v.brand, v.model].filter(Boolean).join(" ")} ${v.year ? `(${v.year})` : ""}`.trim()
+                                      : v.plate}
+                                  </p>
+                                  <div>
+                                    <span className="px-2 py-0.5 rounded-lg bg-zinc-100 dark:bg-black/60 border border-zinc-300 dark:border-white/10 font-mono text-xs font-bold text-zinc-900 dark:text-zinc-200 inline-block">
+                                      {v.plate}
+                                    </span>
+                                  </div>
                                 </div>
                               </div>
 
@@ -5255,6 +5333,14 @@ export default function ModalNuevaOrdenTrabajo({
                                     Compresión
                                   </p>
 
+                                  <input
+                                    ref={fileInputFotosCamaraRef}
+                                    type="file"
+                                    accept="image/*"
+                                    capture="environment"
+                                    onChange={handleSubirFotosIniciales}
+                                    className="hidden"
+                                  />
                                   <input
                                     ref={fileInputFotosRef}
                                     type="file"

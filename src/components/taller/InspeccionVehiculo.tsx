@@ -5,6 +5,10 @@ import type { UnifiedOrder, InspectionFinding, OrderItem, FindingItemLink } from
 import DetallePinModerno, { DetallePinModerno as DetallePinModernoNamed } from "./DetallePinModerno";
 import { comprimirImagenEnNavegador } from "@/lib/storage-client";
 import { getBestSupportedAudioMimeType } from "@/lib/transcription";
+import {
+  procesarYNormalizarAudioBlob,
+  esDispositivoMovilAudio,
+} from "@/lib/taller-audio-processor";
 
 export interface InspeccionVehiculoProps {
   ordenActiva: UnifiedOrder | null;
@@ -2216,18 +2220,15 @@ export default function InspeccionVehiculo({
     setHallazgos(actualizadosInit);
     sincronizarHallazgosNeon(actualizadosInit);
 
-    // Subir archivo de audio a Cloudflare R2 en segundo plano sin bloquear la nota Kanban
+    // Subir archivo de audio normalizado (WAV universal) a Cloudflare R2 en segundo plano
     void (async () => {
       try {
+        const processed = await procesarYNormalizarAudioBlob(
+          audioBlob,
+          `audio_${targetPinId}_${Date.now()}`
+        );
         const formData = new FormData();
-        const ext = mimeFinal.includes("wav")
-          ? "wav"
-          : mimeFinal.includes("mp4")
-          ? "mp4"
-          : mimeFinal.includes("aac")
-          ? "aac"
-          : "webm";
-        formData.append("file", audioBlob, `audio_${targetPinId}_${Date.now()}.${ext}`);
+        formData.append("file", processed.file, processed.file.name);
         formData.append("folder", "taller_notas_voz");
         formData.append("tipo", "audio");
         if (ordenActiva?.id) formData.append("orderId", ordenActiva.id);
@@ -2759,13 +2760,14 @@ export default function InspeccionVehiculo({
     // MODO 1: BOTÓN DE AUDIO (NARANJA) — Graba nota de audio Y la transforma en tarjeta de nota Kanban (sin tocar Descripción)
     // =========================================================================
     if (modo === "audio") {
-      // Iniciar reconocimiento en vivo en PC y Móvil para crear y actualizar la tarjeta Kanban al instante mientras habla
       dictandoActivoRef.current = true;
-      iniciarReconocimientoEnVivo(tipoPin, targetPinId, false, undefined, true);
-
       const okBrowserMic = await iniciarGrabadoraRespaldo();
+      // En móviles Android/iOS no iniciar SpeechRecognition simultáneamente para no robar el micrófono a MediaRecorder
+      if (!esDispositivoMovilAudio()) {
+        iniciarReconocimientoEnVivo(tipoPin, targetPinId, false, undefined, true);
+      }
       if (okBrowserMic) {
-        mostrarToast("🎙️ Grabando audio para nota Kanban... pulsa Detener al terminar.");
+        mostrarToast("🎙️ Grabando nota de audio... pulsa Detener al terminar.");
         return;
       }
 

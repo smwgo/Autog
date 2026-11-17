@@ -6,6 +6,7 @@ import {
   resolveAudioDuration,
   setCachedAudioDuration,
 } from "@/lib/audio-duration";
+import { normalizarUrlAudioReproduccion } from "@/lib/taller-audio-processor";
 
 export function formatearTiempoAudio(seg: number) {
   if (!Number.isFinite(seg) || seg < 0) return "0:00";
@@ -26,12 +27,13 @@ export function MiniAudioPlayer({
   compact?: boolean;
   initialDuration?: number | null;
 }) {
+  const effectiveSrc = normalizarUrlAudioReproduccion(src);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const resolvingInfinityRef = useRef(false);
   const [reproduciendo, setReproduciendo] = useState(false);
   const [tiempoActual, setTiempoActual] = useState(0);
   const [duracion, setDuracion] = useState(() => {
-    const cached = getCachedAudioDuration(src);
+    const cached = getCachedAudioDuration(src) || getCachedAudioDuration(effectiveSrc);
     if (cached > 0) return cached;
     return initialDuration && Number.isFinite(initialDuration) && initialDuration > 0
       ? initialDuration
@@ -40,7 +42,7 @@ export function MiniAudioPlayer({
 
   useEffect(() => {
     let active = true;
-    const cached = getCachedAudioDuration(src);
+    const cached = getCachedAudioDuration(src) || getCachedAudioDuration(effectiveSrc);
     const fallbackInit =
       initialDuration && Number.isFinite(initialDuration) && initialDuration > 0
         ? initialDuration
@@ -49,9 +51,10 @@ export function MiniAudioPlayer({
     setDuracion(initial);
     setTiempoActual(0);
     resolvingInfinityRef.current = false;
-    if (initial <= 0) {
-      void resolveAudioDuration(src).then((d) => {
+    if (initial <= 0 && effectiveSrc) {
+      void resolveAudioDuration(effectiveSrc).then((d) => {
         if (active && d > 0) {
+          setCachedAudioDuration(src, d);
           setDuracion((prev) => (prev > 0 ? prev : d));
         }
       });
@@ -59,7 +62,7 @@ export function MiniAudioPlayer({
     return () => {
       active = false;
     };
-  }, [src, initialDuration]);
+  }, [src, effectiveSrc, initialDuration]);
 
   const togglePlay = () => {
     const el = audioRef.current;
@@ -67,7 +70,14 @@ export function MiniAudioPlayer({
     if (reproduciendo) {
       el.pause();
     } else {
-      void el.play().catch(() => {});
+      el.volume = 1.0;
+      el.muted = false;
+      el.play().catch(() => {
+        try {
+          el.load();
+          void el.play().catch(() => {});
+        } catch {}
+      });
     }
   };
 
@@ -84,7 +94,7 @@ export function MiniAudioPlayer({
     >
       <audio
         ref={audioRef}
-        src={src}
+        src={effectiveSrc}
         playsInline
         preload="auto"
         onPlay={() => setReproduciendo(true)}

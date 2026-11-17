@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import CatalogoProductosServiciosTaller from "@/components/taller/CatalogoProductosServiciosTaller";
 import { MiniAudioPlayer } from "@/components/taller/MiniAudioPlayer";
 import { setCachedAudioDuration } from "@/lib/audio-duration";
+import { procesarYNormalizarAudioBlob } from "@/lib/taller-audio-processor";
 
 export type ModuloEspecialidad = "taller" | "lubricentro" | "carwash" | "tecnicentro";
 
@@ -583,17 +584,13 @@ export default function RegistroFinalUnificado({
           body: JSON.stringify({ action: "stop", sessionId: activePcSessionId, skipTranscribe: true }),
         }).catch(() => { });
       }
-      const ext = browserBlob.mime.includes("mp4")
-        ? "m4a"
-        : browserBlob.mime.includes("ogg")
-          ? "ogg"
-          : "webm";
-      const file = new File([browserBlob.blob], `audio_${Date.now()}.${ext}`, {
-        type: browserBlob.mime,
-      });
-      const uploadedUrl = await subirArchivoEvidencia(file, "audio", omitirBorrador);
+      const processed = await procesarYNormalizarAudioBlob(browserBlob.blob, `audio_${Date.now()}`);
+      const uploadedUrl = await subirArchivoEvidencia(processed.file, "audio", omitirBorrador);
       if (uploadedUrl) {
-        setCachedAudioDuration(uploadedUrl, Math.max(1, duracionGrabadaSeg));
+        setCachedAudioDuration(
+          uploadedUrl,
+          Math.max(1, processed.durationSeconds || duracionGrabadaSeg)
+        );
       }
       return uploadedUrl;
     }
@@ -630,17 +627,13 @@ export default function RegistroFinalUnificado({
     }
 
     if (browserBlob && browserBlob.blob.size > 0) {
-      const ext = browserBlob.mime.includes("mp4")
-        ? "m4a"
-        : browserBlob.mime.includes("ogg")
-          ? "ogg"
-          : "webm";
-      const file = new File([browserBlob.blob], `audio_${Date.now()}.${ext}`, {
-        type: browserBlob.mime,
-      });
-      const uploadedUrl = await subirArchivoEvidencia(file, "audio", omitirBorrador);
+      const processed = await procesarYNormalizarAudioBlob(browserBlob.blob, `audio_${Date.now()}`);
+      const uploadedUrl = await subirArchivoEvidencia(processed.file, "audio", omitirBorrador);
       if (uploadedUrl) {
-        setCachedAudioDuration(uploadedUrl, Math.max(1, duracionGrabadaSeg));
+        setCachedAudioDuration(
+          uploadedUrl,
+          Math.max(1, processed.durationSeconds || duracionGrabadaSeg)
+        );
       }
       return uploadedUrl;
     }
@@ -868,6 +861,7 @@ export default function RegistroFinalUnificado({
           audio: {
             echoCancellation: true,
             noiseSuppression: true,
+            autoGainControl: true,
             channelCount: 1,
           },
         });
@@ -886,12 +880,11 @@ export default function RegistroFinalUnificado({
             }
           }) || "";
 
-        // Bitrate optimizado para voz (24 kbps) para reducir peso y acelerar subida
         let recorder: MediaRecorder;
         try {
           recorder = new MediaRecorder(stream, {
             ...(mimeSoportado ? { mimeType: mimeSoportado } : {}),
-            audioBitsPerSecond: 24000,
+            audioBitsPerSecond: 96000,
           });
         } catch {
           recorder = mimeSoportado
@@ -905,7 +898,7 @@ export default function RegistroFinalUnificado({
         };
 
         mediaRecorderRef.current = recorder;
-        recorder.start(500);
+        recorder.start(250);
         inicioBrowserOk = true;
       } catch {
         // Si falla getUserMedia en PC, intentar grabador nativo del servidor como respaldo
@@ -2004,7 +1997,7 @@ export default function RegistroFinalUnificado({
                           <img src={ev.url} alt="Evidencia" className="w-full h-full object-cover" />
                         </button>
                       ) : (
-                        <audio controls src={ev.url} className="h-8 max-w-[200px]" />
+                        <MiniAudioPlayer src={ev.url} compact />
                       )}
                       <div className="flex flex-col items-start gap-0.5">
                         <span

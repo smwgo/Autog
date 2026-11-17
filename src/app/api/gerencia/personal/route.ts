@@ -1,15 +1,22 @@
 import { NextResponse } from "next/server";
 import { prisma, withRetry } from "@/lib/prisma";
+import { getVerifiedSessionFromRequest, isAdminSession } from "@/lib/signed-tokens";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
     const employees = await withRetry(async () => {
       return await prisma.employee.findMany({
         orderBy: { createdAt: "desc" },
       });
     });
+
+    // Personal no gerencial (POS/Taller/Oficina) solo necesita el listado; ocultar salarios
+    const session = getVerifiedSessionFromRequest(req);
+    if (!isAdminSession(session)) {
+      return NextResponse.json(employees.map(({ salary: _salary, ...rest }: any) => rest));
+    }
 
     return NextResponse.json(employees);
   } catch (error: any) {

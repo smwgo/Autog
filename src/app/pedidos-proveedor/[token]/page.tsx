@@ -78,6 +78,10 @@ function MiniAudioPlayerProveedor({
   transcription?: string | null;
   index: number;
 }) {
+  const effectiveSrc =
+    src && src.startsWith("/api/storage/download") && !src.includes("inline=")
+      ? `${src}${src.includes("?") ? "&" : "?"}inline=1`
+      : src;
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [reproduciendo, setReproduciendo] = useState(false);
   const [tiempoActual, setTiempoActual] = useState(0);
@@ -87,7 +91,7 @@ function MiniAudioPlayerProveedor({
     let active = true;
     setDuracion(0);
     setTiempoActual(0);
-    void resolveAudioDuration(src).then((d) => {
+    void resolveAudioDuration(effectiveSrc).then((d) => {
       if (active && d > 0) {
         setDuracion((prev) => (prev > 0 ? prev : d));
       }
@@ -95,7 +99,7 @@ function MiniAudioPlayerProveedor({
     return () => {
       active = false;
     };
-  }, [src]);
+  }, [effectiveSrc]);
 
   const togglePlay = () => {
     const el = audioRef.current;
@@ -103,7 +107,14 @@ function MiniAudioPlayerProveedor({
     if (reproduciendo) {
       el.pause();
     } else {
-      void el.play().catch(() => {});
+      el.volume = 1.0;
+      el.muted = false;
+      el.play().catch(() => {
+        try {
+          el.load();
+          void el.play().catch(() => {});
+        } catch {}
+      });
     }
   };
 
@@ -117,9 +128,9 @@ function MiniAudioPlayerProveedor({
       <div className="flex items-center gap-2.5">
         <audio
           ref={audioRef}
-          src={src}
+          src={effectiveSrc}
           playsInline
-          preload="metadata"
+          preload="auto"
           onPlay={() => setReproduciendo(true)}
           onPause={() => setReproduciendo(false)}
           onEnded={() => {

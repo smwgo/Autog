@@ -921,6 +921,8 @@ export default function TallerPanel() {
     indice?: number;
     nombre: string;
   } | null>(null);
+  // MODAL FLOTANTE DE CONFIRMACIÓN PARA ELIMINAR ORDEN DE LA LISTA
+  const [ordenAEliminar, setOrdenAEliminar] = useState<UnifiedOrder | null>(null);
 
   // Pausar el trabajo de una orden para seguir con otra
   const handlePausarOrden = async (auto: UnifiedOrder, e?: React.MouseEvent) => {
@@ -1164,6 +1166,53 @@ export default function TallerPanel() {
       });
     } catch (err) {
       console.error("Error al finalizar orden a historial:", err);
+    }
+  };
+
+  // Confirmar y eliminar orden definitivamente desde el modal flotante
+  const confirmarEliminarOrden = async () => {
+    if (!ordenAEliminar) return;
+    const auto = ordenAEliminar;
+    setOrdenAEliminar(null);
+
+    setAutosEnPista((prev) => {
+      const restantes = prev.filter((o) => o.id !== auto.id);
+      if (ordenActiva?.id === auto.id) {
+        const siguiente = restantes[0] || null;
+        setOrdenActiva(siguiente);
+        setKmActualInput(siguiente?.mileage ? String(siguiente.mileage) : "");
+        setFotosRecepcion(siguiente?.receptionPhotos || []);
+        if (typeof window !== "undefined") {
+          try {
+            if (siguiente?.id) {
+              localStorage.setItem("taller_orden_activa_id", siguiente.id);
+            } else {
+              localStorage.removeItem("taller_orden_activa_id");
+            }
+          } catch { }
+        }
+      }
+      return restantes;
+    });
+
+    try {
+      const res = await fetch("/api/taller/operacion", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "ELIMINAR_ORDEN",
+          orderId: auto.id,
+        }),
+      });
+      const data = await res.json().catch(() => null);
+      if (res.ok && data?.success) {
+        mostrarToast(`Orden #${limpiarNumeroOrden(auto.orderNumber)} eliminada`, "ok");
+      } else {
+        mostrarToast(data?.error || "No se pudo eliminar la orden", "err");
+      }
+    } catch (err) {
+      console.error("Error al eliminar orden:", err);
+      mostrarToast("Error al eliminar la orden", "err");
     }
   };
 
@@ -5603,9 +5652,12 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                             <div className="flex items-center gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
                               <button
                                 type="button"
-                                onClick={(e) => void handleFinalizarOrdenAHistorial(auto, e)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setOrdenAEliminar(auto);
+                                }}
                                 className="w-9 h-9 rounded-xl bg-rose-50 dark:bg-rose-500/10 hover:bg-rose-100 dark:hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 flex items-center justify-center cursor-pointer"
-                                title="Enviar a historial"
+                                title="Eliminar orden"
                               >
                                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -5729,9 +5781,12 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                                   <div className="inline-flex items-center gap-2">
                                     <button
                                       type="button"
-                                      onClick={(e) => void handleFinalizarOrdenAHistorial(auto, e)}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setOrdenAEliminar(auto);
+                                      }}
                                       className="w-9 h-9 rounded-xl bg-rose-50 dark:bg-rose-500/10 hover:bg-rose-100 dark:hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 inline-flex items-center justify-center cursor-pointer"
-                                      title="Enviar a historial"
+                                      title="Eliminar orden"
                                     >
                                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -7660,6 +7715,45 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                 type="button"
                 onClick={() => void handleConfirmarEliminar()}
                 className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs sm:text-sm font-normal transition-all cursor-pointer shadow-sm shadow-rose-600/30 active:scale-95 flex items-center gap-1.5"
+              >
+                <span>🗑️</span>
+                <span>Eliminar</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL FLOTANTE DE CONFIRMACIÓN PARA ELIMINAR ORDEN DE TALLER */}
+      {ordenAEliminar && (
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in" onClick={() => setOrdenAEliminar(null)}>
+          <div className="w-full max-w-sm bg-white dark:bg-[#18181b] border border-zinc-200 dark:border-white/10 rounded-2xl shadow-2xl p-5 space-y-4 animate-scale-in" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-500/20 flex items-center justify-center text-lg shrink-0">
+                🗑️
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-zinc-900 dark:text-white leading-snug">
+                  ¿Eliminar orden #{limpiarNumeroOrden(ordenAEliminar.orderNumber)}?
+                </p>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 truncate">
+                  {ordenAEliminar.client || "Cliente"} • {ordenAEliminar.plate || ordenAEliminar.vehicle || "Vehículo"}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-1">
+              <button
+                type="button"
+                onClick={() => setOrdenAEliminar(null)}
+                className="px-4 py-2 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-xs sm:text-sm font-medium text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-white/10 transition-all cursor-pointer active:scale-95"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={() => void confirmarEliminarOrden()}
+                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs sm:text-sm font-semibold transition-all cursor-pointer shadow-sm shadow-rose-600/30 active:scale-95 flex items-center gap-1.5"
               >
                 <span>🗑️</span>
                 <span>Eliminar</span>

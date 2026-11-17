@@ -19,6 +19,8 @@ const VehicleInputSchema = z.object({
   vehicleType: z.string().max(30).optional().nullable(),
   color: z.string().max(40).optional().nullable(),
   imageUrl: z.string().max(1500000).optional().nullable(),
+  fuelType: z.string().max(30).optional().nullable(),
+  mileage: z.union([z.number(), z.string()]).optional().nullable(),
 });
 
 const RegisterSchema = z.object({
@@ -26,6 +28,7 @@ const RegisterSchema = z.object({
   email: z.string().email("Correo electrónico inválido").max(100),
   password: z.string().min(6, "La contraseña debe tener al menos 6 caracteres").max(100),
   whatsapp: z.string().max(30).optional().nullable(),
+  cedula: z.string().max(20).regex(/^\d{10}(\d{3})?$/, "La cédula (10 dígitos) o RUC (13 dígitos) es obligatoria"),
   tipoFactura: z.string().max(30).optional().nullable(),
   direccion: z.string().max(255).optional().nullable(),
   avatar: z.string().max(1500000).optional().nullable(),
@@ -42,7 +45,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: firstError }, { status: 400 });
     }
 
-    const { nombre, email, password, whatsapp, tipoFactura, direccion, avatar, vehiculos } = parseResult.data;
+    const { nombre, email, password, whatsapp, cedula, tipoFactura, direccion, avatar, vehiculos } = parseResult.data;
+    const cleanCedula = (cedula || "").replace(/[^0-9A-Za-z]/g, "").trim();
 
     const cleanEmail = email.trim().toLowerCase();
 
@@ -76,7 +80,7 @@ export async function POST(req: Request) {
         });
 
         // Asociar o crear Customer sin sobrescribir cuentas de otros correos
-        const ident = whatsapp?.trim() || cleanEmail;
+        const ident = cleanCedula || whatsapp?.trim() || cleanEmail;
         const existingCustomer = await tx.customer.findUnique({
           where: { identification: ident },
         });
@@ -125,6 +129,9 @@ export async function POST(req: Request) {
             if (!cleanPlate) continue;
             const parsedYear = v.year ? parseInt(String(v.year), 10) : null;
             const validYear = parsedYear && Number.isFinite(parsedYear) ? parsedYear : null;
+            const parsedMileage = v.mileage ? parseInt(String(v.mileage).replace(/\D/g, ""), 10) : null;
+            const validMileage = parsedMileage && Number.isFinite(parsedMileage) ? parsedMileage : null;
+            const fuel = v.fuelType?.trim() || null;
             const existingVehicle = await tx.vehicle.findUnique({
               where: { plate: cleanPlate },
             });
@@ -143,6 +150,8 @@ export async function POST(req: Request) {
                   vehicleType: v.vehicleType?.trim() || existingVehicle.vehicleType || "Auto",
                   color: v.color?.trim() || existingVehicle.color,
                   imageUrl: v.imageUrl || existingVehicle.imageUrl,
+                  fuelType: fuel || existingVehicle.fuelType,
+                  mileage: validMileage ?? existingVehicle.mileage,
                 },
               });
             } else {
@@ -156,6 +165,8 @@ export async function POST(req: Request) {
                   vehicleType: v.vehicleType?.trim() || "Auto",
                   color: v.color?.trim() || null,
                   imageUrl: v.imageUrl || null,
+                  fuelType: fuel || "Gasolina",
+                  mileage: validMileage,
                 },
               });
             }

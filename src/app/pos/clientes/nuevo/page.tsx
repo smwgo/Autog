@@ -38,6 +38,7 @@ function NuevoClienteContent() {
   const [marca, setMarca] = useState("");
   const [modelo, setModelo] = useState("");
   const [anio, setAnio] = useState("2024");
+  const [colorVehiculo, setColorVehiculo] = useState("");
   const [kilometraje, setKilometraje] = useState("");
   const [combustible, setCombustible] = useState("Gasolina");
 
@@ -146,6 +147,7 @@ function NuevoClienteContent() {
               setMarca(v.brand || "");
               setModelo(v.model || "");
               setAnio(v.year ? String(v.year) : "2024");
+              setColorVehiculo(v.color || "");
               setKilometraje(v.mileage ? String(v.mileage) : "");
               setCombustible(v.fuelType || "Gasolina");
 
@@ -217,6 +219,7 @@ function NuevoClienteContent() {
         payload.marca = marca.trim() || undefined;
         payload.modelo = modelo.trim() || undefined;
         payload.anio = anio ? parseInt(anio, 10) : undefined;
+        payload.color = colorVehiculo.trim() || undefined;
         payload.kilometraje = kilometraje ? parseInt(kilometraje.replace(/\D/g, ""), 10) : undefined;
         payload.combustible = combustible;
         payload.fotoVehiculo = fotoVehiculo.trim() || undefined;
@@ -436,9 +439,6 @@ function NuevoClienteContent() {
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.6" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
                                 </svg>
                               )}
-                              <span className="text-[10px] font-semibold leading-tight">
-                                {tipoCliente === "Empresa" ? "Logo" : "Foto"}
-                              </span>
                             </div>
                           )}
                         </label>
@@ -661,7 +661,6 @@ function NuevoClienteContent() {
                                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.6" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 00-10.026 0 1.106 1.106 0 00-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12" />
                                 </svg>
-                                <span className="text-[10px] font-semibold leading-tight">Foto</span>
                               </div>
                             )}
                           </label>
@@ -761,18 +760,34 @@ function NuevoClienteContent() {
                         </div>
                       </div>
 
-                      <div>
-                        <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5">
-                          Kilometraje
-                        </label>
-                        <input
-                          type="text"
-                          inputMode="numeric"
-                          placeholder="Ej. 45,000 km"
-                          value={kilometraje}
-                          onChange={(e) => setKilometraje(e.target.value)}
-                          className="w-full h-11 sm:h-12 px-3.5 sm:px-4 rounded-xl border border-zinc-300 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-base sm:text-sm text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 outline-none focus:border-blue-500 transition-colors"
-                        />
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4">
+                        <div>
+                          <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5">
+                            Color
+                          </label>
+                          <input
+                            type="text"
+                            autoCapitalize="words"
+                            placeholder="Ej. Blanco, Negro, Plata..."
+                            value={colorVehiculo}
+                            onChange={(e) => setColorVehiculo(e.target.value)}
+                            className="w-full h-11 sm:h-12 px-3.5 sm:px-4 rounded-xl border border-zinc-300 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-base sm:text-sm text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 outline-none focus:border-blue-500 transition-colors"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5">
+                            Kilometraje
+                          </label>
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            placeholder="Ej. 45,000 km"
+                            value={kilometraje}
+                            onChange={(e) => setKilometraje(e.target.value)}
+                            className="w-full h-11 sm:h-12 px-3.5 sm:px-4 rounded-xl border border-zinc-300 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-base sm:text-sm text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 outline-none focus:border-blue-500 transition-colors"
+                          />
+                        </div>
                       </div>
                     </div>
                   )}
