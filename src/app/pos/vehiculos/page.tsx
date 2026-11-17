@@ -39,6 +39,7 @@ export default function PosVehiculosPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filtroOrigen, setFiltroOrigen] = useState<"TODOS" | "CLIENTE" | "TALLER">("TODOS");
   const [filtroMenuAbierto, setFiltroMenuAbierto] = useState(false);
+  const [mostrarMetricasMovil, setMostrarMetricasMovil] = useState(false);
 
   // Modales
   const [modalRegistroAbierto, setModalRegistroAbierto] = useState(false);
@@ -288,13 +289,13 @@ export default function PosVehiculosPage() {
   const totalCliente = vehicles.filter((v) => v.origin === "Cliente" || v.origin === "Ambos").length;
 
   return (
-    <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans pb-24 md:pb-0">
+    <div className="flex flex-col min-h-dvh bg-zinc-50 dark:bg-zinc-950 font-sans pb-[calc(env(safe-area-inset-bottom)+6rem)] md:pb-0">
       <Header />
 
-      <main className="flex-grow p-4 md:p-8 max-w-7xl mx-auto w-full">
+      <main className="flex-grow px-3.5 py-4 sm:p-4 md:p-8 max-w-7xl mx-auto w-full">
         {/* Cabecera / Navegación */}
         <div className="flex flex-col">
-          <div className="order-1 mb-4 sm:mb-8 flex items-center justify-between gap-3">
+          <div className="order-1 mb-3 sm:mb-8 flex items-center justify-between gap-3">
             <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
               <Link 
                 href="/pos"
@@ -308,21 +309,23 @@ export default function PosVehiculosPage() {
               <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50 truncate">
                 Vehículos
               </h1>
-              <span className="inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold bg-indigo-600 text-white shadow-sm shadow-indigo-500/20 shrink-0">
+              <span className="inline-flex items-center justify-center px-2 min-w-6 h-6 rounded-full text-xs font-bold bg-indigo-600 text-white shadow-sm shadow-indigo-500/20 shrink-0">
                 {vehicles.length}
               </span>
             </div>
 
-            <div className="flex flex-col items-end gap-2 shrink-0 ml-auto">
+            <div className="flex items-center sm:flex-col sm:items-end gap-2 shrink-0 ml-auto">
               <BranchTabs size="sm" />
               <Link
                 href="/pos/vehiculos/nuevo"
-                className="h-9 sm:h-10 px-3.5 sm:px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-semibold text-xs sm:text-sm shadow-sm shadow-indigo-500/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                title="Nuevo Vehículo"
+                aria-label="Nuevo Vehículo"
+                className="h-9 w-9 sm:w-auto sm:h-10 sm:px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-semibold text-xs sm:text-sm shadow-sm shadow-indigo-500/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
                 </svg>
-                <span>Nuevo Vehículo</span>
+                <span className="hidden sm:inline">Nuevo Vehículo</span>
               </Link>
             </div>
           </div>
@@ -352,62 +355,46 @@ export default function PosVehiculosPage() {
             </div>
           )}
 
-          {/* KPIs / Métricas Desplegables */}
-          <CollapsibleMetrics className="order-3 sm:order-2 mb-2 sm:mb-8">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-3 sm:mb-8">
-              {/* Total Vehículos */}
-              <div className="bg-white dark:bg-zinc-900/80 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3.5 sm:gap-4 backdrop-blur-sm">
-                <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-indigo-500/15 border border-indigo-500/25 text-indigo-400 flex items-center justify-center text-xl shrink-0">
-                  🚗
+          {/* Métricas: 3 recuadros en fila en móvil (ocultas por defecto), visibles en escritorio */}
+          <div className={`order-3 sm:order-2 mb-3 sm:mb-8 ${mostrarMetricasMovil ? "block" : "hidden"} sm:block`}>
+            <div className="grid grid-cols-3 gap-2 sm:gap-4">
+              {[
+                { icono: "🚗", valor: totalVehiculos, label: "Registrados", cls: "bg-indigo-500/15 border-indigo-500/25 text-indigo-500 dark:text-indigo-400", valCls: "text-zinc-900 dark:text-white" },
+                { icono: "🔧", valor: totalTaller, label: "Taller", cls: "bg-amber-500/15 border-amber-500/25 text-amber-500 dark:text-amber-400", valCls: "text-amber-600 dark:text-amber-400" },
+                { icono: "👤", valor: totalCliente, label: "Clientes", cls: "bg-blue-500/15 border-blue-500/25 text-blue-500 dark:text-blue-400", valCls: "text-blue-600 dark:text-blue-400" },
+              ].map((m) => (
+                <div
+                  key={m.label}
+                  className="bg-white dark:bg-zinc-900/80 p-2.5 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex flex-col sm:flex-row items-center sm:items-center gap-1 sm:gap-4 text-center sm:text-left"
+                >
+                  <div className={`w-9 h-9 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl border flex items-center justify-center text-base sm:text-xl shrink-0 ${m.cls}`}>
+                    {m.icono}
+                  </div>
+                  <div className="min-w-0">
+                    <p className={`text-lg sm:text-2xl font-bold leading-tight tabular-nums ${m.valCls}`}>
+                      {m.valor}
+                    </p>
+                    <h3 className="text-zinc-500 dark:text-zinc-400 text-[11px] sm:text-sm font-medium truncate">{m.label}</h3>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">
-                    {totalVehiculos}
-                  </p>
-                  <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">Total Registrados</h3>
-                </div>
-              </div>
-
-              {/* Con Taller */}
-              <div className="bg-white dark:bg-zinc-900/80 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3.5 sm:gap-4 backdrop-blur-sm">
-                <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-amber-500/15 border border-amber-500/25 text-amber-400 flex items-center justify-center text-xl shrink-0">
-                  🔧
-                </div>
-                <div>
-                  <p className="text-xl sm:text-2xl font-bold text-amber-600 dark:text-amber-400">
-                    {totalTaller}
-                  </p>
-                  <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">Desde Taller</h3>
-                </div>
-              </div>
-
-              {/* Desde Clientes */}
-              <div className="bg-white dark:bg-zinc-900/80 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3.5 sm:gap-4 backdrop-blur-sm">
-                <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-blue-500/15 border border-blue-500/25 text-blue-400 flex items-center justify-center text-xl shrink-0">
-                  👤
-                </div>
-                <div>
-                  <p className="text-xl sm:text-2xl font-bold text-blue-600 dark:text-blue-400">
-                    {totalCliente}
-                  </p>
-                  <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">Desde Clientes</h3>
-                </div>
-              </div>
+              ))}
             </div>
-          </CollapsibleMetrics>
+          </div>
 
-          {/* Filtros y Buscador */}
-          <div className="order-2 sm:order-3 flex flex-col sm:flex-row items-center justify-between gap-2 sm:gap-4 mb-2 sm:mb-6">
-            <div className="relative w-full flex-1">
+          {/* Filtros y Buscador: una sola fila en móvil y escritorio */}
+          <div className="order-2 sm:order-3 flex flex-row items-center justify-between gap-2 sm:gap-4 mb-3 sm:mb-6">
+            <div className="relative min-w-0 flex-1">
               <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400 select-none">
                 🔍
               </span>
               <input
-                type="text"
+                type="search"
+                inputMode="search"
+                enterKeyHint="search"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Buscar por placa, marca, modelo o cliente..."
-                className="w-full pl-10 pr-10 h-11 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white text-sm font-normal focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all placeholder:text-zinc-400 shadow-sm"
+                placeholder="Buscar placa, marca, cliente..."
+                className="w-full pl-10 pr-10 h-11 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white text-base sm:text-sm font-normal focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all placeholder:text-zinc-400 shadow-sm [&::-webkit-search-cancel-button]:hidden"
               />
               {searchTerm && (
                 <button
@@ -420,21 +407,50 @@ export default function PosVehiculosPage() {
               )}
             </div>
 
-            <div className="relative w-full sm:w-52 shrink-0">
+            <div className="relative sm:w-52 shrink-0 flex items-center gap-2">
               <button
                 type="button"
                 onClick={() => setFiltroMenuAbierto(!filtroMenuAbierto)}
-                className="w-full h-11 px-4 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 text-zinc-800 dark:text-zinc-200 text-sm font-normal flex items-center justify-between transition-all cursor-pointer shadow-sm active:scale-98"
+                title="Filtrar"
+                aria-label="Filtrar"
+                className={`relative w-11 sm:w-full h-11 sm:px-4 rounded-xl border text-sm font-normal flex items-center justify-center sm:justify-between transition-all cursor-pointer shadow-sm active:scale-95 ${
+                  filtroOrigen !== "TODOS"
+                    ? "bg-indigo-50 dark:bg-indigo-500/15 border-indigo-300 dark:border-indigo-500/40 text-indigo-600 dark:text-indigo-400"
+                    : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 text-zinc-800 dark:text-zinc-200"
+                }`}
               >
-                <span>
+                <svg className="w-5 h-5 sm:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 4.5h18l-7 8.25V19.5l-4 1.5v-8.25L3 4.5Z" />
+                </svg>
+                {filtroOrigen !== "TODOS" && (
+                  <span className="sm:hidden absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-indigo-600 ring-2 ring-white dark:ring-zinc-950" />
+                )}
+                <span className="hidden sm:inline">
                   {filtroOrigen === "CLIENTE"
                     ? "Origen: Clientes"
                     : filtroOrigen === "TALLER"
                     ? "Origen: Taller"
                     : "Origen: Todos"}
                 </span>
-                <svg className={`w-4 h-4 text-zinc-400 transition-transform ${filtroMenuAbierto ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className={`hidden sm:block w-4 h-4 text-zinc-400 transition-transform ${filtroMenuAbierto ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+
+              {/* Botón Métricas: solo móvil */}
+              <button
+                type="button"
+                onClick={() => setMostrarMetricasMovil((v) => !v)}
+                title="Métricas"
+                aria-label="Métricas"
+                className={`sm:hidden w-11 h-11 rounded-xl border flex items-center justify-center transition-all cursor-pointer shadow-sm active:scale-95 ${
+                  mostrarMetricasMovil
+                    ? "bg-indigo-600 border-indigo-600 text-white"
+                    : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-200"
+                }`}
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 3v18h18M8 17v-5m4 5V8m4 9v-3" />
                 </svg>
               </button>
 
@@ -444,7 +460,7 @@ export default function PosVehiculosPage() {
                     className="fixed inset-0 z-40" 
                     onClick={() => setFiltroMenuAbierto(false)} 
                   />
-                  <div className="absolute right-0 mt-1.5 w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-xl overflow-hidden z-50 py-1 animate-in fade-in zoom-in-95 duration-100">
+                  <div className="absolute right-0 top-full mt-1.5 w-56 sm:w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-xl overflow-hidden z-50 py-1 animate-in fade-in zoom-in-95 duration-100">
                     {[
                       { id: "TODOS", label: "Todos los orígenes" },
                       { id: "CLIENTE", label: "Registrados por Clientes" },
@@ -480,27 +496,27 @@ export default function PosVehiculosPage() {
 
         {/* Listado de Vehículos */}
         <div className="order-4">
-          {cargando ? (
-            <div className="p-12 text-center text-zinc-500 dark:text-zinc-400 text-sm bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
-              <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-              Cargando vehículos unificados...
-            </div>
-          ) : vehiculosFiltrados.length === 0 ? (
-            <div className="p-12 text-center text-zinc-500 dark:text-zinc-400 text-sm bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
-              No se encontraron vehículos registrados con esos criterios.
-            </div>
-          ) : (
-            <>
-              {/* Vista Móvil (Tarjetas táctiles) */}
-              <div className="md:hidden space-y-3.5">
-                {vehiculosFiltrados.map((v) => (
-                  <div
-                    key={v.id}
-                    className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-4 space-y-3 shadow-xs hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-11 h-11 rounded-xl flex items-center justify-center font-bold text-base shrink-0 border bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-400 border-indigo-200 dark:border-indigo-500/30 overflow-hidden">
+            {cargando ? (
+              <div className="p-12 text-center text-zinc-500 dark:text-zinc-400 text-sm bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
+                <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+                Cargando vehículos unificados...
+              </div>
+            ) : vehiculosFiltrados.length === 0 ? (
+              <div className="p-12 text-center text-zinc-500 dark:text-zinc-400 text-sm bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
+                No se encontraron vehículos registrados con esos criterios.
+              </div>
+            ) : (
+              <>
+                {/* Vista Móvil (Tarjetas estructuradas idénticas a Clientes) */}
+                <div className="md:hidden space-y-3.5">
+                  {vehiculosFiltrados.map((v) => (
+                    <div
+                      key={v.id}
+                      className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-xs overflow-hidden active:bg-zinc-50 dark:active:bg-zinc-800/40 transition-colors"
+                    >
+                      {/* Fila 1: Foto + Placa + Marca/Modelo/Año + Origen/Visitas */}
+                      <div className="p-3.5 flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-2xl flex items-center justify-center font-bold text-base shrink-0 border bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-400 border-indigo-200 dark:border-indigo-500/30 overflow-hidden">
                           {v.imageUrl ? (
                             <img
                               src={v.imageUrl}
@@ -511,54 +527,96 @@ export default function PosVehiculosPage() {
                             "🚗"
                           )}
                         </div>
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="font-mono font-extrabold text-sm text-indigo-600 dark:text-indigo-400 tracking-wider">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="font-mono font-extrabold text-[15px] text-indigo-600 dark:text-indigo-400 tracking-wider">
                               {v.plate}
                             </span>
-                            <span
-                              className={`text-[9px] font-bold px-1.5 py-0.5 rounded-md border ${
-                                v.origin === "Ambos"
-                                  ? "bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-500/20 dark:text-purple-300 dark:border-purple-500/30"
-                                  : v.origin === "Taller"
-                                  ? "bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-500/20 dark:text-amber-300 dark:border-amber-500/30"
-                                  : "bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-500/20 dark:text-blue-300 dark:border-blue-500/30"
-                              }`}
-                            >
-                              {v.origin}
-                            </span>
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <span
+                                className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md border ${
+                                  v.origin === "Ambos"
+                                    ? "bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-500/20 dark:text-purple-300 dark:border-purple-500/30"
+                                    : v.origin === "Taller"
+                                    ? "bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-500/20 dark:text-amber-300 dark:border-amber-500/30"
+                                    : "bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-500/20 dark:text-blue-300 dark:border-blue-500/30"
+                                }`}
+                              >
+                                {v.origin}
+                              </span>
+                              {v.tallerVisits > 0 && (
+                                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-500/20">
+                                  🔧 {v.tallerVisits}
+                                </span>
+                              )}
+                            </div>
                           </div>
-                          <p className="font-bold text-sm text-zinc-900 dark:text-zinc-100 truncate">
+                          <p className="font-bold text-sm text-zinc-900 dark:text-zinc-100 truncate mt-0.5">
                             {v.brand} {v.model} {v.year ? `(${v.year})` : ""}
                           </p>
                         </div>
                       </div>
 
-                      {v.tallerVisits > 0 && (
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-500/20">
-                          🔧 {v.tallerVisits} {v.tallerVisits === 1 ? "visita" : "visitas"}
-                        </span>
-                      )}
-                    </div>
+                      {/* Fila 2: Dos recuadros ordenados (Propietario / WhatsApp clicable) */}
+                      <div className="px-3.5 pb-3 grid grid-cols-2 gap-2">
+                        <div className="min-w-0 rounded-xl bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800 px-2.5 py-2">
+                          <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-400">
+                            Cliente
+                          </p>
+                          <p className="text-[13px] font-semibold text-zinc-800 dark:text-zinc-200 truncate">
+                            {v.customerName || "Mostrador"}
+                          </p>
+                        </div>
+                        {v.customerPhone ? (
+                          <a
+                            href={`https://wa.me/${v.customerPhone.replace(/\D/g, "")}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="min-w-0 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 px-2.5 py-2 active:scale-[0.98] transition-transform"
+                          >
+                            <p className="text-[10px] font-semibold uppercase tracking-wide text-emerald-600/80 dark:text-emerald-400/80">
+                              WhatsApp
+                            </p>
+                            <p className="text-[13px] font-mono font-semibold text-emerald-700 dark:text-emerald-400 truncate">
+                              {v.customerPhone}
+                            </p>
+                          </a>
+                        ) : (
+                          <div className="min-w-0 rounded-xl bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800 px-2.5 py-2">
+                            <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-400">WhatsApp</p>
+                            <p className="text-[13px] text-zinc-400 italic">Sin número</p>
+                          </div>
+                        )}
+                      </div>
 
-                    <div className="text-xs text-zinc-600 dark:text-zinc-400 bg-zinc-50 dark:bg-zinc-800/60 p-2.5 rounded-xl border border-zinc-100 dark:border-zinc-800/80 space-y-1">
-                      <p>
-                        <span className="font-semibold text-zinc-800 dark:text-zinc-200">Cliente:</span>{" "}
-                        {v.customerName}
-                      </p>
-                      {v.customerPhone && (
-                        <p>
-                          <span className="font-semibold text-zinc-800 dark:text-zinc-200">Teléfono:</span>{" "}
-                          <span className="font-mono">{v.customerPhone}</span>
-                        </p>
+                      {/* Fila 3: Detalles del vehículo (Color, Combustible, Kilometraje) */}
+                      {(v.color || v.fuelType || v.mileage) && (
+                        <div className="px-3.5 pb-3">
+                          <div className="flex gap-1.5 overflow-x-auto -mx-0.5 px-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                            {v.color && (
+                              <span className="shrink-0 bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 px-2 py-1 rounded-lg text-[11px] font-medium border border-zinc-200 dark:border-zinc-700">
+                                🎨 {v.color}
+                              </span>
+                            )}
+                            {v.fuelType && (
+                              <span className="shrink-0 bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 px-2 py-1 rounded-lg text-[11px] font-medium border border-zinc-200 dark:border-zinc-700">
+                                ⛽ {v.fuelType}
+                              </span>
+                            )}
+                            {v.mileage ? (
+                              <span className="shrink-0 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 px-2 py-1 rounded-lg text-[11px] font-mono font-semibold border border-indigo-200 dark:border-indigo-500/20">
+                                🛣️ {Number(v.mileage).toLocaleString()} km
+                              </span>
+                            ) : null}
+                          </div>
+                        </div>
                       )}
-                    </div>
 
-                    <div className="flex items-center justify-between pt-1">
-                      <div className="flex items-center gap-1.5">
+                      {/* Fila 4: Botones grandes abajo (Venta, Taller, Ver, Editar, Eliminar) */}
+                      <div className="flex items-stretch border-t border-zinc-100 dark:border-zinc-800 divide-x divide-zinc-100 dark:divide-zinc-800">
                         <Link
                           href={`/pos/venta?placa=${encodeURIComponent(v.plate)}`}
-                          className="h-10 px-3 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/25 active:scale-95 transition-all text-xs font-semibold flex items-center gap-1"
+                          className="flex-1 h-11 flex items-center justify-center gap-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400 active:bg-emerald-50 dark:active:bg-emerald-500/10 transition-colors cursor-pointer"
                           title="Cobrar en POS Venta"
                         >
                           <span>🛒</span>
@@ -566,43 +624,43 @@ export default function PosVehiculosPage() {
                         </Link>
                         <Link
                           href={`/taller/ordenes/nueva?placa=${encodeURIComponent(v.plate)}&cliente=${encodeURIComponent(v.customerName)}`}
-                          className="h-10 px-3 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/25 active:scale-95 transition-all text-xs font-semibold flex items-center gap-1"
+                          className="flex-1 h-11 flex items-center justify-center gap-1 text-xs font-semibold text-amber-600 dark:text-amber-400 active:bg-amber-50 dark:active:bg-amber-500/10 transition-colors cursor-pointer"
                           title="Crear Orden en Taller"
                         >
                           <span>🔧</span>
                           <span>Taller</span>
                         </Link>
-                      </div>
-
-                      <div className="flex items-center gap-1">
                         <button
                           type="button"
                           onClick={() => setVehiculoDetalle(v)}
-                          className="w-10 h-10 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:text-indigo-600 flex items-center justify-center active:scale-95 transition-all"
+                          className="w-11 h-11 flex items-center justify-center text-zinc-600 dark:text-zinc-300 active:bg-zinc-100 dark:active:bg-zinc-800 transition-colors cursor-pointer shrink-0"
                           title="Ver Detalle"
                         >
                           👁️
                         </button>
                         <Link
                           href={`/pos/vehiculos/nuevo?id=${encodeURIComponent(v.id)}`}
-                          className="w-10 h-10 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:text-indigo-600 flex items-center justify-center active:scale-95 transition-all"
-                          title="Editar Vehículo"
+                          className="w-11 h-11 flex items-center justify-center text-blue-600 dark:text-blue-400 active:bg-blue-50 dark:active:bg-blue-500/10 transition-colors cursor-pointer shrink-0"
+                          title="Editar"
                         >
-                          ✏️
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                          </svg>
                         </Link>
                         <button
                           type="button"
                           onClick={() => setVehiculoAEliminar(v)}
-                          className="w-10 h-10 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-400 hover:text-rose-600 flex items-center justify-center active:scale-95 transition-all"
+                          className="w-11 h-11 flex items-center justify-center text-rose-600 dark:text-rose-400 active:bg-rose-50 dark:active:bg-rose-500/10 transition-colors cursor-pointer shrink-0"
                           title="Eliminar"
                         >
-                          🗑️
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
                         </button>
                       </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
 
               {/* Vista Escritorio (Tabla fluida) */}
               <div className="hidden md:block bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden">

@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Header } from "@/components/Header";
+import { PosMobileNav } from "@/components/PosMobileNav";
 import { BranchTabs } from "@/components/pos/BranchTabs";
 import { getClientUserBranch, getClientActiveBranch } from "@/lib/branch";
 import { useRealtimeSync } from "@/hooks/useRealtimeSync";
@@ -123,6 +124,7 @@ export default function PosOrdenesPage() {
   const [seccionActiva, setSeccionActiva] = useState<"ACTIVAS" | "HISTORIAL">("ACTIVAS");
   const [filtroEstado, setFiltroEstado] = useState<string>("TODAS");
   const [filtroMenuAbierto, setFiltroMenuAbierto] = useState(false);
+  const [mostrarMetricasMovil, setMostrarMetricasMovil] = useState(false);
   const [menuTallerFilaId, setMenuTallerFilaId] = useState<string | null>(null);
   const [guardandoId, setGuardandoId] = useState<string | null>(null);
   const [toastMensaje, setToastMensaje] = useState<{ tipo: "ok" | "err"; texto: string } | null>(null);
@@ -356,10 +358,10 @@ export default function PosOrdenesPage() {
   const totalEnOrden = totalOrdenes - totalPagados;
 
   return (
-    <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans text-zinc-900 dark:text-zinc-100 pb-20 md:pb-8">
+    <div className="flex flex-col min-h-dvh bg-zinc-50 dark:bg-zinc-950 font-sans text-zinc-900 dark:text-zinc-100 pb-[calc(env(safe-area-inset-bottom)+6rem)] md:pb-8">
       <Header />
 
-      <main className="flex-grow p-4 sm:p-6 md:p-10 max-w-7xl mx-auto w-full flex flex-col gap-6">
+      <main className="flex-grow px-3.5 py-4 sm:p-6 md:p-10 max-w-7xl mx-auto w-full flex flex-col gap-3.5 sm:gap-6">
         {/* Toast Notificación */}
         {toastMensaje && (
           <div
@@ -375,33 +377,43 @@ export default function PosOrdenesPage() {
         )}
 
         {/* Cabecera / Breadcrumb */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3.5">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 sm:gap-3.5 min-w-0">
             <Link
               href="/pos"
               title="Volver a POS"
-              className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-zinc-500/10 dark:bg-zinc-800/30 hover:bg-zinc-500/20 dark:hover:bg-zinc-800/60 border border-zinc-300/40 dark:border-zinc-700/30 text-zinc-700 dark:text-zinc-200 backdrop-blur-sm transition-all flex items-center justify-center shrink-0 active:scale-95 shadow-sm"
+              className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-200 hover:border-amber-500 transition-all flex items-center justify-center shrink-0 active:scale-95 shadow-xs"
             >
-              <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M19 12H5M12 19l-7-7 7-7" />
               </svg>
             </Link>
-            <div>
-              <div className="flex items-center gap-2.5">
-                <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-zinc-900 dark:text-white">
-                  Órdenes
-                </h1>
-                <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500/15 border border-amber-500/30 text-amber-600 dark:text-amber-400">
-                  {cargando ? "..." : totalOrdenes}
-                </span>
-              </div>
-            </div>
+            <h1 className="text-xl sm:text-3xl font-bold tracking-tight text-zinc-900 dark:text-white truncate">
+              Órdenes
+            </h1>
+            <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-amber-500/15 border border-amber-500/30 text-amber-600 dark:text-amber-400 shrink-0">
+              {cargando ? "..." : totalOrdenes}
+            </span>
           </div>
 
-          {/* Selector de Sede arriba + Selector de Sección debajo, alineados a la punta derecha */}
-          <div className="flex flex-col items-end gap-2 self-end sm:self-auto ml-auto">
-            <BranchTabs onChange={() => cargarOrdenes()} size="sm" />
-            <div className="flex items-center p-1 rounded-2xl bg-zinc-200/70 dark:bg-zinc-900 border border-zinc-300/60 dark:border-zinc-800">
+          {/* Selector de Sede + Botón + Nueva Orden en móvil, y Selector de Sección en desktop */}
+          <div className="flex flex-row sm:flex-col items-center sm:items-end gap-2 shrink-0 ml-auto">
+            <div className="flex items-center gap-2">
+              <BranchTabs onChange={() => cargarOrdenes()} size="sm" />
+              <Link
+                href="/taller"
+                title="Nueva Orden en Taller"
+                aria-label="Nueva Orden"
+                className="h-9 w-9 sm:w-auto sm:h-9 sm:px-3.5 rounded-xl bg-amber-500 hover:bg-amber-600 active:scale-95 text-white font-semibold text-xs sm:text-sm shadow-sm shadow-amber-500/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4" />
+                </svg>
+                <span className="hidden sm:inline">Nueva Orden</span>
+              </Link>
+            </div>
+
+            <div className="hidden sm:flex items-center p-1 rounded-2xl bg-zinc-200/70 dark:bg-zinc-900 border border-zinc-300/60 dark:border-zinc-800">
               <button
                 type="button"
                 onClick={() => setSeccionActiva("ACTIVAS")}
@@ -437,77 +449,53 @@ export default function PosOrdenesPage() {
           </div>
         </div>
 
-        {/* Métricas KPI Simplificadas */}
-        <div className="grid grid-cols-3 gap-3 sm:gap-4">
-          <div className="bg-white dark:bg-zinc-900 rounded-2xl p-4 border border-zinc-200/80 dark:border-zinc-800 shadow-sm flex items-center gap-3.5">
-            <div className="w-11 h-11 rounded-xl bg-blue-500/15 text-blue-600 dark:text-blue-400 flex items-center justify-center text-xl shrink-0">
-              📋
-            </div>
-            <div>
-              <p className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">
-                {cargando ? "..." : totalOrdenes}
-              </p>
-              <span className="text-xs text-zinc-500 dark:text-zinc-400 font-medium">Totales</span>
-            </div>
-          </div>
-
-          <div className="bg-white dark:bg-zinc-900 rounded-2xl p-4 border border-zinc-200/80 dark:border-zinc-800 shadow-sm flex items-center gap-3.5">
-            <div className="w-11 h-11 rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center text-xl shrink-0">
-              ⏳
-            </div>
-            <div>
-              <p className="text-xl sm:text-2xl font-bold text-amber-600 dark:text-amber-400">
-                {cargando ? "..." : totalEnOrden}
-              </p>
-              <span className="text-xs text-zinc-500 dark:text-zinc-400 font-medium">En Orden</span>
-            </div>
-          </div>
-
-          <div className="bg-white dark:bg-zinc-900 rounded-2xl p-4 border border-zinc-200/80 dark:border-zinc-800 shadow-sm flex items-center gap-3.5">
-            <div className="w-11 h-11 rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-xl shrink-0">
-              ✅
-            </div>
-            <div>
-              <p className="text-xl sm:text-2xl font-bold text-emerald-600 dark:text-emerald-400">
-                {cargando ? "..." : totalPagados}
-              </p>
-              <span className="text-xs text-zinc-500 dark:text-zinc-400 font-medium">Pagados</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Barra de Filtros y Búsqueda */}
-        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200/80 dark:border-zinc-800 p-3 sm:p-4 shadow-sm flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
-          <div className="relative flex-1">
-            <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400 text-sm pointer-events-none">
+        {/* En una sola línea: Buscador + Filtro + Métricas */}
+        <div className="flex items-center gap-2 sm:gap-3">
+          <div className="relative flex-1 min-w-0">
+            <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400 text-sm pointer-events-none select-none">
               🔍
             </span>
             <input
-              type="text"
+              type="search"
+              inputMode="search"
+              enterKeyHint="search"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Buscar..."
-              className="w-full pl-10 pr-9 h-11 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 focus:border-amber-500 text-zinc-900 dark:text-white text-xs sm:text-sm font-medium placeholder:text-zinc-400 focus:outline-none transition-all"
+              placeholder="Buscar placa, cliente, vehículo u orden..."
+              className="w-full pl-10 pr-9 h-11 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 focus:border-amber-500 text-zinc-900 dark:text-white text-base sm:text-sm font-normal placeholder:text-zinc-400 focus:outline-none transition-all shadow-xs"
             />
             {searchTerm && (
               <button
                 type="button"
                 onClick={() => setSearchTerm("")}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 text-xs"
+                className="absolute right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full flex items-center justify-center text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 text-xs cursor-pointer"
+                title="Limpiar búsqueda"
               >
                 ✕
               </button>
             )}
           </div>
 
-          {/* Selector de Estado Desplegable Simplificado */}
-          <div className="relative min-w-[160px] sm:w-48 shrink-0">
+          {/* Botón Filtro (icono con punto azul en móvil, selector en desktop) */}
+          <div className="relative shrink-0">
             <button
               type="button"
               onClick={() => setFiltroMenuAbierto(!filtroMenuAbierto)}
-              className="w-full h-11 px-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-xs sm:text-sm font-semibold text-zinc-700 dark:text-zinc-200 flex items-center justify-between gap-2 shadow-sm hover:border-amber-500/50 dark:hover:border-amber-500/50 transition-all cursor-pointer"
+              title="Filtrar órdenes"
+              aria-label="Filtrar órdenes"
+              className={`relative w-11 h-11 sm:w-48 sm:px-3.5 rounded-xl border text-xs sm:text-sm font-semibold flex items-center justify-center sm:justify-between gap-2 shadow-xs transition-all cursor-pointer active:scale-95 ${
+                filtroEstado !== "TODAS" || seccionActiva === "HISTORIAL"
+                  ? "bg-blue-50 dark:bg-blue-500/15 border-blue-300 dark:border-blue-500/40 text-blue-600 dark:text-blue-400"
+                  : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-200 hover:border-amber-500/50"
+              }`}
             >
-              <div className="flex items-center gap-2 truncate">
+              <svg className="w-5 h-5 sm:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+              </svg>
+              {(filtroEstado !== "TODAS" || seccionActiva === "HISTORIAL") && (
+                <span className="sm:hidden absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-blue-600 ring-2 ring-white dark:ring-zinc-950" />
+              )}
+              <div className="hidden sm:flex items-center gap-2 truncate">
                 <span className="text-amber-500 text-xs">●</span>
                 <span className="truncate">
                   {filtroEstado === "TODAS"
@@ -520,7 +508,7 @@ export default function PosOrdenesPage() {
                 </span>
               </div>
               <svg
-                className={`w-4 h-4 text-zinc-400 transition-transform ${filtroMenuAbierto ? "rotate-180" : ""}`}
+                className={`hidden sm:block w-4 h-4 text-zinc-400 transition-transform ${filtroMenuAbierto ? "rotate-180" : ""}`}
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -532,7 +520,40 @@ export default function PosOrdenesPage() {
             {filtroMenuAbierto && (
               <>
                 <div className="fixed inset-0 z-40" onClick={() => setFiltroMenuAbierto(false)} />
-                <div className="absolute right-0 mt-1.5 w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-xl overflow-hidden z-50 py-1 animate-in fade-in zoom-in-95 duration-100">
+                <div className="absolute right-0 mt-1.5 w-52 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-xl overflow-hidden z-50 py-1 animate-in fade-in zoom-in-95 duration-100">
+                  <div className="sm:hidden px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-zinc-400 border-b border-zinc-100 dark:border-zinc-800">
+                    Vista
+                  </div>
+                  <div className="sm:hidden border-b border-zinc-100 dark:border-zinc-800">
+                    {[
+                      { id: "ACTIVAS", label: `🔧 Activas (${ordenesActivasList.length})` },
+                      { id: "HISTORIAL", label: `📋 Historial (${ordenesHistorialList.length})` },
+                    ].map((sec) => (
+                      <button
+                        key={sec.id}
+                        type="button"
+                        onClick={() => {
+                          setSeccionActiva(sec.id as "ACTIVAS" | "HISTORIAL");
+                          setFiltroMenuAbierto(false);
+                        }}
+                        className={`w-full px-3.5 py-2 text-left text-xs font-medium transition-colors flex items-center justify-between cursor-pointer ${
+                          seccionActiva === sec.id
+                            ? "bg-blue-50 dark:bg-blue-500/15 text-blue-600 dark:text-blue-400 font-bold"
+                            : "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800/80"
+                        }`}
+                      >
+                        <span>{sec.label}</span>
+                        {seccionActiva === sec.id && (
+                          <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
+                          </svg>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="sm:hidden px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-zinc-400">
+                    Estado
+                  </div>
                   {[
                     { id: "TODAS", label: "Todas" },
                     { id: "EN_ORDEN", label: "En Orden" },
@@ -547,13 +568,13 @@ export default function PosOrdenesPage() {
                       }}
                       className={`w-full px-3.5 py-2.5 text-left text-xs sm:text-sm font-medium transition-colors flex items-center justify-between cursor-pointer ${
                         filtroEstado === opcion.id
-                          ? "bg-amber-50 dark:bg-amber-500/15 text-amber-600 dark:text-amber-400 font-bold"
+                          ? "bg-blue-50 dark:bg-blue-500/15 text-blue-600 dark:text-blue-400 font-bold"
                           : "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800/80 hover:text-zinc-900 dark:hover:text-white"
                       }`}
                     >
                       <span>{opcion.label}</span>
                       {filtroEstado === opcion.id && (
-                        <svg className="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
                         </svg>
                       )}
@@ -562,6 +583,76 @@ export default function PosOrdenesPage() {
                 </div>
               </>
             )}
+          </div>
+
+          {/* Botón Métricas (solo móvil) */}
+          <button
+            type="button"
+            onClick={() => setMostrarMetricasMovil(!mostrarMetricasMovil)}
+            title="Mostrar u ocultar métricas"
+            aria-label="Mostrar métricas"
+            className={`sm:hidden w-11 h-11 rounded-xl border flex items-center justify-center transition-all cursor-pointer shadow-xs active:scale-95 shrink-0 ${
+              mostrarMetricasMovil
+                ? "bg-amber-50 dark:bg-amber-500/15 border-amber-300 dark:border-amber-500/40 text-amber-600 dark:text-amber-400"
+                : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-300"
+            }`}
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Métricas KPI (4 recuadros pequeños en fila en móvil, empiezan ocultos) */}
+        <div className={`${mostrarMetricasMovil ? "block" : "hidden"} sm:block animate-in fade-in slide-in-from-top-1 duration-150`}>
+          <div className="grid grid-cols-4 sm:grid-cols-4 gap-2 sm:gap-4">
+            <div className="bg-white dark:bg-zinc-900 rounded-2xl p-2.5 sm:p-4 border border-zinc-200/80 dark:border-zinc-800 shadow-xs sm:shadow-sm flex flex-col sm:flex-row items-center gap-1 sm:gap-3.5 text-center sm:text-left">
+              <div className="w-8 h-8 sm:w-11 sm:h-11 rounded-xl bg-blue-500/15 text-blue-600 dark:text-blue-400 flex items-center justify-center text-sm sm:text-xl shrink-0">
+                📋
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm sm:text-2xl font-bold text-zinc-900 dark:text-white leading-tight truncate">
+                  {cargando ? "..." : totalOrdenes}
+                </p>
+                <span className="text-[10px] sm:text-xs text-zinc-500 dark:text-zinc-400 font-medium truncate block">Totales</span>
+              </div>
+            </div>
+
+            <div className="bg-white dark:bg-zinc-900 rounded-2xl p-2.5 sm:p-4 border border-zinc-200/80 dark:border-zinc-800 shadow-xs sm:shadow-sm flex flex-col sm:flex-row items-center gap-1 sm:gap-3.5 text-center sm:text-left">
+              <div className="w-8 h-8 sm:w-11 sm:h-11 rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center text-sm sm:text-xl shrink-0">
+                ⏳
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm sm:text-2xl font-bold text-amber-600 dark:text-amber-400 leading-tight truncate">
+                  {cargando ? "..." : totalEnOrden}
+                </p>
+                <span className="text-[10px] sm:text-xs text-zinc-500 dark:text-zinc-400 font-medium truncate block">En Orden</span>
+              </div>
+            </div>
+
+            <div className="bg-white dark:bg-zinc-900 rounded-2xl p-2.5 sm:p-4 border border-zinc-200/80 dark:border-zinc-800 shadow-xs sm:shadow-sm flex flex-col sm:flex-row items-center gap-1 sm:gap-3.5 text-center sm:text-left">
+              <div className="w-8 h-8 sm:w-11 sm:h-11 rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-sm sm:text-xl shrink-0">
+                ✅
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm sm:text-2xl font-bold text-emerald-600 dark:text-emerald-400 leading-tight truncate">
+                  {cargando ? "..." : totalPagados}
+                </p>
+                <span className="text-[10px] sm:text-xs text-zinc-500 dark:text-zinc-400 font-medium truncate block">Pagados</span>
+              </div>
+            </div>
+
+            <div className="bg-white dark:bg-zinc-900 rounded-2xl p-2.5 sm:p-4 border border-zinc-200/80 dark:border-zinc-800 shadow-xs sm:shadow-sm flex flex-col sm:flex-row items-center gap-1 sm:gap-3.5 text-center sm:text-left">
+              <div className="w-8 h-8 sm:w-11 sm:h-11 rounded-xl bg-purple-500/15 text-purple-600 dark:text-purple-400 flex items-center justify-center text-sm sm:text-xl shrink-0">
+                🗂️
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm sm:text-2xl font-bold text-purple-600 dark:text-purple-400 leading-tight truncate">
+                  {cargando ? "..." : ordenesHistorialList.length}
+                </p>
+                <span className="text-[10px] sm:text-xs text-zinc-500 dark:text-zinc-400 font-medium truncate block">Historial</span>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -585,126 +676,200 @@ export default function PosOrdenesPage() {
           </div>
         ) : (
           <div className="space-y-4">
-            {/* Vista Móvil (Lista Compacta) */}
-            <div className="md:hidden space-y-2.5">
+            {/* Vista Móvil (Ordenada como Clientes: Cabecera, 2 recuadros, servicios deslizables y barra de botones abajo) */}
+            <div className="md:hidden space-y-3">
               {ordenesFiltradas.map((ord, idx) => {
                 const estadoCfg = getEstadoSimplificado(ord);
+                const cleanPhone = (ord.clientPhone || "").replace(/\D/g, "");
+                const waPhone = cleanPhone.startsWith("0")
+                  ? `593${cleanPhone.slice(1)}`
+                  : cleanPhone.startsWith("593")
+                  ? cleanPhone
+                  : cleanPhone
+                  ? `593${cleanPhone}`
+                  : "";
+
                 return (
                   <div
                     key={ord.id || ord.dbId}
-                    className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-3.5 space-y-2.5 shadow-xs hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors"
+                    className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden shadow-xs transition-colors"
                   >
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border bg-amber-50 dark:bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-500/30">
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                    <div className="p-3.5 space-y-3">
+                      {/* 1. Icono, Vehículo + Orden, Estado, Placa y Fecha */}
+                      <div className="flex items-start gap-3">
+                        <div className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 border bg-amber-50 dark:bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-500/30">
+                          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 18.75a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 0 1-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h1.125c.621 0 1.125-.504 1.125-1.125V14.25m-17.25 0h17.25M3.75 14.25l2.25-6.75h12l2.25 6.75" />
                           </svg>
                         </div>
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <p className="font-normal text-sm text-zinc-900 dark:text-zinc-100 truncate">
+
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="font-bold text-sm text-zinc-900 dark:text-zinc-100 truncate">
                               {ord.vehicle}
                             </p>
-                            <span className="font-mono text-[11px] font-normal text-amber-600 dark:text-amber-400 bg-amber-500/10 px-1.5 py-0.2 rounded border border-amber-500/20">
-                              {formatNumeroOrden(ord.orderNumber, idx)}
+                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border shrink-0 ${estadoCfg.badge}`}>
+                              <span className={`w-1.5 h-1.5 rounded-full ${estadoCfg.dot}`} />
+                              {estadoCfg.label}
                             </span>
                           </div>
-                          <p className="text-xs text-zinc-500 dark:text-zinc-400 font-mono mt-0.5 truncate">
-                            <span className="font-normal text-zinc-700 dark:text-zinc-300">{ord.plate}</span>
-                            <span> • {ord.client}</span>
-                          </p>
+
+                          <div className="flex items-center flex-wrap gap-1.5 mt-1 text-[11px] text-zinc-500 dark:text-zinc-400">
+                            <span className="font-mono font-bold text-amber-600 dark:text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20">
+                              {formatNumeroOrden(ord.orderNumber, idx)}
+                            </span>
+                            <span className="font-mono font-semibold text-zinc-700 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded border border-zinc-200 dark:border-zinc-700">
+                              {ord.plate}
+                            </span>
+                            {ord.dateIn && (
+                              <>
+                                <span>•</span>
+                                <span>📅 {ord.dateIn}</span>
+                              </>
+                            )}
+                          </div>
                         </div>
                       </div>
 
-                      <div className="text-right shrink-0">
-                        <p className="font-normal text-sm text-emerald-600 dark:text-emerald-400">
-                          ${Number(ord.totalCost || 0).toFixed(2)}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="pt-2 border-t border-zinc-100 dark:border-zinc-800/80 flex items-center justify-between gap-2">
-                      {ord.isBilled || estadoCfg.tipo === "pagado" || estadoCfg.tipo === "terminado" ? (
-                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-normal border ${estadoCfg.badge}`}>
-                          <span className={`w-1.5 h-1.5 rounded-full ${estadoCfg.dot}`} />
-                          {estadoCfg.label}
-                        </span>
-                      ) : (
-                        <div className="relative inline-block text-left" onClick={(e) => e.stopPropagation()}>
-                          <button
-                            type="button"
-                            disabled={guardandoId === (ord.dbId || ord.id)}
-                            onClick={() => setMenuTallerFilaId(menuTallerFilaId === (ord.dbId || ord.id) ? null : (ord.dbId || ord.id))}
-                            className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-normal border transition-all hover:brightness-110 active:scale-95 cursor-pointer disabled:opacity-50 ${estadoCfg.badge}`}
-                            title="Estado Taller (Trabajando, Pausa, En espera)"
+                      {/* 2. Dos recuadros: Cliente/WhatsApp y Total Estimado */}
+                      <div className="grid grid-cols-2 gap-2">
+                        {waPhone ? (
+                          <a
+                            href={`https://wa.me/${waPhone}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="bg-emerald-50/70 dark:bg-emerald-500/10 border border-emerald-200/80 dark:border-emerald-500/25 rounded-xl px-3 py-2 block active:scale-98 transition-transform"
                           >
-                            <span className={`w-1.5 h-1.5 rounded-full ${estadoCfg.dot}`} />
-                            <span>{estadoCfg.label}</span>
-                            <svg className="w-2.5 h-2.5 opacity-60 ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                            </svg>
-                          </button>
-                          {menuTallerFilaId === (ord.dbId || ord.id) && (
-                            <>
-                              <div className="fixed inset-0 z-40" onClick={() => setMenuTallerFilaId(null)} />
-                              <div className="absolute left-0 mt-1 w-36 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-xl overflow-hidden z-50 py-1 text-xs">
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setMenuTallerFilaId(null);
-                                    handleSincronizarEstadoTaller(ord, "Aprobado");
-                                  }}
-                                  className={`w-full px-3 py-2 text-left flex items-center gap-2 hover:bg-emerald-500/10 transition-colors ${
-                                    estadoCfg.tipo === "trabajando" ? "text-emerald-600 font-bold bg-emerald-500/5" : "text-zinc-700 dark:text-zinc-300"
-                                  }`}
-                                >
-                                  <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                                  <span>Trabajando</span>
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setMenuTallerFilaId(null);
-                                    handleSincronizarEstadoTaller(ord, "Pausada");
-                                  }}
-                                  className={`w-full px-3 py-2 text-left flex items-center gap-2 hover:bg-amber-500/10 transition-colors ${
-                                    estadoCfg.tipo === "pausa" ? "text-amber-600 font-bold bg-amber-500/5" : "text-zinc-700 dark:text-zinc-300"
-                                  }`}
-                                >
-                                  <span className="w-2 h-2 rounded-full bg-amber-500" />
-                                  <span>Pausa</span>
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setMenuTallerFilaId(null);
-                                    handleSincronizarEstadoTaller(ord, "Pendiente");
-                                  }}
-                                  className={`w-full px-3 py-2 text-left flex items-center gap-2 hover:bg-amber-500/10 transition-colors ${
-                                    estadoCfg.tipo === "espera" ? "text-amber-600 font-bold bg-amber-500/5" : "text-zinc-700 dark:text-zinc-300"
-                                  }`}
-                                >
-                                  <span className="w-2 h-2 rounded-full bg-amber-500/70" />
-                                  <span>En espera</span>
-                                </button>
-                              </div>
-                            </>
-                          )}
+                            <span className="text-[10px] uppercase tracking-wider font-semibold text-emerald-600 dark:text-emerald-400 block">
+                              Cliente • WhatsApp ↗
+                            </span>
+                            <span className="font-semibold text-xs text-emerald-700 dark:text-emerald-300 truncate block">
+                              💬 {ord.client}
+                            </span>
+                          </a>
+                        ) : (
+                          <div className="bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200/70 dark:border-zinc-800 rounded-xl px-3 py-2">
+                            <span className="text-[10px] uppercase tracking-wider font-semibold text-zinc-400 block">
+                              Cliente
+                            </span>
+                            <span className="font-semibold text-xs text-zinc-800 dark:text-zinc-200 truncate block">
+                              👤 {ord.client}
+                            </span>
+                          </div>
+                        )}
+
+                        <div className="bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200/70 dark:border-zinc-800 rounded-xl px-3 py-2">
+                          <span className="text-[10px] uppercase tracking-wider font-semibold text-zinc-400 block">
+                            Total Orden
+                          </span>
+                          <span className="font-mono font-bold text-sm text-emerald-600 dark:text-emerald-400">
+                            ${Number(ord.totalCost || 0).toFixed(2)}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* 3. Servicios / Trabajos deslizables de lado */}
+                      {ord.services && ord.services.length > 0 && (
+                        <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+                          {ord.services.map((srv, sIdx) => (
+                            <span
+                              key={sIdx}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200/80 dark:border-zinc-700/60 text-[11px] font-medium whitespace-nowrap shrink-0"
+                            >
+                              <span>🔧</span>
+                              <span>{srv}</span>
+                            </span>
+                          ))}
                         </div>
                       )}
+                    </div>
 
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        <Link
-                          href={`/pos/ordenes/detalle?id=${encodeURIComponent(ord.orderNumber || ord.id || ord.dbId || "")}`}
-                          className="w-8 h-8 rounded-xl bg-amber-50 hover:bg-amber-100 dark:bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-500/30 flex items-center justify-center transition-all shrink-0 active:scale-95 shadow-xs cursor-pointer"
-                          title="Ver Orden Completa"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
-                          </svg>
-                        </Link>
+                    {/* 4. Botones grandes abajo */}
+                    <div className="grid grid-cols-3 divide-x divide-zinc-200 dark:divide-zinc-800 border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-900/80">
+                      <div className="relative flex items-center justify-center">
+                        {ord.isBilled || estadoCfg.tipo === "pagado" || estadoCfg.tipo === "terminado" ? (
+                          <span className="h-11 w-full flex items-center justify-center gap-1 text-xs font-semibold text-sky-600 dark:text-sky-400">
+                            <span>✓</span>
+                            <span>{estadoCfg.label}</span>
+                          </span>
+                        ) : (
+                          <>
+                            <button
+                              type="button"
+                              disabled={guardandoId === (ord.dbId || ord.id)}
+                              onClick={() =>
+                                setMenuTallerFilaId(
+                                  menuTallerFilaId === (ord.dbId || ord.id) ? null : ord.dbId || ord.id
+                                )
+                              }
+                              className="h-11 w-full flex items-center justify-center gap-1 text-xs font-semibold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer disabled:opacity-50"
+                            >
+                              <span className={`w-2 h-2 rounded-full ${estadoCfg.dot}`} />
+                              <span>Estado</span>
+                              <svg className="w-3 h-3 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                              </svg>
+                            </button>
+                            {menuTallerFilaId === (ord.dbId || ord.id) && (
+                              <>
+                                <div className="fixed inset-0 z-40" onClick={() => setMenuTallerFilaId(null)} />
+                                <div className="absolute bottom-12 left-2 w-40 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-xl overflow-hidden z-50 py-1 text-xs">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setMenuTallerFilaId(null);
+                                      handleSincronizarEstadoTaller(ord, "Aprobado");
+                                    }}
+                                    className="w-full px-3 py-2.5 text-left flex items-center gap-2 hover:bg-emerald-500/10 text-zinc-700 dark:text-zinc-300 cursor-pointer"
+                                  >
+                                    <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                                    <span>Trabajando</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setMenuTallerFilaId(null);
+                                      handleSincronizarEstadoTaller(ord, "Pausada");
+                                    }}
+                                    className="w-full px-3 py-2.5 text-left flex items-center gap-2 hover:bg-amber-500/10 text-zinc-700 dark:text-zinc-300 cursor-pointer"
+                                  >
+                                    <span className="w-2 h-2 rounded-full bg-amber-500" />
+                                    <span>Pausa</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setMenuTallerFilaId(null);
+                                      handleSincronizarEstadoTaller(ord, "Pendiente");
+                                    }}
+                                    className="w-full px-3 py-2.5 text-left flex items-center gap-2 hover:bg-amber-500/10 text-zinc-700 dark:text-zinc-300 cursor-pointer"
+                                  >
+                                    <span className="w-2 h-2 rounded-full bg-amber-500/70" />
+                                    <span>En espera</span>
+                                  </button>
+                                </div>
+                              </>
+                            )}
+                          </>
+                        )}
                       </div>
+
+                      <button
+                        type="button"
+                        onClick={() => handleCobrarEnPos(ord)}
+                        className="h-11 flex items-center justify-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 active:bg-emerald-100 transition-colors cursor-pointer"
+                      >
+                        <span>🛒</span>
+                        <span>Cobrar</span>
+                      </button>
+
+                      <Link
+                        href={`/pos/ordenes/detalle?id=${encodeURIComponent(ord.orderNumber || ord.id || ord.dbId || "")}`}
+                        className="h-11 flex items-center justify-center gap-1.5 text-xs font-semibold text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-500/10 active:bg-amber-100 transition-colors cursor-pointer"
+                      >
+                        <span>📄</span>
+                        <span>Detalle</span>
+                      </Link>
                     </div>
                   </div>
                 );
@@ -872,6 +1037,8 @@ export default function PosOrdenesPage() {
           </div>
         )}
       </main>
+
+      <PosMobileNav />
     </div>
   );
 }

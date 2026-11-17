@@ -46,6 +46,8 @@ export default function CatalogoPage() {
   const [catMenuAbierto, setCatMenuAbierto] = useState(false);
   const [selectedEstado, setSelectedEstado] = useState("TODOS");
   const [estadoMenuAbierto, setEstadoMenuAbierto] = useState(false);
+  const [filtroMovilAbierto, setFiltroMovilAbierto] = useState(false);
+  const [mostrarMetricasMovil, setMostrarMetricasMovil] = useState(false);
 
   // Modales
   const [mostrarModalNuevo, setMostrarModalNuevo] = useState(false);
@@ -322,14 +324,16 @@ export default function CatalogoPage() {
     return true;
   });
 
+  const hayFiltroActivo = Boolean(selectedCategory) || selectedEstado !== "TODOS";
+
   return (
-    <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans pb-24 md:pb-0">
+    <div className="flex flex-col min-h-dvh bg-zinc-50 dark:bg-zinc-950 font-sans pb-[calc(env(safe-area-inset-bottom)+6rem)] md:pb-0">
       <Header />
 
-      <main className="flex-grow p-4 md:p-8 max-w-7xl mx-auto w-full flex flex-col">
-        {/* Header */}
-        <div className="order-1 mb-6 sm:mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
+      <main className="flex-grow px-3.5 py-4 sm:p-4 md:p-8 max-w-7xl mx-auto w-full flex flex-col">
+        {/* Header - Móvil y Escritorio en una sola fila (idéntico a Clientes) */}
+        <div className="order-1 mb-3 sm:mb-8 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
             <Link 
               href="/pos"
               title="Volver a Panel POS"
@@ -339,84 +343,56 @@ export default function CatalogoPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
               </svg>
             </Link>
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50 truncate">
               Productos
             </h1>
-            <span className="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-600 text-white shadow-sm shadow-blue-500/20">
+            <span className="inline-flex items-center justify-center px-2 min-w-6 h-6 rounded-full text-xs font-bold bg-blue-600 text-white shadow-sm shadow-blue-500/20 shrink-0">
               {cargando && productos.length === 0 ? "..." : productosFiltrados.length}
             </span>
           </div>
 
-          <div className="flex flex-col items-end gap-2 w-full sm:w-auto sm:ml-auto">
+          <div className="flex items-center sm:flex-col sm:items-end gap-2 shrink-0 ml-auto">
             <BranchTabs size="sm" />
             <Link
               href="/pos/catalogo/nuevo"
-              className="h-10 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm transition-all shadow-sm shadow-blue-500/20 active:scale-95 flex items-center justify-center gap-2 w-full sm:w-auto"
+              title="Nuevo Producto"
+              aria-label="Nuevo Producto"
+              className="h-9 w-9 sm:w-auto sm:h-10 sm:px-4 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-semibold text-xs sm:text-sm shadow-sm shadow-blue-500/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
               </svg>
-              <span>Nuevo Producto</span>
+              <span className="hidden sm:inline">Nuevo Producto</span>
             </Link>
           </div>
         </div>
 
-        {/* Resumen Cards Desplegable en Móvil: debajo de Estado */}
-        <CollapsibleMetrics className="order-3 sm:order-2 mb-6 sm:mb-8">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
-            {/* Total Productos */}
-            <div className="bg-white dark:bg-zinc-900/80 p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3 sm:gap-4 backdrop-blur-sm">
-              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-blue-500/15 border border-blue-500/25 text-blue-500 flex items-center justify-center text-xl shrink-0">
-                📦
+        {/* Métricas: en móvil se muestran con el icono 📊 en 4 recuadros en una fila, en escritorio siempre visibles */}
+        <div className={`order-3 sm:order-2 mb-3 sm:mb-8 ${mostrarMetricasMovil ? "block" : "hidden"} sm:block`}>
+          <div className="grid grid-cols-4 sm:grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
+            {[
+              { icono: "📦", valor: productos.length, label: "Productos", cls: "bg-blue-500/15 border-blue-500/25 text-blue-500 dark:text-blue-400", valCls: "text-zinc-900 dark:text-white" },
+              { icono: "🟢", valor: enStockCount, label: "En Stock", cls: "bg-emerald-500/15 border-emerald-500/25 text-emerald-500 dark:text-emerald-400", valCls: "text-emerald-600 dark:text-emerald-400" },
+              { icono: "⚠️", valor: bajoStockCount, label: "Bajo Stock", cls: "bg-amber-500/15 border-amber-500/25 text-amber-500 dark:text-amber-400", valCls: "text-amber-600 dark:text-amber-400" },
+              { icono: "🛑", valor: agotadosCount, label: "Agotados", cls: "bg-rose-500/15 border-rose-500/25 text-rose-500 dark:text-rose-400", valCls: "text-rose-600 dark:text-rose-400" },
+            ].map((m) => (
+              <div
+                key={m.label}
+                className="bg-white dark:bg-zinc-900/80 p-2.5 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex flex-col sm:flex-row items-center sm:items-center gap-1 sm:gap-4 text-center sm:text-left"
+              >
+                <div className={`w-9 h-9 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl border flex items-center justify-center text-base sm:text-xl shrink-0 ${m.cls}`}>
+                  {m.icono}
+                </div>
+                <div className="min-w-0">
+                  <p className={`text-lg sm:text-2xl font-bold leading-tight tabular-nums ${m.valCls}`}>
+                    {cargando && productos.length === 0 ? "..." : m.valor}
+                  </p>
+                  <h3 className="text-zinc-500 dark:text-zinc-400 text-[11px] sm:text-sm font-medium truncate">{m.label}</h3>
+                </div>
               </div>
-              <div>
-                <p className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">
-                  {cargando && productos.length === 0 ? "..." : productos.length}
-                </p>
-                <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">Productos</h3>
-              </div>
-            </div>
-
-            {/* En Stock */}
-            <div className="bg-white dark:bg-zinc-900/80 p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3 sm:gap-4 backdrop-blur-sm">
-              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-emerald-500/15 border border-emerald-500/25 text-emerald-500 flex items-center justify-center text-xl shrink-0">
-                🟢
-              </div>
-              <div>
-                <p className="text-xl sm:text-2xl font-bold text-emerald-600 dark:text-emerald-400">
-                  {cargando ? "..." : enStockCount}
-                </p>
-                <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">En Stock</h3>
-              </div>
-            </div>
-
-            {/* Bajo Stock */}
-            <div className="bg-white dark:bg-zinc-900/80 p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3 sm:gap-4 backdrop-blur-sm">
-              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-amber-500/15 border border-amber-500/25 text-amber-500 flex items-center justify-center text-xl shrink-0">
-                ⚠️
-              </div>
-              <div>
-                <p className="text-xl sm:text-2xl font-bold text-amber-600 dark:text-amber-400">
-                  {cargando ? "..." : bajoStockCount}
-                </p>
-                <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">Bajo Stock</h3>
-              </div>
-            </div>
-
-            {/* Agotados */}
-            <div className="bg-white dark:bg-zinc-900/80 p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3 sm:gap-4 backdrop-blur-sm">
-              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-rose-500/15 border border-rose-500/25 text-rose-500 flex items-center justify-center text-xl shrink-0">
-                🛑
-              </div>
-              <div>
-                <p className="text-xl sm:text-2xl font-bold text-rose-600 dark:text-rose-400">
-                  {cargando ? "..." : agotadosCount}
-                </p>
-                <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">Agotados</h3>
-              </div>
-            </div>
+            ))}
           </div>
-        </CollapsibleMetrics>
+        </div>
 
         {/* Mensaje de Error */}
         {error && (
@@ -431,18 +407,20 @@ export default function CatalogoPage() {
           </div>
         )}
 
-        {/* Buscador y Filtros */}
-        <div className="order-2 sm:order-3 flex flex-col sm:flex-row items-center justify-between gap-2 sm:gap-4 mb-2 sm:mb-6">
-          <div className="relative w-full flex-1">
+        {/* Buscador y Filtros: en una sola fila en móvil y escritorio */}
+        <div className="order-2 sm:order-3 flex flex-row items-center justify-between gap-2 sm:gap-4 mb-3 sm:mb-6">
+          <div className="relative min-w-0 flex-1">
             <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400 select-none">
               🔍
             </span>
             <input
-              type="text"
+              type="search"
+              inputMode="search"
+              enterKeyHint="search"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Buscar..."
-              className="w-full pl-10 pr-10 h-11 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white text-sm font-normal focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-zinc-400 shadow-sm"
+              className="w-full pl-10 pr-10 h-11 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white text-base sm:text-sm font-normal focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-zinc-400 shadow-sm [&::-webkit-search-cancel-button]:hidden"
             />
             {searchTerm && (
               <button
@@ -455,9 +433,144 @@ export default function CatalogoPage() {
             )}
           </div>
 
-          <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
+          {/* Botones Móvil: Filtro (con punto azul si activo) + Métricas */}
+          <div className="relative sm:hidden flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => setFiltroMovilAbierto(!filtroMovilAbierto)}
+              title="Filtrar"
+              aria-label="Filtrar"
+              className={`relative w-11 h-11 rounded-xl border flex items-center justify-center transition-all cursor-pointer shadow-sm active:scale-95 ${
+                hayFiltroActivo
+                  ? "bg-blue-50 dark:bg-blue-500/15 border-blue-300 dark:border-blue-500/40 text-blue-600 dark:text-blue-400"
+                  : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-200"
+              }`}
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 4.5h18l-7 8.25V19.5l-4 1.5v-8.25L3 4.5Z" />
+              </svg>
+              {hayFiltroActivo && (
+                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-blue-600 ring-2 ring-white dark:ring-zinc-950" />
+              )}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setMostrarMetricasMovil((v) => !v)}
+              title="Métricas"
+              aria-label="Métricas"
+              className={`w-11 h-11 rounded-xl border flex items-center justify-center transition-all cursor-pointer shadow-sm active:scale-95 ${
+                mostrarMetricasMovil
+                  ? "bg-blue-600 border-blue-600 text-white"
+                  : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-200"
+              }`}
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 3v18h18M8 17v-5m4 5V8m4 9v-3" />
+              </svg>
+            </button>
+
+            {filtroMovilAbierto && (
+              <>
+                <div
+                  className="fixed inset-0 z-40"
+                  onClick={() => setFiltroMovilAbierto(false)}
+                />
+                <div className="absolute right-0 top-full mt-1.5 w-60 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-xl overflow-hidden z-50 py-1.5 max-h-80 overflow-y-auto animate-in fade-in zoom-in-95 duration-100">
+                  <div className="px-3.5 py-1 text-[10px] font-bold uppercase tracking-wider text-zinc-400">
+                    Estado de Stock
+                  </div>
+                  {[
+                    { id: "TODOS", label: "Todos" },
+                    { id: "EN_STOCK", label: "En Stock" },
+                    { id: "BAJO_STOCK", label: "Bajo Stock" },
+                    { id: "AGOTADO", label: "Agotados" },
+                  ].map((opcion) => (
+                    <button
+                      key={opcion.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedEstado(opcion.id);
+                        setFiltroMovilAbierto(false);
+                      }}
+                      className={`w-full px-4 py-2 text-left text-sm font-normal transition-colors flex items-center justify-between cursor-pointer ${
+                        selectedEstado === opcion.id
+                          ? "bg-blue-50 dark:bg-blue-600/15 text-blue-600 dark:text-blue-400"
+                          : "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800/80"
+                      }`}
+                    >
+                      <span>{opcion.label}</span>
+                      {selectedEstado === opcion.id && (
+                        <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
+                        </svg>
+                      )}
+                    </button>
+                  ))}
+
+                  <div className="my-1 border-t border-zinc-100 dark:border-zinc-800" />
+                  <div className="px-3.5 py-1 text-[10px] font-bold uppercase tracking-wider text-zinc-400">
+                    Categoría
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedCategory("");
+                      setFiltroMovilAbierto(false);
+                    }}
+                    className={`w-full px-4 py-2 text-left text-sm font-normal transition-colors flex items-center justify-between cursor-pointer ${
+                      !selectedCategory
+                        ? "bg-blue-50 dark:bg-blue-600/15 text-blue-600 dark:text-blue-400"
+                        : "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800/80"
+                    }`}
+                  >
+                    <span>Todas las categorías</span>
+                    {!selectedCategory && (
+                      <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
+                      </svg>
+                    )}
+                  </button>
+                  {Array.from(
+                    new Set([
+                      "Tienda",
+                      "Taller",
+                      "Lubricentro",
+                      "Car Wash",
+                      "Tecnicentro",
+                      ...categories.map((c) => String(c).trim()).filter(Boolean),
+                    ])
+                  ).map((cat, idx) => (
+                    <button
+                      key={`cat-mov-${cat}-${idx}`}
+                      type="button"
+                      onClick={() => {
+                        setSelectedCategory(cat);
+                        setFiltroMovilAbierto(false);
+                      }}
+                      className={`w-full px-4 py-2 text-left text-sm font-normal transition-colors flex items-center justify-between cursor-pointer ${
+                        selectedCategory === cat
+                          ? "bg-blue-50 dark:bg-blue-600/15 text-blue-600 dark:text-blue-400"
+                          : "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800/80"
+                      }`}
+                    >
+                      <span className="truncate">{cat}</span>
+                      {selectedCategory === cat && (
+                        <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
+                        </svg>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Filtros Escritorio (sm:flex) */}
+          <div className="hidden sm:flex items-center gap-3 w-auto shrink-0">
             {/* Filtro Categorías */}
-            <div className="relative w-full sm:w-44 shrink-0">
+            <div className="relative w-44 shrink-0">
               <button
                 type="button"
                 onClick={() => {
@@ -526,7 +639,7 @@ export default function CatalogoPage() {
             </div>
 
             {/* Filtro Estado */}
-            <div className="relative w-full sm:w-40 shrink-0">
+            <div className="relative w-40 shrink-0">
               <button
                 type="button"
                 onClick={() => {
@@ -616,109 +729,129 @@ export default function CatalogoPage() {
             </div>
           ) : (
             <>
-              {/* Mobile Cards (md:hidden) adaptadas con orden idéntico a facturas */}
+              {/* Vista Móvil (md:hidden): Tarjetas estructuradas idénticas a Clientes */}
               <div className="md:hidden space-y-3.5">
                 {productosFiltrados.map((item) => (
                   <div
                     key={item.id}
-                    className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-4 space-y-3 shadow-xs hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors"
+                    className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-xs overflow-hidden active:bg-zinc-50 dark:active:bg-zinc-800/40 transition-colors"
                   >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-center gap-3 min-w-0">
-                        {/* Icono / Foto de producto */}
-                        <div className="w-12 h-12 rounded-xl flex items-center justify-center font-bold text-base shrink-0 border bg-zinc-100 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 overflow-hidden shadow-2xs">
-                          {item.imageUrl ? (
-                            <img
-                              src={item.imageUrl}
-                              alt={item.name}
-                              className="w-full h-full object-contain p-1"
-                            />
-                          ) : (
-                            <span className="text-xl">📦</span>
+                    {/* Fila 1: Foto + Nombre + Código/Marca + Estado */}
+                    <div className="p-3.5 flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-2xl flex items-center justify-center font-bold text-base shrink-0 border bg-zinc-100 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 overflow-hidden shadow-2xs">
+                        {item.imageUrl ? (
+                          <img
+                            src={item.imageUrl}
+                            alt={item.name}
+                            className="w-full h-full object-contain p-1"
+                          />
+                        ) : (
+                          <span className="text-xl">📦</span>
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="font-bold text-[15px] leading-tight text-zinc-900 dark:text-zinc-100 truncate">
+                            {formatearPrimeraMayuscula(item.name)}
+                          </p>
+                          <span
+                            className={`shrink-0 text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-md border ${getStatusColor(
+                              item.status
+                            )}`}
+                          >
+                            {item.status}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1.5 mt-1 flex-wrap text-xs text-zinc-500 dark:text-zinc-400">
+                          <span className="font-mono font-semibold text-blue-600 dark:text-blue-400">
+                            #{item.code}
+                          </span>
+                          {item.brand && (
+                            <span className="truncate">• {item.brand}</span>
+                          )}
+                          {item.location && (
+                            <span className="text-[11px] text-zinc-400 ml-auto flex items-center gap-0.5">
+                              <span>📍</span> {item.location}
+                            </span>
                           )}
                         </div>
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <p className="font-bold text-sm text-zinc-900 dark:text-zinc-100 truncate">
-                              {formatearPrimeraMayuscula(item.name)}
-                            </p>
-                            <span
-                              className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${getStatusColor(
-                                item.status
-                              )}`}
-                            >
-                              {item.status} ({item.stock} uds)
-                            </span>
-                          </div>
-                          <p className="text-xs text-zinc-500 dark:text-zinc-400 font-mono mt-0.5 truncate">
-                            <span className="font-semibold text-blue-600 dark:text-blue-400">#{item.code}</span>
-                            {item.brand && <span> • {item.brand}</span>}
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Acciones Rápidas (Toque táctil >= 44px) */}
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        <Link
-                          href={`/pos/catalogo/editar?id=${item.id}`}
-                          className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl flex items-center justify-center text-zinc-500 hover:text-blue-600 bg-zinc-100 dark:bg-zinc-800 hover:bg-blue-50 dark:hover:bg-blue-500/10 active:scale-95 transition-all"
-                          title="Editar producto"
-                          aria-label="Editar producto"
-                        >
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                          </svg>
-                        </Link>
-                        <button
-                          onClick={() => setProductoAEliminar(item)}
-                          disabled={eliminandoId === item.id}
-                          className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl flex items-center justify-center text-zinc-500 hover:text-rose-600 bg-zinc-100 dark:bg-zinc-800 hover:bg-rose-50 dark:hover:bg-rose-500/10 active:scale-95 transition-all disabled:opacity-50 cursor-pointer"
-                          title="Eliminar producto"
-                          aria-label="Eliminar producto"
-                        >
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                          </svg>
-                        </button>
                       </div>
                     </div>
 
-                    {/* Datos secundarios (Precio, Categoría, Ubicación) */}
-                    <div className="flex flex-wrap items-center gap-2 pt-1 text-xs">
-                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-sky-400 border border-blue-200 dark:border-blue-500/20 font-bold font-mono text-xs">
-                        💰 ${Number(item.price).toFixed(2)}
-                      </span>
+                    {/* Fila 2: Dos recuadros ordenados (Precio PVP / Stock) */}
+                    <div className="px-3.5 pb-3 grid grid-cols-2 gap-2">
+                      <div className="min-w-0 rounded-xl bg-blue-50/70 dark:bg-blue-500/10 border border-blue-200/70 dark:border-blue-500/20 px-2.5 py-2">
+                        <p className="text-[10px] font-semibold uppercase tracking-wide text-blue-600/80 dark:text-blue-400/80">
+                          Precio PVP
+                        </p>
+                        <p className="text-[14px] font-mono font-bold text-blue-700 dark:text-sky-300 truncate">
+                          ${Number(item.price || 0).toFixed(2)}
+                        </p>
+                      </div>
+                      <div className="min-w-0 rounded-xl bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800 px-2.5 py-2">
+                        <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-400">
+                          Existencia
+                        </p>
+                        <p className="text-[13px] font-mono font-semibold text-zinc-800 dark:text-zinc-200 truncate">
+                          {item.stock} uds <span className="text-[11px] font-normal text-zinc-400">(Mín: {item.minStock})</span>
+                        </p>
+                      </div>
+                    </div>
 
-                      {item.category && item.category !== "General" && (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700/60 text-xs font-medium">
-                          {item.category}
-                        </span>
-                      )}
-                      {item.subCategory && (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700/60 text-xs font-medium">
-                          {item.subCategory}
-                        </span>
-                      )}
-                      {item.presentation && (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-500/20 text-xs font-medium">
-                          {item.presentation}
-                        </span>
-                      )}
-                      {item.tipo &&
-                        parsearModulos(item.tipo).map((t) => (
-                          <span
-                            key={t}
-                            className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-500/20"
-                          >
-                            {t}
+                    {/* Fila 3: Categorías, Presentación y Módulos (deslizables horizontalmente) */}
+                    <div className="px-3.5 pb-3">
+                      <div className="flex gap-1.5 overflow-x-auto -mx-0.5 px-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                        {item.category && item.category !== "General" && (
+                          <span className="shrink-0 bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 px-2 py-1 rounded-lg text-[11px] font-medium border border-zinc-200 dark:border-zinc-700">
+                            {item.category}
                           </span>
-                        ))}
+                        )}
+                        {item.subCategory && (
+                          <span className="shrink-0 bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 px-2 py-1 rounded-lg text-[11px] font-medium border border-zinc-200 dark:border-zinc-700">
+                            {item.subCategory}
+                          </span>
+                        )}
+                        {item.presentation && (
+                          <span className="shrink-0 bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-300 px-2 py-1 rounded-lg text-[11px] font-medium border border-amber-200 dark:border-amber-500/20">
+                            {item.presentation}
+                          </span>
+                        )}
+                        {item.tipo &&
+                          parsearModulos(item.tipo).map((t) => (
+                            <span
+                              key={t}
+                              className="shrink-0 bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-300 px-2 py-1 rounded-lg text-[11px] font-medium border border-blue-200 dark:border-blue-500/20"
+                            >
+                              {t}
+                            </span>
+                          ))}
+                      </div>
+                    </div>
 
-                      {item.location && (
-                        <span className="text-zinc-400 ml-auto text-[11px] whitespace-nowrap flex items-center gap-1">
-                          <span>📍</span> {item.location}
-                        </span>
-                      )}
+                    {/* Fila 4: Botones grandes abajo (Editar y Eliminar) */}
+                    <div className="flex items-stretch border-t border-zinc-100 dark:border-zinc-800 divide-x divide-zinc-100 dark:divide-zinc-800">
+                      <Link
+                        href={`/pos/catalogo/editar?id=${item.id}`}
+                        className="flex-1 h-11 flex items-center justify-center gap-1.5 text-xs font-semibold text-blue-600 dark:text-blue-400 active:bg-blue-50 dark:active:bg-blue-500/10 transition-colors cursor-pointer"
+                        title="Editar"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                        </svg>
+                        <span>Editar</span>
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={() => setProductoAEliminar(item)}
+                        disabled={eliminandoId === item.id}
+                        className="flex-1 h-11 flex items-center justify-center gap-1.5 text-xs font-semibold text-rose-600 dark:text-rose-400 active:bg-rose-50 dark:active:bg-rose-500/10 transition-colors disabled:opacity-50 cursor-pointer"
+                        title="Eliminar"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                        <span>Eliminar</span>
+                      </button>
                     </div>
                   </div>
                 ))}

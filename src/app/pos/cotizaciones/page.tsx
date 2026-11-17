@@ -58,6 +58,7 @@ export default function CotizacionesPosPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filtroEstado, setFiltroEstado] = useState<"TODAS" | "PENDIENTE" | "APROBADA" | "ANULADA">("TODAS");
   const [filtroMenuAbierto, setFiltroMenuAbierto] = useState(false);
+  const [mostrarMetricasMovil, setMostrarMetricasMovil] = useState(false);
 
   // Modales
   const [cotizacionDetalle, setCotizacionDetalle] = useState<Cotizacion | null>(null);
@@ -246,17 +247,17 @@ export default function CotizacionesPosPage() {
   ).length;
 
   return (
-    <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans pb-24 md:pb-0">
+    <div className="flex flex-col min-h-dvh bg-zinc-50 dark:bg-zinc-950 font-sans pb-[calc(env(safe-area-inset-bottom)+6rem)] md:pb-0">
       <div className="print:hidden">
         <Header />
       </div>
 
-      <main className="flex-grow p-4 md:p-8 max-w-7xl mx-auto w-full print:p-0 print:m-0">
+      <main className="flex-grow px-3.5 py-4 sm:p-6 md:p-8 max-w-7xl mx-auto w-full print:p-0 print:m-0">
         {/* Cabecera / Navegación */}
         <div className="print:hidden flex flex-col">
-          {/* Fila de Título y Botón Nueva Cotización (idéntico al estilo Facturas) */}
-          <div className="order-1 mb-4 sm:mb-8 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+          {/* Fila de Título y Botón Nueva Cotización */}
+          <div className="order-1 mb-3.5 sm:mb-8 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
               <Link 
                 href="/pos"
                 title="Volver a Panel POS"
@@ -269,29 +270,30 @@ export default function CotizacionesPosPage() {
               <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50 truncate">
                 Cotizaciones
               </h1>
-              <span className="inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold bg-purple-600 text-white shadow-sm shadow-purple-500/20 shrink-0">
+              <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full text-xs font-bold bg-purple-600 text-white shadow-sm shadow-purple-500/20 shrink-0">
                 {cotizaciones.length}
               </span>
             </div>
 
-            <div className="flex flex-col items-end gap-2 shrink-0 ml-auto">
+            <div className="flex flex-row sm:flex-col items-center sm:items-end gap-2 shrink-0 ml-auto">
               <BranchTabs onChange={() => cargarCotizaciones(searchTerm, true)} size="sm" />
               <Link
                 href="/pos/venta"
-                title="Crear nueva cotización desde la terminal de Venta"
-                className="h-9 sm:h-10 px-3.5 sm:px-4 rounded-xl bg-purple-600 hover:bg-purple-700 active:scale-95 text-white font-semibold text-xs sm:text-sm shadow-sm shadow-purple-500/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                title="Nueva Cotización"
+                aria-label="Nueva Cotización"
+                className="h-9 w-9 sm:w-auto sm:h-10 sm:px-4 rounded-xl bg-purple-600 hover:bg-purple-700 active:scale-95 text-white font-semibold text-xs sm:text-sm shadow-sm shadow-purple-500/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0"
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+                <svg className="w-4 h-4 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4" />
                 </svg>
-                <span>Nueva Cotización</span>
+                <span className="hidden sm:inline">Nueva Cotización</span>
               </Link>
             </div>
           </div>
 
           {/* Notificaciones */}
           {mensajeExito && (
-            <div className="mb-6 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 text-sm font-medium animate-in fade-in flex items-center justify-between">
+            <div className="mb-4 sm:mb-6 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 text-sm font-medium animate-in fade-in flex items-center justify-between">
               <span>✓ {mensajeExito}</span>
               <button
                 onClick={() => setMensajeExito(null)}
@@ -303,7 +305,7 @@ export default function CotizacionesPosPage() {
           )}
 
           {errorMensaje && (
-            <div className="mb-6 p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 text-sm font-medium animate-in fade-in flex items-center justify-between">
+            <div className="mb-4 sm:mb-6 p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 text-sm font-medium animate-in fade-in flex items-center justify-between">
               <span>⚠️ {errorMensaje}</span>
               <button
                 onClick={() => setErrorMensaje(null)}
@@ -314,67 +316,83 @@ export default function CotizacionesPosPage() {
             </div>
           )}
 
-          {/* KPIs / Resumen Desplegable en Móvil */}
-          <CollapsibleMetrics className="order-3 sm:order-2 mb-2 sm:mb-8">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-3 sm:mb-8">
+          {/* KPIs / Resumen (4 recuadros pequeños en fila en móvil, empiezan ocultos) */}
+          <div className={`order-3 sm:order-2 mb-3 sm:mb-8 ${mostrarMetricasMovil ? "block" : "hidden"} sm:block animate-in fade-in slide-in-from-top-1 duration-150`}>
+            <div className="grid grid-cols-4 sm:grid-cols-4 gap-2 sm:gap-4">
+              {/* Total Cotizaciones */}
+              <div className="bg-white dark:bg-zinc-900/80 p-2.5 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-xs sm:shadow-sm flex flex-col sm:flex-row items-center sm:items-center justify-center sm:justify-start gap-1 sm:gap-4 text-center sm:text-left backdrop-blur-sm">
+                <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-blue-500/15 border border-blue-500/25 text-blue-400 flex items-center justify-center text-sm sm:text-xl shrink-0">
+                  📄
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm sm:text-2xl font-bold text-zinc-900 dark:text-white leading-tight truncate">
+                    {cotizaciones.length}
+                  </p>
+                  <h3 className="text-zinc-500 dark:text-zinc-400 text-[10px] sm:text-sm font-medium truncate">Cotiz.</h3>
+                </div>
+              </div>
+
               {/* Total Cotizado */}
-              <div className="bg-white dark:bg-zinc-900/80 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3.5 sm:gap-4 backdrop-blur-sm">
-                <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-purple-500/15 border border-purple-500/25 text-purple-400 flex items-center justify-center text-xl shrink-0">
+              <div className="bg-white dark:bg-zinc-900/80 p-2.5 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-xs sm:shadow-sm flex flex-col sm:flex-row items-center sm:items-center justify-center sm:justify-start gap-1 sm:gap-4 text-center sm:text-left backdrop-blur-sm">
+                <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-purple-500/15 border border-purple-500/25 text-purple-400 flex items-center justify-center text-sm sm:text-xl shrink-0">
                   💰
                 </div>
-                <div>
-                  <p className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">
-                    ${totalCotizado.toFixed(2)}
+                <div className="min-w-0">
+                  <p className="text-sm sm:text-2xl font-bold text-zinc-900 dark:text-white leading-tight truncate">
+                    ${totalCotizado.toFixed(0)}
                   </p>
-                  <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">Total Cotizado</h3>
+                  <h3 className="text-zinc-500 dark:text-zinc-400 text-[10px] sm:text-sm font-medium truncate">Monto</h3>
                 </div>
               </div>
 
               {/* Pendientes */}
-              <div className="bg-white dark:bg-zinc-900/80 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3.5 sm:gap-4 backdrop-blur-sm">
-                <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-amber-500/15 border border-amber-500/25 text-amber-400 flex items-center justify-center text-xl shrink-0">
+              <div className="bg-white dark:bg-zinc-900/80 p-2.5 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-xs sm:shadow-sm flex flex-col sm:flex-row items-center sm:items-center justify-center sm:justify-start gap-1 sm:gap-4 text-center sm:text-left backdrop-blur-sm">
+                <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-amber-500/15 border border-amber-500/25 text-amber-400 flex items-center justify-center text-sm sm:text-xl shrink-0">
                   📋
                 </div>
-                <div>
-                  <p className="text-xl sm:text-2xl font-bold text-amber-600 dark:text-amber-400">
+                <div className="min-w-0">
+                  <p className="text-sm sm:text-2xl font-bold text-amber-600 dark:text-amber-400 leading-tight truncate">
                     {totalPendientes}
                   </p>
-                  <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">Pendientes</h3>
+                  <h3 className="text-zinc-500 dark:text-zinc-400 text-[10px] sm:text-sm font-medium truncate">Pendientes</h3>
                 </div>
               </div>
 
               {/* Aprobadas */}
-              <div className="bg-white dark:bg-zinc-900/80 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3.5 sm:gap-4 backdrop-blur-sm">
-                <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-emerald-500/15 border border-emerald-500/25 text-emerald-400 flex items-center justify-center text-xl shrink-0">
+              <div className="bg-white dark:bg-zinc-900/80 p-2.5 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-xs sm:shadow-sm flex flex-col sm:flex-row items-center sm:items-center justify-center sm:justify-start gap-1 sm:gap-4 text-center sm:text-left backdrop-blur-sm">
+                <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-emerald-500/15 border border-emerald-500/25 text-emerald-400 flex items-center justify-center text-sm sm:text-xl shrink-0">
                   ✅
                 </div>
-                <div>
-                  <p className="text-xl sm:text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+                <div className="min-w-0">
+                  <p className="text-sm sm:text-2xl font-bold text-emerald-600 dark:text-emerald-400 leading-tight truncate">
                     {totalAprobadas}
                   </p>
-                  <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">Aprobadas</h3>
+                  <h3 className="text-zinc-500 dark:text-zinc-400 text-[10px] sm:text-sm font-medium truncate">Aprobadas</h3>
                 </div>
               </div>
             </div>
-          </CollapsibleMetrics>
+          </div>
 
-          {/* Filtros y Buscador */}
-          <div className="order-2 sm:order-3 flex flex-col sm:flex-row items-center justify-between gap-2 sm:gap-4 mb-2 sm:mb-6">
-            <div className="relative w-full flex-1">
-              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400 select-none">
+          {/* En una sola línea: Buscador + Filtro + Métricas */}
+          <div className="order-2 sm:order-3 flex items-center gap-2 sm:gap-3 mb-3 sm:mb-6">
+            <div className="relative flex-1 min-w-0">
+              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400 select-none pointer-events-none">
                 🔍
               </span>
               <input
-                type="text"
+                type="search"
+                inputMode="search"
+                enterKeyHint="search"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Buscar por folio, cliente o producto..."
-                className="w-full pl-10 pr-10 h-11 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white text-sm font-normal focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all placeholder:text-zinc-400 shadow-sm"
+                placeholder="Buscar folio, cliente o producto..."
+                className="w-full pl-10 pr-9 h-11 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white text-base sm:text-sm font-normal focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all placeholder:text-zinc-400 shadow-xs"
               />
               {searchTerm && (
                 <button
+                  type="button"
                   onClick={() => setSearchTerm("")}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 text-sm cursor-pointer"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full flex items-center justify-center text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 text-xs cursor-pointer"
                   title="Limpiar búsqueda"
                 >
                   ✕
@@ -382,13 +400,26 @@ export default function CotizacionesPosPage() {
               )}
             </div>
 
-            <div className="relative w-full sm:w-48 shrink-0">
+            {/* Botón Filtro (icono en móvil con punto activo, desplegable en desktop) */}
+            <div className="relative shrink-0">
               <button
                 type="button"
                 onClick={() => setFiltroMenuAbierto(!filtroMenuAbierto)}
-                className="w-full h-11 px-4 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 text-zinc-800 dark:text-zinc-200 text-sm font-normal flex items-center justify-between transition-all cursor-pointer shadow-sm active:scale-98"
+                title="Filtrar por estado"
+                aria-label="Filtrar cotizaciones"
+                className={`relative w-11 h-11 sm:w-48 sm:px-4 rounded-xl border text-sm font-normal flex items-center justify-center sm:justify-between transition-all cursor-pointer shadow-xs active:scale-95 ${
+                  filtroEstado !== "TODAS"
+                    ? "bg-blue-50 dark:bg-blue-500/15 border-blue-300 dark:border-blue-500/40 text-blue-600 dark:text-blue-400"
+                    : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 text-zinc-700 dark:text-zinc-200"
+                }`}
               >
-                <span>
+                <svg className="w-5 h-5 sm:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                </svg>
+                {filtroEstado !== "TODAS" && (
+                  <span className="sm:hidden absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-blue-600 ring-2 ring-white dark:ring-zinc-950" />
+                )}
+                <span className="hidden sm:inline truncate">
                   {filtroEstado === "PENDIENTE"
                     ? "Pendientes"
                     : filtroEstado === "APROBADA"
@@ -397,7 +428,7 @@ export default function CotizacionesPosPage() {
                     ? "Anuladas"
                     : "Estado: Todas"}
                 </span>
-                <svg className={`w-4 h-4 text-zinc-400 transition-transform ${filtroMenuAbierto ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className={`hidden sm:block w-4 h-4 text-zinc-400 transition-transform ${filtroMenuAbierto ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
                 </svg>
               </button>
@@ -408,7 +439,7 @@ export default function CotizacionesPosPage() {
                     className="fixed inset-0 z-40" 
                     onClick={() => setFiltroMenuAbierto(false)} 
                   />
-                  <div className="absolute right-0 mt-1.5 w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-xl overflow-hidden z-50 py-1 animate-in fade-in zoom-in-95 duration-100">
+                  <div className="absolute right-0 mt-1.5 w-48 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-xl overflow-hidden z-50 py-1 animate-in fade-in zoom-in-95 duration-100">
                     {[
                       { id: "TODAS", label: "Todas" },
                       { id: "PENDIENTE", label: "Pendientes" },
@@ -424,13 +455,13 @@ export default function CotizacionesPosPage() {
                         }}
                         className={`w-full px-4 py-2.5 text-left text-sm font-normal transition-colors flex items-center justify-between cursor-pointer ${
                           filtroEstado === opcion.id
-                            ? "bg-purple-50 dark:bg-purple-600/15 text-purple-600 dark:text-purple-400 font-medium"
+                            ? "bg-blue-50 dark:bg-blue-600/15 text-blue-600 dark:text-blue-400 font-medium"
                             : "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800/80 hover:text-zinc-900 dark:hover:text-white"
                         }`}
                       >
                         <span>{opcion.label}</span>
                         {filtroEstado === opcion.id && (
-                          <svg className="w-4 h-4 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
                           </svg>
                         )}
@@ -440,6 +471,23 @@ export default function CotizacionesPosPage() {
                 </>
               )}
             </div>
+
+            {/* Botón Métricas (solo móvil) */}
+            <button
+              type="button"
+              onClick={() => setMostrarMetricasMovil(!mostrarMetricasMovil)}
+              title="Mostrar u ocultar métricas"
+              aria-label="Mostrar métricas"
+              className={`sm:hidden w-11 h-11 rounded-xl border flex items-center justify-center transition-all cursor-pointer shadow-xs active:scale-95 shrink-0 ${
+                mostrarMetricasMovil
+                  ? "bg-purple-50 dark:bg-purple-500/15 border-purple-300 dark:border-purple-500/40 text-purple-600 dark:text-purple-400"
+                  : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-300"
+              }`}
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+            </button>
           </div>
         </div>
 
@@ -456,27 +504,37 @@ export default function CotizacionesPosPage() {
             </div>
           ) : (
             <>
-              {/* Vista Móvil (Tarjetas táctiles >= 44px) */}
-              <div className="md:hidden space-y-3.5">
+              {/* Vista Móvil (Ordenada como Clientes: Cabecera, 2 recuadros, ítems deslizables y barra de botones abajo) */}
+              <div className="md:hidden space-y-3">
                 {cotizacionesFiltradas.map((c) => {
                   const estado = (c.status || "PENDIENTE").toUpperCase();
                   const esAnulada = estado === "ANULADA";
-                  const esAprobada = estado === "APROBADA" || estado === "COMPLETADA";
+                  const esAprobada = estado === "APROBADA" || estado === "COMPLETADA" || estado === "FACTURADA";
                   const fecha = new Date(c.createdAt).toLocaleDateString("es-EC", {
-                    day: "numeric",
+                    day: "2-digit",
                     month: "short",
                     year: "numeric",
                   });
+                  const items = parseItems(c.itemsJson);
+                  const cleanPhone = (c.customerPhone || "").replace(/\D/g, "");
+                  const waPhone = cleanPhone.startsWith("0")
+                    ? `593${cleanPhone.slice(1)}`
+                    : cleanPhone.startsWith("593")
+                    ? cleanPhone
+                    : cleanPhone
+                    ? `593${cleanPhone}`
+                    : "";
 
                   return (
                     <div
                       key={c.id}
-                      className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-4 space-y-3 shadow-xs hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors"
+                      className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden shadow-xs transition-colors"
                     >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex items-center gap-3 min-w-0">
+                      <div className="p-3.5 space-y-3">
+                        {/* 1. Inicial / Icono, Cliente, Estado, Folio y Fecha */}
+                        <div className="flex items-start gap-3">
                           <div
-                            className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-base shrink-0 border ${
+                            className={`w-12 h-12 rounded-2xl flex items-center justify-center font-bold text-base shrink-0 border ${
                               esAnulada
                                 ? "bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-400 border-rose-200 dark:border-rose-500/30"
                                 : esAprobada
@@ -484,89 +542,143 @@ export default function CotizacionesPosPage() {
                                 : "bg-purple-100 text-purple-700 dark:bg-purple-500/20 dark:text-purple-400 border-purple-200 dark:border-purple-500/30"
                             }`}
                           >
-                            📋
+                            {(c.customerName || "C").charAt(0).toUpperCase()}
                           </div>
-                          <div className="min-w-0">
-                            <p className="font-bold text-sm text-zinc-900 dark:text-zinc-100 truncate">
-                              {c.customerName || "Consumidor Final"}
-                            </p>
-                            <p className="text-xs text-zinc-500 dark:text-zinc-400 font-mono mt-0.5 truncate">
-                              <span className="font-semibold text-purple-600 dark:text-purple-400">
+
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center justify-between gap-2">
+                              <p className="font-bold text-sm text-zinc-900 dark:text-zinc-100 truncate">
+                                {c.customerName || "Consumidor Final"}
+                              </p>
+                              <span
+                                className={`text-[10px] font-bold px-2 py-0.5 rounded-full border shrink-0 ${
+                                  esAnulada
+                                    ? "bg-rose-100 text-rose-700 border-rose-200 dark:bg-rose-500/20 dark:text-rose-400 dark:border-rose-500/30"
+                                    : esAprobada
+                                    ? "bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-500/20 dark:text-emerald-400 dark:border-emerald-500/30"
+                                    : "bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-500/20 dark:text-amber-400 dark:border-amber-500/30"
+                                }`}
+                              >
+                                {estado}
+                              </span>
+                            </div>
+
+                            <div className="flex items-center flex-wrap gap-1.5 mt-1 text-[11px] text-zinc-500 dark:text-zinc-400">
+                              <span className="font-mono font-bold text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-500/10 px-1.5 py-0.5 rounded border border-purple-200 dark:border-purple-500/20">
                                 #{c.requestNumber}
                               </span>
-                            </p>
+                              <span>•</span>
+                              <span>📅 {fecha}</span>
+                            </div>
                           </div>
                         </div>
 
-                        {/* Estado Badge */}
-                        <span
-                          className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                            esAnulada
-                              ? "bg-rose-100 text-rose-700 border-rose-200 dark:bg-rose-500/20 dark:text-rose-400 dark:border-rose-500/30"
-                              : esAprobada
-                              ? "bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-500/20 dark:text-emerald-400 dark:border-emerald-500/30"
-                              : "bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-500/20 dark:text-amber-400 dark:border-amber-500/30"
-                          }`}
-                        >
-                          {estado}
-                        </span>
+                        {/* 2. Dos recuadros: Total Estimado y WhatsApp */}
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className="bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200/70 dark:border-zinc-800 rounded-xl px-3 py-2">
+                            <span className="text-[10px] uppercase tracking-wider font-semibold text-zinc-400 block">
+                              Total Cotizado
+                            </span>
+                            <span className="font-mono font-bold text-sm text-zinc-900 dark:text-white">
+                              ${Number(c.totalEstimated || 0).toFixed(2)}
+                            </span>
+                          </div>
+
+                          {waPhone ? (
+                            <a
+                              href={`https://wa.me/${waPhone}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="bg-emerald-50/70 dark:bg-emerald-500/10 border border-emerald-200/80 dark:border-emerald-500/25 rounded-xl px-3 py-2 block active:scale-98 transition-transform"
+                            >
+                              <span className="text-[10px] uppercase tracking-wider font-semibold text-emerald-600 dark:text-emerald-400 block">
+                                WhatsApp ↗
+                              </span>
+                              <span className="font-mono font-bold text-xs text-emerald-700 dark:text-emerald-300 truncate block">
+                                💬 {c.customerPhone}
+                              </span>
+                            </a>
+                          ) : (
+                            <div className="bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200/70 dark:border-zinc-800 rounded-xl px-3 py-2">
+                              <span className="text-[10px] uppercase tracking-wider font-semibold text-zinc-400 block">
+                                Contacto
+                              </span>
+                              <span className="text-xs text-zinc-400 truncate block">
+                                {c.customerEmail || "Sin teléfono"}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* 3. Artículos deslizables de lado */}
+                        {(items.length > 0 || c.itemsSummary) && (
+                          <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+                            {items.length > 0 ? (
+                              items.map((it, i) => (
+                                <span
+                                  key={i}
+                                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200/80 dark:border-zinc-700/60 text-[11px] font-medium whitespace-nowrap shrink-0"
+                                >
+                                  <span className="font-bold text-purple-600 dark:text-purple-400">
+                                    {it.qty || 1}x
+                                  </span>
+                                  <span>{it.name || it.product?.name || "Artículo"}</span>
+                                </span>
+                              ))
+                            ) : (
+                              <span className="inline-flex items-center px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border border-zinc-200/80 dark:border-zinc-700/60 text-[11px] whitespace-nowrap shrink-0">
+                                {c.itemsSummary}
+                              </span>
+                            )}
+                          </div>
+                        )}
                       </div>
 
-                      {c.itemsSummary && (
-                        <p className="text-xs text-zinc-600 dark:text-zinc-400 line-clamp-2 bg-zinc-50 dark:bg-zinc-800/60 p-2.5 rounded-xl border border-zinc-100 dark:border-zinc-800/80">
-                          {c.itemsSummary}
-                        </p>
-                      )}
-
-                      {/* Datos y Botones de Acción */}
-                      <div className="flex items-center justify-between pt-1 text-xs">
-                        <div>
-                          <span className="font-bold font-mono text-sm text-zinc-900 dark:text-white">
-                            ${Number(c.totalEstimated || 0).toFixed(2)}
-                          </span>
-                          <span className="text-zinc-400 block text-[11px]">{fecha}</span>
-                        </div>
-
-                        <div className="flex items-center gap-1.5">
-                          {/* Botón Cargar en Venta (Cobrar) */}
-                          {!esAnulada && (
-                            <button
-                              type="button"
-                              onClick={() => handleCargarEnVenta(c)}
-                              className="h-10 px-3 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/25 active:scale-95 transition-all text-xs font-semibold flex items-center gap-1 cursor-pointer"
-                              title="Cobrar en POS Venta"
-                            >
-                              <span>🛒</span>
-                              <span>Cobrar</span>
-                            </button>
-                          )}
-
-                          {/* Ver Detalle / Imprimir */}
+                      {/* 4. Botones grandes abajo */}
+                      <div className="grid grid-cols-3 divide-x divide-zinc-200 dark:divide-zinc-800 border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-900/80">
+                        {!esAnulada ? (
                           <button
                             type="button"
-                            onClick={() => setCotizacionDetalle(c)}
-                            className="w-10 h-10 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:text-purple-600 flex items-center justify-center active:scale-95 transition-all cursor-pointer"
-                            title="Ver Detalle"
+                            onClick={() => handleCargarEnVenta(c)}
+                            className="h-11 flex items-center justify-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 active:bg-emerald-100 transition-colors cursor-pointer"
                           >
-                            👁️
+                            <span>🛒</span>
+                            <span>Cobrar</span>
                           </button>
-
-                          {/* Eliminar */}
+                        ) : (
                           <button
                             type="button"
-                            onClick={() =>
-                              setCotizacionAEliminar({
-                                id: c.id,
-                                folio: c.requestNumber,
-                                total: Number(c.totalEstimated || 0),
-                              })
-                            }
-                            className="w-10 h-10 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-400 hover:text-rose-600 flex items-center justify-center active:scale-95 transition-all cursor-pointer"
-                            title="Eliminar"
+                            onClick={() => handleCambiarEstado(c.id, "PENDIENTE")}
+                            className="h-11 flex items-center justify-center gap-1.5 text-xs font-semibold text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-500/10 transition-colors cursor-pointer"
                           >
-                            🗑️
+                            <span>↺</span>
+                            <span>Reactivar</span>
                           </button>
-                        </div>
+                        )}
+
+                        <button
+                          type="button"
+                          onClick={() => setCotizacionDetalle(c)}
+                          className="h-11 flex items-center justify-center gap-1.5 text-xs font-semibold text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-500/10 active:bg-purple-100 transition-colors cursor-pointer"
+                        >
+                          <span>👁️</span>
+                          <span>Ver / PDF</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setCotizacionAEliminar({
+                              id: c.id,
+                              folio: c.requestNumber,
+                              total: Number(c.totalEstimated || 0),
+                            })
+                          }
+                          className="h-11 flex items-center justify-center gap-1.5 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 active:bg-rose-100 transition-colors cursor-pointer"
+                        >
+                          <span>🗑️</span>
+                          <span>Eliminar</span>
+                        </button>
                       </div>
                     </div>
                   );

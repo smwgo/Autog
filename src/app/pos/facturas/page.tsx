@@ -4,7 +4,6 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import { Header } from "@/components/Header";
 import { PosMobileNav } from "@/components/PosMobileNav";
-import { CollapsibleMetrics } from "@/components/CollapsibleMetrics";
 import { BranchTabs } from "@/components/pos/BranchTabs";
 import { getClientUserBranch, getClientActiveBranch } from "@/lib/branch";
 
@@ -41,12 +40,19 @@ interface Sale {
   customer?: CustomerInfo | null;
 }
 
+function formatearMontoCorto(val: number): string {
+  const n = Math.round(Number(val || 0) * 100) / 100;
+  if (!Number.isFinite(n)) return "0";
+  return Number.isInteger(n) ? String(n) : n.toFixed(2);
+}
+
 export default function FacturasPosPage() {
   const [ventas, setVentas] = useState<Sale[]>([]);
   const [cargando, setCargando] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [filtroEstado, setFiltroEstado] = useState<"TODAS" | "COMPLETADA" | "ANULADA">("TODAS");
   const [filtroMenuAbierto, setFiltroMenuAbierto] = useState(false);
+  const [mostrarMetricasMovil, setMostrarMetricasMovil] = useState(false);
   
   // Modales
   const [ventaDetalle, setVentaDetalle] = useState<Sale | null>(null);
@@ -220,16 +226,16 @@ export default function FacturasPosPage() {
   const totalAnuladas = ventas.filter((v) => v.status?.toLowerCase() === "anulada").length;
 
   return (
-    <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans pb-24 md:pb-0">
+    <div className="flex flex-col min-h-dvh bg-zinc-50 dark:bg-zinc-950 font-sans pb-[calc(env(safe-area-inset-bottom)+6rem)] md:pb-0 print:pb-0">
       <div className="print:hidden">
         <Header />
       </div>
 
-      <main className="flex-grow p-4 md:p-8 max-w-7xl mx-auto w-full print:p-0 print:m-0">
+      <main className="flex-grow px-3.5 py-4 sm:p-4 md:p-8 max-w-7xl mx-auto w-full print:p-0 print:m-0">
         {/* Cabecera / Navegación */}
         <div className="print:hidden flex flex-col">
           {/* Header - Idéntico al estilo Venta (Móvil y Escritorio en una sola fila) */}
-          <div className="order-1 mb-4 sm:mb-8 flex items-center justify-between gap-3">
+          <div className="order-1 mb-3 sm:mb-8 flex items-center justify-between gap-3">
             <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
               <Link 
                 href="/pos"
@@ -248,16 +254,18 @@ export default function FacturasPosPage() {
               </span>
             </div>
 
-            <div className="flex flex-col items-end gap-2 shrink-0 ml-auto">
+            <div className="flex items-center sm:flex-col sm:items-end gap-2 shrink-0 ml-auto">
               <BranchTabs onChange={() => cargarVentas(searchTerm, true)} size="sm" />
               <Link
                 href="/pos/facturas/nueva"
-                className="h-9 sm:h-10 px-3.5 sm:px-4 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-semibold text-xs sm:text-sm shadow-sm shadow-blue-500/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                title="Nueva Factura"
+                aria-label="Nueva Factura"
+                className="h-9 w-9 sm:w-auto sm:h-10 sm:px-4 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-semibold text-xs sm:text-sm shadow-sm shadow-blue-500/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
                 </svg>
-                <span>Nueva Factura</span>
+                <span className="hidden sm:inline">Nueva Factura</span>
               </Link>
             </div>
           </div>
@@ -287,62 +295,46 @@ export default function FacturasPosPage() {
             </div>
           )}
 
-          {/* KPIs / Resumen Desplegable en Móvil */}
-          <CollapsibleMetrics className="order-3 sm:order-2 mb-2 sm:mb-8">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-3 sm:mb-8">
-              {/* Facturado */}
-              <div className="bg-white dark:bg-zinc-900/80 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3.5 sm:gap-4 backdrop-blur-sm">
-                <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-cyan-500/15 border border-cyan-500/25 text-cyan-400 flex items-center justify-center text-xl shrink-0">
-                  💰
+          {/* Métricas: en móvil con el icono 📊, en escritorio siempre visibles */}
+          <div className={`order-3 sm:order-2 mb-3 sm:mb-8 ${mostrarMetricasMovil ? "block" : "hidden"} sm:block`}>
+            <div className="grid grid-cols-3 gap-2 sm:gap-4">
+              {[
+                { icono: "💰", valor: `$${formatearMontoCorto(totalFacturado)}`, label: "Facturado", cls: "bg-cyan-500/15 border-cyan-500/25 text-cyan-500 dark:text-cyan-400", txt: "text-zinc-900 dark:text-white" },
+                { icono: "✅", valor: String(totalCompletadas), label: "Completadas", cls: "bg-emerald-500/15 border-emerald-500/25 text-emerald-500 dark:text-emerald-400", txt: "text-emerald-600 dark:text-emerald-400" },
+                { icono: "⚠️", valor: String(totalAnuladas), label: "Anuladas", cls: "bg-rose-500/15 border-rose-500/25 text-rose-500 dark:text-rose-400", txt: "text-rose-500 dark:text-rose-400" },
+              ].map((m) => (
+                <div
+                  key={m.label}
+                  className="bg-white dark:bg-zinc-900/80 p-2.5 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex flex-col sm:flex-row items-center gap-1 sm:gap-4 text-center sm:text-left min-w-0"
+                >
+                  <div className={`w-9 h-9 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl border flex items-center justify-center text-base sm:text-xl shrink-0 ${m.cls}`}>
+                    {m.icono}
+                  </div>
+                  <div className="min-w-0 max-w-full">
+                    <p className={`text-base sm:text-2xl font-bold leading-tight tabular-nums truncate ${m.txt}`}>
+                      {m.valor}
+                    </p>
+                    <h3 className="text-zinc-500 dark:text-zinc-400 text-[11px] sm:text-sm font-medium truncate">{m.label}</h3>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">
-                    ${totalFacturado.toFixed(2)}
-                  </p>
-                  <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">Facturado</h3>
-                </div>
-              </div>
-
-              {/* Facturas Válidas */}
-              <div className="bg-white dark:bg-zinc-900/80 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3.5 sm:gap-4 backdrop-blur-sm">
-                <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-emerald-500/15 border border-emerald-500/25 text-emerald-400 flex items-center justify-center text-xl shrink-0">
-                  ✅
-                </div>
-                <div>
-                  <p className="text-xl sm:text-2xl font-bold text-emerald-600 dark:text-emerald-400">
-                    {totalCompletadas}
-                  </p>
-                  <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">Completadas</h3>
-                </div>
-              </div>
-
-              {/* Anuladas */}
-              <div className="bg-white dark:bg-zinc-900/80 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3.5 sm:gap-4 backdrop-blur-sm">
-                <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-rose-500/15 border border-rose-500/25 text-rose-400 flex items-center justify-center text-xl shrink-0">
-                  ⚠️
-                </div>
-                <div>
-                  <p className="text-xl sm:text-2xl font-bold text-rose-500 dark:text-rose-400">
-                    {totalAnuladas}
-                  </p>
-                  <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">Anuladas</h3>
-                </div>
-              </div>
+              ))}
             </div>
-          </CollapsibleMetrics>
+          </div>
 
           {/* Filtros y Buscador */}
-          <div className="order-2 sm:order-3 flex flex-col sm:flex-row items-center justify-between gap-2 sm:gap-4 mb-2 sm:mb-6">
-            <div className="relative w-full flex-1">
+          <div className="order-2 sm:order-3 flex flex-row items-center justify-between gap-2 sm:gap-4 mb-3 sm:mb-6">
+            <div className="relative min-w-0 flex-1">
               <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400 select-none">
                 🔍
               </span>
               <input
-                type="text"
+                type="search"
+                inputMode="search"
+                enterKeyHint="search"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="Buscar..."
-                className="w-full pl-10 pr-10 h-11 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white text-sm font-normal focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-zinc-400 shadow-sm"
+                className="w-full pl-10 pr-10 h-11 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white text-base sm:text-sm font-normal focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-zinc-400 shadow-sm [&::-webkit-search-cancel-button]:hidden"
               />
               {searchTerm && (
                 <button
@@ -355,21 +347,51 @@ export default function FacturasPosPage() {
               )}
             </div>
 
-            <div className="relative w-full sm:w-48 shrink-0">
+            <div className="relative sm:w-48 shrink-0 flex items-center gap-2">
+              {/* Filtro: icono en móvil, desplegable con texto en escritorio */}
               <button
                 type="button"
                 onClick={() => setFiltroMenuAbierto(!filtroMenuAbierto)}
-                className="w-full h-11 px-4 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 text-zinc-800 dark:text-zinc-200 text-sm font-normal flex items-center justify-between transition-all cursor-pointer shadow-sm active:scale-98"
+                title="Filtrar"
+                aria-label="Filtrar"
+                className={`relative w-11 sm:w-full h-11 sm:px-4 rounded-xl border text-sm font-normal flex items-center justify-center sm:justify-between transition-all cursor-pointer shadow-sm active:scale-95 ${
+                  filtroEstado !== "TODAS"
+                    ? "bg-blue-50 dark:bg-blue-500/15 border-blue-300 dark:border-blue-500/40 text-blue-600 dark:text-blue-400"
+                    : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 text-zinc-700 dark:text-zinc-200"
+                }`}
               >
-                <span>
+                <svg className="w-5 h-5 sm:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 4.5h18l-7 8.25V19.5l-4 1.5v-8.25L3 4.5Z" />
+                </svg>
+                {filtroEstado !== "TODAS" && (
+                  <span className="sm:hidden absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-blue-600 ring-2 ring-white dark:ring-zinc-950" />
+                )}
+                <span className="hidden sm:inline">
                   {filtroEstado === "COMPLETADA"
                     ? "Completadas"
                     : filtroEstado === "ANULADA"
                     ? "Anuladas"
                     : "Estado"}
                 </span>
-                <svg className={`w-4 h-4 text-zinc-400 transition-transform ${filtroMenuAbierto ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className={`hidden sm:block w-4 h-4 text-zinc-400 transition-transform ${filtroMenuAbierto ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+
+              {/* Métricas: solo móvil */}
+              <button
+                type="button"
+                onClick={() => setMostrarMetricasMovil((v) => !v)}
+                title="Métricas"
+                aria-label="Métricas"
+                className={`sm:hidden w-11 h-11 rounded-xl border flex items-center justify-center transition-all cursor-pointer shadow-sm active:scale-95 ${
+                  mostrarMetricasMovil
+                    ? "bg-blue-600 border-blue-600 text-white"
+                    : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-200"
+                }`}
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 3v18h18M8 17v-5m4 5V8m4 9v-3" />
                 </svg>
               </button>
 
@@ -379,9 +401,9 @@ export default function FacturasPosPage() {
                     className="fixed inset-0 z-40" 
                     onClick={() => setFiltroMenuAbierto(false)} 
                   />
-                  <div className="absolute right-0 mt-1.5 w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-xl overflow-hidden z-50 py-1 animate-in fade-in zoom-in-95 duration-100">
+                  <div className="absolute right-0 top-full mt-1.5 w-52 sm:w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-xl overflow-hidden z-50 py-1 animate-in fade-in zoom-in-95 duration-100">
                     {[
-                      { id: "TODAS", label: "Estado" },
+                      { id: "TODAS", label: "Todas" },
                       { id: "COMPLETADA", label: "Completadas" },
                       { id: "ANULADA", label: "Anuladas" },
                     ].map((opcion) => (
@@ -439,81 +461,84 @@ export default function FacturasPosPage() {
                   return (
                     <div
                       key={v.id}
-                      className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-4 space-y-3 shadow-xs hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors"
+                      className={`bg-white dark:bg-zinc-900 rounded-2xl border shadow-xs overflow-hidden transition-colors ${
+                        esAnulada ? "border-rose-200 dark:border-rose-500/25" : "border-zinc-200 dark:border-zinc-800"
+                      }`}
                     >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex items-center gap-3 min-w-0">
-                          {/* Icono de factura estilo cliente */}
-                          <div
-                            className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-base shrink-0 border ${
-                              esAnulada
-                                ? "bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-400 border-rose-200 dark:border-rose-500/30"
-                                : "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400 border-blue-200 dark:border-blue-500/30"
-                            }`}
-                          >
-                            🧾
-                          </div>
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                              <p className="font-bold text-sm text-zinc-900 dark:text-zinc-100 truncate">
-                                {v.customerName || "Consumidor Final"}
-                              </p>
-                              <span
-                                className={`text-[10px] px-1.5 py-0.5 rounded font-semibold uppercase tracking-wider border ${
-                                  esAnulada
-                                    ? "bg-rose-500/10 text-rose-500 border-rose-500/20"
-                                    : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
-                                }`}
-                              >
-                                {esAnulada ? "Anulada" : "Completada"}
-                              </span>
-                            </div>
-                            <p className="text-xs text-zinc-500 dark:text-zinc-400 font-mono mt-0.5 truncate">
-                              <span className="font-semibold text-blue-600 dark:text-blue-400">#{v.saleNumber}</span>
-                              {v.customer?.identification && !v.customer.identification.startsWith("CLI-") && (
-                                <span> • CI: {v.customer.identification}</span>
-                              )}
-                            </p>
+                      {/* Fila 1: Icono + Cliente + Estado / Total */}
+                      <div className="p-3.5 flex items-center gap-3">
+                        <div
+                          className={`w-12 h-12 rounded-2xl flex items-center justify-center text-lg shrink-0 border ${
+                            esAnulada
+                              ? "bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-400 border-rose-200 dark:border-rose-500/30"
+                              : "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400 border-blue-200 dark:border-blue-500/30"
+                          }`}
+                        >
+                          🧾
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="font-bold text-[15px] leading-tight text-zinc-900 dark:text-zinc-100 truncate">
+                            {v.customerName || "Consumidor Final"}
+                          </p>
+                          <div className="flex items-center gap-1.5 mt-1">
+                            <span className="font-mono text-xs font-semibold text-blue-600 dark:text-blue-400">#{v.saleNumber}</span>
+                            <span
+                              className={`text-[10px] px-1.5 py-0.5 rounded-md font-semibold uppercase tracking-wide border ${
+                                esAnulada
+                                  ? "bg-rose-500/10 text-rose-500 border-rose-500/20"
+                                  : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+                              }`}
+                            >
+                              {esAnulada ? "Anulada" : "Completada"}
+                            </span>
                           </div>
                         </div>
-
-                        {/* Acciones Rápidas */}
-                        <div className="flex items-center gap-1.5 shrink-0">
-                          <Link
-                            href={`/pos/facturas/editar?id=${v.id}`}
-                            className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl flex items-center justify-center text-zinc-500 hover:text-blue-600 bg-zinc-100 dark:bg-zinc-800 hover:bg-blue-50 dark:hover:bg-blue-500/10 active:scale-95 transition-all cursor-pointer"
-                            title="Editar factura"
-                            aria-label="Editar factura"
-                          >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                            </svg>
-                          </Link>
+                        <div className="text-right shrink-0">
+                          <p className={`text-lg font-black font-mono tabular-nums leading-tight ${esAnulada ? "text-zinc-400 line-through" : "text-zinc-900 dark:text-white"}`}>
+                            ${formatearMontoCorto(Number(v.total || 0))}
+                          </p>
+                          <p className="text-[11px] text-zinc-400 whitespace-nowrap">{fecha}</p>
                         </div>
                       </div>
 
-                      {/* Datos secundarios (Total, Método de pago, Fecha) */}
-                      <div className="flex flex-wrap items-center gap-2 pt-1 text-xs">
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-sky-400 border border-blue-200 dark:border-blue-500/20 font-bold font-mono text-xs">
-                          💰 ${Number(v.total || 0).toFixed(2)}
-                        </span>
+                      {/* Fila 2: Datos ordenados (Documento / Pago) */}
+                      <div className="px-3.5 pb-3 grid grid-cols-2 gap-2">
+                        <div className="min-w-0 rounded-xl bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800 px-2.5 py-2">
+                          <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-400">Cédula / RUC</p>
+                          <p className="text-[13px] font-mono font-semibold text-zinc-800 dark:text-zinc-200 truncate">
+                            {v.customer?.identification && !v.customer.identification.startsWith("CLI-") ? v.customer.identification : "—"}
+                          </p>
+                        </div>
+                        <div className="min-w-0 rounded-xl bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800 px-2.5 py-2">
+                          <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-400">Pago</p>
+                          <p className="text-[13px] font-semibold text-zinc-800 dark:text-zinc-200 truncate">
+                            {v.paymentMethod?.toLowerCase().includes("mixto")
+                              ? "🔀"
+                              : v.paymentMethod?.toLowerCase().includes("crédito") || v.paymentMethod?.toLowerCase().includes("credito")
+                              ? "📋"
+                              : v.paymentMethod?.toLowerCase().includes("tarjeta")
+                              ? "💳"
+                              : v.paymentMethod?.toLowerCase().includes("transf")
+                              ? "🏦"
+                              : "💵"}{" "}
+                            {v.paymentMethod || "Efectivo"}
+                          </p>
+                        </div>
+                      </div>
 
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700/60 text-xs font-medium">
-                          {v.paymentMethod?.toLowerCase().includes("mixto")
-                            ? "🔀"
-                            : v.paymentMethod?.toLowerCase().includes("crédito") || v.paymentMethod?.toLowerCase().includes("credito")
-                            ? "📋"
-                            : v.paymentMethod?.toLowerCase().includes("tarjeta")
-                            ? "💳"
-                            : v.paymentMethod?.toLowerCase().includes("transf")
-                            ? "🏦"
-                            : "💵"}{" "}
-                          {v.paymentMethod || "Efectivo"}
-                        </span>
-
-                        <span className="text-zinc-400 ml-auto text-[11px] whitespace-nowrap">
-                          {fecha}
-                        </span>
+                      {/* Fila 3: Acción (zona táctil amplia) */}
+                      <div className="flex items-stretch border-t border-zinc-100 dark:border-zinc-800">
+                        <Link
+                          href={`/pos/facturas/editar?id=${v.id}`}
+                          className="flex-1 h-11 flex items-center justify-center gap-1.5 text-xs font-semibold text-blue-600 dark:text-blue-400 active:bg-blue-50 dark:active:bg-blue-500/10 transition-colors cursor-pointer"
+                          title="Editar factura"
+                          aria-label="Editar factura"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                          </svg>
+                          <span>Ver / Editar</span>
+                        </Link>
                       </div>
                     </div>
                   );

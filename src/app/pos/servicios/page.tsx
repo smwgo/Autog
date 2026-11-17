@@ -38,6 +38,8 @@ export default function ServiciosPosPage() {
   const [selectedEstado, setSelectedEstado] = useState("TODOS");
   const [catMenuAbierto, setCatMenuAbierto] = useState(false);
   const [estadoMenuAbierto, setEstadoMenuAbierto] = useState(false);
+  const [filtroMovilAbierto, setFiltroMovilAbierto] = useState(false);
+  const [mostrarMetricasMovil, setMostrarMetricasMovil] = useState(false);
 
   // Modales
   const [servicioAEliminar, setServicioAEliminar] = useState<WorkshopService | null>(null);
@@ -126,109 +128,90 @@ export default function ServiciosPosPage() {
       : 0;
   const bahiaCount = servicios.filter((s) => s.requiresBay).length;
 
+  const hayFiltroActivo = selectedCategory !== "TODAS" || selectedEstado !== "TODOS";
+
   return (
-    <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans text-zinc-900 dark:text-zinc-100 pb-24 md:pb-0">
+    <div className="flex flex-col min-h-dvh bg-zinc-50 dark:bg-zinc-950 font-sans text-zinc-900 dark:text-zinc-100 pb-[calc(env(safe-area-inset-bottom)+6rem)] md:pb-0">
       <Header />
 
-      <main className="flex-grow p-4 md:p-10 max-w-7xl mx-auto w-full flex flex-col">
-        {/* Header */}
-        <div className="order-1 mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-3">
-              <Link 
-                href="/pos"
-                title="Volver a POS"
-                className="w-10 h-10 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center justify-center text-zinc-600 dark:text-zinc-300 hover:text-blue-600 dark:hover:text-blue-400 hover:border-blue-500 dark:hover:border-blue-500 hover:bg-blue-50/50 dark:hover:bg-blue-500/10 transition-all shadow-sm active:scale-95 group"
-              >
-                <svg className="w-5 h-5 transition-transform group-hover:-translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                </svg>
-              </Link>
-              <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
-                Servicios
-              </h1>
-              <span className="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-600 text-white shadow-sm shadow-blue-500/20">
-                {cargando ? "..." : serviciosFiltrados.length}
-              </span>
-            </div>
+      <main className="flex-grow px-3.5 py-4 sm:p-4 md:p-8 max-w-7xl mx-auto w-full flex flex-col">
+        {/* Header - Móvil y Escritorio en una sola fila */}
+        <div className="order-1 mb-3 sm:mb-8 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+            <Link 
+              href="/pos"
+              title="Volver a POS"
+              className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center justify-center text-zinc-600 dark:text-zinc-300 hover:text-blue-600 dark:hover:text-blue-400 hover:border-blue-500 dark:hover:border-blue-500 hover:bg-blue-50/50 dark:hover:bg-blue-500/10 transition-all shadow-sm active:scale-95 group shrink-0"
+            >
+              <svg className="w-5 h-5 transition-transform group-hover:-translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+            </Link>
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50 truncate">
+              Servicios
+            </h1>
+            <span className="inline-flex items-center justify-center px-2 min-w-6 h-6 rounded-full text-xs font-bold bg-blue-600 text-white shadow-sm shadow-blue-500/20 shrink-0">
+              {cargando ? "..." : serviciosFiltrados.length}
+            </span>
           </div>
 
-          <div className="flex flex-col items-end gap-2 ml-auto shrink-0">
+          <div className="flex items-center sm:flex-col sm:items-end gap-2 shrink-0 ml-auto">
             <BranchTabs size="sm" />
             <Link
               href="/pos/servicios/nuevo"
-              className="h-10 px-5 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-medium text-sm transition-all shadow-sm shadow-blue-500/20 flex items-center gap-2 cursor-pointer"
+              title="Nuevo Servicio"
+              aria-label="Nuevo Servicio"
+              className="h-9 w-9 sm:w-auto sm:h-10 sm:px-4 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-semibold text-xs sm:text-sm shadow-sm shadow-blue-500/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
             >
-              <span>+</span> Nuevo Servicio
+              <svg className="w-5 h-5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+              </svg>
+              <span className="hidden sm:inline">Nuevo Servicio</span>
             </Link>
           </div>
         </div>
 
-        {/* Resumen Cards Desplegable en Móvil: debajo de Estado */}
-        <CollapsibleMetrics className="order-3 sm:order-2 mb-6 sm:mb-8">
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
-            <div className="bg-white dark:bg-zinc-900/80 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3.5 sm:gap-4 backdrop-blur-sm">
-              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-blue-500/15 border border-blue-500/25 text-blue-400 flex items-center justify-center text-xl shrink-0">
-                ⚙️
+        {/* Métricas: 4 recuadros pequeños en fila en móvil (ocultas por defecto), visibles en escritorio */}
+        <div className={`order-3 sm:order-2 mb-3 sm:mb-8 ${mostrarMetricasMovil ? "block" : "hidden"} sm:block`}>
+          <div className="grid grid-cols-4 sm:grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
+            {[
+              { icono: "⚙️", valor: servicios.length, label: "Totales", cls: "bg-blue-500/15 border-blue-500/25 text-blue-500 dark:text-blue-400", valCls: "text-zinc-900 dark:text-white" },
+              { icono: "✅", valor: totalActivos, label: "Activos", cls: "bg-emerald-500/15 border-emerald-500/25 text-emerald-500 dark:text-emerald-400", valCls: "text-emerald-600 dark:text-emerald-400" },
+              { icono: "⏱️", valor: `${promedioMinutos}m`, label: "Promedio", cls: "bg-amber-500/15 border-amber-500/25 text-amber-500 dark:text-amber-400", valCls: "text-amber-600 dark:text-amber-400" },
+              { icono: "🚗", valor: bahiaCount, label: "Bahía", cls: "bg-purple-500/15 border-purple-500/25 text-purple-500 dark:text-purple-400", valCls: "text-purple-600 dark:text-purple-400" },
+            ].map((m) => (
+              <div
+                key={m.label}
+                className="bg-white dark:bg-zinc-900/80 p-2.5 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex flex-col sm:flex-row items-center sm:items-center gap-1 sm:gap-4 text-center sm:text-left"
+              >
+                <div className={`w-9 h-9 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl border flex items-center justify-center text-base sm:text-xl shrink-0 ${m.cls}`}>
+                  {m.icono}
+                </div>
+                <div className="min-w-0">
+                  <p className={`text-lg sm:text-2xl font-bold leading-tight tabular-nums ${m.valCls}`}>
+                    {cargando ? "..." : m.valor}
+                  </p>
+                  <h3 className="text-zinc-500 dark:text-zinc-400 text-[11px] sm:text-sm font-medium truncate">{m.label}</h3>
+                </div>
               </div>
-              <div>
-                <p className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">
-                  {cargando ? "..." : servicios.length}
-                </p>
-                <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">Totales</h3>
-              </div>
-            </div>
-
-            <div className="bg-white dark:bg-zinc-900/80 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3.5 sm:gap-4 backdrop-blur-sm">
-              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-emerald-500/15 border border-emerald-500/25 text-emerald-400 flex items-center justify-center text-xl shrink-0">
-                ✅
-              </div>
-              <div>
-                <p className="text-xl sm:text-2xl font-bold text-emerald-600 dark:text-emerald-400">
-                  {cargando ? "..." : totalActivos}
-                </p>
-                <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">Activos</h3>
-              </div>
-            </div>
-
-            <div className="bg-white dark:bg-zinc-900/80 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3.5 sm:gap-4 backdrop-blur-sm">
-              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-amber-500/15 border border-amber-500/25 text-amber-400 flex items-center justify-center text-xl shrink-0">
-                ⏱️
-              </div>
-              <div>
-                <p className="text-xl sm:text-2xl font-bold text-amber-600 dark:text-amber-400">
-                  {cargando ? "..." : `${promedioMinutos} min`}
-                </p>
-                <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">Promedio</h3>
-              </div>
-            </div>
-
-            <div className="bg-white dark:bg-zinc-900/80 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3.5 sm:gap-4 backdrop-blur-sm">
-              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-purple-500/15 border border-purple-500/25 text-purple-400 flex items-center justify-center text-xl shrink-0">
-                🚗
-              </div>
-              <div>
-                <p className="text-xl sm:text-2xl font-bold text-purple-600 dark:text-purple-400">
-                  {cargando ? "..." : bahiaCount}
-                </p>
-                <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">Bahía</h3>
-              </div>
-            </div>
+            ))}
           </div>
-        </CollapsibleMetrics>
+        </div>
 
-        {/* Buscador y Filtros */}
-        <div className="order-2 sm:order-3 flex flex-col sm:flex-row items-center justify-between gap-2 sm:gap-4 mb-2 sm:mb-6">
-          <div className="relative w-full flex-1">
+        {/* Buscador y Filtros en una sola fila */}
+        <div className="order-2 sm:order-3 flex flex-row items-center justify-between gap-2 sm:gap-4 mb-3 sm:mb-6">
+          <div className="relative min-w-0 flex-1">
             <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400 select-none">
               🔍
             </span>
             <input
-              type="text"
+              type="search"
+              inputMode="search"
+              enterKeyHint="search"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Buscar..."
-              className="w-full pl-10 pr-10 h-11 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white text-sm font-normal focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-zinc-400 shadow-sm"
+              className="w-full pl-10 pr-10 h-11 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white text-base sm:text-sm font-normal focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-zinc-400 shadow-sm [&::-webkit-search-cancel-button]:hidden"
             />
             {searchTerm && (
               <button
@@ -241,7 +224,131 @@ export default function ServiciosPosPage() {
             )}
           </div>
 
-          <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
+          {/* Botones Móvil: Filtro + Métricas */}
+          <div className="relative sm:hidden flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => setFiltroMovilAbierto(!filtroMovilAbierto)}
+              title="Filtrar"
+              aria-label="Filtrar"
+              className={`relative w-11 h-11 rounded-xl border flex items-center justify-center transition-all cursor-pointer shadow-sm active:scale-95 ${
+                hayFiltroActivo
+                  ? "bg-blue-50 dark:bg-blue-500/15 border-blue-300 dark:border-blue-500/40 text-blue-600 dark:text-blue-400"
+                  : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-200"
+              }`}
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 4.5h18l-7 8.25V19.5l-4 1.5v-8.25L3 4.5Z" />
+              </svg>
+              {hayFiltroActivo && (
+                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-blue-600 ring-2 ring-white dark:ring-zinc-950" />
+              )}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setMostrarMetricasMovil((v) => !v)}
+              title="Métricas"
+              aria-label="Métricas"
+              className={`w-11 h-11 rounded-xl border flex items-center justify-center transition-all cursor-pointer shadow-sm active:scale-95 ${
+                mostrarMetricasMovil
+                  ? "bg-blue-600 border-blue-600 text-white"
+                  : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-200"
+              }`}
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 3v18h18M8 17v-5m4 5V8m4 9v-3" />
+              </svg>
+            </button>
+
+            {filtroMovilAbierto && (
+              <>
+                <div
+                  className="fixed inset-0 z-40"
+                  onClick={() => setFiltroMovilAbierto(false)}
+                />
+                <div className="absolute right-0 top-full mt-1.5 w-60 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-xl overflow-hidden z-50 py-1.5 max-h-80 overflow-y-auto animate-in fade-in zoom-in-95 duration-100">
+                  <div className="px-3.5 py-1 text-[10px] font-bold uppercase tracking-wider text-zinc-400">
+                    Estado
+                  </div>
+                  {[
+                    { id: "TODOS", label: "Todos" },
+                    { id: "ACTIVOS", label: "Activos" },
+                    { id: "PAUSADOS", label: "Pausados" },
+                  ].map((opcion) => (
+                    <button
+                      key={opcion.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedEstado(opcion.id);
+                        setFiltroMovilAbierto(false);
+                      }}
+                      className={`w-full px-4 py-2 text-left text-sm font-normal transition-colors flex items-center justify-between cursor-pointer ${
+                        selectedEstado === opcion.id
+                          ? "bg-blue-50 dark:bg-blue-600/15 text-blue-600 dark:text-blue-400"
+                          : "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800/80"
+                      }`}
+                    >
+                      <span>{opcion.label}</span>
+                      {selectedEstado === opcion.id && (
+                        <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
+                        </svg>
+                      )}
+                    </button>
+                  ))}
+
+                  <div className="my-1 border-t border-zinc-100 dark:border-zinc-800" />
+                  <div className="px-3.5 py-1 text-[10px] font-bold uppercase tracking-wider text-zinc-400">
+                    Categoría
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedCategory("TODAS");
+                      setFiltroMovilAbierto(false);
+                    }}
+                    className={`w-full px-4 py-2 text-left text-sm font-normal transition-colors flex items-center justify-between cursor-pointer ${
+                      selectedCategory === "TODAS"
+                        ? "bg-blue-50 dark:bg-blue-600/15 text-blue-600 dark:text-blue-400"
+                        : "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800/80"
+                    }`}
+                  >
+                    <span>Todas las categorías</span>
+                    {selectedCategory === "TODAS" && (
+                      <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
+                      </svg>
+                    )}
+                  </button>
+                  {Array.from(new Set(categories.map((c) => String(c).trim()).filter(Boolean))).map((cat, idx) => (
+                    <button
+                      key={`srv-cat-mov-${cat}-${idx}`}
+                      type="button"
+                      onClick={() => {
+                        setSelectedCategory(cat);
+                        setFiltroMovilAbierto(false);
+                      }}
+                      className={`w-full px-4 py-2 text-left text-sm font-normal transition-colors flex items-center justify-between cursor-pointer ${
+                        selectedCategory === cat
+                          ? "bg-blue-50 dark:bg-blue-600/15 text-blue-600 dark:text-blue-400"
+                          : "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800/80"
+                      }`}
+                    >
+                      <span className="truncate">{cat}</span>
+                      {selectedCategory === cat && (
+                        <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
+                        </svg>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+
+          <div className="hidden sm:flex items-center gap-3 w-auto shrink-0">
             {/* Filtro Categorías */}
             <div className="relative w-full sm:w-44 shrink-0">
               <button
@@ -402,100 +509,110 @@ export default function ServiciosPosPage() {
           </div>
         ) : (
           <div>
-            {/* Mobile Cards (md:hidden) adaptadas con orden idéntico a facturas */}
+            {/* Vista Móvil (md:hidden): Tarjetas estructuradas idénticas a Clientes y Productos */}
             <div className="md:hidden space-y-3.5">
               {serviciosFiltrados.map((s) => (
                 <div
                   key={s.id}
-                  className={`bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-4 space-y-3 shadow-xs hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors ${
+                  className={`bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-xs overflow-hidden active:bg-zinc-50 dark:active:bg-zinc-800/40 transition-colors ${
                     !s.active ? "opacity-60 bg-zinc-50/50 dark:bg-zinc-950/50" : ""
                   }`}
                 >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-center gap-3 min-w-0">
-                      {/* Icono de servicio estilo factura */}
-                      <div className="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-base shrink-0 border bg-teal-100 text-teal-700 dark:bg-teal-500/20 dark:text-teal-400 border-teal-200 dark:border-teal-500/30">
-                        🔧
-                      </div>
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <p className="font-bold text-sm text-zinc-900 dark:text-zinc-100 truncate">
-                            {s.name}
-                          </p>
-                          <span
-                            className={`text-[10px] px-1.5 py-0.5 rounded font-semibold uppercase tracking-wider border ${
-                              s.active
-                                ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
-                                : "bg-zinc-500/10 text-zinc-500 border-zinc-500/20"
-                            }`}
-                          >
-                            {s.active ? "Activo" : "Pausado"}
-                          </span>
-                        </div>
-                        <p className="text-xs text-zinc-500 dark:text-zinc-400 font-mono mt-0.5 truncate">
-                          <span className="font-semibold text-teal-600 dark:text-teal-400">#{s.code}</span>
-                          <span> • {s.category}</span>
-                        </p>
-                        {s.tipo && (
-                          <div className="flex flex-wrap gap-1 mt-1.5">
-                            {parsearModulos(s.tipo).map((t) => (
-                              <span
-                                key={t}
-                                className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-500/20"
-                              >
-                                {t}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                      </div>
+                  {/* Fila 1: Icono + Nombre + Estado + Código/Categoría */}
+                  <div className="p-3.5 flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-2xl flex items-center justify-center font-bold text-lg shrink-0 border bg-teal-100 text-teal-700 dark:bg-teal-500/20 dark:text-teal-400 border-teal-200 dark:border-teal-500/30">
+                      🔧
                     </div>
-
-                    {/* Acciones Rápidas (Toque táctil >= 44px) */}
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      <Link
-                        href={`/pos/servicios/editar?id=${s.id}`}
-                        className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl flex items-center justify-center text-zinc-500 hover:text-blue-600 bg-zinc-100 dark:bg-zinc-800 hover:bg-blue-50 dark:hover:bg-blue-500/10 active:scale-95 transition-all"
-                        title="Editar servicio"
-                        aria-label="Editar servicio"
-                      >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                        </svg>
-                      </Link>
-                      <button
-                        type="button"
-                        onClick={() => setServicioAEliminar(s)}
-                        className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl flex items-center justify-center text-zinc-500 hover:text-rose-600 bg-zinc-100 dark:bg-zinc-800 hover:bg-rose-50 dark:hover:bg-rose-500/10 active:scale-95 transition-all cursor-pointer"
-                        title="Eliminar servicio"
-                        aria-label="Eliminar servicio"
-                      >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                      </button>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="font-bold text-[15px] leading-tight text-zinc-900 dark:text-zinc-100 truncate">
+                          {s.name}
+                        </p>
+                        <span
+                          className={`shrink-0 text-[10px] px-2 py-0.5 rounded-md font-bold uppercase tracking-wide border ${
+                            s.active
+                              ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+                              : "bg-zinc-500/10 text-zinc-500 border-zinc-500/20"
+                          }`}
+                        >
+                          {s.active ? "Activo" : "Pausado"}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1.5 mt-1 flex-wrap text-xs text-zinc-500 dark:text-zinc-400">
+                        <span className="font-mono font-semibold text-teal-600 dark:text-teal-400">
+                          #{s.code}
+                        </span>
+                        <span className="truncate">• {s.category}</span>
+                      </div>
                     </div>
                   </div>
 
-                  {s.description && (
-                    <p className="text-xs text-zinc-600 dark:text-zinc-400 line-clamp-2 bg-zinc-50 dark:bg-zinc-800/60 p-2.5 rounded-xl border border-zinc-100 dark:border-zinc-800">
-                      {s.description}
-                    </p>
+                  {/* Fila 2: Dos recuadros ordenados (Tarifa / Tiempo y Bahía) */}
+                  <div className="px-3.5 pb-3 grid grid-cols-2 gap-2">
+                    <div className="min-w-0 rounded-xl bg-teal-50/70 dark:bg-teal-500/10 border border-teal-200/70 dark:border-teal-500/20 px-2.5 py-2">
+                      <p className="text-[10px] font-semibold uppercase tracking-wide text-teal-600/80 dark:text-teal-400/80">
+                        Tarifa PVP
+                      </p>
+                      <p className="text-[14px] font-mono font-bold text-teal-700 dark:text-teal-300 truncate">
+                        ${Number(s.price || 0).toFixed(2)}
+                      </p>
+                    </div>
+                    <div className="min-w-0 rounded-xl bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800 px-2.5 py-2">
+                      <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-400">
+                        Tiempo / Área
+                      </p>
+                      <p className="text-[13px] font-semibold text-zinc-800 dark:text-zinc-200 truncate">
+                        ⏱️ {s.estimatedMinutes}m • {s.requiresBay ? "Bahía" : "Taller"}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Fila 3: Módulos y Descripción */}
+                  {(s.tipo || s.description) && (
+                    <div className="px-3.5 pb-3 space-y-2">
+                      {s.tipo && (
+                        <div className="flex gap-1.5 overflow-x-auto -mx-0.5 px-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                          {parsearModulos(s.tipo).map((t) => (
+                            <span
+                              key={t}
+                              className="shrink-0 bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-300 px-2 py-1 rounded-lg text-[11px] font-medium border border-blue-200 dark:border-blue-500/20"
+                            >
+                              {t}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      {s.description && (
+                        <p className="text-xs text-zinc-600 dark:text-zinc-400 line-clamp-2 bg-zinc-50 dark:bg-zinc-800/60 p-2 rounded-xl border border-zinc-100 dark:border-zinc-800">
+                          {s.description}
+                        </p>
+                      )}
+                    </div>
                   )}
 
-                  {/* Datos secundarios (Tarifa, Tiempo, Bahía) */}
-                  <div className="flex flex-wrap items-center gap-2 pt-1 text-xs">
-                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-teal-50 dark:bg-teal-500/10 text-teal-600 dark:text-teal-400 border border-teal-200 dark:border-teal-500/20 font-bold font-mono text-xs">
-                      💰 ${Number(s.price).toFixed(2)}
-                    </span>
-
-                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700/60 text-xs font-medium">
-                      ⏱️ {s.estimatedMinutes} min
-                    </span>
-
-                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700/60 text-xs font-medium">
-                      {s.requiresBay ? "🚗 Bahía" : "🧰 Mano de Obra"}
-                    </span>
+                  {/* Fila 4: Botones grandes abajo (Editar y Eliminar) */}
+                  <div className="flex items-stretch border-t border-zinc-100 dark:border-zinc-800 divide-x divide-zinc-100 dark:divide-zinc-800">
+                    <Link
+                      href={`/pos/servicios/editar?id=${s.id}`}
+                      className="flex-1 h-11 flex items-center justify-center gap-1.5 text-xs font-semibold text-blue-600 dark:text-blue-400 active:bg-blue-50 dark:active:bg-blue-500/10 transition-colors cursor-pointer"
+                      title="Editar"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                      </svg>
+                      <span>Editar</span>
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={() => setServicioAEliminar(s)}
+                      className="flex-1 h-11 flex items-center justify-center gap-1.5 text-xs font-semibold text-rose-600 dark:text-rose-400 active:bg-rose-50 dark:active:bg-rose-500/10 transition-colors cursor-pointer"
+                      title="Eliminar"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                      <span>Eliminar</span>
+                    </button>
                   </div>
                 </div>
               ))}
