@@ -623,6 +623,61 @@ export async function GET(request: Request) {
         ).catch(() => [])) as any[]) || [];
       }
 
+      // 4.1 Consultar envíos a POS (OrderRequest) y cobros realizados en POS (Sale)
+      let posSendCount = Number((order as any).posSendCount || 0);
+      let isPaidInPos =
+        String(order.quoteStatus || "").toLowerCase() === "pagado" ||
+        String(order.status || "").toLowerCase() === "pagado";
+      let lastSaleNumber: string | null = null;
+
+      try {
+        const reqBaseNum = order.orderNumber.startsWith("OT-")
+          ? order.orderNumber
+          : `OT-${order.orderNumber}`;
+        const posReqs = (await prisma.$queryRawUnsafe(
+          `SELECT "id", "requestNumber", "status" FROM "OrderRequest"
+           WHERE "requestNumber" = $1
+              OR "requestNumber" LIKE $2
+              OR "id" = $3`,
+          reqBaseNum,
+          `${reqBaseNum}-%`,
+          order.posRequestId || ""
+        ).catch(() => [])) as any[];
+
+        if (Array.isArray(posReqs)) {
+          posSendCount = Math.max(posSendCount, posReqs.length);
+          const paidStatuses = new Set(["DESPACHADO", "PAGADO", "COBRADO", "FACTURADO"]);
+          if (posReqs.some((r: any) => paidStatuses.has(String(r.status || "").toUpperCase()))) {
+            isPaidInPos = true;
+          }
+        }
+
+        if (order.plate) {
+          const orderCreatedAt = order.createdAt
+            ? new Date(new Date(order.createdAt).getTime() - 3600000)
+            : new Date(Date.now() - 86400000 * 7);
+          const salesRows = (await prisma.$queryRawUnsafe(
+            `SELECT "id", "saleNumber", "total", "status", "createdAt" FROM "Sale"
+             WHERE UPPER(COALESCE("vehiclePlate", '')) = UPPER($1)
+               AND COALESCE("status", '') NOT IN ('Anulada', 'Eliminada')
+               AND "createdAt" >= $2
+             ORDER BY "createdAt" DESC LIMIT 5`,
+            String(order.plate).trim(),
+            orderCreatedAt
+          ).catch(() => [])) as any[];
+
+          if (Array.isArray(salesRows) && salesRows.length > 0) {
+            isPaidInPos = true;
+            lastSaleNumber = salesRows[0].saleNumber || null;
+          }
+        }
+      } catch {}
+
+      const effectiveQuoteStatus = isPaidInPos
+        ? "Pagado"
+        : order.quoteStatus || (order.status === "EN_CAJA" ? "Aprobado" : "Borrador");
+      const effectiveStatus = isPaidInPos ? "Trabajando" : order.status;
+
       return NextResponse.json({
         success: true,
         order: {
@@ -634,7 +689,7 @@ export async function GET(request: Request) {
           clientPhone: order.clientPhone,
           clientIdDoc: order.clientIdDoc,
           mechanic: order.mechanic ? order.mechanic.replace(/\s*\([^)]*\)/g, "").trim() : "",
-          status: order.status,
+          status: effectiveStatus,
           progress: Number(order.progress || 0),
           mileage: order.mileage,
           fuelLevel: order.fuelLevel,
@@ -643,11 +698,14 @@ export async function GET(request: Request) {
           dateIn: order.dateIn,
           createdAt: order.createdAt,
           quoteNumber: order.quoteNumber || `COT-${order.orderNumber}`,
-          quoteStatus: order.quoteStatus || (order.status === "EN_CAJA" ? "Aprobado" : "Borrador"),
+          quoteStatus: effectiveQuoteStatus,
           quoteApprovedAt: order.quoteApprovedAt,
           quoteTaxRate: order.quoteTaxRate !== null && order.quoteTaxRate !== undefined ? Number(order.quoteTaxRate) : 15,
           quoteDiscount: Number(order.quoteDiscount ?? 0),
           posRequestId: order.posRequestId,
+          posSendCount,
+          isPaidInPos,
+          lastSaleNumber,
           supplierSig: signSupplierScope(order.id),
           dailySupplierSig: signSupplierScope("daily"),
           items: repuestosNormalizados,

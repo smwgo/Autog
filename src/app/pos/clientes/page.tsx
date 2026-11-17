@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { Header } from "@/components/Header";
 import { PosMobileNav } from "@/components/PosMobileNav";
-import { CollapsibleMetrics } from "@/components/CollapsibleMetrics";
 import { getClientActiveBranch, getClientUserBranch, SedeType, FiltroSedeType } from "@/lib/branch";
 import { BranchTabs } from "@/components/pos/BranchTabs";
 import { useRealtimeSync } from "@/hooks/useRealtimeSync";
@@ -46,6 +45,7 @@ export default function GestionClientes() {
   const [error, setError] = useState<string | null>(null);
   const [filtro, setFiltro] = useState("todos");
   const [filtroMenuAbierto, setFiltroMenuAbierto] = useState(false);
+  const [mostrarMetricasMovil, setMostrarMetricasMovil] = useState(false);
   const [busqueda, setBusqueda] = useState("");
   const [stats, setStats] = useState({
     totalClientes: 0,
@@ -353,12 +353,12 @@ export default function GestionClientes() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans pb-24 md:pb-0">
+    <div className="flex flex-col min-h-dvh bg-zinc-50 dark:bg-zinc-950 font-sans pb-[calc(env(safe-area-inset-bottom)+6rem)] md:pb-0">
       <Header />
 
-      <main className="flex-grow p-4 md:p-8 max-w-7xl mx-auto w-full flex flex-col">
+      <main className="flex-grow px-3.5 py-4 sm:p-4 md:p-8 max-w-7xl mx-auto w-full flex flex-col">
         {/* Header - Idéntico al estilo Facturas / Venta (Móvil y Escritorio en una sola fila) */}
-        <div className="order-1 mb-4 sm:mb-8 flex items-center justify-between gap-3">
+        <div className="order-1 mb-3 sm:mb-8 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
             <Link
               href="/pos"
@@ -377,14 +377,16 @@ export default function GestionClientes() {
             </span>
           </div>
 
-          <div className="flex flex-col items-end gap-2 shrink-0 ml-auto">
+          <div className="flex items-center sm:flex-col sm:items-end gap-2 shrink-0 ml-auto">
             <BranchTabs size="sm" />
             <Link
               href="/pos/clientes/nuevo"
-              className="h-9 sm:h-10 px-3.5 sm:px-4 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-semibold text-xs sm:text-sm shadow-sm shadow-blue-500/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+              title="Nuevo Cliente"
+              aria-label="Nuevo Cliente"
+              className="h-9 w-9 sm:w-auto sm:h-10 sm:px-4 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-semibold text-xs sm:text-sm shadow-sm shadow-blue-500/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" /></svg>
-              <span>Nuevo Cliente</span>
+              <svg className="w-5 h-5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" /></svg>
+              <span className="hidden sm:inline">Nuevo Cliente</span>
             </Link>
           </div>
         </div>
@@ -402,71 +404,47 @@ export default function GestionClientes() {
           </div>
         )}
 
-        {/* Resumen Cards Desplegable en Móvil: orden 3 en móvil (debajo de filtros), orden 2 en escritorio */}
-        <CollapsibleMetrics className="order-3 sm:order-2 mb-2 sm:mb-8">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-3 sm:mb-8">
-            <div className="bg-white dark:bg-zinc-900/80 p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3 sm:gap-4 backdrop-blur-sm">
-              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-blue-500/15 border border-blue-500/25 text-blue-500 dark:text-blue-400 flex items-center justify-center text-xl shrink-0">
-                👥
+        {/* Métricas: en móvil se muestran con el icono 📊, en escritorio siempre visibles */}
+        <div className={`order-3 sm:order-2 mb-3 sm:mb-8 ${mostrarMetricasMovil ? "block" : "hidden"} sm:block`}>
+          <div className="grid grid-cols-4 sm:grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
+            {[
+              { icono: "👥", valor: stats.totalClientes, label: "Clientes", cls: "bg-blue-500/15 border-blue-500/25 text-blue-500 dark:text-blue-400" },
+              { icono: "🚗", valor: stats.totalVehiculos, label: "Vehículos", cls: "bg-emerald-500/15 border-emerald-500/25 text-emerald-500 dark:text-emerald-400" },
+              { icono: "⭐", valor: stats.totalVip, label: "VIP", cls: "bg-amber-500/15 border-amber-500/25 text-amber-500 dark:text-amber-400" },
+              { icono: "📅", valor: stats.totalNuevos, label: "Nuevos", cls: "bg-purple-500/15 border-purple-500/25 text-purple-500 dark:text-purple-400" },
+            ].map((m) => (
+              <div
+                key={m.label}
+                className="bg-white dark:bg-zinc-900/80 p-2.5 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex flex-col sm:flex-row items-center sm:items-center gap-1 sm:gap-4 text-center sm:text-left"
+              >
+                <div className={`w-9 h-9 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl border flex items-center justify-center text-base sm:text-xl shrink-0 ${m.cls}`}>
+                  {m.icono}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-lg sm:text-2xl font-bold text-zinc-900 dark:text-white leading-tight tabular-nums">
+                    {cargando && m.valor === 0 ? "..." : m.valor}
+                  </p>
+                  <h3 className="text-zinc-500 dark:text-zinc-400 text-[11px] sm:text-sm font-medium truncate">{m.label}</h3>
+                </div>
               </div>
-              <div>
-                <p className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">
-                  {cargando && stats.totalClientes === 0 ? "..." : stats.totalClientes}
-                </p>
-                <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">Clientes</h3>
-              </div>
-            </div>
-
-            <div className="bg-white dark:bg-zinc-900/80 p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3 sm:gap-4 backdrop-blur-sm">
-              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-emerald-500/15 border border-emerald-500/25 text-emerald-500 dark:text-emerald-400 flex items-center justify-center text-xl shrink-0">
-                🚗
-              </div>
-              <div>
-                <p className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">
-                  {cargando && stats.totalVehiculos === 0 ? "..." : stats.totalVehiculos}
-                </p>
-                <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">Vehículos</h3>
-              </div>
-            </div>
-
-            <div className="bg-white dark:bg-zinc-900/80 p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3 sm:gap-4 backdrop-blur-sm">
-              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-amber-500/15 border border-amber-500/25 text-amber-500 dark:text-amber-400 flex items-center justify-center text-xl shrink-0">
-                ⭐
-              </div>
-              <div>
-                <p className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">
-                  {cargando && stats.totalVip === 0 ? "..." : stats.totalVip}
-                </p>
-                <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">VIP</h3>
-              </div>
-            </div>
-
-            <div className="bg-white dark:bg-zinc-900/80 p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3 sm:gap-4 backdrop-blur-sm">
-              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-purple-500/15 border border-purple-500/25 text-purple-500 dark:text-purple-400 flex items-center justify-center text-xl shrink-0">
-                📅
-              </div>
-              <div>
-                <p className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">
-                  {cargando && stats.totalNuevos === 0 ? "..." : stats.totalNuevos}
-                </p>
-                <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">Nuevos</h3>
-              </div>
-            </div>
+            ))}
           </div>
-        </CollapsibleMetrics>
+        </div>
 
         {/* Filtros y Buscador: fila independiente idéntica a Facturas */}
-        <div className="order-2 sm:order-3 flex flex-col sm:flex-row items-center justify-between gap-2 sm:gap-4 mb-2 sm:mb-6">
-          <div className="relative w-full flex-1">
+        <div className="order-2 sm:order-3 flex flex-row items-center justify-between gap-2 sm:gap-4 mb-3 sm:mb-6">
+          <div className="relative min-w-0 flex-1">
             <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400 select-none">
               🔍
             </span>
             <input
-              type="text"
+              type="search"
+              inputMode="search"
+              enterKeyHint="search"
               value={busqueda}
               onChange={(e) => setBusqueda(e.target.value)}
               placeholder="Buscar..."
-              className="w-full pl-10 pr-10 h-11 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white text-sm font-normal focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-zinc-400 shadow-sm"
+              className="w-full pl-10 pr-10 h-11 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white text-base sm:text-sm font-normal focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-zinc-400 shadow-sm [&::-webkit-search-cancel-button]:hidden"
             />
             {busqueda && (
               <button
@@ -479,15 +457,45 @@ export default function GestionClientes() {
             )}
           </div>
 
-          <div className="relative w-full sm:w-48 shrink-0">
+          <div className="relative sm:w-48 shrink-0 flex items-center gap-2">
+            {/* Botón Filtro: icono en móvil, desplegable con texto en escritorio */}
             <button
               type="button"
               onClick={() => setFiltroMenuAbierto(!filtroMenuAbierto)}
-              className="w-full h-11 px-4 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 text-zinc-800 dark:text-zinc-200 text-sm font-normal flex items-center justify-between transition-all cursor-pointer shadow-sm active:scale-98"
+              title="Filtrar"
+              aria-label="Filtrar"
+              className={`relative w-11 sm:w-full h-11 sm:px-4 rounded-xl border text-sm font-normal flex items-center justify-center sm:justify-between transition-all cursor-pointer shadow-sm active:scale-95 ${
+                filtro !== "todos"
+                  ? "bg-blue-50 dark:bg-blue-500/15 border-blue-300 dark:border-blue-500/40 text-blue-600 dark:text-blue-400"
+                  : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 text-zinc-700 dark:text-zinc-200"
+              }`}
             >
-              <span>{filtro === "persona" ? "Persona" : filtro === "empresa" ? "Empresa" : filtro === "principal" ? "Solo Principal" : filtro === "sucursal" ? "En Sucursal" : "Todos"}</span>
-              <svg className={`w-4 h-4 text-zinc-400 transition-transform ${filtroMenuAbierto ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5 sm:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 4.5h18l-7 8.25V19.5l-4 1.5v-8.25L3 4.5Z" />
+              </svg>
+              {filtro !== "todos" && (
+                <span className="sm:hidden absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-blue-600 ring-2 ring-white dark:ring-zinc-950" />
+              )}
+              <span className="hidden sm:inline">{filtro === "persona" ? "Persona" : filtro === "empresa" ? "Empresa" : filtro === "principal" ? "Solo Principal" : filtro === "sucursal" ? "En Sucursal" : "Todos"}</span>
+              <svg className={`hidden sm:block w-4 h-4 text-zinc-400 transition-transform ${filtroMenuAbierto ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+
+            {/* Botón Métricas: solo móvil */}
+            <button
+              type="button"
+              onClick={() => setMostrarMetricasMovil((v) => !v)}
+              title="Métricas"
+              aria-label="Métricas"
+              className={`sm:hidden w-11 h-11 rounded-xl border flex items-center justify-center transition-all cursor-pointer shadow-sm active:scale-95 ${
+                mostrarMetricasMovil
+                  ? "bg-blue-600 border-blue-600 text-white"
+                  : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-200"
+              }`}
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 3v18h18M8 17v-5m4 5V8m4 9v-3" />
               </svg>
             </button>
 
@@ -497,7 +505,7 @@ export default function GestionClientes() {
                   className="fixed inset-0 z-40"
                   onClick={() => setFiltroMenuAbierto(false)}
                 />
-                <div className="absolute right-0 mt-1.5 w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-xl overflow-hidden z-50 py-1 animate-in fade-in zoom-in-95 duration-100">
+                <div className="absolute right-0 top-full mt-1.5 w-52 sm:w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-xl overflow-hidden z-50 py-1 animate-in fade-in zoom-in-95 duration-100">
                   {[
                     { id: "todos", label: "Todos" },
                     { id: "persona", label: "Persona" },
@@ -557,145 +565,155 @@ export default function GestionClientes() {
               clientesPaginados.map((row) => (
                 <div
                   key={row.id}
-                  className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-4 space-y-3 shadow-xs hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors"
+                  className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-xs overflow-hidden active:bg-zinc-50 dark:active:bg-zinc-800/40 transition-colors"
                 >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm shrink-0 border overflow-hidden ${row.type === 'Empresa'
-                        ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400 border-amber-200 dark:border-amber-500/30'
-                        : 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400 border-blue-200 dark:border-blue-500/30'
-                        }`}>
-                        {row.avatar || row.imageUrl ? (
-                          <img
-                            src={row.avatar || row.imageUrl || ""}
-                            alt={row.name}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          row.type === 'Empresa' ? '🏢' : row.name.charAt(0).toUpperCase()
-                        )}
-                      </div>
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <p className="font-bold text-sm text-zinc-900 dark:text-zinc-100 truncate">{row.name}</p>
-                          <span className="text-[10px] px-1.5 py-0.5 rounded font-semibold uppercase tracking-wider bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700">
-                            {row.type === 'Empresa' ? 'Empresa' : 'Persona'}
-                          </span>
-                          {row.branch === "SUCURSAL" ? (
-                            <span className="text-[10px] px-1.5 py-0.5 rounded font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">
-                              Sucursal
-                            </span>
-                          ) : row.assignedToSucursal ? (
-                            <span className="text-[10px] px-1.5 py-0.5 rounded font-bold bg-purple-500/15 text-purple-600 dark:text-purple-400 border border-purple-500/30">
-                              ⇄ Sucursal
-                            </span>
-                          ) : (
-                            <span className="text-[10px] px-1.5 py-0.5 rounded font-semibold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
-                              Principal
-                            </span>
-                          )}
-                          {row.vip && <span title="Cliente VIP" className="text-xs">⭐</span>}
-                        </div>
-                        {row.identification && !row.identification.startsWith("CLI-") && (
-                          <p className="text-xs text-zinc-500 dark:text-zinc-400 font-mono mt-0.5">
-                            {row.type === 'Empresa' ? 'RUC' : 'Cédula'}: {row.identification}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Acciones Rápidas */}
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      {userBranch === "PRINCIPAL" && row.branch !== "SUCURSAL" && (
-                        <button
-                          type="button"
-                          onClick={() => handleTransferirSucursal(row)}
-                          disabled={transfiriendoId === row.id}
-                          title={row.assignedToSucursal ? "Quitar acceso a Sucursal" : "Asignar / Transferir cliente a Sucursal"}
-                          className={`h-10 px-2.5 rounded-xl flex items-center justify-center text-xs font-bold active:scale-95 transition-all cursor-pointer border ${row.assignedToSucursal
-                            ? "bg-purple-600 text-white border-purple-500 shadow-xs"
-                            : "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 border-zinc-200 dark:border-zinc-700 hover:text-purple-600"
-                            }`}
-                        >
-                          ⇄
-                        </button>
+                  {/* Fila 1: Foto + Nombre + Tipo/Sede */}
+                  <div className="p-3.5 flex items-center gap-3">
+                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-bold text-base shrink-0 border overflow-hidden ${row.type === 'Empresa'
+                      ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400 border-amber-200 dark:border-amber-500/30'
+                      : 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400 border-blue-200 dark:border-blue-500/30'
+                      }`}>
+                      {row.avatar || row.imageUrl ? (
+                        <img
+                          src={row.avatar || row.imageUrl || ""}
+                          alt={row.name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        row.type === 'Empresa' ? '🏢' : row.name.charAt(0).toUpperCase()
                       )}
-                      <Link
-                        href={`/pos/clientes/nuevo?id=${row.id}`}
-                        className="w-10 h-10 rounded-xl flex items-center justify-center text-zinc-500 hover:text-blue-600 bg-zinc-100 dark:bg-zinc-800 hover:bg-blue-50 dark:hover:bg-blue-500/10 active:scale-95 transition-all shadow-xs cursor-pointer"
-                        title="Editar en Formulario"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                        </svg>
-                      </Link>
-                      <button
-                        onClick={() => solicitarEliminar(row.id, row.name)}
-                        disabled={eliminandoId === row.id}
-                        className="w-10 h-10 rounded-xl flex items-center justify-center text-zinc-500 hover:text-rose-600 bg-zinc-100 dark:bg-zinc-800 hover:bg-rose-50 dark:hover:bg-rose-500/10 active:scale-95 transition-all disabled:opacity-50 shadow-xs cursor-pointer"
-                        title="Eliminar"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                      </button>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5">
+                        <p className="font-bold text-[15px] leading-tight text-zinc-900 dark:text-zinc-100 truncate">{row.name}</p>
+                        {row.vip && <span title="Cliente VIP" className="text-sm shrink-0">⭐</span>}
+                      </div>
+                      <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-md font-semibold uppercase tracking-wide bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700">
+                          {row.type === 'Empresa' ? 'Empresa' : 'Persona'}
+                        </span>
+                        {row.branch === "SUCURSAL" ? (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-md font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+                            Sucursal
+                          </span>
+                        ) : row.assignedToSucursal ? (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-md font-bold bg-purple-500/15 text-purple-600 dark:text-purple-400 border border-purple-500/30">
+                            ⇄ Sucursal
+                          </span>
+                        ) : (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-md font-semibold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                            Principal
+                          </span>
+                        )}
+                        <span className="text-[11px] text-zinc-400 ml-auto">
+                          {new Date(row.createdAt).toLocaleDateString("es-EC", {
+                            day: "numeric",
+                            month: "short",
+                            year: "numeric",
+                          })}
+                        </span>
+                      </div>
                     </div>
                   </div>
 
-                  {/* Datos secundarios (WhatsApp, Vehículos, Fecha) */}
-                  <div className="flex flex-wrap items-center gap-2 pt-1 text-xs">
+                  {/* Fila 2: Datos ordenados (Documento / WhatsApp) */}
+                  <div className="px-3.5 pb-3 grid grid-cols-2 gap-2">
+                    <div className="min-w-0 rounded-xl bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800 px-2.5 py-2">
+                      <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-400">
+                        {row.type === 'Empresa' ? 'RUC' : 'Cédula'}
+                      </p>
+                      <p className="text-[13px] font-mono font-semibold text-zinc-800 dark:text-zinc-200 truncate">
+                        {row.identification && !row.identification.startsWith("CLI-") ? row.identification : "—"}
+                      </p>
+                    </div>
                     {row.phone ? (
                       <a
                         href={`https://wa.me/${row.phone.replace(/\D/g, "")}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20 font-medium active:scale-95"
+                        className="min-w-0 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 px-2.5 py-2 active:scale-[0.98] transition-transform"
                       >
-                        <span>📱</span> {row.phone}
+                        <p className="text-[10px] font-semibold uppercase tracking-wide text-emerald-600/80 dark:text-emerald-400/80">
+                          WhatsApp
+                        </p>
+                        <p className="text-[13px] font-mono font-semibold text-emerald-700 dark:text-emerald-400 truncate">
+                          {row.phone}
+                        </p>
                       </a>
                     ) : (
-                      <span className="text-zinc-400 dark:text-zinc-500 italic px-2 py-0.5">
-                        Sin WhatsApp
-                      </span>
+                      <div className="min-w-0 rounded-xl bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800 px-2.5 py-2">
+                        <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-400">WhatsApp</p>
+                        <p className="text-[13px] text-zinc-400 italic">Sin número</p>
+                      </div>
                     )}
-
-                    {row.vehicles && row.vehicles.length > 0 ? (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-sky-400 border border-blue-200 dark:border-blue-500/20 font-medium">
-                        🚗 {row.vehicles.length} {row.vehicles.length === 1 ? "vehículo" : "vehículos"}
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800/80">
-                        0 vehículos
-                      </span>
-                    )}
-
-                    <span className="text-zinc-400 ml-auto text-[11px]">
-                      {new Date(row.createdAt).toLocaleDateString("es-EC", {
-                        day: "numeric",
-                        month: "short",
-                        year: "numeric",
-                      })}
-                    </span>
                   </div>
 
-                  {/* Vehículos detalle si tiene */}
-                  {row.vehicles && row.vehicles.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5 pt-0.5">
-                      {row.vehicles.map((v) => (
-                        <span
-                          key={v.id}
-                          className="bg-zinc-100 dark:bg-zinc-800/80 text-zinc-700 dark:text-zinc-300 px-2 py-0.5 rounded text-[11px] font-medium inline-flex items-center gap-1 border border-zinc-200 dark:border-zinc-700/60 font-mono"
-                        >
-                          <span className="font-bold text-blue-600 dark:text-sky-400">{v.plate}</span>
-                          {(v.brand || v.model) && (
-                            <span className="text-zinc-500 font-sans text-[10px]">
-                              {[v.brand, v.model].filter(Boolean).join(" ")}
-                            </span>
-                          )}
-                        </span>
-                      ))}
-                    </div>
-                  )}
+                  {/* Fila 3: Vehículos */}
+                  <div className="px-3.5 pb-3">
+                    {row.vehicles && row.vehicles.length > 0 ? (
+                      <div className="flex gap-1.5 overflow-x-auto -mx-0.5 px-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                        {row.vehicles.map((v) => (
+                          <span
+                            key={v.id}
+                            className="shrink-0 bg-blue-50 dark:bg-blue-500/10 text-zinc-700 dark:text-zinc-300 px-2 py-1 rounded-lg text-[11px] font-medium inline-flex items-center gap-1.5 border border-blue-200 dark:border-blue-500/20"
+                          >
+                            <span>🚗</span>
+                            <span className="font-mono font-bold text-blue-600 dark:text-sky-400">{v.plate}</span>
+                            {(v.brand || v.model) && (
+                              <span className="text-zinc-500 dark:text-zinc-400 text-[10px]">
+                                {[v.brand, v.model].filter(Boolean).join(" ")}
+                              </span>
+                            )}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800/80">
+                        🚗 Sin vehículos
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Fila 4: Acciones (zona táctil amplia) */}
+                  <div className="flex items-stretch border-t border-zinc-100 dark:border-zinc-800 divide-x divide-zinc-100 dark:divide-zinc-800">
+                    {userBranch === "PRINCIPAL" && row.branch !== "SUCURSAL" && (
+                      <button
+                        type="button"
+                        onClick={() => handleTransferirSucursal(row)}
+                        disabled={transfiriendoId === row.id}
+                        title={row.assignedToSucursal ? "Quitar acceso a Sucursal" : "Asignar / Transferir cliente a Sucursal"}
+                        className={`flex-1 h-11 flex items-center justify-center gap-1.5 text-xs font-semibold active:scale-[0.98] transition-all cursor-pointer disabled:opacity-50 ${row.assignedToSucursal
+                          ? "text-purple-600 dark:text-purple-400 bg-purple-500/5"
+                          : "text-zinc-600 dark:text-zinc-300"
+                          }`}
+                      >
+                        <span>⇄</span>
+                        <span>{row.assignedToSucursal ? "Quitar" : "Sucursal"}</span>
+                      </button>
+                    )}
+                    <Link
+                      href={`/pos/clientes/nuevo?id=${row.id}`}
+                      className="flex-1 h-11 flex items-center justify-center gap-1.5 text-xs font-semibold text-blue-600 dark:text-blue-400 active:bg-blue-50 dark:active:bg-blue-500/10 transition-colors cursor-pointer"
+                      title="Editar"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                      </svg>
+                      <span>Editar</span>
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={() => solicitarEliminar(row.id, row.name)}
+                      disabled={eliminandoId === row.id}
+                      className="flex-1 h-11 flex items-center justify-center gap-1.5 text-xs font-semibold text-rose-600 dark:text-rose-400 active:bg-rose-50 dark:active:bg-rose-500/10 transition-colors disabled:opacity-50 cursor-pointer"
+                      title="Eliminar"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                      <span>Eliminar</span>
+                    </button>
+                  </div>
                 </div>
               ))
             )}

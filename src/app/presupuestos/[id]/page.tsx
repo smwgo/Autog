@@ -789,6 +789,7 @@ export default function PaginaDetallePropuesta() {
   const [ultimaSync, setUltimaSync] = useState<Date | null>(null);
   const debounceTimerRef = React.useRef<NodeJS.Timeout | null>(null);
   const lastLocalEditAtRef = React.useRef<number>(0);
+  const [modalConfirmarReenvioPos, setModalConfirmarReenvioPos] = useState(false);
 
   // Modal para crear nuevo hallazgo / evidencia
   const [modalNuevoHallazgo, setModalNuevoHallazgo] = useState<{
@@ -3133,8 +3134,9 @@ export default function PaginaDetallePropuesta() {
   };
 
   // Autorizar Cobro y Enviar al POS de Venta
-  const handleAutorizarYEnviarAPos = async () => {
+  const ejecutarEnvioAPos = async () => {
     if (!orden) return;
+    setModalConfirmarReenvioPos(false);
     if (repuestos.length === 0 && servicios.length === 0) {
       mostrarToast("Agrega al menos un ítem o servicio a la factura antes de autorizar.", "err");
       return;
@@ -3170,8 +3172,20 @@ export default function PaginaDetallePropuesta() {
         data = await res.json();
       } catch { }
       if (data?.success) {
-        mostrarToast("¡Presupuesto autorizado y enviado a Caja POS con éxito!");
-        setOrden((prev) => (prev ? { ...prev, quoteStatus: "Aprobado", status: "EN_CAJA" } : null));
+        const nextCount = Number(data.posSendCount || (Number((orden as any)?.posSendCount || 0) + 1));
+        const yaPagada = Boolean(data.isPaidInPos || (orden as any)?.isPaidInPos || esPagado);
+        mostrarToast(`¡Enviado a Caja POS con éxito! (Envío #${nextCount})`);
+        setOrden((prev: any) =>
+          prev
+            ? {
+              ...prev,
+              quoteStatus: yaPagada ? "Pagado" : "Aprobado",
+              status: yaPagada ? "Trabajando" : "EN_CAJA",
+              posSendCount: nextCount,
+              isPaidInPos: yaPagada,
+            }
+            : null
+        );
       } else {
         mostrarToast(data.error || "No se pudo autorizar el cobro.", "err");
       }
@@ -3180,6 +3194,21 @@ export default function PaginaDetallePropuesta() {
     } finally {
       setAutorizando(false);
     }
+  };
+
+  const handleAutorizarYEnviarAPos = () => {
+    if (!orden) return;
+    if (repuestos.length === 0 && servicios.length === 0) {
+      mostrarToast("Agrega al menos un ítem o servicio a la factura antes de autorizar.", "err");
+      return;
+    }
+    const enviosPrevios = Number((orden as any)?.posSendCount || 0);
+    const yaFuePagada = Boolean((orden as any)?.isPaidInPos || esPagado);
+    if (enviosPrevios > 0 || yaFuePagada) {
+      setModalConfirmarReenvioPos(true);
+      return;
+    }
+    void ejecutarEnvioAPos();
   };
 
   // Agregar nuevo repuesto (CRUD Create)
@@ -3503,10 +3532,12 @@ export default function PaginaDetallePropuesta() {
   const esPagado =
     esPagadoLocal !== null
       ? esPagadoLocal
-      : quoteStatusLower === "pagado" ||
+      : Boolean((orden as any)?.isPaidInPos) ||
+      quoteStatusLower === "pagado" ||
       statusLower === "pagado" ||
       statusLower.includes("pagad") ||
       statusLower.includes("factur");
+  const posSendCount = Number((orden as any)?.posSendCount || 0);
   const esPausado =
     esPausadoLocal !== null
       ? esPausadoLocal
@@ -5688,19 +5719,41 @@ export default function PaginaDetallePropuesta() {
                     </div>
                   </div>
 
-                  {/* BARRA DE CIERRE FINAL: TÍTULOS DE 1 PALABRA + ICONO */}
-                  <div className="print:hidden pt-5 border-t border-zinc-200 dark:border-white/10 flex flex-col md:flex-row items-stretch md:items-center justify-end gap-4 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] sm:pb-0">
-                    <div className="flex items-center gap-2.5 flex-wrap justify-end w-full sm:w-auto">
+                  {/* BARRA DE CIERRE FINAL: ESTADO PAGADA / TRABAJANDO + BOTONES */}
+                  <div className="print:hidden pt-5 border-t border-zinc-200 dark:border-white/10 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] sm:pb-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      {esPagado && (
+                        <div className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-emerald-500/15 border border-emerald-500/35 text-emerald-700 dark:text-emerald-300 text-xs font-bold shadow-xs">
+                          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                          <span>✓ Pagada • Trabajando</span>
+                          {(orden as any)?.lastSaleNumber && (
+                            <span className="font-mono text-[11px] opacity-80">
+                              ({(orden as any).lastSaleNumber})
+                            </span>
+                          )}
+                        </div>
+                      )}
+                      {posSendCount > 0 && (
+                        <div className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-blue-500/10 border border-blue-500/30 text-blue-700 dark:text-blue-300 text-xs font-semibold">
+                          <span>📤</span>
+                          <span>
+                            Enviada a POS: {posSendCount} {posSendCount === 1 ? "vez" : "veces"}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-2.5 flex-wrap justify-end w-full sm:w-auto ml-auto">
                       <button
                         type="button"
                         disabled={cambiandoEstado}
                         onClick={handleTogglePagado}
                         className={`flex-1 sm:flex-initial h-11 sm:h-10 px-4 rounded-xl border text-sm sm:text-xs font-medium sm:font-normal shadow-sm transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 ${esPagado
-                          ? "bg-sky-600 hover:bg-sky-500 border-sky-500 text-white"
+                          ? "bg-emerald-600 hover:bg-emerald-500 border-emerald-500 text-white"
                           : "bg-sky-500/15 hover:bg-sky-500/25 border-sky-500/35 text-sky-600 dark:text-sky-300"
                           }`}
                       >
-                        <span>{esPagado ? "✓ Pagado" : "💳 Pagar"}</span>
+                        <span>{esPagado ? "✓ Pagada • Trabajando" : "💳 Pagar"}</span>
                       </button>
 
                       <button
@@ -5710,7 +5763,13 @@ export default function PaginaDetallePropuesta() {
                         className="flex-1 sm:flex-initial h-11 sm:h-10 px-5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm sm:text-xs font-medium sm:font-normal shadow-sm transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50"
                       >
                         <span>🛒</span>
-                        <span>{autorizando ? "..." : "POS"}</span>
+                        <span>
+                          {autorizando
+                            ? "..."
+                            : posSendCount > 0
+                              ? `POS (${posSendCount})`
+                              : "POS"}
+                        </span>
                       </button>
                     </div>
                   </div>
@@ -5733,6 +5792,62 @@ export default function PaginaDetallePropuesta() {
               </div>
             </div>
           </main>
+
+          {/* MODAL FLOTANTE CORTO: CONFIRMAR REENVÍO A POS CON CONTEO DE ENVÍOS */}
+          {modalConfirmarReenvioPos && (
+            <div
+              onClick={() => setModalConfirmarReenvioPos(false)}
+              className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in"
+            >
+              <div
+                onClick={(e) => e.stopPropagation()}
+                className="w-full max-w-sm bg-white dark:bg-[#18181b] border border-zinc-200 dark:border-white/10 rounded-2xl shadow-2xl p-5 space-y-4 animate-scale-up"
+              >
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 flex items-center justify-center text-lg shrink-0">
+                    🛒
+                  </div>
+                  <div className="min-w-0 flex-1 space-y-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-sm font-bold text-zinc-900 dark:text-white leading-snug">
+                        ¿Enviar otra vez a POS?
+                      </p>
+                      <span className="px-2 py-0.5 rounded-full bg-blue-500/15 border border-blue-500/30 text-blue-600 dark:text-blue-300 font-mono text-[11px] font-bold shrink-0">
+                        Envío #{posSendCount + 1}
+                      </span>
+                    </div>
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                      Ya se envió <strong>{posSendCount}</strong> {posSendCount === 1 ? "vez" : "veces"} a Caja POS.
+                    </p>
+                    {esPagado && (
+                      <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 pt-0.5">
+                        ✓ Ya cobrada en POS • Estado: Trabajando
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-end gap-2.5 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setModalConfirmarReenvioPos(false)}
+                    className="px-4 py-2 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-xs sm:text-sm font-medium text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-white/10 transition-all cursor-pointer active:scale-95"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    disabled={autorizando}
+                    onClick={() => void ejecutarEnvioAPos()}
+                    className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs sm:text-sm font-semibold transition-all cursor-pointer shadow-sm shadow-emerald-600/30 active:scale-95 flex items-center gap-1.5 disabled:opacity-50"
+                  >
+                    <span>🛒</span>
+                    <span>Enviar #{posSendCount + 1}</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* MODAL CATÁLOGO WHATSAPP PARA PROVEEDORES */}
           {modalWhatsApp && (

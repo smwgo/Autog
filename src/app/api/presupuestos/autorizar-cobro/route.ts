@@ -46,13 +46,13 @@ export async function POST(request: Request) {
 
       const order = rows[0];
 
-      // 2. Consolidar ítems para POS aplicando cantidades, descuento e IVA de forma consistente
+      // 2. Consolidar ítems para POS aplicando los valores de la columna PVP, descuento e IVA de forma consistente
       const totalRepuestos = items.reduce(
-        (acc: number, it: any) => acc + Number(it.price || 0) * Number(it.qty || 1),
+        (acc: number, it: any) => acc + Number(it.price || 0),
         0
       );
       const totalServicios = services.reduce(
-        (acc: number, sv: any) => acc + Number(sv.price || 0) * Number(sv.qty || 1),
+        (acc: number, sv: any) => acc + Number(sv.price || 0),
         0
       );
       const subtotalCalculado = Number((totalRepuestos + totalServicios).toFixed(2));
@@ -226,11 +226,31 @@ export async function POST(request: Request) {
         }
       }
 
-      // 4. Actualizar la orden de trabajo
+      // 4. Actualizar la orden de trabajo e incrementar contador de envíos a POS
+      await prisma.$executeRawUnsafe(
+        `ALTER TABLE "WorkshopOrder" ADD COLUMN IF NOT EXISTS "posSendCount" INTEGER DEFAULT 0`
+      ).catch(() => {});
+
+      const allOrderReqs = (await prisma.$queryRawUnsafe(
+        `SELECT "id", "status" FROM "OrderRequest" WHERE "requestNumber" = $1 OR "requestNumber" LIKE $2`,
+        requestNumber,
+        `${requestNumber}-%`
+      ).catch(() => [])) as any[];
+
+      const alreadyPaidInPos =
+        existingReqPaid ||
+        String(order.quoteStatus || "").toLowerCase() === "pagado" ||
+        allOrderReqs.some((r: any) => PAID_REQ_STATUSES.has(String(r.status || "").toUpperCase()));
+
+      const nextSendCount = Math.max(
+        Number((order as any).posSendCount || 0) + 1,
+        allOrderReqs.length || 1
+      );
+
       await prisma.$executeRawUnsafe(
         `UPDATE "WorkshopOrder"
-         SET "status" = 'EN_CAJA',
-             "quoteStatus" = 'Aprobado',
+         SET "status" = $8,
+             "quoteStatus" = $9,
              "quoteApprovedAt" = CURRENT_TIMESTAMP,
              "quoteTaxRate" = $6,
              "quoteDiscount" = $7,
@@ -238,6 +258,7 @@ export async function POST(request: Request) {
              "itemsJson" = $3,
              "servicesJson" = $4,
              "posRequestId" = $5,
+             "posSendCount" = $10,
              "updatedAt" = CURRENT_TIMESTAMP
          WHERE "id" = $1`,
         order.id,
@@ -246,7 +267,10 @@ export async function POST(request: Request) {
         JSON.stringify(services),
         posRequest.id,
         taxRate,
-        discount
+        discount,
+        alreadyPaidInPos ? "Trabajando" : "EN_CAJA",
+        alreadyPaidInPos ? "Pagado" : "Aprobado",
+        nextSendCount
       );
 
       // 5. Opcional: Registrar órdenes de compra en PurchaseOrder agrupadas por proveedor
@@ -299,6 +323,8 @@ export async function POST(request: Request) {
         posRequestId: posRequest.id,
         orderNumber: order.orderNumber,
         total: totalCalculado,
+        posSendCount: nextSendCount,
+        isPaidInPos: alreadyPaidInPos,
       });
     });
   } catch (error: any) {
