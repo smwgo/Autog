@@ -421,7 +421,6 @@ export default function PaginaDetallePropuesta() {
   const [fotoClienteError, setFotoClienteError] = useState(false);
   const [modalEditarPropuestaOpen, setModalEditarPropuestaOpen] = useState(false);
   const [propuestaEditId, setPropuestaEditId] = useState<string>("");
-  const [modalRespuestasProvOpen, setModalRespuestasProvOpen] = useState(false);
 
   // Carrusel de propuestas en el encabezado morado (estilo Taller)
   const [listaPropuestas, setListaPropuestas] = useState<any[]>([]);
@@ -4797,7 +4796,7 @@ export default function PaginaDetallePropuesta() {
                 <div className="flex items-center gap-1.5 sm:gap-2 ml-auto shrink-0">
                   <button
                     type="button"
-                    onClick={() => setModalRespuestasProvOpen(true)}
+                    onClick={() => router.push(`/presupuestos/${encodeURIComponent(orden.id)}/recibidos`)}
                     className={`h-9 px-2.5 sm:px-3.5 rounded-xl text-xs sm:text-sm transition-all cursor-pointer flex items-center justify-center gap-1.5 sm:gap-2 active:scale-95 border backdrop-blur-sm font-semibold relative touch-manipulation ${
                       itemsSiHayProveedor.length > 0
                         ? "bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-700 dark:text-emerald-300 border-emerald-500/35 shadow-sm"
@@ -5179,16 +5178,6 @@ export default function PaginaDetallePropuesta() {
                                                   <span className="text-[10px]">✓ Enviado</span>
                                                 )}
                                               </button>
-                                              {it.supplierAvailability === "SI_HAY" && (
-                                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-500/40 text-[10px] font-bold shrink-0">
-                                                  ✓ Sí hay{it.deliveryTime ? ` · ${it.deliveryTime}` : ""}
-                                                </span>
-                                              )}
-                                              {it.supplierAvailability === "NO_HAY" && (
-                                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-rose-50 dark:bg-rose-500/15 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-500/40 text-[10px] font-bold shrink-0">
-                                                  ✕ No hay
-                                                </span>
-                                              )}
                                             </div>
                                           ) : (
                                             <span className="text-zinc-300 dark:text-zinc-600 text-xs">—</span>
@@ -5500,16 +5489,6 @@ export default function PaginaDetallePropuesta() {
                                                   <span className="text-[10px]">✓ Enviado</span>
                                                 )}
                                               </button>
-                                              {it.supplierAvailability === "SI_HAY" && (
-                                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-500/40 text-[10px] font-bold shrink-0">
-                                                  ✓ Sí hay{it.deliveryTime ? ` · ${it.deliveryTime}` : ""}
-                                                </span>
-                                              )}
-                                              {it.supplierAvailability === "NO_HAY" && (
-                                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-rose-50 dark:bg-rose-500/15 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-500/40 text-[10px] font-bold shrink-0">
-                                                  ✕ No hay
-                                                </span>
-                                              )}
                                             </div>
                                           ) : (
                                             <span className="text-zinc-300 dark:text-zinc-600 text-xs">—</span>
@@ -7740,147 +7719,6 @@ export default function PaginaDetallePropuesta() {
             );
           })()}
         </>
-      )}
-
-      {/* MODAL: RESPUESTAS DEL PROVEEDOR RECIBIDAS POR EL ENLACE */}
-      {modalRespuestasProvOpen && (
-        <div
-          onClick={() => setModalRespuestasProvOpen(false)}
-          className="fixed inset-0 z-50 bg-black/75 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4 animate-fade-in"
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-2xl bg-white dark:bg-[#111114] border border-zinc-200 dark:border-white/10 rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[85dvh]"
-          >
-            <div className="px-4 py-3.5 border-b border-zinc-200 dark:border-white/10 flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-8 h-8 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                  </svg>
-                </div>
-                <div className="min-w-0">
-                  <h3 className="text-sm font-bold text-zinc-900 dark:text-white truncate">
-                    Respuestas de Proveedor
-                  </h3>
-                  <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
-                    {itemsSiHayProveedor.length} sí hay · {itemsRespondidosProveedor.length - itemsSiHayProveedor.length} no hay
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setModalRespuestasProvOpen(false)}
-                className="w-8 h-8 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white flex items-center justify-center text-sm cursor-pointer transition-colors"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="p-4 overflow-y-auto space-y-2.5">
-              {itemsRespondidosProveedor.length === 0 ? (
-                <div className="py-10 text-center">
-                  <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">
-                    Sin respuestas aún.
-                  </p>
-                </div>
-              ) : (
-                itemsRespondidosProveedor.map((it) => {
-                  const siHay = it.supplierAvailability === "SI_HAY";
-                  const provMatch = proveedores.find(
-                    (p: any) =>
-                      (it.supplierId && p.id === it.supplierId) ||
-                      (it.supplierName &&
-                        String(p.name || "").trim().toLowerCase() ===
-                          String(it.supplierName || "").trim().toLowerCase())
-                  );
-                  const proveedorNombre = it.supplierName || provMatch?.name || "Proveedor";
-                  const proveedorWhatsapp = it.supplierPhone || provMatch?.phone || "";
-                  const fechaResp = it.supplierRespondedAt
-                    ? new Date(it.supplierRespondedAt).toLocaleString("es-EC", {
-                        day: "2-digit",
-                        month: "2-digit",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })
-                    : "";
-                  return (
-                    <div
-                      key={`${it.isService ? "s" : "r"}-${it.id}`}
-                      className={`rounded-xl border p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 ${
-                        siHay
-                          ? "bg-emerald-500/[0.06] border-emerald-500/25"
-                          : "bg-rose-500/[0.06] border-rose-500/25"
-                      }`}
-                    >
-                      <div className="space-y-1.5 min-w-0 flex-1">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span
-                            className={`px-2.5 py-0.5 rounded-md text-xs font-bold ${
-                              siHay
-                                ? "bg-emerald-500/20 text-emerald-700 dark:text-emerald-300"
-                                : "bg-rose-500/20 text-rose-700 dark:text-rose-300"
-                            }`}
-                          >
-                            {siHay ? "✓ Sí hay" : "✕ No hay"}
-                          </span>
-                          <span className="text-sm font-bold text-zinc-500 dark:text-zinc-400 tabular-nums">
-                            {it.qty}x
-                          </span>
-                          <span className="text-base sm:text-sm font-bold text-zinc-900 dark:text-white truncate">
-                            {it.name}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-3 flex-wrap text-sm sm:text-xs text-zinc-500 dark:text-zinc-400">
-                          <span className="font-semibold text-purple-600 dark:text-purple-300">
-                            Proveedor: {proveedorNombre}
-                          </span>
-                          <span className="inline-flex items-center gap-1 font-mono text-sm sm:text-xs text-emerald-600 dark:text-emerald-400">
-                            WhatsApp: {proveedorWhatsapp || "Sin número"}
-                          </span>
-                          {it.deliveryTime && <span>Envío: {it.deliveryTime}</span>}
-                          {fechaResp && <span>{fechaResp}</span>}
-                        </div>
-                      </div>
-
-                      <div className="text-right shrink-0">
-                        <span
-                          className={`text-base font-black font-mono ${
-                            siHay
-                              ? "text-emerald-600 dark:text-emerald-400"
-                              : "text-zinc-400 line-through"
-                          }`}
-                        >
-                          ${Number(it.supplierPrice || 0).toFixed(2)}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-
-            <div className="px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] border-t border-zinc-200 dark:border-white/10 flex items-center justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setModalRespuestasProvOpen(false);
-                  router.push(`/presupuestos/${encodeURIComponent(orden.id)}/pedir`);
-                }}
-                className="h-9 px-3.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/[0.06] dark:hover:bg-white/[0.12] text-xs font-semibold text-zinc-700 dark:text-zinc-200 cursor-pointer transition-colors"
-              >
-                Ir a Pedir
-              </button>
-              <button
-                type="button"
-                onClick={() => setModalRespuestasProvOpen(false)}
-                className="h-9 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold cursor-pointer transition-colors"
-              >
-                Cerrar
-              </button>
-            </div>
-          </div>
-        </div>
       )}
     </div>
   );

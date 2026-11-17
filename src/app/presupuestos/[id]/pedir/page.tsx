@@ -829,16 +829,12 @@ export default function PedirProveedoresPage() {
                     ? gruposPorProveedor[0].prov
                     : undefined;
                 return (
-                  <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto shrink-0">
-                    <div className="flex-1 min-w-[180px] sm:w-64">
+                  <div className="flex items-center gap-1.5 w-auto shrink-0">
+                    <div className="w-36 sm:w-40">
                       <ProveedorRowDropdown
                         proveedores={proveedores}
                         valueId={proveedorUnicoTodos?.id}
-                        valueName={
-                          proveedorUnicoTodos
-                            ? `Todo Proveedor: ${proveedorUnicoTodos.name}`
-                            : undefined
-                        }
+                        valueName={proveedorUnicoTodos ? proveedorUnicoTodos.name : undefined}
                         placeholder="Todo Proveedor"
                         alignRight
                         onSelect={(provId) => void handleAplicarProveedorATodos(provId)}
@@ -850,19 +846,19 @@ export default function PedirProveedoresPage() {
                           type="button"
                           onClick={() => enviarWhatsAppGrupo(listaVisible, proveedorUnicoTodos)}
                           title={`Enviar los ${listaVisible.length} pedidos en un solo WhatsApp a ${proveedorUnicoTodos.name}`}
-                          className="h-9 px-3 rounded-full bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/35 text-emerald-700 dark:text-emerald-300 text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer transition-colors shrink-0"
+                          className="h-7 px-2.5 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/35 text-emerald-700 dark:text-emerald-300 text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer transition-colors shrink-0"
                         >
                           <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                             <path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91C21.95 6.45 17.5 2 12.04 2Zm5.76 14.12c-.24.68-1.41 1.3-1.95 1.38-.5.07-1.13.1-1.82-.12-.42-.13-.96-.31-1.65-.61-2.9-1.25-4.79-4.17-4.94-4.37-.14-.2-1.18-1.57-1.18-3 0-1.43.75-2.13 1.01-2.42.26-.29.58-.36.77-.36.19 0 .38 0 .55.01.18.01.42-.07.65.49.24.58.82 2 .89 2.14.07.14.12.31.02.5-.1.19-.15.31-.29.48-.14.17-.3.38-.43.51-.14.14-.29.29-.12.58.17.29.74 1.22 1.59 1.98 1.09.97 2.01 1.27 2.3 1.41.29.14.46.12.63-.07.17-.19.72-.84.91-1.13.19-.29.38-.24.65-.14.27.1 1.68.79 1.97.94.29.14.48.22.55.34.07.12.07.69-.17 1.37Z" />
                           </svg>
-                          <span>Enviar todo ({listaVisible.length})</span>
+                          <span>{listaVisible.length}</span>
                         </button>
                         <button
                           type="button"
                           onClick={() => void abrirLinkCatalogo(listaVisible, proveedorUnicoTodos)}
                           title="Abrir enlace consolidado de todos los pedidos"
                           aria-label="Abrir enlace consolidado"
-                          className="h-9 w-9 rounded-full bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/35 text-purple-700 dark:text-purple-200 inline-flex items-center justify-center cursor-pointer transition-colors shrink-0"
+                          className="h-7 w-7 rounded-lg bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/35 text-purple-700 dark:text-purple-200 inline-flex items-center justify-center cursor-pointer transition-colors shrink-0 text-[11px]"
                         >
                           🔗
                         </button>
