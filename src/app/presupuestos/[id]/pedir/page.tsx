@@ -78,8 +78,12 @@ function getBadgeDetallePedir(item: PedidoItem) {
       cls: "bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-500/15 dark:text-purple-300 dark:border-purple-500/30",
     };
   }
+  const esManoDeObra = cat.includes("mano de obra");
   return {
-    label: item.category ? formatearPrimeraMayusculaPedir(item.category) : "Taller",
+    label:
+      item.category && !esManoDeObra
+        ? formatearPrimeraMayusculaPedir(item.category)
+        : "Taller",
     cls: "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-500/15 dark:text-blue-300 dark:border-blue-500/30",
   };
 }
@@ -668,7 +672,7 @@ export default function PedirProveedoresPage() {
       minute: "2-digit",
     });
     const link = await construirLinkCorto(itemsGrupo, prov);
-    const vehiculoInfo = `${orden.vehicle || "Vehículo"} (Placa: ${orden.plate || "N/A"})`;
+    const vehiculoInfo = orden.vehicle || "Vehículo";
     const detalle = itemsGrupo.map((it) => `• ${it.qty || 1}x ${it.name}`).join("\n");
     const texto = `Hola${prov?.name ? ` ${prov.name}` : ""}, solicito cotización para el vehículo ${vehiculoInfo}\nFecha y hora: ${fechaHora}\n\nLo que necesito:\n${detalle}\n\nAbre el catálogo del proveedor para confirmar disponibilidad, precio y tiempo de entrega:\n${link}`;
     abrirWhatsAppCompatible({

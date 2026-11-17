@@ -567,19 +567,6 @@ export default function PaginaCatalogoProveedor() {
                     >
                       #{numeroOrdenFormateado}
                     </span>
-                    {isSingleView && allItemsCount > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => setVerTodos((v) => !v)}
-                        className={`px-2.5 py-0.5 rounded-lg border text-[11px] font-medium cursor-pointer transition-colors ${
-                          temaOscuro
-                            ? "bg-white/[0.06] hover:bg-white/[0.12] border-white/10 text-zinc-200"
-                            : "bg-zinc-100 hover:bg-zinc-200 border-zinc-200 text-zinc-700"
-                        }`}
-                      >
-                        {verTodos ? "Filtrados" : `Ver todos (${allItemsCount})`}
-                      </button>
-                    )}
                   </div>
 
                   {order && (
@@ -591,11 +578,6 @@ export default function PaginaCatalogoProveedor() {
                       <span className={`font-semibold ${temaOscuro ? "text-white" : "text-zinc-900"}`}>
                         {order.vehicle}
                       </span>
-                      {order.plate && (
-                        <span className="font-mono font-bold text-blue-500 dark:text-blue-400 bg-blue-500/10 border border-blue-500/25 px-2 py-0.5 rounded-md text-xs">
-                          {order.plate}
-                        </span>
-                      )}
                       {fechaHoraEnvio && (
                         <span
                           className={`text-[11px] font-mono ${
@@ -800,7 +782,8 @@ export default function PaginaCatalogoProveedor() {
                             >
                               {item.name}
                             </h3>
-                            {item.vistaLabel && (
+                            {item.vistaLabel &&
+                              item.vistaLabel.trim().toLowerCase() !== "mano de obra" && (
                               <span
                                 className={`px-2 py-0.5 rounded-md border text-[11px] font-medium ${
                                   temaOscuro
