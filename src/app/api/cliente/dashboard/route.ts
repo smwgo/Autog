@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getVerifiedSessionFromRequest, isStaffSession } from "@/lib/signed-tokens";
+import { resolveSessionCustomerScope } from "@/lib/client-scope";
 
 export const dynamic = "force-dynamic";
 
@@ -15,113 +17,105 @@ function safeJsonParse<T>(jsonStr: any, fallback: T): T {
 
 export async function GET(req: Request) {
   try {
-    const { searchParams } = new URL(req.url);
-    const id = searchParams.get("id")?.trim();
-    const doc = searchParams.get("doc")?.trim() || searchParams.get("identificacion")?.trim();
-    const phone = searchParams.get("phone")?.trim() || searchParams.get("telefono")?.trim();
-    const email = searchParams.get("email")?.trim();
+    const session = getVerifiedSessionFromRequest(req);
+    if (!session) {
+      return NextResponse.json(
+        { success: false, error: "No autorizado. Inicia sesión." },
+        { status: 401 }
+      );
+    }
+    const staff = isStaffSession(session);
 
-    // 1. Obtener lista de clientes para selector rápido/conmutación
-    const allCustomers = await prisma.customer.findMany({
-      select: {
-        id: true,
-        name: true,
-        identification: true,
-        phone: true,
-        email: true,
-        type: true,
-      },
-      orderBy: { updatedAt: "desc" },
-      take: 25,
-    });
+    const { searchParams } = new URL(req.url);
+    const id = staff ? searchParams.get("id")?.trim() : undefined;
+    const doc = staff
+      ? searchParams.get("doc")?.trim() || searchParams.get("identificacion")?.trim()
+      : undefined;
+    const phone = staff
+      ? searchParams.get("phone")?.trim() || searchParams.get("telefono")?.trim()
+      : undefined;
+    const email = staff ? searchParams.get("email")?.trim() : undefined;
+
+    // 1. Obtener lista de clientes solo para personal autorizado
+    const allCustomers = staff
+      ? await prisma.customer.findMany({
+          select: {
+            id: true,
+            name: true,
+            identification: true,
+            phone: true,
+            email: true,
+            type: true,
+          },
+          orderBy: { updatedAt: "desc" },
+          take: 25,
+        })
+      : [];
 
     // 2. Resolver el cliente activo
     let activeCustomer: any = null;
 
-    if (id) {
-      activeCustomer = await prisma.customer.findUnique({
-        where: { id },
-        include: { vehicles: true },
-      });
-    }
-
-    if (!activeCustomer && doc) {
-      activeCustomer = await prisma.customer.findUnique({
-        where: { identification: doc },
-        include: { vehicles: true },
-      });
-    }
-
-    if (!activeCustomer && (phone || email)) {
-      const orConditions: any[] = [];
-      if (phone) orConditions.push({ phone: { contains: phone } });
-      if (email) orConditions.push({ email: { equals: email } });
-
-      activeCustomer = await prisma.customer.findFirst({
-        where: { OR: orConditions },
-        include: { vehicles: true },
-      });
-    }
-
-    // Si aún no se encontró, buscar el cliente de la última orden de taller activa
-    if (!activeCustomer) {
-      const latestOrder: any = await prisma.workshopOrder.findFirst({
-        orderBy: { createdAt: "desc" },
-      });
-
-      if (latestOrder?.customerId) {
-        activeCustomer = await prisma.customer.findUnique({
-          where: { id: latestOrder.customerId },
-          include: { vehicles: true },
+    if (!staff) {
+      activeCustomer = await resolveSessionCustomerScope(session, true);
+      if (!activeCustomer) {
+        return NextResponse.json({
+          success: true,
+          customer: null,
+          vehicles: [],
+          activeOrder: null,
+          allOrders: [],
+          invoices: [],
+          quotes: [],
+          credits: null,
+          history: [],
+          availableCustomers: [],
         });
-      } else if (latestOrder?.clientIdDoc) {
+      }
+    } else {
+      if (id) {
         activeCustomer = await prisma.customer.findUnique({
-          where: { identification: latestOrder.clientIdDoc },
+          where: { id },
           include: { vehicles: true },
         });
       }
-    }
 
-    // Si la BD no tiene cliente registrado aún, tomar el primero o crear uno de demostración
-    if (!activeCustomer) {
-      if (allCustomers.length > 0) {
+      if (!activeCustomer && doc) {
+        activeCustomer = await prisma.customer.findUnique({
+          where: { identification: doc },
+          include: { vehicles: true },
+        });
+      }
+
+      if (!activeCustomer && (phone || email)) {
+        const orConditions: any[] = [];
+        if (phone) orConditions.push({ phone: { contains: phone } });
+        if (email) orConditions.push({ email: { equals: email } });
+
+        activeCustomer = await prisma.customer.findFirst({
+          where: { OR: orConditions },
+          include: { vehicles: true },
+        });
+      }
+
+      if (!activeCustomer && allCustomers.length > 0) {
         activeCustomer = await prisma.customer.findUnique({
           where: { id: allCustomers[0].id },
           include: { vehicles: true },
         });
-      } else {
-        // Crear cliente demo unificado
-        activeCustomer = await prisma.customer.create({
-          data: {
-            identification: "0923849120",
-            name: "Juan Pérez González",
-            phone: "+593 99 876 5432",
-            email: "juan.perez@ejemplo.com",
-            type: "Personal",
-            address: "Av. Principal 450 y Palmeras",
-            vip: true,
-            vehicles: {
-              create: [
-                {
-                  plate: "ABC-1234",
-                  brand: "Toyota",
-                  model: "Hilux D-4D 2.8",
-                  year: 2022,
-                  mileage: 48500,
-                  fuelType: "Diésel",
-                },
-                {
-                  plate: "XYZ-9870",
-                  brand: "Honda",
-                  model: "Civic Turbo",
-                  year: 2020,
-                  mileage: 32000,
-                  fuelType: "Gasolina",
-                },
-              ],
-            },
-          },
-          include: { vehicles: true },
+      }
+
+      if (!activeCustomer) {
+        return NextResponse.json({
+          success: true,
+          customer: null,
+          vehicles: [],
+          activeOrder: null,
+          allOrders: [],
+          invoices: [],
+          quotes: [],
+          credits: null,
+          history: [],
+          availableCustomers: [],
         });
       }
     }
@@ -870,31 +864,26 @@ export async function GET(req: Request) {
           id: creditRows[0].id,
           customerName: creditRows[0].customerName,
           identification: creditRows[0].identification,
-          creditLimit: Number(creditRows[0].creditLimit || 500),
-          currentBalance: Number(creditRows[0].currentBalance || totalPendienteFacturas || 0),
+          creditLimit: Number(creditRows[0].creditLimit || 0),
+          currentBalance: Number(creditRows[0].currentBalance ?? totalPendienteFacturas ?? 0),
           availableCredit: Math.max(
             0,
-            Number(creditRows[0].creditLimit || 500) - Number(creditRows[0].currentBalance || totalPendienteFacturas || 0)
+            Number(creditRows[0].creditLimit || 0) - Number(creditRows[0].currentBalance ?? totalPendienteFacturas ?? 0)
           ),
-          dueDate: creditRows[0].dueDate || "28 de Octubre, 2026",
+          dueDate: creditRows[0].dueDate || "",
           status: creditRows[0].status || "AL_DIA",
-          lastPaymentDate: creditRows[0].lastPaymentDate || "15 oct 2026",
-          lastPaymentAmount: Number(creditRows[0].lastPaymentAmount || 150),
-          notes: creditRows[0].notes || "Cuenta comercial de cliente frecuente con cupo rotativo.",
+          lastPaymentDate: creditRows[0].lastPaymentDate || "",
+          lastPaymentAmount: Number(creditRows[0].lastPaymentAmount || 0),
+          notes: creditRows[0].notes || "",
         }
-      : {
-          id: "crd-default",
-          customerName: activeCustomer.name,
-          identification: activeCustomer.identification,
-          creditLimit: 600,
-          currentBalance: totalPendienteFacturas > 0 ? totalPendienteFacturas : 170,
-          availableCredit: totalPendienteFacturas > 0 ? Math.max(0, 600 - totalPendienteFacturas) : 430,
-          dueDate: "28 de Octubre, 2026",
-          status: "AL_DIA",
-          lastPaymentDate: "15 oct 2026",
-          lastPaymentAmount: 150,
-          notes: "Cupo de crédito activo para compras de repuestos y servicios en cuotas.",
-        };
+      : null;
+
+    const companyCfg = await prisma.companyConfig
+      .findUnique({
+        where: { id: "default" },
+        select: { razonSocial: true, nombreComercial: true, ruc: true, telefono: true, correo: true, direccion: true },
+      })
+      .catch(() => null);
 
     return NextResponse.json({
       success: true,
@@ -908,6 +897,7 @@ export async function GET(req: Request) {
         type: activeCustomer.type,
         vip: activeCustomer.vip,
       },
+      companyInfo: companyCfg,
       vehicles: vehiclesWithHealth,
       activeOrder,
       allOrders: parsedOrders,

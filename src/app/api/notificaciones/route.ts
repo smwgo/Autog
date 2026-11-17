@@ -1,11 +1,14 @@
 import { NextResponse } from "next/server";
 import { prisma, withRetry } from "@/lib/prisma";
+import { getVerifiedSessionFromRequest } from "@/lib/signed-tokens";
 
 export const dynamic = "force-dynamic";
 
-let cachedNotifPayload: { notificaciones: any[]; unreadCount: number } | null = null;
-let lastNotifCacheTime = 0;
-const NOTIF_CACHE_TTL_MS = 15000;
+function getReadSettingId(req: Request): string {
+  const session = getVerifiedSessionFromRequest(req);
+  const key = (session?.id || session?.email || "global").replace(/[^a-zA-Z0-9_-]/g, "_");
+  return `notif_read_${key}`;
+}
 
 function hasPayments(paymentsJson: string | null | undefined): boolean {
   if (!paymentsJson || paymentsJson === "[]") return false;
@@ -59,39 +62,56 @@ function formatBranchLabel(branch: string | null | undefined): string {
   return "Principal";
 }
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
-    const now = Date.now();
-    if (cachedNotifPayload && now - lastNotifCacheTime < NOTIF_CACHE_TTL_MS) {
-      return NextResponse.json({
-        success: true,
-        ...cachedNotifPayload,
-      });
-    }
+    const settingId = getReadSettingId(req);
 
     return await withRetry(async () => {
-      const orders = await prisma.workshopOrder.findMany({
-        select: {
-          id: true,
-          orderNumber: true,
-          vehicle: true,
-          plate: true,
-          status: true,
-          mechanic: true,
-          branch: true,
-          paymentsJson: true,
-          completedAt: true,
-          updatedAt: true,
-        },
-        take: 15,
-        orderBy: { updatedAt: "desc" },
-      });
+      const [orders, pendingRequests, products, readSetting] = await Promise.all([
+        prisma.workshopOrder.findMany({
+          select: {
+            id: true,
+            orderNumber: true,
+            vehicle: true,
+            plate: true,
+            status: true,
+            mechanic: true,
+            branch: true,
+            paymentsJson: true,
+            completedAt: true,
+            updatedAt: true,
+          },
+          take: 15,
+          orderBy: { updatedAt: "desc" },
+        }),
+        prisma.orderRequest.findMany({
+          where: { status: "PENDIENTE", type: { in: ["TIENDA", "LANDING", "REPUESTO", "SERVICIO", "TALLER"] } },
+          select: { id: true, requestNumber: true, type: true, customerName: true, createdAt: true },
+          take: 5,
+          orderBy: { createdAt: "desc" },
+        }).catch(() => []),
+        prisma.product.findMany({
+          select: { id: true, name: true, stock: true, stockNorte: true, minStock: true },
+        }).catch(() => []),
+        prisma.systemSetting.findUnique({ where: { id: settingId } }).catch(() => null),
+      ]);
 
-      const items = orders.map((o) => {
+      let readIds = new Set<string>();
+      if (readSetting?.configJson) {
+        try {
+          const parsed = JSON.parse(readSetting.configJson);
+          if (Array.isArray(parsed)) readIds = new Set(parsed.map(String));
+        } catch {}
+      }
+
+      const lowStockProducts = products.filter((p) => p.stock + p.stockNorte <= p.minStock);
+
+      const orderItems = orders.map((o) => {
         const { etapa, type, icon } = classifyOrderNotification(o);
         const sedeLabel = formatBranchLabel(o.branch);
+        const id = `ord-${o.id}`;
         return {
-          id: `ord-${o.id}`,
+          id,
           type,
           icon,
           title: `${etapa} • ${sedeLabel}`,
@@ -100,27 +120,91 @@ export async function GET() {
             hour: "2-digit",
             minute: "2-digit",
           }),
-          read: false,
+          read: readIds.has(id),
           link: "/taller/ordenes",
         };
       });
 
-      const payload = {
-        notificaciones: items,
-        unreadCount: items.length,
-      };
-      cachedNotifPayload = payload;
-      lastNotifCacheTime = Date.now();
+      const requestItems = pendingRequests.map((r) => {
+        const id = `req-${r.id}`;
+        return {
+          id,
+          type: "INFO",
+          icon: "📩",
+          title: `Solicitud ${r.type}`,
+          text: `${r.requestNumber} • ${r.customerName}`,
+          date: new Date(r.createdAt).toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
+          read: readIds.has(id),
+          link: "/pos",
+        };
+      });
+
+      const stockItems =
+        lowStockProducts.length > 0
+          ? [
+              {
+                id: `stock-alert-${lowStockProducts.length}`,
+                type: "WARNING",
+                icon: "⚠️",
+                title: "Alerta de Inventario",
+                text: `${lowStockProducts.length} producto(s) con stock igual o menor al mínimo.`,
+                date: "Ahora",
+                read: readIds.has(`stock-alert-${lowStockProducts.length}`),
+                link: "/gerencia/inventario",
+              },
+            ]
+          : [];
+
+      const items = [...stockItems, ...requestItems, ...orderItems];
+      const unreadCount = items.filter((i) => !i.read).length;
 
       return NextResponse.json({
         success: true,
-        ...payload,
+        notificaciones: items,
+        unreadCount,
       });
     });
   } catch (error: any) {
     console.error("Error al consultar notificaciones en base de datos:", error);
     return NextResponse.json(
       { success: false, notificaciones: [], unreadCount: 0, error: error.message },
+      { status: 500 }
+    );
+  }
+}
+
+export async function POST(req: Request) {
+  try {
+    const settingId = getReadSettingId(req);
+    const body = await req.json().catch(() => ({}));
+    const ids: string[] = Array.isArray(body?.ids) ? body.ids.map(String) : [];
+    if (ids.length === 0) {
+      return NextResponse.json({ success: true });
+    }
+
+    const existing = await prisma.systemSetting.findUnique({ where: { id: settingId } }).catch(() => null);
+    let prevIds: string[] = [];
+    if (existing?.configJson) {
+      try {
+        const parsed = JSON.parse(existing.configJson);
+        if (Array.isArray(parsed)) prevIds = parsed.map(String);
+      } catch {}
+    }
+
+    const merged = Array.from(new Set([...prevIds, ...ids])).slice(-200);
+    await prisma.systemSetting.upsert({
+      where: { id: settingId },
+      update: { configJson: JSON.stringify(merged) },
+      create: { id: settingId, configJson: JSON.stringify(merged) },
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (error: any) {
+    return NextResponse.json(
+      { success: false, error: error.message || "Error al marcar notificaciones" },
       { status: 500 }
     );
   }

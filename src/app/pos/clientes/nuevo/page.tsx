@@ -386,86 +386,94 @@ function NuevoClienteContent() {
                     </div>
                   </div>
 
-                  {/* Foto de Perfil o Logo */}
-                  <div className="flex justify-center py-1">
-                    <div className="relative group">
-                      <label
-                        className={`relative w-24 h-24 sm:w-28 sm:h-28 rounded-2xl bg-white dark:bg-zinc-900 border-2 border-dashed ${
-                          fotoCliente
-                            ? "border-blue-500/50 dark:border-blue-500/50"
-                            : "border-zinc-300 dark:border-zinc-700 hover:border-blue-500 dark:hover:border-blue-400"
-                        } flex flex-col items-center justify-center overflow-hidden shadow-sm cursor-pointer transition-all duration-200 active:scale-95 ${
-                          subiendoFotoCliente ? "opacity-60 pointer-events-none" : ""
-                        }`}
-                        title="Subir foto"
-                      >
-                        <input
-                          type="file"
-                          accept="image/*"
-                          disabled={subiendoFotoCliente}
-                          onChange={handleSubirFotoCliente}
-                          className="hidden"
-                        />
-
-                        {subiendoFotoCliente ? (
-                          <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-                        ) : fotoCliente ? (
-                          <>
-                            <img
-                              src={fotoCliente}
-                              alt="Foto de perfil"
-                              className="w-full h-full object-cover"
-                            />
-                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white backdrop-blur-[1px]">
-                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                                <circle cx="12" cy="13" r="3" />
-                              </svg>
-                            </div>
-                          </>
-                        ) : (
-                          <div className="flex flex-col items-center justify-center text-zinc-400 dark:text-zinc-500 group-hover:text-blue-500 transition-colors">
-                            <span className="text-3xl">
-                              {tipoCliente === "Empresa" ? "🏢" : "👤"}
-                            </span>
-                          </div>
-                        )}
-                      </label>
-
-                      {fotoCliente && !subiendoFotoCliente && (
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            setFotoCliente("");
-                          }}
-                          title="Eliminar foto"
-                          className="absolute -top-1.5 -right-1.5 w-6 h-6 rounded-full bg-rose-600 hover:bg-rose-700 text-white flex items-center justify-center text-xs font-bold shadow-md cursor-pointer transition-transform active:scale-90 z-10"
-                        >
-                          ✕
-                        </button>
-                      )}
-                    </div>
-                  </div>
-
                   {/* Campos de Entrada */}
                   <div className="space-y-3.5 sm:space-y-4 pt-1">
-                    {/* Nombres y Apellidos arriba */}
-                    <div>
-                      <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5">
-                        {tipoCliente === "Empresa" ? "Razón Social" : "Nombres y Apellidos"} <span className="text-rose-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        autoComplete="name"
-                        autoCapitalize="words"
-                        placeholder={tipoCliente === "Empresa" ? "Transportes Andinos S.A." : "Juan Carlos Pérez"}
-                        value={nombre}
-                        onChange={(e) => setNombre(e.target.value)}
-                        className="w-full h-11 sm:h-12 px-3.5 sm:px-4 rounded-xl border border-zinc-300 dark:border-zinc-800 bg-white dark:bg-zinc-950/60 text-base sm:text-sm text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 outline-none focus:border-blue-500 transition-colors"
-                      />
+                    {/* Foto de Perfil o Logo + Nombres y Apellidos */}
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                      <div className="relative group shrink-0 self-center sm:self-auto">
+                        <label
+                          className={`relative w-20 h-20 sm:w-22 sm:h-22 rounded-2xl bg-zinc-50 dark:bg-zinc-950/60 border-2 border-dashed ${
+                            fotoCliente
+                              ? "border-blue-500/50 dark:border-blue-500/50"
+                              : "border-zinc-300 dark:border-zinc-700 hover:border-blue-500 dark:hover:border-blue-400"
+                          } flex flex-col items-center justify-center overflow-hidden shadow-sm cursor-pointer transition-all duration-200 active:scale-95 ${
+                            subiendoFotoCliente ? "opacity-60 pointer-events-none" : ""
+                          }`}
+                          title={tipoCliente === "Empresa" ? "Subir logo" : "Subir foto"}
+                        >
+                          <input
+                            type="file"
+                            accept="image/*"
+                            disabled={subiendoFotoCliente}
+                            onChange={handleSubirFotoCliente}
+                            className="hidden"
+                          />
+
+                          {subiendoFotoCliente ? (
+                            <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                          ) : fotoCliente ? (
+                            <>
+                              <img
+                                src={fotoCliente}
+                                alt="Foto de perfil"
+                                className="w-full h-full object-cover"
+                              />
+                              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white backdrop-blur-[1px]">
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                                  <circle cx="12" cy="13" r="3" />
+                                </svg>
+                              </div>
+                            </>
+                          ) : (
+                            <div className="flex flex-col items-center justify-center gap-1 text-zinc-400 dark:text-zinc-500 group-hover:text-blue-500 transition-colors px-1 text-center">
+                              {tipoCliente === "Empresa" ? (
+                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.6" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                                </svg>
+                              ) : (
+                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.6" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+                                </svg>
+                              )}
+                              <span className="text-[10px] font-semibold leading-tight">
+                                {tipoCliente === "Empresa" ? "Logo" : "Foto"}
+                              </span>
+                            </div>
+                          )}
+                        </label>
+
+                        {fotoCliente && !subiendoFotoCliente && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setFotoCliente("");
+                            }}
+                            title="Eliminar foto"
+                            className="absolute -top-1.5 -right-1.5 w-6 h-6 rounded-full bg-rose-600 hover:bg-rose-700 text-white flex items-center justify-center text-xs font-bold shadow-md cursor-pointer transition-transform active:scale-90 z-10"
+                          >
+                            ✕
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="flex-1 min-w-0">
+                        <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5">
+                          {tipoCliente === "Empresa" ? "Razón Social" : "Nombres y Apellidos"} <span className="text-rose-500">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          autoComplete="name"
+                          autoCapitalize="words"
+                          placeholder={tipoCliente === "Empresa" ? "Transportes Andinos S.A." : "Juan Carlos Pérez"}
+                          value={nombre}
+                          onChange={(e) => setNombre(e.target.value)}
+                          className="w-full h-11 sm:h-12 px-3.5 sm:px-4 rounded-xl border border-zinc-300 dark:border-zinc-800 bg-white dark:bg-zinc-950/60 text-base sm:text-sm text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 outline-none focus:border-blue-500 transition-colors"
+                        />
+                      </div>
                     </div>
 
                     {/* Cédula y WhatsApp abajo */}
@@ -611,11 +619,11 @@ function NuevoClienteContent() {
 
                   {asociarVehiculo && (
                     <div className="space-y-3.5 sm:space-y-4 p-3.5 sm:p-5 rounded-xl sm:rounded-2xl bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-200 dark:border-zinc-800/80 animate-in fade-in duration-200">
-                      {/* Foto del Vehículo */}
-                      <div className="flex justify-center py-1">
-                        <div className="relative group">
+                      {/* Foto del Vehículo + Placa y Marca */}
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                        <div className="relative group shrink-0 self-center sm:self-auto">
                           <label
-                            className={`relative w-44 sm:w-52 h-28 sm:h-32 rounded-2xl bg-zinc-100 dark:bg-zinc-950 border-2 border-dashed ${
+                            className={`relative w-28 h-20 sm:w-32 sm:h-24 rounded-2xl bg-white dark:bg-zinc-900 border-2 border-dashed ${
                               fotoVehiculo
                                 ? "border-blue-500/50"
                                 : "border-zinc-300 dark:border-zinc-800 hover:border-blue-500"
@@ -633,7 +641,7 @@ function NuevoClienteContent() {
                             />
 
                             {subiendoFotoVehiculo ? (
-                              <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                              <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
                             ) : fotoVehiculo ? (
                               <>
                                 <img
@@ -649,8 +657,11 @@ function NuevoClienteContent() {
                                 </div>
                               </>
                             ) : (
-                              <div className="flex flex-col items-center justify-center text-zinc-400 dark:text-zinc-500 group-hover:text-blue-500 transition-colors">
-                                <span className="text-3xl">🚗</span>
+                              <div className="flex flex-col items-center justify-center gap-1 text-zinc-400 dark:text-zinc-500 group-hover:text-blue-500 transition-colors px-1 text-center">
+                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.6" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 00-10.026 0 1.106 1.106 0 00-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12" />
+                                </svg>
+                                <span className="text-[10px] font-semibold leading-tight">Foto</span>
                               </div>
                             )}
                           </label>
@@ -670,35 +681,35 @@ function NuevoClienteContent() {
                             </button>
                           )}
                         </div>
-                      </div>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4">
-                        <div>
-                          <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5">
-                            Placa del Vehículo
-                          </label>
-                          <input
-                            type="text"
-                            autoCapitalize="characters"
-                            placeholder="ABC-1234"
-                            value={placa}
-                            onChange={(e) => setPlaca(e.target.value)}
-                            className="w-full h-11 sm:h-12 px-3.5 sm:px-4 rounded-xl border border-zinc-300 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-base sm:text-sm text-zinc-900 dark:text-white font-mono uppercase font-bold placeholder-zinc-400 dark:placeholder-zinc-500 outline-none focus:border-blue-500 transition-colors"
-                          />
-                        </div>
+                        <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4 min-w-0">
+                          <div>
+                            <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5">
+                              Placa del Vehículo
+                            </label>
+                            <input
+                              type="text"
+                              autoCapitalize="characters"
+                              placeholder="ABC-1234"
+                              value={placa}
+                              onChange={(e) => setPlaca(e.target.value)}
+                              className="w-full h-11 sm:h-12 px-3.5 sm:px-4 rounded-xl border border-zinc-300 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-base sm:text-sm text-zinc-900 dark:text-white font-mono uppercase font-bold placeholder-zinc-400 dark:placeholder-zinc-500 outline-none focus:border-blue-500 transition-colors"
+                            />
+                          </div>
 
-                        <div>
-                          <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5">
-                            Marca
-                          </label>
-                          <input
-                            type="text"
-                            autoCapitalize="words"
-                            placeholder="Toyota, Chevrolet, Hyundai..."
-                            value={marca}
-                            onChange={(e) => setMarca(e.target.value)}
-                            className="w-full h-11 sm:h-12 px-3.5 sm:px-4 rounded-xl border border-zinc-300 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-base sm:text-sm text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 outline-none focus:border-blue-500 transition-colors"
-                          />
+                          <div>
+                            <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5">
+                              Marca
+                            </label>
+                            <input
+                              type="text"
+                              autoCapitalize="words"
+                              placeholder="Toyota, Chevrolet, Hyundai..."
+                              value={marca}
+                              onChange={(e) => setMarca(e.target.value)}
+                              className="w-full h-11 sm:h-12 px-3.5 sm:px-4 rounded-xl border border-zinc-300 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-base sm:text-sm text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 outline-none focus:border-blue-500 transition-colors"
+                            />
+                          </div>
                         </div>
                       </div>
 

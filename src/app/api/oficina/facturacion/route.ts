@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma, withRetry } from "@/lib/prisma";
 import { emitirFacturaElectronica } from "@/lib/sri/facturaService";
+import { createAuditLog } from "@/lib/audit";
 
 async function ensureFacturacionTables() {
   await prisma.$executeRawUnsafe(`
@@ -163,6 +164,15 @@ export async function POST(req: Request) {
         return rows[0];
       });
 
+      void createAuditLog({
+        module: "FACTURACION",
+        action: `Nota de crédito ${created?.noteNumber || created?.id || ""}`,
+        entityName: "CreditNote",
+        entityId: created?.id,
+        details: `Cliente: ${body.clientName || "Cliente"} | Total: $${Number(body.total || 0).toFixed(2)}`,
+        level: "INFO",
+      });
+
       return NextResponse.json(created);
     } else {
       // Emitir Factura Electrónica Real con SRI
@@ -198,6 +208,15 @@ export async function POST(req: Request) {
         `SELECT * FROM "ClientInvoice" WHERE "id" = $1`,
         resultado.invoiceId
       );
+
+      void createAuditLog({
+        module: "FACTURACION",
+        action: `Factura electrónica emitida`,
+        entityName: "ClientInvoice",
+        entityId: resultado.invoiceId,
+        details: `Cliente: ${body.clientName || "Consumidor Final"} | Identificación: ${body.clientRfc || "9999999999999"}`,
+        level: "INFO",
+      });
 
       return NextResponse.json(rows[0] || resultado);
     }

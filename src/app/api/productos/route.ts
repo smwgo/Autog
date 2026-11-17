@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { createAuditLog } from "@/lib/audit";
 
 export const dynamic = "force-dynamic";
 
@@ -222,6 +223,15 @@ export async function POST(request: Request) {
     cachedProducts = null;
     lastCacheTime = 0;
 
+    void createAuditLog({
+      module: "CATALOGO",
+      action: `Producto creado ${nuevoProducto.code}`,
+      entityName: "Product",
+      entityId: nuevoProducto.id,
+      details: `${nuevoProducto.name} | Precio: $${Number(nuevoProducto.price).toFixed(2)} | Stock: ${nuevoProducto.stock}/${nuevoProducto.stockNorte}`,
+      level: "INFO",
+    });
+
     return NextResponse.json({ success: true, producto: { ...nuevoProducto, tipo: finalTipo } }, { status: 201 });
   } catch (error: any) {
     console.error("Error al crear producto en base de datos:", error);
@@ -288,6 +298,15 @@ export async function PUT(request: Request) {
     cachedProducts = null;
     lastCacheTime = 0;
 
+    void createAuditLog({
+      module: "CATALOGO",
+      action: `Producto actualizado ${actualizado.code}`,
+      entityName: "Product",
+      entityId: actualizado.id,
+      details: `${actualizado.name} | Precio: $${Number(actualizado.price).toFixed(2)} | Stock: ${actualizado.stock}/${actualizado.stockNorte}`,
+      level: "INFO",
+    });
+
     return NextResponse.json({
       success: true,
       producto: {
@@ -341,6 +360,15 @@ export async function DELETE(request: Request) {
 
     cachedProducts = null;
     lastCacheTime = 0;
+
+    void createAuditLog({
+      module: "CATALOGO",
+      action: `Producto eliminado ${existing.code}`,
+      entityName: "Product",
+      entityId: id,
+      details: existing.name,
+      level: "ADVERTENCIA",
+    });
 
     return NextResponse.json(
       { success: true, message: "Producto eliminado correctamente." },

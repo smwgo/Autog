@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getVerifiedSessionFromRequest, isStaffSession } from "@/lib/signed-tokens";
+import { resolveSessionCustomerScope } from "@/lib/client-scope";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +22,11 @@ async function withRetry<T>(fn: () => Promise<T>, maxRetries = 3, delayMs = 600)
 
 export async function GET(request: Request) {
   try {
+    const session = getVerifiedSessionFromRequest(request);
+    if (!session) {
+      return NextResponse.json({ success: false, error: "No autorizado." }, { status: 401 });
+    }
+    const staff = isStaffSession(session);
     const { searchParams } = new URL(request.url);
     const busqueda = searchParams.get("busqueda")?.trim() || "";
     const vehiculo = searchParams.get("vehiculo")?.trim() || "";
@@ -28,6 +35,27 @@ export async function GET(request: Request) {
       let query = 'SELECT * FROM "WorkshopHistory" WHERE 1=1';
       const params: any[] = [];
       let pIdx = 1;
+
+      if (!staff) {
+        const scoped = await resolveSessionCustomerScope(session, true);
+        const nameCandidates = Array.from(
+          new Set([scoped?.name, session.name].map((v) => String(v || "").trim()).filter(Boolean))
+        );
+        const plateCandidates = (scoped?.vehicles || []).map((v) => v.plate.trim().toUpperCase()).filter(Boolean);
+        const scopeClauses: string[] = [];
+        for (const nm of nameCandidates) {
+          scopeClauses.push(`LOWER("client") = LOWER($${pIdx++})`);
+          params.push(nm);
+        }
+        for (const pl of plateCandidates) {
+          scopeClauses.push(`UPPER("plate") = UPPER($${pIdx++})`);
+          params.push(pl);
+        }
+        if (scopeClauses.length === 0) {
+          return NextResponse.json({ success: true, history: [], total: 0 });
+        }
+        query += ` AND (${scopeClauses.join(" OR ")})`;
+      }
 
       if (vehiculo && vehiculo !== "Todos") {
         query += ` AND ("vehicle" ILIKE $${pIdx} OR "plate" ILIKE $${pIdx})`;
@@ -45,7 +73,22 @@ export async function GET(request: Request) {
 
       const rows: any = await prisma.$queryRawUnsafe(query, ...params);
 
-      const history = rows.map((r: any, idx: number) => {
+      // Consultar facturas reales asociadas por orden o número de servicio
+      const orderKeys = rows
+        .map((r: any) => String(r.orderNumber || r.serviceCode || "").trim())
+        .filter(Boolean);
+      const realInvoices = orderKeys.length > 0
+        ? await prisma.clientInvoice.findMany({
+            where: { orderId: { in: orderKeys } },
+            select: { orderId: true, invoiceNumber: true, uuid: true },
+          }).catch(() => [])
+        : [];
+      const invoiceByOrder = new Map<string, { invoiceNumber: string; uuid: string }>();
+      for (const inv of realInvoices) {
+        if (inv.orderId) invoiceByOrder.set(inv.orderId, inv);
+      }
+
+      const history = rows.map((r: any) => {
         let services: string[] = [];
         try {
           services = r.servicesJson ? JSON.parse(r.servicesJson) : [];
@@ -58,18 +101,13 @@ export async function GET(request: Request) {
             ? `${services.join(", ")}.${r.notes ? " " + r.notes : ""}`
             : r.notes || "Servicio técnico automotriz completado.";
 
-        const invoiceMap: Record<number, string> = {
-          0: "F-2023-0899",
-          1: "F-2023-0850",
-          2: "F-2022-0412",
-          3: "F-2023-0910",
-        };
-        const invoiceId = invoiceMap[idx] || `F-2026-0${900 + idx}`;
+        const matchedInvoice = r.orderNumber ? invoiceByOrder.get(String(r.orderNumber).trim()) : undefined;
+        const invoiceId = matchedInvoice?.invoiceNumber || null;
 
         // Calcular vigencia de garantía (6 meses desde fecha o creación)
         const recDate = r.date ? new Date(r.date) : new Date(r.createdAt || Date.now());
         const expDate = new Date(recDate.getTime() + 180 * 24 * 60 * 60 * 1000);
-        const isActive = expDate.getTime() >= Date.now() - 365 * 24 * 60 * 60 * 1000 * 2; // Activa en registros recientes
+        const isActive = expDate.getTime() >= Date.now();
         const expStr = expDate.toISOString().split("T")[0];
 
         let photos: string[] = [];
@@ -82,25 +120,25 @@ export async function GET(request: Request) {
           dbId: r.id,
           serviceCode: r.serviceCode,
           invoiceId,
-          uuid: `UUID-${(r.id || "000").toUpperCase()}-AUTOG`,
+          uuid: matchedInvoice?.uuid || null,
           date: r.date,
           vehicle: `${r.vehicle} (${r.plate})`,
           rawVehicle: r.vehicle,
           plate: r.plate,
           client: r.client,
-          mileage: r.mileage || "45,000 km",
+          mileage: r.mileage || "N/A",
           nextOilChangeKm: r.nextOilChangeKm ? Number(r.nextOilChangeKm) : null,
           photos,
           type,
           details,
           services,
-          mechanic: r.mechanic || "Carlos Rodríguez",
-          laborCost: Math.round(cost * 0.4 * 100) / 100,
-          partsCost: Math.round(cost * 0.6 * 100) / 100,
+          mechanic: r.mechanic || "Por asignar",
+          laborCost: null,
+          partsCost: null,
           cost,
           paymentMethod: "Tarjeta / Transferencia",
           warranty: {
-            active: idx < 2 ? true : isActive,
+            active: isActive,
             expires: r.nextOilChangeKm
               ? `${expStr} o ${Number(r.nextOilChangeKm).toLocaleString()} km`
               : `${expStr} o +5,000 km`,

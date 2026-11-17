@@ -96,7 +96,7 @@ export async function GET(request: Request) {
         financialTransactions,
       ] = await Promise.all([
         database.sale.findMany({
-          where: { createdAt: { gte: startDate, lte: endDate }, status: { not: "Anulada" } },
+          where: { createdAt: { gte: startDate, lte: endDate }, status: { notIn: ["Anulada", "ANULADA", "anulada"] } },
           select: {
             id: true,
             saleNumber: true,
@@ -112,7 +112,7 @@ export async function GET(request: Request) {
           },
         }),
         database.sale.findMany({
-          where: { createdAt: { gte: todayStart, lte: todayEnd }, status: { not: "Anulada" } },
+          where: { createdAt: { gte: todayStart, lte: todayEnd }, status: { notIn: ["Anulada", "ANULADA", "anulada"] } },
           select: {
             id: true,
             total: true,
@@ -153,7 +153,7 @@ export async function GET(request: Request) {
           select: { id: true, quoteNumber: true, total: true, subtotal: true, status: true, createdAt: true, updatedAt: true },
         }),
         database.clientInvoice.findMany({
-          select: { id: true, invoiceNumber: true, amount: true, status: true, createdAt: true, orderId: true },
+          select: { id: true, invoiceNumber: true, amount: true, status: true, createdAt: true, orderId: true, saleId: true },
         }),
         database.financialTransaction.findMany({
           select: { id: true, amount: true, isIncome: true, createdAt: true },
@@ -223,7 +223,7 @@ export async function GET(request: Request) {
 
       const branchTransactions = filterBranch === "SUCURSAL" ? [] : financialTransactions;
 
-      const branchCredits = filterBranch === "SUCURSAL" ? [] : posCredits;
+      const branchCredits = posCredits;
 
       // 3. Filtrar por fechas
       const ordersInPeriod = branchWorkshopOrders.filter((o) => {
@@ -249,17 +249,35 @@ export async function GET(request: Request) {
       // Evitar doble conteo de órdenes de taller que ya tienen una venta POS asociada
       const billedOrderNumbers = new Set(
         branchSalesPeriod
-          .map((s: any) => (s.sourceOrderNumber || "").trim().toUpperCase())
+          .map((s: any) => (s.sourceOrderNumber || "").trim().toUpperCase().replace(/^OT-/, ""))
           .filter(Boolean)
       );
+      const billedSaleIds = new Set(branchSalesPeriod.map((s: any) => s.id));
 
-      // 1. VENTAS TOTALES (Taller + Tienda POS + Facturación Electrónica SRI)
+      const isClosedOrBilledOrder = (o: any) => {
+        const st = (o.status || "").toLowerCase();
+        return (
+          st.includes("finaliz") ||
+          st.includes("entregad") ||
+          st.includes("pagad") ||
+          st.includes("facturad") ||
+          st.includes("cobrad") ||
+          st.includes("terminad")
+        );
+      };
+
+      // 1. VENTAS TOTALES (Taller cobrado + Tienda POS + Facturas independientes sin Sale + Ingresos financieros)
       const ventasPosPeriodo = branchSalesPeriod.reduce((acc, s) => acc + Number(s.total || 0), 0);
       const tallerFacturadoPeriodo = ordersInPeriod.reduce((acc, o) => {
-        if (o.orderNumber && billedOrderNumbers.has(o.orderNumber.trim().toUpperCase())) return acc;
+        const normOrd = (o.orderNumber || "").trim().toUpperCase().replace(/^OT-/, "");
+        if (normOrd && billedOrderNumbers.has(normOrd)) return acc;
+        if (!isClosedOrBilledOrder(o)) return acc;
         return acc + getOrderValue(o);
       }, 0);
-      const facturasMontoPeriodo = invoicesInPeriod
+      const standaloneInvoicesInPeriod = invoicesInPeriod.filter(
+        (i: any) => !i.saleId && !billedSaleIds.has(i.saleId)
+      );
+      const facturasMontoPeriodo = standaloneInvoicesInPeriod
         .filter((i) => i.status === "Autorizado" || i.status === "Pagada")
         .reduce((acc, i) => acc + Number(i.amount || 0), 0);
       const ingresosFinancieros = transactionsInPeriod
@@ -270,15 +288,15 @@ export async function GET(request: Request) {
         (ventasPosPeriodo + tallerFacturadoPeriodo + facturasMontoPeriodo + ingresosFinancieros).toFixed(2)
       );
 
-      // 2. COBRADO EN CAJA (Ventas POS en efectivo/transferencia + Órdenes terminadas/cobradas + Movimientos INGRESO)
+      // 2. COBRADO EN CAJA (Ventas POS en efectivo/transferencia + Órdenes terminadas/cobradas sin Sale + Movimientos INGRESO)
       const cobradoPos = branchSalesPeriod.reduce((acc, s) => {
         if (s.paymentMethod === "Crédito") return acc;
         return acc + Number(s.total || 0);
       }, 0);
       const cobradoTaller = ordersInPeriod.reduce((acc, o) => {
-        if (o.orderNumber && billedOrderNumbers.has(o.orderNumber.trim().toUpperCase())) return acc;
-        const st = (o.status || "").toLowerCase();
-        if (st.includes("finaliz") || st.includes("entregad") || st.includes("caja") || st.includes("cobrad")) {
+        const normOrd = (o.orderNumber || "").trim().toUpperCase().replace(/^OT-/, "");
+        if (normOrd && billedOrderNumbers.has(normOrd)) return acc;
+        if (isClosedOrBilledOrder(o)) {
           return acc + getOrderValue(o);
         }
         return acc;
@@ -291,9 +309,11 @@ export async function GET(request: Request) {
         (cobradoPos + cobradoTaller + facturasMontoPeriodo + ingresosCaja + ingresosFinancieros).toFixed(2)
       );
 
-      // 3. VENTAS HOY (Órdenes de hoy + Ventas POS de hoy + Transacciones de hoy)
+      // 3. VENTAS HOY (Órdenes cobradas de hoy + Ventas POS de hoy + Transacciones de hoy)
       const ordersToday = branchWorkshopOrders.filter((o) => {
-        if (o.orderNumber && billedOrderNumbers.has(o.orderNumber.trim().toUpperCase())) return false;
+        const normOrd = (o.orderNumber || "").trim().toUpperCase().replace(/^OT-/, "");
+        if (normOrd && billedOrderNumbers.has(normOrd)) return false;
+        if (!isClosedOrBilledOrder(o)) return false;
         const d = getRecordDate(o);
         return d >= todayStart && d <= todayEnd;
       });
@@ -305,7 +325,13 @@ export async function GET(request: Request) {
       const montoHoy = Number((ventasPosHoy + tallerHoy + txHoy).toFixed(2));
 
       // 4. TICKET PROMEDIO POR AUTO / TRANSACCIÓN
-      const totalTransacciones = branchSalesPeriod.length + ordersInPeriod.length + invoicesInPeriod.length;
+      const totalTransacciones =
+        branchSalesPeriod.length +
+        ordersInPeriod.filter((o) => {
+          const normOrd = (o.orderNumber || "").trim().toUpperCase().replace(/^OT-/, "");
+          return isClosedOrBilledOrder(o) && (!normOrd || !billedOrderNumbers.has(normOrd));
+        }).length +
+        standaloneInvoicesInPeriod.length;
       const ticketPromedio = totalTransacciones > 0
         ? Number((ventasTotales / totalTransacciones).toFixed(2))
         : ventasTotales > 0 ? ventasTotales : 0;
@@ -313,7 +339,15 @@ export async function GET(request: Request) {
       // 5. AUTOS EN PISTA (Vehículos activos en bahías de taller/lubricentro)
       const autosEnPista = branchWorkshopOrders.filter((o) => {
         const st = (o.status || "").toLowerCase();
-        return !st.includes("finaliz") && !st.includes("entregad") && !st.includes("cancelad");
+        return (
+          !st.includes("finaliz") &&
+          !st.includes("entregad") &&
+          !st.includes("cancelad") &&
+          !st.includes("pagad") &&
+          !st.includes("facturad") &&
+          !st.includes("terminad") &&
+          !st.includes("historial")
+        );
       }).length;
 
       // 6. AUTOS ENTREGADOS / SERVICIOS COMPLETADOS

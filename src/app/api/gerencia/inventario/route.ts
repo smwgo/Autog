@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma, withRetry } from "@/lib/prisma";
+import { createAuditLog } from "@/lib/audit";
 
 export const dynamic = "force-dynamic";
 
@@ -109,6 +110,15 @@ export async function PUT(req: Request) {
       });
     });
 
+    void createAuditLog({
+      module: "INVENTARIO",
+      action: `Producto actualizado ${updated.code}`,
+      entityName: "Product",
+      entityId: updated.id,
+      details: `${updated.name} | Precio: $${Number(updated.price).toFixed(2)} | Stock: ${updated.stock}/${updated.stockNorte}`,
+      level: "INFO",
+    });
+
     return NextResponse.json(updated);
   } catch (error: any) {
     return NextResponse.json({ error: error.message || "Error al actualizar producto" }, { status: 500 });
@@ -132,6 +142,14 @@ export async function DELETE(req: Request) {
           if (!e.message?.includes("Record to delete does not exist")) throw e;
         });
       });
+    });
+
+    void createAuditLog({
+      module: "INVENTARIO",
+      action: "Producto eliminado",
+      entityName: "Product",
+      entityId: id,
+      level: "ADVERTENCIA",
     });
     return NextResponse.json({ ok: true });
   } catch (error: any) {

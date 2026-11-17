@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { createAuditLog } from "@/lib/audit";
 
 // GET: Consultar lista de sesiones de caja en Neon, métricas y estado activo
 export async function GET(request: Request) {
@@ -136,7 +137,7 @@ export async function GET(request: Request) {
         const rawSessionSales = await prisma.sale.findMany({
           where: {
             createdAt: { gte: new Date(activeSession.openedAt) },
-            status: { not: "ANULADA" },
+            status: { notIn: ["Anulada", "ANULADA", "anulada"] },
           },
           orderBy: { createdAt: "desc" },
         });
@@ -176,6 +177,16 @@ export async function GET(request: Request) {
 
     if (activeSession && activeSession.openedAt) {
       try {
+        const cashMovs = Array.isArray(activeSession.movements)
+          ? activeSession.movements.map((m: any) => ({
+              id: m.id,
+              type: m.type === "INGRESO" ? "INGRESO" : "GASTO",
+              concept: m.reason,
+              amount: parseFloat(m.amount?.toString() || "0"),
+              createdAt: m.createdAt,
+            }))
+          : [];
+
         const records = await (prisma as any).orderRequest.findMany({
           where: {
             type: "CAJA_MOV",
@@ -199,13 +210,17 @@ export async function GET(request: Request) {
           return b !== "SUCURSAL";
         });
 
-        movements = filteredRecords.map((r: any) => ({
+        const legacyMovs = filteredRecords.map((r: any) => ({
           id: r.id,
           type: r.status === "INGRESO" ? "INGRESO" : "GASTO",
           concept: r.itemsSummary,
           amount: parseFloat(r.totalEstimated?.toString() || "0"),
           createdAt: r.createdAt,
         }));
+
+        movements = [...cashMovs, ...legacyMovs].sort(
+          (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
 
         totalExpenses = movements
           .filter((m) => m.type === "GASTO")
@@ -345,16 +360,45 @@ export async function POST(request: Request) {
       });
     }
 
-    // Caso 2: Registrar un egreso o ingreso en efectivo
+    // Caso 2: Registrar un egreso o ingreso en efectivo en CashMovement (y fallback OrderRequest si no hay CashRegister)
     const monto = parseFloat(amount) || 0;
+    const movType = type === "INGRESO" ? "INGRESO" : "GASTO";
+    const movReason = concept?.trim() || (movType === "INGRESO" ? "Ingreso a caja" : "Gasto de caja");
+
+    const openRegister = await prisma.cashRegister.findFirst({
+      where: { status: "ABIERTA", branch: postBranch },
+      orderBy: { openedAt: "desc" },
+    });
+
+    if (openRegister) {
+      const nuevoMov = await prisma.cashMovement.create({
+        data: {
+          cashRegisterId: openRegister.id,
+          type: movType,
+          amount: monto,
+          reason: movReason,
+        },
+      });
+      return NextResponse.json({
+        success: true,
+        movement: {
+          id: nuevoMov.id,
+          type: nuevoMov.type,
+          concept: nuevoMov.reason,
+          amount: Number(nuevoMov.amount),
+          createdAt: nuevoMov.createdAt,
+        },
+      });
+    }
+
     const nuevoMov = await (prisma as any).orderRequest.create({
       data: {
         requestNumber: `MOV-${Date.now().toString().slice(-6)}`,
         type: "CAJA_MOV",
-        customerName: type === "INGRESO" ? "Ingreso Extra" : "Gasto / Salida",
-        itemsSummary: concept?.trim() || (type === "INGRESO" ? "Ingreso a caja" : "Gasto de caja"),
+        customerName: movType === "INGRESO" ? "Ingreso Extra" : "Gasto / Salida",
+        itemsSummary: movReason,
         totalEstimated: monto,
-        status: type === "INGRESO" ? "INGRESO" : "GASTO",
+        status: movType,
       },
     });
     await prisma
@@ -391,32 +435,102 @@ export async function PUT(request: Request) {
     } = body;
 
     const declaredCashNum = parseFloat(declaredCash) || 0;
-    const expectedCashNum = parseFloat(expectedCash) || 0;
-    const diffCashNum = parseFloat(diffCash) || 0;
+    const declaredCardNum = parseFloat(declaredCard) || 0;
+    const declaredTransferNum = parseFloat(declaredTransfer) || 0;
+    const putBranch = String(body.branch || body.sede || "").toUpperCase().includes("SUCURSAL")
+      ? "SUCURSAL"
+      : "PRINCIPAL";
+
+    // Recalcular en servidor el efectivo esperado y diferencias cuando existe la sesión CashRegister
+    let targetReg = sessionId
+      ? await prisma.cashRegister.findUnique({ where: { id: sessionId }, include: { movements: true } }).catch(() => null)
+      : null;
+    if (!targetReg) {
+      targetReg = await prisma.cashRegister
+        .findFirst({ where: { status: "ABIERTA", branch: putBranch }, orderBy: { openedAt: "desc" }, include: { movements: true } })
+        .catch(() => null);
+    }
+
+    let expectedCashNum = parseFloat(expectedCash) || 0;
+    let diffCashNum = parseFloat(diffCash) || 0;
+    let diffCardNum = parseFloat(diffCard) || 0;
+    let diffTransferNum = parseFloat(diffTransfer) || 0;
+    let totalSalesCashCalc = 0;
+    let totalSalesCardCalc = 0;
+    let totalSalesTransferCalc = 0;
+    let totalExpensesCalc = 0;
+
+    if (targetReg) {
+      const regBranch = (targetReg.branch || putBranch).toUpperCase();
+      const sessionSales = await prisma.sale.findMany({
+        where: {
+          createdAt: { gte: new Date(targetReg.openedAt) },
+          status: { notIn: ["Anulada", "ANULADA", "anulada"] },
+          branch: regBranch,
+        },
+      });
+      for (const s of sessionSales) {
+        const tot = parseFloat(s.total.toString()) || 0;
+        const m = (s.paymentMethod || "").toLowerCase();
+        if (m.includes("tarjeta") || m.includes("card") || m.includes("pos")) totalSalesCardCalc += tot;
+        else if (m.includes("transfer") || m.includes("banco")) totalSalesTransferCalc += tot;
+        else totalSalesCashCalc += tot;
+      }
+
+      let movIncome = 0;
+      for (const mov of targetReg.movements || []) {
+        const amt = parseFloat(mov.amount.toString()) || 0;
+        if (mov.type === "INGRESO") movIncome += amt;
+        else totalExpensesCalc += amt;
+      }
+
+      const legacyMovs = await (prisma as any).orderRequest
+        .findMany({
+          where: { type: "CAJA_MOV", createdAt: { gte: new Date(targetReg.openedAt) }, branch: regBranch },
+        })
+        .catch(() => []);
+      for (const lm of legacyMovs) {
+        const amt = parseFloat(lm.totalEstimated?.toString() || "0") || 0;
+        if (lm.status === "INGRESO") movIncome += amt;
+        else totalExpensesCalc += amt;
+      }
+
+      const initCash = parseFloat(targetReg.initialCash.toString()) || 0;
+      expectedCashNum = Number((initCash + totalSalesCashCalc + movIncome - totalExpensesCalc).toFixed(2));
+      diffCashNum = Number((declaredCashNum - expectedCashNum).toFixed(2));
+      diffCardNum = Number((declaredCardNum - totalSalesCardCalc).toFixed(2));
+      diffTransferNum = Number((declaredTransferNum - totalSalesTransferCalc).toFixed(2));
+    }
 
     let sesionCerrada: any = null;
 
-    // 1. Intentar actualizar en CashRegister si existe sessionId
-    if (sessionId) {
+    // 1. Actualizar en CashRegister si existe
+    if (targetReg) {
       try {
         sesionCerrada = await prisma.cashRegister.update({
-          where: { id: sessionId },
+          where: { id: targetReg.id },
           data: {
             status: "CERRADA",
             declaredCash: declaredCashNum,
-            declaredCard: parseFloat(declaredCard) || 0,
-            declaredTransfer: parseFloat(declaredTransfer) || 0,
+            declaredCard: declaredCardNum,
+            declaredTransfer: declaredTransferNum,
             expectedCash: expectedCashNum,
             differenceCash: diffCashNum,
-            differenceCard: parseFloat(diffCard) || 0,
-            differenceTransfer: parseFloat(diffTransfer) || 0,
+            differenceCard: diffCardNum,
+            differenceTransfer: diffTransferNum,
+            totalSalesCash: totalSalesCashCalc,
+            totalSalesCard: totalSalesCardCalc,
+            totalSalesTransfer: totalSalesTransferCalc,
+            totalExpenses: totalExpensesCalc,
             notes: notes.trim(),
             closedAt: new Date(),
           },
         });
       } catch {}
+    }
 
-      // 2. Intentar actualizar en orderRequest (por id directo)
+    // 2. Intentar actualizar en orderRequest (por id directo)
+    if (sessionId) {
       try {
         const updatedLegacy = await (prisma as any).orderRequest.update({
           where: { id: sessionId },
@@ -432,36 +546,11 @@ export async function PUT(request: Request) {
       } catch {}
     }
 
-    // 3. Si aún no se cerró ninguna sesión, buscar y cerrar cualquier sesión ABIERTA activa
+    // 3. Fallback legado filtrado por sede
     if (!sesionCerrada) {
       try {
-        const putBranch = String(body.branch || body.sede || "").toUpperCase().includes("SUCURSAL")
-          ? "SUCURSAL"
-          : "PRINCIPAL";
-        const abiertaReg = await prisma.cashRegister.findFirst({
-          where: { status: "ABIERTA", branch: putBranch },
-          orderBy: { openedAt: "desc" },
-        });
-        if (abiertaReg) {
-          sesionCerrada = await prisma.cashRegister.update({
-            where: { id: abiertaReg.id },
-            data: {
-              status: "CERRADA",
-              declaredCash: declaredCashNum,
-              declaredCard: parseFloat(declaredCard) || 0,
-              declaredTransfer: parseFloat(declaredTransfer) || 0,
-              expectedCash: expectedCashNum,
-              differenceCash: diffCashNum,
-              notes: notes.trim(),
-              closedAt: new Date(),
-            },
-          });
-        }
-      } catch {}
-
-      try {
         const abiertasLegacy = await (prisma as any).orderRequest.findMany({
-          where: { type: "CAJA_SESSION", status: "ABIERTA" },
+          where: { type: "CAJA_SESSION", status: "ABIERTA", branch: putBranch },
           orderBy: { createdAt: "desc" },
           take: 1,
         });
@@ -480,6 +569,16 @@ export async function PUT(request: Request) {
         }
       } catch {}
     }
+
+    void createAuditLog({
+      location: putBranch as "PRINCIPAL" | "SUCURSAL",
+      module: "CAJA",
+      action: "Cierre de caja",
+      entityName: "CashRegister",
+      entityId: sesionCerrada?.id,
+      details: `Declarado: $${declaredCashNum.toFixed(2)} | Esperado: $${expectedCashNum.toFixed(2)} | Diferencia: $${diffCashNum.toFixed(2)}`,
+      level: Math.abs(diffCashNum) > 1 ? "ADVERTENCIA" : "INFO",
+    });
 
     return NextResponse.json({
       success: true,

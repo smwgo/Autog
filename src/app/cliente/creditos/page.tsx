@@ -31,6 +31,13 @@ interface Invoice {
 export default function ClienteCreditosPage() {
   const [cargando, setCargando] = useState(true);
   const [creditos, setCreditos] = useState<CreditAccount | null>(null);
+  const [companyInfo, setCompanyInfo] = useState<{
+    razonSocial?: string;
+    nombreComercial?: string;
+    ruc?: string;
+    telefono?: string;
+    correo?: string;
+  } | null>(null);
   const [facturasPendientes, setFacturasPendientes] = useState<Invoice[]>([]);
   const [modalAbono, setModalAbono] = useState(false);
 
@@ -41,18 +48,8 @@ export default function ClienteCreditosPage() {
         const res = await fetch("/api/cliente/dashboard");
         const data = await res.json();
         if (data.success) {
-          setCreditos(data.credits || {
-            id: "crd-1",
-            customerName: data.customer?.name || "Camila Rojas",
-            identification: data.customer?.identification || "0923849120",
-            creditLimit: 600.0,
-            currentBalance: 170.0,
-            availableCredit: 430.0,
-            dueDate: "28 de Octubre, 2026",
-            status: "AL_DIA",
-            lastPaymentDate: "15 oct 2026",
-            lastPaymentAmount: 150.0,
-          });
+          setCreditos(data.credits || null);
+          setCompanyInfo(data.companyInfo || null);
           const allInvs: Invoice[] = data.invoices || [];
           setFacturasPendientes(
             allInvs.filter((i) => (i.paymentStatus || "").includes("Abono") || (i.paymentStatus || "").includes("pendiente"))
@@ -214,46 +211,48 @@ export default function ClienteCreditosPage() {
               <div className="space-y-3 text-xs">
                 <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-zinc-800/80 border border-slate-200 dark:border-zinc-700 space-y-1">
                   <strong className="text-slate-900 dark:text-white block font-bold">
-                    Banco Pichincha (Cta. Corriente)
+                    {companyInfo?.nombreComercial || companyInfo?.razonSocial || "Empresa"}
                   </strong>
-                  <p className="font-mono text-slate-600 dark:text-zinc-300">
-                    N°: <strong>2100492810</strong> • RUC: 0992384912001
-                  </p>
-                  <span className="text-[10px] text-slate-400">AutoG Sistema Automotriz S.A.</span>
-                </div>
-
-                <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-zinc-800/80 border border-slate-200 dark:border-zinc-700 space-y-1">
-                  <strong className="text-slate-900 dark:text-white block font-bold">
-                    Banco Guayaquil (Cta. Ahorros)
-                  </strong>
-                  <p className="font-mono text-slate-600 dark:text-zinc-300">
-                    N°: <strong>0048192041</strong>
-                  </p>
-                  <span className="text-[10px] text-slate-400">AutoG Taller & POS</span>
-                </div>
-
-                <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-zinc-800/80 border border-slate-200 dark:border-zinc-700 space-y-1">
-                  <strong className="text-slate-900 dark:text-white block font-bold">
-                    Deuna! / Pagos QR
-                  </strong>
-                  <p className="font-mono text-slate-600 dark:text-zinc-300">+593 99 876 5432</p>
+                  {companyInfo?.ruc && (
+                    <p className="font-mono text-slate-600 dark:text-zinc-300">
+                      RUC: <strong>{companyInfo.ruc}</strong>
+                    </p>
+                  )}
+                  {companyInfo?.correo && (
+                    <p className="text-slate-600 dark:text-zinc-300">{companyInfo.correo}</p>
+                  )}
+                  <span className="text-[10px] text-slate-400">
+                    Solicita los datos bancarios actualizados por WhatsApp antes de transferir.
+                  </span>
                 </div>
               </div>
 
-              <button
-                type="button"
-                onClick={() => {
-                  const text = `Hola AutoG, soy ${creditos.customerName} (Doc: ${creditos.identification}). Adjunto mi comprobante para registrar un abono a mi crédito de $${creditos.currentBalance.toFixed(2)}.`;
-                  window.open(`https://wa.me/593998765432?text=${encodeURIComponent(text)}`, "_blank");
-                }}
-                className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-xs cursor-pointer"
-              >
-                <span>💬</span>
-                <span>Enviar Comprobante por WhatsApp</span>
-              </button>
+              {companyInfo?.telefono && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const cleanPhone = companyInfo.telefono!.replace(/[^0-9]/g, "");
+                    const text = `Hola, soy ${creditos.customerName} (Doc: ${creditos.identification}). Adjunto mi comprobante para registrar un abono a mi crédito de $${creditos.currentBalance.toFixed(2)}.`;
+                    window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(text)}`, "_blank");
+                  }}
+                  className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-xs cursor-pointer"
+                >
+                  <span>💬</span>
+                  <span>Enviar Comprobante por WhatsApp</span>
+                </button>
+              )}
             </div>
           </div>
-        ) : null}
+        ) : (
+          <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-slate-200 dark:border-zinc-800 p-8 text-center space-y-2">
+            <h2 className="text-base font-bold text-slate-900 dark:text-white">
+              Sin línea de crédito activa
+            </h2>
+            <p className="text-xs text-slate-500 dark:text-zinc-400">
+              Actualmente no tienes una cuenta de crédito registrada. Puedes solicitar una en caja o con tu asesor.
+            </p>
+          </div>
+        )}
       </main>
 
       {/* Modal Abono */}

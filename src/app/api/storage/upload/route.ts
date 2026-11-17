@@ -8,6 +8,7 @@ import {
   MAX_FILE_SIZE_BYTES,
 } from "@/lib/r2";
 import { prisma as prismaClient } from "@/lib/prisma";
+import { getVerifiedSessionFromRequest, isStaffSession } from "@/lib/signed-tokens";
 
 const prisma = prismaClient as any;
 
@@ -29,6 +30,13 @@ function normalizeEvidenceType(mimeType: string, tipoParam?: string | null): str
 
 // GET: Generar Presigned URL de subida directa a Cloudflare R2 con trazabilidad de intención
 export async function GET(req: Request) {
+  const session = getVerifiedSessionFromRequest(req);
+  if (!isStaffSession(session)) {
+    return NextResponse.json(
+      { success: false, error: "No autorizado para generar enlaces de subida." },
+      { status: session ? 403 : 401 }
+    );
+  }
   try {
     const { searchParams } = new URL(req.url);
     const mimeType = (searchParams.get("mimeType") || "image/jpeg").toLowerCase().split(";")[0].trim();
@@ -162,6 +170,13 @@ export async function GET(req: Request) {
 
 // POST: Subir archivo a Cloudflare R2 mediante el servidor (Canal proxy seguro o fallback)
 export async function POST(req: Request) {
+  const session = getVerifiedSessionFromRequest(req);
+  if (!isStaffSession(session)) {
+    return NextResponse.json(
+      { success: false, error: "No autorizado para subir archivos." },
+      { status: session ? 403 : 401 }
+    );
+  }
   try {
     const formData = await req.formData();
     const file = formData.get("file") as File | null;

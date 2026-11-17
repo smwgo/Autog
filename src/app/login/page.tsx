@@ -51,15 +51,14 @@ export default function LoginPage() {
     sessionStorage.removeItem(REMEMBER_WARNING_KEY);
     const savedRemember = localStorage.getItem("autog_remember_login") === "true";
     const savedEmail = localStorage.getItem("autog_saved_email");
-    const savedPassword = localStorage.getItem("autog_saved_password");
+    localStorage.removeItem("autog_saved_password");
     if (!savedRemember) {
       localStorage.removeItem("autog_saved_email");
-      localStorage.removeItem("autog_saved_password");
       localStorage.removeItem("autog_remember_login");
     }
     setRemember(savedRemember);
     setEmail(savedRemember ? savedEmail || "" : "");
-    setPassword(savedRemember ? savedPassword || "" : "");
+    setPassword("");
 
     if (typeof window !== "undefined") {
       const sp = new URLSearchParams(window.location.search);
@@ -100,13 +99,12 @@ export default function LoginPage() {
         sessionStorage.removeItem(REMEMBER_WARNING_KEY);
         if (remember) {
           localStorage.setItem("autog_saved_email", email.trim().toLowerCase());
-          localStorage.setItem("autog_saved_password", password);
           localStorage.setItem("autog_remember_login", "true");
         } else {
           localStorage.removeItem("autog_saved_email");
-          localStorage.removeItem("autog_saved_password");
           localStorage.removeItem("autog_remember_login");
         }
+        localStorage.removeItem("autog_saved_password");
 
         // Guardar usuario y token firmado en localStorage para el cliente (además de cookies HttpOnly)
         localStorage.setItem("currentUser", JSON.stringify(data.user));

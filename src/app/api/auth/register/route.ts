@@ -18,6 +18,7 @@ const VehicleInputSchema = z.object({
   year: z.union([z.number(), z.string()]).optional().nullable(),
   vehicleType: z.string().max(30).optional().nullable(),
   color: z.string().max(40).optional().nullable(),
+  imageUrl: z.string().max(1500000).optional().nullable(),
 });
 
 const RegisterSchema = z.object({
@@ -27,6 +28,7 @@ const RegisterSchema = z.object({
   whatsapp: z.string().max(30).optional().nullable(),
   tipoFactura: z.string().max(30).optional().nullable(),
   direccion: z.string().max(255).optional().nullable(),
+  avatar: z.string().max(1500000).optional().nullable(),
   vehiculos: z.array(VehicleInputSchema).max(10).optional(),
 });
 
@@ -40,7 +42,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: firstError }, { status: 400 });
     }
 
-    const { nombre, email, password, whatsapp, tipoFactura, direccion, vehiculos } = parseResult.data;
+    const { nombre, email, password, whatsapp, tipoFactura, direccion, avatar, vehiculos } = parseResult.data;
 
     const cleanEmail = email.trim().toLowerCase();
 
@@ -69,6 +71,7 @@ export async function POST(req: Request) {
             email: cleanEmail,
             passwordHash,
             role: "CLIENT",
+            avatar: avatar || null,
           },
         });
 
@@ -99,6 +102,8 @@ export async function POST(req: Request) {
                 email: existingCustomer.email || cleanEmail,
                 type: existingCustomer.type || (tipoFactura === "empresa" ? "Empresa" : "Personal"),
                 address: existingCustomer.address || direccion?.trim() || null,
+                avatar: avatar || existingCustomer.avatar,
+                imageUrl: avatar || existingCustomer.imageUrl,
               },
             })
           : await tx.customer.create({
@@ -109,6 +114,8 @@ export async function POST(req: Request) {
                 email: cleanEmail,
                 type: tipoFactura === "empresa" ? "Empresa" : "Personal",
                 address: direccion?.trim() || null,
+                avatar: avatar || null,
+                imageUrl: avatar || null,
               },
             });
 
@@ -135,6 +142,7 @@ export async function POST(req: Request) {
                   year: validYear ?? existingVehicle.year,
                   vehicleType: v.vehicleType?.trim() || existingVehicle.vehicleType || "Auto",
                   color: v.color?.trim() || existingVehicle.color,
+                  imageUrl: v.imageUrl || existingVehicle.imageUrl,
                 },
               });
             } else {
@@ -147,6 +155,7 @@ export async function POST(req: Request) {
                   year: validYear,
                   vehicleType: v.vehicleType?.trim() || "Auto",
                   color: v.color?.trim() || null,
+                  imageUrl: v.imageUrl || null,
                 },
               });
             }

@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getVerifiedSessionFromRequest, isStaffSession } from "@/lib/signed-tokens";
+import { resolveSessionCustomerScope } from "@/lib/client-scope";
 
 export const dynamic = "force-dynamic";
 
@@ -79,6 +81,11 @@ async function ensureTableExists() {
 
 export async function GET(request: Request) {
   try {
+    const session = getVerifiedSessionFromRequest(request);
+    if (!session) {
+      return NextResponse.json({ success: false, error: "No autorizado." }, { status: 401 });
+    }
+    const staff = isStaffSession(session);
     const { searchParams } = new URL(request.url);
     const busqueda = searchParams.get("busqueda")?.trim() || "";
 
@@ -87,9 +94,33 @@ export async function GET(request: Request) {
 
       let query = 'SELECT * FROM "ClientQuote" WHERE 1=1';
       const params: any[] = [];
+      let pIdx = 1;
+
+      if (!staff) {
+        const scoped = await resolveSessionCustomerScope(session, true);
+        const nameCandidates = Array.from(
+          new Set([scoped?.name, session.name].map((v) => String(v || "").trim()).filter(Boolean))
+        );
+        const plateCandidates = (scoped?.vehicles || []).map((v) => v.plate.trim().toUpperCase()).filter(Boolean);
+        const scopeClauses: string[] = [];
+        for (const nm of nameCandidates) {
+          scopeClauses.push(`LOWER("clientName") = LOWER($${pIdx++})`);
+          params.push(nm);
+        }
+        for (const pl of plateCandidates) {
+          scopeClauses.push(`UPPER(COALESCE("plate", '')) = UPPER($${pIdx++})`);
+          params.push(pl);
+        }
+        if (scopeClauses.length === 0) {
+          return NextResponse.json({ success: true, quotes: [], total: 0 });
+        }
+        query += ` AND (${scopeClauses.join(" OR ")})`;
+      }
+
       if (busqueda) {
-        query += ` AND ("quoteNumber" ILIKE $1 OR "vehicle" ILIKE $1 OR COALESCE("notes", '') ILIKE $1)`;
+        query += ` AND ("quoteNumber" ILIKE $${pIdx} OR "vehicle" ILIKE $${pIdx} OR COALESCE("notes", '') ILIKE $${pIdx})`;
         params.push(`%${busqueda}%`);
+        pIdx++;
       }
       query += ' ORDER BY "createdAt" DESC';
 

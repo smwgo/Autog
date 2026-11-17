@@ -19,7 +19,7 @@ export async function GET() {
           orderBy: { createdAt: "desc" },
         }),
         prisma.sale.findMany({
-          where: { status: { not: "Anulada" } },
+          where: { status: { notIn: ["Anulada", "ANULADA", "anulada"] } },
           orderBy: { createdAt: "desc" },
         }),
         prisma.workshopOrder.findMany({
@@ -46,10 +46,12 @@ export async function GET() {
       }
 
       const billedOrderNumbers = new Set<string>();
+      const billedSaleIds = new Set<string>();
       for (const s of sales) {
+        billedSaleIds.add(s.id);
         const ref = (s.saleNumber || `VENTA-${s.id.slice(-4)}`).trim();
         if (s.sourceOrderNumber) {
-          billedOrderNumbers.add(s.sourceOrderNumber.trim().toUpperCase());
+          billedOrderNumbers.add(s.sourceOrderNumber.trim().toUpperCase().replace(/^OT-/, ""));
         }
         if (existingRefs.has(ref.toUpperCase())) continue;
         existingRefs.add(ref.toUpperCase());
@@ -71,11 +73,16 @@ export async function GET() {
       for (const o of orders) {
         const st = (o.status || "").toLowerCase();
         const isPaidOrDone =
-          st.includes("finaliz") || st.includes("entregad") || st.includes("caja") || st.includes("cobrad");
+          st.includes("finaliz") ||
+          st.includes("entregad") ||
+          st.includes("pagad") ||
+          st.includes("facturad") ||
+          st.includes("cobrad");
         if (!isPaidOrDone) continue;
 
         const ordRef = (o.orderNumber || "").trim();
-        if (ordRef && (existingRefs.has(ordRef.toUpperCase()) || billedOrderNumbers.has(ordRef.toUpperCase()))) {
+        const normOrdRef = ordRef.toUpperCase().replace(/^OT-/, "");
+        if (ordRef && (existingRefs.has(ordRef.toUpperCase()) || billedOrderNumbers.has(normOrdRef))) {
           continue;
         }
 
@@ -106,6 +113,7 @@ export async function GET() {
       }
 
       for (const inv of invoices) {
+        if (inv.saleId && billedSaleIds.has(inv.saleId)) continue;
         const invRef = (inv.invoiceNumber || "").trim();
         if (invRef && existingRefs.has(invRef.toUpperCase())) continue;
         const amount = Number(inv.amount || 0);

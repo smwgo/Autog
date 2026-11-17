@@ -28,7 +28,7 @@ export async function GET(request: Request) {
     const data = await withRetry(async () => {
       const salesWhere = {
         createdAt: { gte: startDate, lte: endDate },
-        status: { not: "Anulada" },
+        status: { notIn: ["Anulada", "ANULADA", "anulada"] },
       };
       const [
         salesCount,
@@ -108,7 +108,7 @@ export async function GET(request: Request) {
           units: products.reduce((sum, product) => sum + product.stock + product.stockNorte, 0),
           lowStock: products.filter((product) => {
             const min = Math.max(Number(product.minStock ?? 0), globalLowStockThreshold);
-            return product.stock <= min || product.stockNorte <= min;
+            return product.stock + product.stockNorte <= min;
           }).length,
         },
         workshop: {

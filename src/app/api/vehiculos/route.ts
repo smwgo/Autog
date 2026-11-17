@@ -1,27 +1,28 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getVerifiedSessionFromRequest, isStaffSession } from "@/lib/signed-tokens";
+import { resolveSessionCustomerScope } from "@/lib/client-scope";
 
-// Función auxiliar para obtener o crear cliente por defecto
-async function getDefaultCustomer() {
-  let customer = await prisma.customer.findFirst();
-  if (!customer) {
-    customer = await prisma.customer.create({
-      data: {
-        identification: "CLI-001",
-        name: "Cliente General",
-        phone: "555-0199",
-        email: "cliente@autog.com",
-        type: "Personal",
-      },
-    });
-  }
-  return customer;
-}
-
-// GET: Obtener todos los vehículos de Neon (con seed automático si está vacío)
-export async function GET() {
+// GET: Obtener vehículos de Neon (acotados al cliente si no es personal)
+export async function GET(request: Request) {
   try {
-    let vehicles = await prisma.vehicle.findMany({
+    const session = getVerifiedSessionFromRequest(request);
+    if (!session) {
+      return NextResponse.json({ success: false, error: "No autorizado." }, { status: 401 });
+    }
+    const staff = isStaffSession(session);
+
+    let where: any = {};
+    if (!staff) {
+      const scoped = await resolveSessionCustomerScope(session);
+      if (!scoped) {
+        return NextResponse.json({ success: true, vehicles: [], count: 0 });
+      }
+      where = { customerId: scoped.id };
+    }
+
+    const vehicles = await prisma.vehicle.findMany({
+      where,
       include: {
         customer: true,
       },
@@ -29,61 +30,6 @@ export async function GET() {
         createdAt: "desc",
       },
     });
-
-    // Si la base de datos no tiene vehículos aún, sembramos los iniciales
-    if (vehicles.length === 0) {
-      const defaultCustomer = await getDefaultCustomer();
-      
-      const seedData = [
-        {
-          plate: "ABC-123",
-          brand: "Toyota",
-          model: "Hilux",
-          year: 2020,
-          mileage: 45200,
-          color: "Blanco",
-          fuelType: "Diésel",
-          customerId: defaultCustomer.id,
-        },
-        {
-          plate: "XYZ-987",
-          brand: "Honda",
-          model: "Civic",
-          year: 2018,
-          mileage: 68100,
-          color: "Gris",
-          fuelType: "Gasolina",
-          customerId: defaultCustomer.id,
-        },
-        {
-          plate: "QWE-554",
-          brand: "Ford",
-          model: "Escape",
-          year: 2021,
-          mileage: 49800,
-          color: "Azul",
-          fuelType: "Híbrido",
-          customerId: defaultCustomer.id,
-        },
-      ];
-
-      for (const item of seedData) {
-        await prisma.vehicle.upsert({
-          where: { plate: item.plate },
-          update: {},
-          create: item,
-        });
-      }
-
-      vehicles = await prisma.vehicle.findMany({
-        include: {
-          customer: true,
-        },
-        orderBy: {
-          createdAt: "desc",
-        },
-      });
-    }
 
     return NextResponse.json({
       success: true,
@@ -102,6 +48,11 @@ export async function GET() {
 // POST: Crear nuevo vehículo en Neon
 export async function POST(request: Request) {
   try {
+    const session = getVerifiedSessionFromRequest(request);
+    if (!session) {
+      return NextResponse.json({ success: false, error: "No autorizado." }, { status: 401 });
+    }
+    const staff = isStaffSession(session);
     const body = await request.json();
     const {
       plate,
@@ -137,10 +88,25 @@ export async function POST(request: Request) {
     }
 
     // Resolver cliente asociado
-    let finalCustomerId = customerId;
-    if (!finalCustomerId) {
-      const defaultCustomer = await getDefaultCustomer();
-      finalCustomerId = defaultCustomer.id;
+    let finalCustomerId = staff ? customerId : undefined;
+    if (!staff) {
+      const scoped = await resolveSessionCustomerScope(session);
+      if (!scoped) {
+        return NextResponse.json(
+          { success: false, error: "No se encontró un perfil de cliente asociado a tu sesión." },
+          { status: 403 }
+        );
+      }
+      finalCustomerId = scoped.id;
+    } else if (!finalCustomerId) {
+      const firstCustomer = await prisma.customer.findFirst();
+      if (!firstCustomer) {
+        return NextResponse.json(
+          { success: false, error: "Debe seleccionar o crear un cliente antes de registrar un vehículo." },
+          { status: 400 }
+        );
+      }
+      finalCustomerId = firstCustomer.id;
     }
 
     const newVehicle = await prisma.vehicle.create({
@@ -177,6 +143,11 @@ export async function POST(request: Request) {
 // PUT: Actualizar vehículo existente en Neon
 export async function PUT(request: Request) {
   try {
+    const session = getVerifiedSessionFromRequest(request);
+    if (!session) {
+      return NextResponse.json({ success: false, error: "No autorizado." }, { status: 401 });
+    }
+    const staff = isStaffSession(session);
     const body = await request.json();
     const { id, plate, brand, model, year, mileage, color, vin, fuelType } = body;
 
@@ -185,6 +156,17 @@ export async function PUT(request: Request) {
         { success: false, error: "El ID del vehículo es obligatorio para actualizar." },
         { status: 400 }
       );
+    }
+
+    if (!staff) {
+      const scoped = await resolveSessionCustomerScope(session);
+      const existingVeh = await prisma.vehicle.findUnique({ where: { id }, select: { customerId: true } });
+      if (!scoped || !existingVeh || existingVeh.customerId !== scoped.id) {
+        return NextResponse.json(
+          { success: false, error: "No autorizado para modificar este vehículo." },
+          { status: 403 }
+        );
+      }
     }
 
     const updateData: any = {};
@@ -222,6 +204,11 @@ export async function PUT(request: Request) {
 // DELETE: Eliminar vehículo de Neon
 export async function DELETE(request: Request) {
   try {
+    const session = getVerifiedSessionFromRequest(request);
+    if (!session) {
+      return NextResponse.json({ success: false, error: "No autorizado." }, { status: 401 });
+    }
+    const staff = isStaffSession(session);
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
 
@@ -230,6 +217,17 @@ export async function DELETE(request: Request) {
         { success: false, error: "El ID del vehículo es requerido para eliminar." },
         { status: 400 }
       );
+    }
+
+    if (!staff) {
+      const scoped = await resolveSessionCustomerScope(session);
+      const existingVeh = await prisma.vehicle.findUnique({ where: { id }, select: { customerId: true } });
+      if (!scoped || !existingVeh || existingVeh.customerId !== scoped.id) {
+        return NextResponse.json(
+          { success: false, error: "No autorizado para eliminar este vehículo." },
+          { status: 403 }
+        );
+      }
     }
 
     const deletedVehicle = await prisma.vehicle.delete({

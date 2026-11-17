@@ -73,7 +73,7 @@ function BookingForm() {
       const vehicleDesc = [formData.brand, formData.model, formData.year, formData.plate ? `Placa: ${formData.plate}` : ""].filter(Boolean).join(" ");
       const fechaHora = formData.date ? `Fecha: ${formData.date} ${formData.time || ""}` : "";
 
-      await fetch("/api/solicitudes", {
+      const res = await fetch("/api/solicitudes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -85,8 +85,18 @@ function BookingForm() {
           itemsSummary: `Servicio Landing: ${servicioTitulo}`,
           notes: `${fechaHora} - ${formData.notes || ""}`.trim(),
           totalEstimated: 0,
+          appointment: {
+            vehicle: [formData.brand, formData.model, formData.year].filter(Boolean).join(" ") || "Vehículo",
+            plate: formData.plate || "S/P",
+            serviceName: servicioTitulo,
+            date: formData.date || new Date().toISOString().split("T")[0],
+            timeSlot: formData.time || "10:00 AM",
+          },
         }),
       });
+      if (res.ok) {
+        setIsSubmitted(true);
+      }
     } catch (err) {
       console.error("Error al registrar solicitud en base de datos:", err);
     } finally {

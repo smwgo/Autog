@@ -93,6 +93,29 @@ export async function POST(request: Request) {
       },
     });
 
+    if (body.appointment && typeof body.appointment === "object") {
+      try {
+        const appt = body.appointment;
+        const apptNum = `CIT-${Math.floor(1000 + Math.random() * 9000)}`;
+        await prisma.clientAppointment.create({
+          data: {
+            appointmentNumber: apptNum,
+            vehicle: String(appt.vehicle || vehicleInfo || "Vehículo").trim(),
+            plate: String(appt.plate || "S/P").trim().toUpperCase(),
+            clientName: finalCustomerName,
+            clientPhone: customerPhone ? customerPhone.toString().trim() : null,
+            serviceName: String(appt.serviceName || finalItemsSummary).trim(),
+            date: String(appt.date || new Date().toISOString().split("T")[0]).trim(),
+            timeSlot: String(appt.timeSlot || "10:00 AM").trim(),
+            status: "Programada",
+            notes: notes ? notes.toString().trim() : null,
+          },
+        });
+      } catch (apptErr) {
+        console.warn("Aviso al sincronizar cita en ClientAppointment:", apptErr);
+      }
+    }
+
     return NextResponse.json({ success: true, solicitud: nuevaSolicitud }, { status: 201 });
   } catch (error: any) {
     console.error("Error al crear solicitud en base de datos:", error);

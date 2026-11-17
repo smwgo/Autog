@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { emitirFacturaElectronica } from "@/lib/sri/facturaService";
 import { emitRealtimeEvent } from "@/lib/realtime";
+import { createAuditLog } from "@/lib/audit";
 
 let saleInvoiceDetailsSchemaEnsured = false;
 
@@ -242,8 +243,8 @@ export async function POST(request: Request) {
       );
     }
 
-    // 1. Ejecutar verificación de precios, creación de venta, descuento de stock y actualización de caja en una sola transacción atómica
-    const sale = await prisma.$transaction(async (tx) => {
+    // 1. Ejecutar verificación de precios, creación de venta, descuento de stock y actualización de caja en una sola transacción atómica (con reintento ante colisión de secuencial)
+    const runSaleTx = () => prisma.$transaction(async (tx) => {
       const sourceOrderNumber =
         typeof serviceOrderNumber === "string"
           ? serviceOrderNumber.trim().replace(/^OT-/i, "")
@@ -347,8 +348,14 @@ export async function POST(request: Request) {
 
           const curPrincipal = Number(dbProduct.stock || 0);
           const curSucursal = Number((dbProduct as any).stockNorte || 0);
-          const nextPrincipal = targetBranch === "SUCURSAL" ? curPrincipal : Math.max(0, curPrincipal - quantity);
-          const nextSucursal = targetBranch === "SUCURSAL" ? Math.max(0, curSucursal - quantity) : curSucursal;
+          const availableInBranch = targetBranch === "SUCURSAL" ? curSucursal : curPrincipal;
+          if (availableInBranch < quantity) {
+            throw new Error(
+              `STOCK_INSUFICIENTE:Stock insuficiente para "${dbProduct.name}" en sede ${targetBranch} (disponible: ${availableInBranch}, solicitado: ${quantity}).`
+            );
+          }
+          const nextPrincipal = targetBranch === "SUCURSAL" ? curPrincipal : curPrincipal - quantity;
+          const nextSucursal = targetBranch === "SUCURSAL" ? curSucursal - quantity : curSucursal;
           const newStatus = calcularEstado(nextPrincipal + nextSucursal, dbProduct.minStock);
           await tx.product.update({
             where: { id: dbProduct.id },
@@ -356,6 +363,24 @@ export async function POST(request: Request) {
               ? { stockNorte: nextSucursal, status: newStatus }
               : { stock: nextPrincipal, status: newStatus },
           });
+        } else if (item.isService || (typeof item.code === "string" && item.code.trim())) {
+          // Validar precio de catálogo cuando el ítem corresponde a un WorkshopService
+          const dbService = await tx.workshopService
+            .findFirst({
+              where: {
+                OR: [
+                  ...(item.id ? [{ id: String(item.id) }] : []),
+                  ...(typeof item.code === "string" && item.code.trim() ? [{ code: item.code.trim() }] : []),
+                ],
+                active: true,
+              },
+            })
+            .catch(() => null);
+          if (dbService && (!price || price <= 0)) {
+            price = parseFloat(dbService.price.toString());
+            name = dbService.name;
+            code = dbService.code;
+          }
         }
 
         const itemTotal = price * quantity;
@@ -481,8 +506,10 @@ export async function POST(request: Request) {
                  "deliveryStatus" = 'Facturado',
                  "updatedAt" = NOW()
              WHERE UPPER("plate") = UPPER($1)
+               AND COALESCE("branch", 'PRINCIPAL') = $2
                AND "status" NOT IN ('Entregado', 'ENTREGADO', '05 Entregada', 'Entregada', 'Finalizado', 'FINALIZADO', 'Terminado', 'TERMINADO', 'Historial', 'HISTORIAL', 'Cancelado', 'CANCELADO', 'Pagado', 'PAGADO', 'Facturado', 'FACTURADO')`,
-            saleVehiclePlate.toString().trim()
+            saleVehiclePlate.toString().trim(),
+            targetBranch
           );
         } catch (ordErr) {
           console.warn("Aviso al actualizar WorkshopOrder por placa como Pagado:", ordErr);
@@ -580,6 +607,19 @@ export async function POST(request: Request) {
       return createdSale;
     });
 
+    let sale: any = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        sale = await runSaleTx();
+        break;
+      } catch (txErr: any) {
+        if (txErr?.code === "P2002" && attempt < 2) {
+          continue;
+        }
+        throw txErr;
+      }
+    }
+
     // 2. Facturación Electrónica SRI automática
     let facturaElectronicaRes: any = null;
     const debeEmitirFactura = body.emitirFacturaElectronica !== false;
@@ -625,12 +665,29 @@ export async function POST(request: Request) {
     emitRealtimeEvent({ channel: "presupuestos", action: "updated" });
     emitRealtimeEvent({ channel: "taller", action: "updated" });
 
+    void createAuditLog({
+      location: targetBranch as "PRINCIPAL" | "SUCURSAL",
+      module: "POS_VENTAS",
+      action: `Venta registrada ${sale.saleNumber}`,
+      entityName: "Sale",
+      entityId: sale.id,
+      details: `Cliente: ${sale.customerName} | Total: $${Number(sale.total).toFixed(2)} | Método: ${sale.paymentMethod}`,
+      level: "INFO",
+    });
+
     return NextResponse.json({
       success: true,
       venta: sale,
       factura: facturaElectronicaRes,
     }, { status: 201 });
   } catch (error: any) {
+    const msg = String(error?.message || "");
+    if (msg.startsWith("STOCK_INSUFICIENTE:")) {
+      return NextResponse.json(
+        { success: false, error: msg.replace("STOCK_INSUFICIENTE:", "") },
+        { status: 400 }
+      );
+    }
     console.error("Error al registrar venta en base de datos:", error);
     return NextResponse.json(
       { success: false, error: error.message || "Error al guardar venta en base de datos" },
@@ -865,6 +922,17 @@ export async function PATCH(request: Request) {
 
     emitRealtimeEvent({ channel: "ordenes", action: "updated", entityId: id });
     emitRealtimeEvent({ channel: "presupuestos", action: "updated" });
+
+    if (status === "Anulada" && saleActual.status !== "Anulada" && saleUpdated) {
+      void createAuditLog({
+        module: "POS_VENTAS",
+        action: `Venta anulada ${saleUpdated.saleNumber}`,
+        entityName: "Sale",
+        entityId: saleUpdated.id,
+        details: `Cliente: ${saleUpdated.customerName} | Total: $${Number(saleUpdated.total).toFixed(2)}`,
+        level: "ADVERTENCIA",
+      });
+    }
 
     return NextResponse.json({ success: true, venta: saleUpdated });
   } catch (error: any) {

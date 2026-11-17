@@ -36,9 +36,19 @@ export function NotificationCenter() {
     fetchNotifications();
   }, []);
 
-  const handleMarcarLeidas = () => {
+  const handleMarcarLeidas = async () => {
+    const ids = notifications.map((n) => n.id);
     setCount(0);
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    if (ids.length > 0) {
+      try {
+        await fetch("/api/notificaciones", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ids }),
+        });
+      } catch {}
+    }
   };
 
   return (

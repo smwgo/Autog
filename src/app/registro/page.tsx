@@ -9,18 +9,49 @@ interface VehicleDraft {
   brand: string;
   model: string;
   year: string;
+  color: string;
   vehicleType: string;
+  imageUrl: string;
+}
+
+function comprimirImagen(file: File, maxSize = 640): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const scale = Math.min(1, maxSize / Math.max(img.width, img.height));
+        const w = Math.max(1, Math.round(img.width * scale));
+        const h = Math.max(1, Math.round(img.height * scale));
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          resolve(String(reader.result || ''));
+          return;
+        }
+        ctx.drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', 0.8));
+      };
+      img.onerror = () => reject(new Error('No se pudo leer la imagen.'));
+      img.src = String(reader.result || '');
+    };
+    reader.onerror = () => reject(new Error('Error al cargar la imagen.'));
+    reader.readAsDataURL(file);
+  });
 }
 
 export default function RegistroPage() {
   const [tipoFactura, setTipoFactura] = useState('persona');
+  const [avatar, setAvatar] = useState('');
   const [nombre, setNombre] = useState('');
   const [whatsapp, setWhatsapp] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [direccion, setDireccion] = useState('');
   const [vehiculos, setVehiculos] = useState<VehicleDraft[]>([
-    { plate: '', brand: '', model: '', year: '', vehicleType: 'Auto' },
+    { plate: '', brand: '', model: '', year: '', color: '', vehicleType: 'Auto', imageUrl: '' },
   ]);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -36,7 +67,7 @@ export default function RegistroPage() {
   const addVehiculo = () => {
     setVehiculos((prev) => [
       ...prev,
-      { plate: '', brand: '', model: '', year: '', vehicleType: 'Auto' },
+      { plate: '', brand: '', model: '', year: '', color: '', vehicleType: 'Auto', imageUrl: '' },
     ]);
   };
 
@@ -57,7 +88,9 @@ export default function RegistroPage() {
           brand: v.brand.trim(),
           model: v.model.trim(),
           year: v.year.trim() || null,
+          color: v.color.trim() || null,
           vehicleType: v.vehicleType || 'Auto',
+          imageUrl: v.imageUrl || null,
         }));
 
       for (const v of vehiculosValidos) {
@@ -76,6 +109,7 @@ export default function RegistroPage() {
           password,
           tipoFactura,
           direccion,
+          avatar: avatar || null,
           vehiculos: vehiculosValidos,
         }),
       });
@@ -160,22 +194,64 @@ export default function RegistroPage() {
 
           <form className="space-y-5 sm:space-y-6" onSubmit={handleRegister}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-              {/* Nombre y Apellido */}
-              <div className="md:col-span-2">
-                <label htmlFor="nombre" className="block text-sm font-bold text-zinc-700 dark:text-zinc-300">
-                  Nombre y Apellido
-                </label>
-                <div className="mt-1">
-                  <input
-                    id="nombre"
-                    name="nombre"
-                    type="text"
-                    required
-                    value={nombre}
-                    onChange={(e) => setNombre(e.target.value)}
-                    placeholder="Ej. Juan Pérez"
-                    className="appearance-none block w-full px-4 h-11 sm:h-12 border-2 border-zinc-200 dark:border-zinc-700 rounded-xl shadow-sm placeholder-zinc-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-base sm:text-sm bg-zinc-50 dark:bg-zinc-800 dark:text-white transition-colors"
-                  />
+              {/* Foto de Perfil + Nombre y Apellido */}
+              <div className="md:col-span-2 flex items-end gap-3.5">
+                <div className="relative group shrink-0">
+                  <label
+                    title="Subir foto de perfil"
+                    className="relative w-12 h-12 sm:w-14 sm:h-14 rounded-2xl border-2 border-dashed border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 flex items-center justify-center overflow-hidden cursor-pointer hover:border-blue-500 transition-colors active:scale-95"
+                  >
+                    {avatar ? (
+                      <img src={avatar} alt="Foto de perfil" className="w-full h-full object-cover" />
+                    ) : (
+                      <svg className="w-6 h-6 text-zinc-400 group-hover:text-blue-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
+                      </svg>
+                    )}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        try {
+                          const dataUrl = await comprimirImagen(file, 400);
+                          setAvatar(dataUrl);
+                        } catch {
+                          setErrorMessage('No se pudo procesar la foto de perfil.');
+                        }
+                      }}
+                    />
+                  </label>
+                  {avatar && (
+                    <button
+                      type="button"
+                      onClick={() => setAvatar('')}
+                      title="Quitar foto"
+                      className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-rose-600 hover:bg-rose-700 text-white flex items-center justify-center text-[10px] font-bold shadow cursor-pointer"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex-1 min-w-0">
+                  <label htmlFor="nombre" className="block text-sm font-bold text-zinc-700 dark:text-zinc-300">
+                    Nombre y Apellido
+                  </label>
+                  <div className="mt-1">
+                    <input
+                      id="nombre"
+                      name="nombre"
+                      type="text"
+                      required
+                      value={nombre}
+                      onChange={(e) => setNombre(e.target.value)}
+                      placeholder="Ej. Juan Pérez"
+                      className="appearance-none block w-full px-4 h-11 sm:h-12 border-2 border-zinc-200 dark:border-zinc-700 rounded-xl shadow-sm placeholder-zinc-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-base sm:text-sm bg-zinc-50 dark:bg-zinc-800 dark:text-white transition-colors"
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -280,9 +356,6 @@ export default function RegistroPage() {
                     <h3 className="text-sm font-bold text-zinc-900 dark:text-white">
                       Registra tu vehículo
                     </h3>
-                    <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                      Asocia tu auto desde ahora para agilizar tus citas y pedidos.
-                    </p>
                   </div>
                   <button
                     type="button"
@@ -355,6 +428,55 @@ export default function RegistroPage() {
                           max="2035"
                           className="appearance-none block w-full px-3.5 h-11 border border-zinc-200 dark:border-zinc-700 rounded-xl placeholder-zinc-400 focus:outline-none focus:border-blue-500 text-sm bg-white dark:bg-zinc-900 dark:text-white"
                         />
+                      </div>
+                      <div className="sm:col-span-2 flex items-center gap-3">
+                        <input
+                          type="text"
+                          value={v.color}
+                          onChange={(e) => updateVehiculo(idx, 'color', e.target.value)}
+                          placeholder="Color (ej. Blanco, Negro)"
+                          className="appearance-none block flex-1 min-w-0 px-3.5 h-11 border border-zinc-200 dark:border-zinc-700 rounded-xl placeholder-zinc-400 focus:outline-none focus:border-blue-500 text-sm bg-white dark:bg-zinc-900 dark:text-white"
+                        />
+                        <div className="relative group shrink-0">
+                          <label
+                            title="Subir foto del vehículo"
+                            className="relative w-12 h-11 rounded-xl border border-dashed border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 flex items-center justify-center overflow-hidden cursor-pointer hover:border-blue-500 transition-colors active:scale-95"
+                          >
+                            {v.imageUrl ? (
+                              <img src={v.imageUrl} alt={`Vehículo ${idx + 1}`} className="w-full h-full object-cover" />
+                            ) : (
+                              <svg className="w-5 h-5 text-zinc-400 group-hover:text-blue-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0ZM18.75 10.5h.008v.008h-.008V10.5Z" />
+                              </svg>
+                            )}
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={async (e) => {
+                                const file = e.target.files?.[0];
+                                if (!file) return;
+                                try {
+                                  const dataUrl = await comprimirImagen(file, 720);
+                                  updateVehiculo(idx, 'imageUrl', dataUrl);
+                                } catch {
+                                  setErrorMessage('No se pudo procesar la foto del vehículo.');
+                                }
+                              }}
+                            />
+                          </label>
+                          {v.imageUrl && (
+                            <button
+                              type="button"
+                              onClick={() => updateVehiculo(idx, 'imageUrl', '')}
+                              title="Quitar foto"
+                              className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-rose-600 hover:bg-rose-700 text-white flex items-center justify-center text-[10px] font-bold shadow cursor-pointer"
+                            >
+                              ✕
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>

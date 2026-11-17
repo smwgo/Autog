@@ -21,9 +21,9 @@ function isPublicApiRequest(pathname: string, method: string): boolean {
     return true;
   }
   if (pathname === "/api/storage/download" && method === "GET") return true;
-  if (pathname === "/api/storage/upload" && method === "POST") return true;
   if (pathname === "/api/servicios-taller" && method === "GET") return true;
   if (pathname === "/api/productos" && method === "GET") return true;
+  if (pathname === "/api/empresa" && method === "GET") return true;
   if (pathname === "/api/solicitudes" && method === "POST") return true;
   return false;
 }
@@ -99,10 +99,7 @@ export function proxy(request: NextRequest) {
       );
     }
 
-    if (
-      pathname.startsWith("/api/gerencia/usuarios") ||
-      pathname.startsWith("/api/gerencia/configuracion")
-    ) {
+    if (pathname.startsWith("/api/gerencia/")) {
       if (!isAdminSession(session)) {
         return NextResponse.json(
           {

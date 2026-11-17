@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getVerifiedSessionFromRequest, isStaffSession } from "@/lib/signed-tokens";
+import { resolveSessionCustomerScope } from "@/lib/client-scope";
 
 export const dynamic = "force-dynamic";
 
@@ -20,38 +22,63 @@ async function withRetry<T>(fn: () => Promise<T>, maxRetries = 3, delayMs = 600)
 
 export async function GET(request: Request) {
   try {
+    const session = getVerifiedSessionFromRequest(request);
+    if (!session) {
+      return NextResponse.json({ success: false, error: "No autorizado." }, { status: 401 });
+    }
+    const staff = isStaffSession(session);
     const { searchParams } = new URL(request.url);
-    const id = searchParams.get("id");
+    const id = staff ? searchParams.get("id") : null;
 
     return await withRetry(async () => {
+      if (!staff) {
+        const activeCustomer = await resolveSessionCustomerScope(session, true);
+        if (!activeCustomer) {
+          return NextResponse.json({ success: true, profile: null, customers: [] });
+        }
+        let preferences = {
+          notifyServiceReminders: true,
+          notifyRepairStatus: true,
+          notifyPromotions: false,
+        };
+        if (activeCustomer.notes) {
+          try {
+            const parsed = JSON.parse(activeCustomer.notes);
+            if (typeof parsed === "object" && parsed !== null) {
+              preferences = { ...preferences, ...parsed };
+            }
+          } catch {}
+        }
+        return NextResponse.json({
+          success: true,
+          profile: {
+            id: activeCustomer.id,
+            name: activeCustomer.name,
+            identification: activeCustomer.identification,
+            type: activeCustomer.type,
+            phone: activeCustomer.phone,
+            email: activeCustomer.email || "",
+            address: activeCustomer.address || "",
+            vip: activeCustomer.vip,
+            preferences,
+            vehiclesCount: activeCustomer.vehicles?.length || 0,
+          },
+          customers: [],
+        });
+      }
+
       const customers = await prisma.customer.findMany({
         include: { vehicles: true },
         orderBy: { createdAt: "asc" },
         take: 50,
       });
 
-      let activeCustomer = id
+      const activeCustomer = id
         ? customers.find((c) => c.id === id || c.identification === id) || customers[0]
         : customers[0];
 
       if (!activeCustomer) {
-        activeCustomer = await prisma.customer.create({
-          data: {
-            identification: "XAXX010101000",
-            name: "Juan Pérez",
-            type: "Personal",
-            phone: "+593 99 123 4567",
-            email: "juan.perez@autog.com",
-            address: "Av. Principal 123, Sector Norte",
-            vip: true,
-            notes: JSON.stringify({
-              notifyServiceReminders: true,
-              notifyRepairStatus: true,
-              notifyPromotions: false,
-            }),
-          },
-          include: { vehicles: true },
-        });
+        return NextResponse.json({ success: true, profile: null, customers: [] });
       }
 
       let preferences = {
@@ -102,6 +129,11 @@ export async function GET(request: Request) {
 
 export async function PUT(request: Request) {
   try {
+    const session = getVerifiedSessionFromRequest(request);
+    if (!session) {
+      return NextResponse.json({ success: false, error: "No autorizado." }, { status: 401 });
+    }
+    const staff = isStaffSession(session);
     const body = await request.json();
     const { id, name, identification, email, phone, address, type, preferences } = body;
 
@@ -110,6 +142,16 @@ export async function PUT(request: Request) {
         { success: false, error: "ID de cliente requerido." },
         { status: 400 }
       );
+    }
+
+    if (!staff) {
+      const scoped = await resolveSessionCustomerScope(session);
+      if (!scoped || scoped.id !== id) {
+        return NextResponse.json(
+          { success: false, error: "No autorizado para editar este perfil." },
+          { status: 403 }
+        );
+      }
     }
 
     return await withRetry(async () => {
@@ -145,6 +187,13 @@ export async function PUT(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const session = getVerifiedSessionFromRequest(request);
+  if (!isStaffSession(session)) {
+    return NextResponse.json(
+      { success: false, error: "Requiere permisos de personal autorizado." },
+      { status: session ? 403 : 401 }
+    );
+  }
   try {
     const body = await request.json();
     const { name, identification, email, phone, address, type = "Personal" } = body;
@@ -189,6 +238,13 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE(request: Request) {
+  const session = getVerifiedSessionFromRequest(request);
+  if (!isStaffSession(session)) {
+    return NextResponse.json(
+      { success: false, error: "Requiere permisos de personal autorizado." },
+      { status: session ? 403 : 401 }
+    );
+  }
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");

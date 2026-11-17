@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getVerifiedSessionFromRequest, isStaffSession } from "@/lib/signed-tokens";
+import { resolveSessionCustomerScope } from "@/lib/client-scope";
 
 export const dynamic = "force-dynamic";
 
@@ -72,6 +74,11 @@ async function ensureTableExists() {
 
 export async function GET(request: Request) {
   try {
+    const session = getVerifiedSessionFromRequest(request);
+    if (!session) {
+      return NextResponse.json({ success: false, error: "No autorizado." }, { status: 401 });
+    }
+    const staff = isStaffSession(session);
     const { searchParams } = new URL(request.url);
     const busqueda = searchParams.get("busqueda")?.trim() || "";
     const estado = searchParams.get("estado")?.trim() || "";
@@ -82,6 +89,27 @@ export async function GET(request: Request) {
       let query = 'SELECT * FROM "ClientAppointment" WHERE 1=1';
       const params: any[] = [];
       let pIdx = 1;
+
+      if (!staff) {
+        const scoped = await resolveSessionCustomerScope(session, true);
+        const nameCandidates = Array.from(
+          new Set([scoped?.name, session.name].map((v) => String(v || "").trim()).filter(Boolean))
+        );
+        const plateCandidates = (scoped?.vehicles || []).map((v) => v.plate.trim().toUpperCase()).filter(Boolean);
+        const scopeClauses: string[] = [];
+        for (const nm of nameCandidates) {
+          scopeClauses.push(`LOWER("clientName") = LOWER($${pIdx++})`);
+          params.push(nm);
+        }
+        for (const pl of plateCandidates) {
+          scopeClauses.push(`UPPER("plate") = UPPER($${pIdx++})`);
+          params.push(pl);
+        }
+        if (scopeClauses.length === 0) {
+          return NextResponse.json({ success: true, appointments: [], total: 0 });
+        }
+        query += ` AND (${scopeClauses.join(" OR ")})`;
+      }
 
       if (estado && estado !== "TODAS") {
         query += ` AND "status" ILIKE $${pIdx++}`;
@@ -131,6 +159,11 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    const session = getVerifiedSessionFromRequest(request);
+    if (!session) {
+      return NextResponse.json({ success: false, error: "No autorizado." }, { status: 401 });
+    }
+    const staff = isStaffSession(session);
     const body = await request.json();
     const { vehicle, plate, clientName, clientPhone, serviceName, date, timeSlot, notes } = body;
 
@@ -141,12 +174,16 @@ export async function POST(request: Request) {
       );
     }
 
+    const scoped = !staff ? await resolveSessionCustomerScope(session) : null;
+
     return await withRetry(async () => {
       await ensureTableExists();
       const id = generateId();
       const appointmentNumber = `CIT-${Math.floor(1000 + Math.random() * 9000)}`;
       const finalPlate = (plate || "S/P").trim().toUpperCase();
-      const finalClient = (clientName || "Juan Pérez").trim();
+      const finalClient = staff
+        ? (clientName || "Cliente").trim()
+        : (scoped?.name || session.name || "Cliente").trim();
 
       await prisma.$executeRawUnsafe(
         `INSERT INTO "ClientAppointment" ("id", "appointmentNumber", "vehicle", "plate", "clientName", "clientPhone", "serviceName", "date", "timeSlot", "status", "notes", "createdAt", "updatedAt")

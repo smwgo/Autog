@@ -3,7 +3,7 @@
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { PublicMobileNav } from "@/components/PublicMobileNav";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 
 export default function ContactoPage() {
@@ -13,8 +13,23 @@ export default function ContactoPage() {
     subject: "",
     message: ""
   });
+  const [empresaInfo, setEmpresaInfo] = useState<{
+    nombreComercial?: string;
+    direccion?: string;
+    telefono?: string;
+    correo?: string;
+  } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/empresa")
+      .then((r) => r.json())
+      .then((d) => {
+        if (d?.success && d.empresa) setEmpresaInfo(d.empresa);
+      })
+      .catch(() => {});
+  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -26,7 +41,7 @@ export default function ContactoPage() {
     setIsSubmitting(true);
     
     try {
-      await fetch("/api/solicitudes", {
+      const res = await fetch("/api/solicitudes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -37,12 +52,16 @@ export default function ContactoPage() {
           notes: formData.message || null,
         }),
       });
-    } catch (err) {
-      console.error("Error al enviar solicitud:", err);
-    } finally {
-      setIsSubmitting(false);
+      if (!res.ok) {
+        throw new Error("No se pudo enviar tu mensaje.");
+      }
       setIsSubmitted(true);
       setFormData({ name: "", email: "", subject: "", message: "" });
+    } catch (err) {
+      console.error("Error al enviar solicitud:", err);
+      alert("No se pudo enviar tu mensaje. Intenta nuevamente.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -84,8 +103,9 @@ export default function ContactoPage() {
               </div>
               <h3 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 mb-2">Visítanos</h3>
               <p className="text-zinc-600 dark:text-zinc-400">
-                Av. Principal 1234, Zona Industrial.<br />
-                Ciudad, País, 10001
+                {empresaInfo?.direccion || "Dirección principal del taller"}
+                {empresaInfo?.telefono ? <><br />Tel: {empresaInfo.telefono}</> : null}
+                {empresaInfo?.correo ? <><br />{empresaInfo.correo}</> : null}
               </p>
             </div>
 

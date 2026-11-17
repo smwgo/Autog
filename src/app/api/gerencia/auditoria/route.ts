@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma, withRetry } from "@/lib/prisma";
+import { getVerifiedSessionFromRequest } from "@/lib/signed-tokens";
 
 export const dynamic = "force-dynamic";
 
@@ -49,6 +50,13 @@ export async function POST(req: Request) {
 }
 
 export async function DELETE(req: Request) {
+  const session = getVerifiedSessionFromRequest(req);
+  if (!session || (String(session.role || "").toUpperCase() !== "ROOT" && !session.isSuperAdmin)) {
+    return NextResponse.json(
+      { error: "Solo el superadministrador ROOT puede eliminar registros de auditoría." },
+      { status: 403 }
+    );
+  }
   try {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");

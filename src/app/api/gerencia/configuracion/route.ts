@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma, withRetry } from "@/lib/prisma";
 import { getVerifiedSessionFromRequest, isAdminSession } from "@/lib/signed-tokens";
+import { createAuditLog } from "@/lib/audit";
 
 export const dynamic = "force-dynamic";
 
@@ -316,6 +317,14 @@ export async function PUT(req: Request) {
       }
 
       return { success: true };
+    });
+
+    void createAuditLog({
+      module: "CONFIGURACION",
+      action: "Actualización de configuración de empresa / SRI / sucursal",
+      entityName: "CompanyConfig",
+      entityId: "default",
+      level: "ADVERTENCIA",
     });
 
     return NextResponse.json(result);

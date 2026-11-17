@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma, withRetry } from "@/lib/prisma";
 import { emitRealtimeEvent } from "@/lib/realtime";
+import { createAuditLog } from "@/lib/audit";
 import { getVerifiedSessionFromRequest, isStaffSession } from "@/lib/signed-tokens";
 import crypto from "crypto";
 import fs from "fs";
@@ -5766,6 +5767,13 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE(request: Request) {
+  const session = getVerifiedSessionFromRequest(request);
+  if (!isStaffSession(session)) {
+    return NextResponse.json(
+      { success: false, error: "No autorizado para eliminar órdenes." },
+      { status: session ? 403 : 401 }
+    );
+  }
   try {
     const { searchParams } = new URL(request.url);
     const orderId = (searchParams.get("id") || searchParams.get("orderId") || "").trim();
@@ -5798,6 +5806,15 @@ export async function DELETE(request: Request) {
 
       emitRealtimeEvent({ channel: "taller", action: "deleted", entityId: existing[0].id });
       emitRealtimeEvent({ channel: "presupuestos", action: "deleted", entityId: existing[0].id });
+
+      void createAuditLog({
+        userName: session?.name || session?.email || "Staff",
+        module: "TALLER",
+        action: `Orden eliminada ${existing[0].orderNumber}`,
+        entityName: "WorkshopOrder",
+        entityId: existing[0].id,
+        level: "CRÍTICO",
+      });
 
       return NextResponse.json({
         success: true,

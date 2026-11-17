@@ -27,7 +27,7 @@ async function hashPinIfNeeded(rawPin: string): Promise<string> {
   return bcrypt.hash(clean, 10);
 }
 
-async function registrarAuditoria(action: string, details: string, level: string = "INFO") {
+async function registrarAuditoria(action: string, details: string, level: string = "INFO", ipAddress: string = "127.0.0.1") {
   try {
     const now = new Date();
     const dateLabel = now.toLocaleString("es-EC", {
@@ -40,7 +40,7 @@ async function registrarAuditoria(action: string, details: string, level: string
       data: {
         dateLabel,
         userName: "Gerencia",
-        ipAddress: "192.168.1.10",
+        ipAddress,
         module: "USUARIOS",
         action,
         details,
@@ -203,9 +203,18 @@ export async function POST(req: Request) {
         .filter(Boolean)
         .join(", ");
 
+      const reqIp =
+        req.headers.get("cf-connecting-ip") ||
+        req.headers.get("x-client-ip") ||
+        req.headers.get("x-real-ip") ||
+        req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+        "127.0.0.1";
+
       await registrarAuditoria(
         "CREAR_USUARIO",
-        `Usuario ${cleanName} (${cleanEmail}) creado con acceso a: ${modulosActivos || "Ninguno"}`
+        `Usuario ${cleanName} (${cleanEmail}) creado con acceso a: ${modulosActivos || "Ninguno"}`,
+        "INFO",
+        reqIp
       );
 
       return user;
@@ -307,9 +316,18 @@ export async function PUT(req: Request) {
         .filter(Boolean)
         .join(", ");
 
+      const reqIp =
+        req.headers.get("cf-connecting-ip") ||
+        req.headers.get("x-client-ip") ||
+        req.headers.get("x-real-ip") ||
+        req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+        "127.0.0.1";
+
       await registrarAuditoria(
         "ACTUALIZAR_ACCESO_USUARIO",
-        `Permisos actualizados para ${nextName}: [${modulosActivos || "Sin acceso"}] (${nextStatus})`
+        `Permisos actualizados para ${nextName}: [${modulosActivos || "Sin acceso"}] (${nextStatus})`,
+        "INFO",
+        reqIp
       );
 
       return user;
@@ -353,10 +371,18 @@ export async function DELETE(req: Request) {
       await prisma.appUserAccess.delete({ where: { id } });
 
       if (existing) {
+        const reqIp =
+          req.headers.get("cf-connecting-ip") ||
+          req.headers.get("x-client-ip") ||
+          req.headers.get("x-real-ip") ||
+          req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+          "127.0.0.1";
+
         await registrarAuditoria(
           "ELIMINAR_USUARIO",
           `Usuario eliminado: ${existing.name} (${existing.email})`,
-          "ADVERTENCIA"
+          "ADVERTENCIA",
+          reqIp
         );
       }
     });
