@@ -16,6 +16,7 @@ interface RecibidoItem {
   supplierName?: string | null;
   supplierPhone?: string | null;
   deliveryTime?: string | null;
+  supplierNotes?: string | null;
   supplierRespondedAt?: string | null;
 }
 
@@ -298,6 +299,11 @@ export default function RecibidosProveedorPage() {
                       {it.deliveryTime && <span>Envío: {it.deliveryTime}</span>}
                       {fechaResp && <span>{fechaResp}</span>}
                     </div>
+                    {it.supplierNotes && (
+                      <p className="text-xs text-zinc-700 dark:text-zinc-300 bg-zinc-100/80 dark:bg-white/[0.04] border border-zinc-200/70 dark:border-white/10 rounded-lg px-2.5 py-1.5">
+                        Detalle: {it.supplierNotes}
+                      </p>
+                    )}
                   </div>
 
                   <div className="text-right shrink-0">

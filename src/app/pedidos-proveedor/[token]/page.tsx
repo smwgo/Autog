@@ -333,7 +333,7 @@ export default function PaginaCatalogoProveedor() {
                 it.supplierAvailability && it.supplierAvailability !== "PENDIENTE"
                   ? it.supplierAvailability
                   : "SI_HAY",
-              deliveryTime: it.deliveryTime || "30 min",
+              deliveryTime: (it.deliveryTime || "").trim() || "30 min",
             }));
             setItems(loadedItems);
             setFotos(data.fotos || []);
@@ -400,7 +400,7 @@ export default function PaginaCatalogoProveedor() {
             isService: it.isService,
             supplierAvailability: it.supplierAvailability || "SI_HAY",
             supplierPrice: Number(it.supplierPrice || 0),
-            deliveryTime: it.deliveryTime || "30 min",
+            deliveryTime: (it.deliveryTime || "").trim() || "30 min",
             shippingMethod: it.shippingMethod || "",
             supplierNotes: it.supplierNotes || "",
             supplierName: nombreProveedor.trim() || it.supplierName || "Proveedor",
@@ -459,13 +459,9 @@ export default function PaginaCatalogoProveedor() {
     const num = Number(raw);
     const d = Number.isFinite(num) && num > 0 ? new Date(num) : new Date(String(raw));
     if (Number.isNaN(d.getTime())) return String(raw);
-    return d.toLocaleString("es-EC", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    const dias = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+    const meses = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+    return `${dias[d.getDay()]} ${d.getDate()} de ${meses[d.getMonth()]} ${d.getFullYear()}`;
   }, [paramSentAt, order]);
 
   return (
@@ -615,97 +611,6 @@ export default function PaginaCatalogoProveedor() {
                     </svg>
                   )}
                 </button>
-
-                <div
-                  className={`rounded-xl border px-3.5 py-2.5 sm:text-right shrink-0 ${
-                    temaOscuro ? "bg-black/30 border-white/10" : "bg-zinc-50 border-zinc-200"
-                  }`}
-                >
-                {proveedoresUrl.length > 1 && !editandoProveedor ? (
-                  <div className="flex items-center sm:justify-end gap-1.5">
-                    <select
-                      value={nombreProveedor}
-                      onChange={(e) => {
-                        const sel = proveedoresUrl.find((p: any) => p.name === e.target.value);
-                        setNombreProveedor(e.target.value);
-                        if (sel?.phone) setTelefonoProveedor(sel.phone);
-                      }}
-                      className={`bg-transparent font-bold text-sm focus:outline-none cursor-pointer ${
-                        temaOscuro ? "text-emerald-400" : "text-emerald-600"
-                      }`}
-                    >
-                      {proveedoresUrl.map((p: any, idx: number) => (
-                        <option
-                          key={idx}
-                          value={p.name}
-                          className={temaOscuro ? "bg-[#111114] text-white" : "bg-white text-zinc-900"}
-                        >
-                          {p.name}
-                        </option>
-                      ))}
-                    </select>
-                    <button
-                      type="button"
-                      onClick={() => setEditandoProveedor(true)}
-                      className="text-[11px] text-zinc-500 hover:text-zinc-300 cursor-pointer"
-                      title="Editar proveedor"
-                    >
-                      ✎
-                    </button>
-                  </div>
-                ) : editandoProveedor ? (
-                  <div className="space-y-1.5 min-w-[180px]">
-                    <div className="flex items-center gap-1">
-                      <input
-                        type="text"
-                        value={nombreProveedor}
-                        onChange={(e) => setNombreProveedor(e.target.value)}
-                        placeholder="Proveedor"
-                        className="w-full h-7 px-2 rounded-lg bg-zinc-900 border border-white/15 text-xs font-bold text-emerald-400 focus:outline-none focus:border-emerald-500"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setEditandoProveedor(false)}
-                        className="h-7 px-2 rounded-lg bg-white/10 text-[11px] text-zinc-300 hover:text-white cursor-pointer"
-                      >
-                        ✓
-                      </button>
-                    </div>
-                    <input
-                      type="text"
-                      value={telefonoProveedor}
-                      onChange={(e) => setTelefonoProveedor(e.target.value)}
-                      placeholder="WhatsApp"
-                      className="w-full h-7 px-2 rounded-lg bg-zinc-900 border border-white/15 text-xs text-zinc-300 focus:outline-none focus:border-blue-500"
-                    />
-                  </div>
-                ) : (
-                  <div className="flex items-center sm:justify-end gap-2">
-                    <div>
-                      <div
-                        onClick={() => setEditandoProveedor(true)}
-                        className="text-sm font-bold text-emerald-400 cursor-pointer hover:underline"
-                        title="Clic para editar proveedor"
-                      >
-                        {nombreProveedor || "Proveedor"}
-                      </div>
-                      {telefonoProveedor && (
-                        <div className="text-[11px] font-mono text-zinc-400">
-                          {telefonoProveedor}
-                        </div>
-                      )}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setEditandoProveedor(true)}
-                      className="text-xs text-zinc-500 hover:text-zinc-300 cursor-pointer"
-                      title="Editar proveedor"
-                    >
-                      ✎
-                    </button>
-                  </div>
-                )}
-                </div>
               </div>
             </header>
 
@@ -962,33 +867,45 @@ export default function PaginaCatalogoProveedor() {
                             />
                           </div>
 
-                          <select
+                          <input
+                            type="text"
                             disabled={disp === "NO_HAY"}
-                            value={item.deliveryTime || "30 min"}
+                            value={item.deliveryTime ?? "30 min"}
                             aria-label="Tiempo de envío"
+                            placeholder="Ej: 30 min"
                             onChange={(e) =>
                               actualizarCampoItem(item.id, {
                                 supplierAvailability: "SI_HAY",
                                 deliveryTime: e.target.value,
                               })
                             }
-                            className={`h-9 px-2.5 rounded-xl border focus:border-amber-500 font-bold text-base sm:text-xs focus:outline-none cursor-pointer disabled:opacity-40 ${
+                            className={`w-28 sm:w-32 h-9 px-2.5 rounded-xl border focus:border-amber-500 font-bold text-base sm:text-xs focus:outline-none disabled:opacity-40 ${
                               temaOscuro
-                                ? "bg-black/40 border-white/10 text-amber-400"
-                                : "bg-zinc-50 border-zinc-300 text-amber-700"
+                                ? "bg-black/40 border-white/10 text-amber-400 placeholder:text-zinc-500"
+                                : "bg-zinc-50 border-zinc-300 text-amber-700 placeholder:text-zinc-400"
                             }`}
-                          >
-                            {OPCIONES_TIEMPO.map((t) => (
-                              <option
-                                key={t}
-                                value={t}
-                                className={temaOscuro ? "bg-[#111114] text-white" : "bg-white text-zinc-900"}
-                              >
-                                {t}
-                              </option>
-                            ))}
-                          </select>
+                          />
                         </div>
+                      </div>
+
+                      {/* Campo Detalle / Nota del Proveedor */}
+                      <div>
+                        <input
+                          type="text"
+                          value={item.supplierNotes || ""}
+                          onChange={(e) =>
+                            actualizarCampoItem(item.id, {
+                              supplierNotes: e.target.value,
+                            })
+                          }
+                          placeholder="Detalle o nota (ej: marca, estado, garantía, observación)..."
+                          aria-label="Detalle o nota"
+                          className={`w-full h-9 px-3 rounded-xl border text-sm sm:text-xs focus:outline-none focus:border-purple-500 transition-colors ${
+                            temaOscuro
+                              ? "bg-black/30 border-white/10 text-zinc-200 placeholder:text-zinc-500"
+                              : "bg-zinc-50 border-zinc-200 text-zinc-800 placeholder:text-zinc-400"
+                          }`}
+                        />
                       </div>
 
                       {/* Reproductor de Audio Desplegable */}
