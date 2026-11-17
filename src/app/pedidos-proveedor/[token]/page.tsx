@@ -491,14 +491,30 @@ export default function PaginaCatalogoProveedor() {
       {/* Contenido Principal Estilo Propuesta Limpio */}
       <main className="max-w-4xl mx-auto px-3 sm:px-6 py-4 sm:py-6 space-y-3.5">
         {cargando ? (
-          <div className="p-14 text-center space-y-3 bg-[#111114] rounded-2xl border border-white/10">
+          <div
+            className={`p-14 text-center space-y-3 rounded-2xl border ${
+              temaOscuro
+                ? "bg-[#111114] border-white/10"
+                : "bg-white border-zinc-200 shadow-sm"
+            }`}
+          >
             <div className="w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto" />
-            <p className="text-xs text-zinc-400">Cargando...</p>
+            <p className={`text-xs ${temaOscuro ? "text-zinc-400" : "text-zinc-500"}`}>
+              Cargando...
+            </p>
           </div>
         ) : error ? (
-          <div className="p-10 text-center bg-[#111114] rounded-2xl border border-rose-500/30 space-y-2">
+          <div
+            className={`p-10 text-center rounded-2xl border space-y-2 ${
+              temaOscuro
+                ? "bg-[#111114] border-rose-500/30"
+                : "bg-white border-rose-200 shadow-sm"
+            }`}
+          >
             <div className="text-xl">⚠️</div>
-            <h2 className="text-sm font-bold text-white">{error}</h2>
+            <h2 className={`text-sm font-bold ${temaOscuro ? "text-white" : "text-zinc-900"}`}>
+              {error}
+            </h2>
           </div>
         ) : (
           <>
@@ -632,10 +648,16 @@ export default function PaginaCatalogoProveedor() {
                         setNombreProveedor(e.target.value);
                         if (sel?.phone) setTelefonoProveedor(sel.phone);
                       }}
-                      className="bg-transparent text-emerald-400 font-bold text-sm focus:outline-none cursor-pointer"
+                      className={`bg-transparent font-bold text-sm focus:outline-none cursor-pointer ${
+                        temaOscuro ? "text-emerald-400" : "text-emerald-600"
+                      }`}
                     >
                       {proveedoresUrl.map((p: any, idx: number) => (
-                        <option key={idx} value={p.name} className="bg-[#111114] text-white">
+                        <option
+                          key={idx}
+                          value={p.name}
+                          className={temaOscuro ? "bg-[#111114] text-white" : "bg-white text-zinc-900"}
+                        >
                           {p.name}
                         </option>
                       ))}
@@ -742,38 +764,72 @@ export default function PaginaCatalogoProveedor() {
                   return (
                     <div
                       key={item.id || idx}
-                      className={`rounded-2xl bg-[#111114] border p-4 transition-all space-y-3 ${
+                      className={`rounded-2xl border p-4 transition-all space-y-3 ${
+                        temaOscuro ? "bg-[#111114]" : "bg-white shadow-sm"
+                      } ${
                         confirmado
-                          ? "border-emerald-500/40"
+                          ? temaOscuro
+                            ? "border-emerald-500/40"
+                            : "border-emerald-400"
                           : disp === "NO_HAY"
-                          ? "border-rose-500/30"
-                          : "border-white/10"
+                          ? temaOscuro
+                            ? "border-rose-500/30"
+                            : "border-rose-300"
+                          : temaOscuro
+                          ? "border-white/10"
+                          : "border-zinc-200"
                       }`}
                     >
                       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3.5">
                         {/* Izquierda: Cantidad + Nombre + Detalle + Evidencia */}
                         <div className="space-y-1.5 flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="px-2 py-0.5 rounded-md bg-white/[0.06] border border-white/10 text-zinc-200 text-xs font-bold tabular-nums">
+                            <span
+                              className={`px-2 py-0.5 rounded-md border text-xs font-bold tabular-nums ${
+                                temaOscuro
+                                  ? "bg-white/[0.06] border-white/10 text-zinc-200"
+                                  : "bg-zinc-100 border-zinc-200 text-zinc-800"
+                              }`}
+                            >
                               {item.qty || 1}x
                             </span>
-                            <h3 className="text-sm sm:text-base font-bold text-white leading-snug truncate">
+                            <h3
+                              className={`text-sm sm:text-base font-bold leading-snug truncate ${
+                                temaOscuro ? "text-white" : "text-zinc-900"
+                              }`}
+                            >
                               {item.name}
                             </h3>
                             {item.vistaLabel && (
-                              <span className="px-2 py-0.5 rounded-md bg-blue-500/10 border border-blue-500/25 text-blue-300 text-[11px] font-medium">
+                              <span
+                                className={`px-2 py-0.5 rounded-md border text-[11px] font-medium ${
+                                  temaOscuro
+                                    ? "bg-blue-500/10 border-blue-500/25 text-blue-300"
+                                    : "bg-blue-50 border-blue-200 text-blue-700"
+                                }`}
+                              >
                                 {item.vistaLabel}
                               </span>
                             )}
                             {confirmado && (
-                              <span className="px-2 py-0.5 rounded-md bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-[11px] font-bold">
+                              <span
+                                className={`px-2 py-0.5 rounded-md border text-[11px] font-bold ${
+                                  temaOscuro
+                                    ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-300"
+                                    : "bg-emerald-50 border-emerald-200 text-emerald-700"
+                                }`}
+                              >
                                 ✓ Confirmado
                               </span>
                             )}
                           </div>
 
                           {detalleTexto && (
-                            <p className="text-xs text-zinc-400 leading-relaxed">
+                            <p
+                              className={`text-xs leading-relaxed ${
+                                temaOscuro ? "text-zinc-400" : "text-zinc-600"
+                              }`}
+                            >
                               {detalleTexto}
                             </p>
                           )}
@@ -790,7 +846,11 @@ export default function PaginaCatalogoProveedor() {
                                       titulo: item.name,
                                     })
                                   }
-                                  className="px-2.5 py-1 rounded-lg bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/25 text-sky-300 text-[11px] font-semibold inline-flex items-center gap-1 cursor-pointer transition-colors"
+                                  className={`px-2.5 py-1 rounded-lg border text-[11px] font-semibold inline-flex items-center gap-1 cursor-pointer transition-colors ${
+                                    temaOscuro
+                                      ? "bg-sky-500/10 hover:bg-sky-500/20 border-sky-500/25 text-sky-300"
+                                      : "bg-sky-50 hover:bg-sky-100 border-sky-200 text-sky-700"
+                                  }`}
                                 >
                                   <span>📷</span>
                                   <span>Foto{fotosList.length > 1 ? ` (${fotosList.length})` : ""}</span>
@@ -806,7 +866,11 @@ export default function PaginaCatalogoProveedor() {
                                       titulo: item.name,
                                     })
                                   }
-                                  className="px-2.5 py-1 rounded-lg bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/25 text-purple-300 text-[11px] font-semibold inline-flex items-center gap-1 cursor-pointer transition-colors"
+                                  className={`px-2.5 py-1 rounded-lg border text-[11px] font-semibold inline-flex items-center gap-1 cursor-pointer transition-colors ${
+                                    temaOscuro
+                                      ? "bg-purple-500/10 hover:bg-purple-500/20 border-purple-500/25 text-purple-300"
+                                      : "bg-purple-50 hover:bg-purple-100 border-purple-200 text-purple-700"
+                                  }`}
                                 >
                                   <span>🎥</span>
                                   <span>Video{videosList.length > 1 ? ` (${videosList.length})` : ""}</span>
@@ -825,7 +889,9 @@ export default function PaginaCatalogoProveedor() {
                                   className={`px-2.5 py-1 rounded-lg border text-[11px] font-semibold inline-flex items-center gap-1 cursor-pointer transition-colors ${
                                     audioAbierto
                                       ? "bg-amber-500 text-black border-amber-400"
-                                      : "bg-amber-500/10 hover:bg-amber-500/20 border-amber-500/25 text-amber-300"
+                                      : temaOscuro
+                                      ? "bg-amber-500/10 hover:bg-amber-500/20 border-amber-500/25 text-amber-300"
+                                      : "bg-amber-50 hover:bg-amber-100 border-amber-200 text-amber-700"
                                   }`}
                                 >
                                   <span>🎙️</span>
@@ -838,7 +904,13 @@ export default function PaginaCatalogoProveedor() {
 
                         {/* Derecha: Controles limpios en una fila */}
                         <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 shrink-0">
-                          <div className="inline-flex rounded-xl bg-black/40 border border-white/10 p-0.5">
+                          <div
+                            className={`inline-flex rounded-xl border p-0.5 ${
+                              temaOscuro
+                                ? "bg-black/40 border-white/10"
+                                : "bg-zinc-100 border-zinc-200"
+                            }`}
+                          >
                             <button
                               type="button"
                               onClick={() =>
@@ -849,7 +921,9 @@ export default function PaginaCatalogoProveedor() {
                               className={`h-9 sm:h-8 px-3.5 sm:px-3 rounded-lg text-xs font-bold cursor-pointer transition-all touch-manipulation ${
                                 disp === "SI_HAY"
                                   ? "bg-emerald-600 text-white"
-                                  : "text-zinc-400 hover:text-white"
+                                  : temaOscuro
+                                  ? "text-zinc-400 hover:text-white"
+                                  : "text-zinc-600 hover:text-zinc-900"
                               }`}
                             >
                               Sí
@@ -865,7 +939,9 @@ export default function PaginaCatalogoProveedor() {
                               className={`h-9 sm:h-8 px-3.5 sm:px-3 rounded-lg text-xs font-bold cursor-pointer transition-all touch-manipulation ${
                                 disp === "NO_HAY"
                                   ? "bg-rose-600 text-white"
-                                  : "text-zinc-400 hover:text-white"
+                                  : temaOscuro
+                                  ? "text-zinc-400 hover:text-white"
+                                  : "text-zinc-600 hover:text-zinc-900"
                               }`}
                             >
                               No
@@ -873,7 +949,11 @@ export default function PaginaCatalogoProveedor() {
                           </div>
 
                           <div className="relative">
-                            <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-emerald-400">
+                            <span
+                              className={`absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-bold ${
+                                temaOscuro ? "text-emerald-400" : "text-emerald-600"
+                              }`}
+                            >
                               $
                             </span>
                             <input
@@ -891,7 +971,11 @@ export default function PaginaCatalogoProveedor() {
                               }
                               placeholder="0.00"
                               aria-label="Precio"
-                              className="w-24 sm:w-28 h-9 pl-6 pr-2.5 rounded-xl bg-black/40 border border-white/10 focus:border-emerald-500 text-base sm:text-sm font-bold text-white placeholder:text-zinc-500 focus:outline-none disabled:opacity-40 tabular-nums"
+                              className={`w-24 sm:w-28 h-9 pl-6 pr-2.5 rounded-xl border focus:border-emerald-500 text-base sm:text-sm font-bold focus:outline-none disabled:opacity-40 tabular-nums ${
+                                temaOscuro
+                                  ? "bg-black/40 border-white/10 text-white placeholder:text-zinc-500"
+                                  : "bg-zinc-50 border-zinc-300 text-zinc-900 placeholder:text-zinc-400"
+                              }`}
                             />
                           </div>
 
@@ -905,10 +989,18 @@ export default function PaginaCatalogoProveedor() {
                                 deliveryTime: e.target.value,
                               })
                             }
-                            className="h-9 px-2.5 rounded-xl bg-black/40 border border-white/10 focus:border-amber-500 text-amber-400 font-bold text-base sm:text-xs focus:outline-none cursor-pointer disabled:opacity-40"
+                            className={`h-9 px-2.5 rounded-xl border focus:border-amber-500 font-bold text-base sm:text-xs focus:outline-none cursor-pointer disabled:opacity-40 ${
+                              temaOscuro
+                                ? "bg-black/40 border-white/10 text-amber-400"
+                                : "bg-zinc-50 border-zinc-300 text-amber-700"
+                            }`}
                           >
                             {OPCIONES_TIEMPO.map((t) => (
-                              <option key={t} value={t} className="bg-[#111114] text-white">
+                              <option
+                                key={t}
+                                value={t}
+                                className={temaOscuro ? "bg-[#111114] text-white" : "bg-white text-zinc-900"}
+                              >
                                 {t}
                               </option>
                             ))}
@@ -918,7 +1010,11 @@ export default function PaginaCatalogoProveedor() {
 
                       {/* Reproductor de Audio Desplegable */}
                       {audioAbierto && audiosList.length > 0 && (
-                        <div className="pt-2 border-t border-white/10 space-y-2 animate-fade-in">
+                        <div
+                          className={`pt-2 border-t space-y-2 animate-fade-in ${
+                            temaOscuro ? "border-white/10" : "border-zinc-200"
+                          }`}
+                        >
                           {audiosList.map((aud, aIdx) => (
                             <MiniAudioPlayerProveedor
                               key={aud.id || `aud-${aIdx}`}
@@ -940,13 +1036,23 @@ export default function PaginaCatalogoProveedor() {
 
       {/* Barra Inferior Fija Limpia */}
       {!cargando && !error && items.length > 0 && (
-        <div className="fixed bottom-0 inset-x-0 z-30 bg-[#09090b]/95 backdrop-blur-xl border-t border-white/10 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+        <div
+          className={`fixed bottom-0 inset-x-0 z-30 backdrop-blur-xl border-t px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] transition-colors ${
+            temaOscuro
+              ? "bg-[#09090b]/95 border-white/10"
+              : "bg-white/95 border-zinc-200 shadow-[0_-4px_20px_rgba(0,0,0,0.06)]"
+          }`}
+        >
           <div className="max-w-4xl mx-auto flex items-center justify-between gap-3">
             <div className="flex items-baseline gap-3">
-              <span className="text-base sm:text-lg font-black text-emerald-400 font-mono">
+              <span
+                className={`text-base sm:text-lg font-black font-mono ${
+                  temaOscuro ? "text-emerald-400" : "text-emerald-600"
+                }`}
+              >
                 ${resumenTotal.totalValor.toFixed(2)}
               </span>
-              <span className="text-xs text-zinc-400">
+              <span className={`text-xs ${temaOscuro ? "text-zinc-400" : "text-zinc-600"}`}>
                 {resumenTotal.disponiblesCount}/{items.length} disponibles
               </span>
             </div>
