@@ -21,6 +21,7 @@ import {
   procesarYNormalizarAudioBlob,
   esDispositivoMovilAudio,
 } from "@/lib/taller-audio-processor";
+import { MiniAudioPlayer } from "@/components/taller/MiniAudioPlayer";
 
 export interface ModalNuevaOrdenProps {
   isOpen?: boolean;
@@ -5651,12 +5652,12 @@ export default function ModalNuevaOrdenTrabajo({
                                       {audioBlobTemp?.type || "audio/webm"}
                                     </span>
                                   </div>
-                                  <audio
-                                    src={audioUrlTemp || undefined}
-                                    controls
-                                    className="w-full h-9 rounded-lg"
-                                    preload="metadata"
-                                  />
+                                  {audioUrlTemp && (
+                                    <MiniAudioPlayer
+                                      src={audioUrlTemp || ""}
+                                      initialDuration={segundosAudio}
+                                    />
+                                  )}
                                 </div>
 
                                 {/* Estado de Transcripción */}
@@ -5871,11 +5872,9 @@ export default function ModalNuevaOrdenTrabajo({
 
                                   {/* Reproductor de audio */}
                                   {audio.audioUrl && (
-                                    <audio
+                                    <MiniAudioPlayer
                                       src={audio.audioUrl}
-                                      controls
-                                      className="w-full h-7 rounded"
-                                      preload="none"
+                                      initialDuration={audio.durationSeconds}
                                     />
                                   )}
 

@@ -19,6 +19,7 @@ const ModalCategoriasTaller = dynamic(() => import("./components/ModalCategorias
 const CatalogoProductosServiciosTaller = dynamic(() => import("@/components/taller/CatalogoProductosServiciosTaller"), { ssr: false });
 import { getClientActiveBranch, getClientUserBranch } from "@/lib/branch";
 import { VoiceNoteRecord } from "@/lib/transcription";
+import { procesarYNormalizarAudioBlob } from "@/lib/taller-audio-processor";
 import { useRealtimeSync } from "@/hooks/useRealtimeSync";
 
 // ============================================================================
@@ -3313,7 +3314,13 @@ export default function TallerPanel() {
     }
 
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        },
+      });
       const mimeType = MediaRecorder.isTypeSupported("audio/webm")
         ? "audio/webm"
         : MediaRecorder.isTypeSupported("audio/mp4")
@@ -3333,21 +3340,21 @@ export default function TallerPanel() {
       recorder.onstop = async () => {
         stream.getTracks().forEach((track) => track.stop());
         const durationSec = Math.max(1, Math.round((Date.now() - startTime) / 1000));
-        const blob = new Blob(audioChunksRef.current, { type: mimeType });
-        const ext = mimeType.includes("mp4") ? "m4a" : mimeType.includes("ogg") ? "ogg" : "webm";
-        const file = new File([blob], `nota-voz-${Date.now()}.${ext}`, { type: mimeType });
+        const rawBlob = new Blob(audioChunksRef.current, { type: mimeType });
 
         try {
           setSubiendoAudioEtapa5(true);
-          const audioUrl = await subirArchivoACloudflareR2(file, "taller_notas_voz");
+          const processed = await procesarYNormalizarAudioBlob(rawBlob, `nota-voz-${Date.now()}`);
+          const finalDuration = processed.durationSeconds || durationSec;
+          const audioUrl = await subirArchivoACloudflareR2(processed.file, "taller_notas_voz");
           if (audioUrl) {
             const msgVoz: InternalChatMessage = {
               id: `voz-${Date.now()}`,
               author: etapa5ChatAutor || etapa5TecnicosAsignados[0]?.name || "Técnico",
               role: "Nota de Voz",
-              text: `🎙️ Nota de voz (${durationSec}s)`,
+              text: `🎙️ Nota de voz (${finalDuration}s)`,
               audioUrl,
-              audioDurationSec: durationSec,
+              audioDurationSec: finalDuration,
               createdAt: new Date().toLocaleTimeString("es-EC", {
                 hour: "2-digit",
                 minute: "2-digit",
