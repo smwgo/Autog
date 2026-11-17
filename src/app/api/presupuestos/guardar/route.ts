@@ -30,9 +30,9 @@ export async function POST(request: Request) {
     }
 
     return await withRetry(async () => {
-      // Calcular total de la orden con impuestos y descuentos
-      const totalRepuestos = items.reduce((acc: number, it: any) => acc + (Number(it.price || 0) * Number(it.qty || 1)), 0);
-      const totalServicios = services.reduce((acc: number, sv: any) => acc + (Number(sv.price || 0) * Number(sv.qty || 1)), 0);
+      // Calcular total de la orden sumando los valores de la columna PVP de productos y servicios
+      const totalRepuestos = items.reduce((acc: number, it: any) => acc + Number(it.price || 0), 0);
+      const totalServicios = services.reduce((acc: number, sv: any) => acc + Number(sv.price || 0), 0);
       const subtotalCalculado = Number((totalRepuestos + totalServicios).toFixed(2));
 
       const taxRate = Number(quoteTaxRate !== undefined ? quoteTaxRate : 15);

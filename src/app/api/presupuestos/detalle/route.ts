@@ -491,28 +491,42 @@ export async function GET(request: Request) {
       const seenSrvNames = new Set<string>();
       const combinedServices: any[] = [];
 
-      // Primero agregar servicios con estructura completa desde itemsJson (rawExtraServices)
-      for (const sv of rawExtraServices) {
-        if (!sv) continue;
+      // Mapear objetos de servicesJson para dar prioridad a los precios editados en Propuesta
+      const savedServicesObjects = (Array.isArray(services) ? services : []).filter(
+        (sv) => sv && typeof sv === "object"
+      );
+
+      // Primero agregar servicios con estructura completa desde servicesJson (donde Propuesta guarda los precios editados)
+      for (const sv of savedServicesObjects) {
         const idKey = sv.id ? String(sv.id) : "";
         const normName = String(sv.name || sv.description || "").trim().toLowerCase().replace(/^\d+x\s+/i, "");
+        if (!normName && !idKey) continue;
         if (idKey && seenSrvIds.has(idKey)) continue;
+        if (partNamesSet.has(normName)) continue;
         if (idKey) seenSrvIds.add(idKey);
         if (normName) seenSrvNames.add(normName);
         combinedServices.push(sv);
       }
 
-      // Luego agregar servicios de servicesJson que no sean productos ni duplicados de los anteriores
-      for (const sv of Array.isArray(services) ? services : []) {
+      // Luego agregar servicios desde itemsJson (rawExtraServices) que no hayan sido ya incluidos
+      for (const sv of rawExtraServices) {
         if (!sv) continue;
-        const isStr = typeof sv === "string";
-        const idKey = !isStr && sv.id ? String(sv.id) : "";
-        const normName = String(isStr ? sv : (sv.name || sv.description || "")).trim().toLowerCase().replace(/^\d+x\s+/i, "");
-        if (!normName) continue;
+        const idKey = sv.id ? String(sv.id) : "";
+        const normName = String(sv.name || sv.description || "").trim().toLowerCase().replace(/^\d+x\s+/i, "");
         if (idKey && seenSrvIds.has(idKey)) continue;
+        if (normName && seenSrvNames.has(normName)) continue;
+        if (idKey) seenSrvIds.add(idKey);
+        if (normName) seenSrvNames.add(normName);
+        combinedServices.push(sv);
+      }
+
+      // Finalmente agregar servicios tipo string de servicesJson que no sean duplicados
+      for (const sv of Array.isArray(services) ? services : []) {
+        if (!sv || typeof sv !== "string") continue;
+        const normName = String(sv).trim().toLowerCase().replace(/^\d+x\s+/i, "");
+        if (!normName) continue;
         if (partNamesSet.has(normName)) continue;
         if (seenSrvNames.has(normName)) continue;
-        if (idKey) seenSrvIds.add(idKey);
         seenSrvNames.add(normName);
         combinedServices.push(sv);
       }

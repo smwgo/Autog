@@ -241,7 +241,7 @@ export default function FacturasPosPage() {
                 </svg>
               </Link>
               <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50 truncate">
-                Historial
+                Facturas
               </h1>
               <span className="inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold bg-blue-600 text-white shadow-sm shadow-blue-500/20 shrink-0">
                 {ventas.length}

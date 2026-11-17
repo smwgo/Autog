@@ -31,7 +31,7 @@ const modules = [
     ),
   },
   {
-    title: "Historial",
+    title: "Facturas",
     href: "/pos/facturas",
     color: "bg-indigo-500",
     gradient: "from-indigo-500 to-purple-600",

@@ -278,6 +278,19 @@ function formatoPrimeraMayuscula(texto?: string): string {
   return res.replace(/\(([a-záéíóúñ])/gi, (m) => m.toUpperCase());
 }
 
+function formatearPrecioLimpio(val: number | string | null | undefined): string {
+  const n = Number(val || 0);
+  if (!Number.isFinite(n)) return "0";
+  return Number.isInteger(n) ? String(n) : n.toFixed(2).replace(/\.?0+$/, "");
+}
+
+// Monto para liquidación: sin ".00" en enteros, 2 decimales si los tiene (ej. 181, 27.15, 27.50)
+function formatoMontoLiquidacion(val: number | string | null | undefined): string {
+  const n = Math.round(Number(val || 0) * 100) / 100;
+  if (!Number.isFinite(n)) return "0";
+  return Number.isInteger(n) ? String(n) : n.toFixed(2);
+}
+
 function clasificarItem(it: any): {
   modulo: "Taller" | "Lubricentro" | "Car Wash" | "Tecnicentro";
   moduloIcon: string;
@@ -775,6 +788,7 @@ export default function PaginaDetallePropuesta() {
   const [estadoSync, setEstadoSync] = useState<"guardado" | "guardando" | "error">("guardado");
   const [ultimaSync, setUltimaSync] = useState<Date | null>(null);
   const debounceTimerRef = React.useRef<NodeJS.Timeout | null>(null);
+  const lastLocalEditAtRef = React.useRef<number>(0);
 
   // Modal para crear nuevo hallazgo / evidencia
   const [modalNuevoHallazgo, setModalNuevoHallazgo] = useState<{
@@ -928,36 +942,52 @@ export default function PaginaDetallePropuesta() {
     const seenSrvKeys = new Set<string>();
     const seenSrvNames = new Set<string>();
 
-    // Primero agregar servicios con estructura completa desde itemsJson (extraServicesFromItems)
-    for (const sv of extraServicesFromItems) {
-      if (!sv) continue;
+    // Primero agregar objetos completos de servicesJson (donde Propuesta guarda los precios editados)
+    for (const sv of rawServicesList) {
+      if (!sv || typeof sv !== "object") continue;
       const key = sv?.id ? String(sv.id) : "";
       const normName = String(sv?.name || "").trim().toLowerCase().replace(/^\d+x\s+/i, "");
+      if (!normName && !key) continue;
       if (key && seenSrvKeys.has(key)) continue;
+      if (partNamesSet.has(normName)) continue;
       if (key) seenSrvKeys.add(key);
       if (normName) seenSrvNames.add(normName);
       combinedRawServices.push(sv);
     }
 
-    // Luego agregar servicios de servicesJson filtrando duplicados o nombres que sean productos
-    for (const sv of rawServicesList) {
+    // Luego agregar servicios desde itemsJson (extraServicesFromItems) que no hayan sido incluidos
+    for (const sv of extraServicesFromItems) {
       if (!sv) continue;
-      const isStr = typeof sv === "string";
-      const key = !isStr && sv?.id ? String(sv.id) : "";
-      const normName = String(isStr ? sv : (sv?.name || "")).trim().toLowerCase().replace(/^\d+x\s+/i, "");
-      if (!normName) continue;
+      const key = sv?.id ? String(sv.id) : "";
+      const normName = String(sv?.name || "").trim().toLowerCase().replace(/^\d+x\s+/i, "");
       if (key && seenSrvKeys.has(key)) continue;
+      if (normName && seenSrvNames.has(normName)) continue;
+      if (key) seenSrvKeys.add(key);
+      if (normName) seenSrvNames.add(normName);
+      combinedRawServices.push(sv);
+    }
+
+    // Finalmente agregar servicios tipo string de servicesJson que no sean duplicados
+    for (const sv of rawServicesList) {
+      if (!sv || typeof sv !== "string") continue;
+      const normName = String(sv).trim().toLowerCase().replace(/^\d+x\s+/i, "");
+      if (!normName) continue;
       if (partNamesSet.has(normName)) continue;
       if (seenSrvNames.has(normName)) continue;
-      if (key) seenSrvKeys.add(key);
       seenSrvNames.add(normName);
       combinedRawServices.push(sv);
     }
 
+    const usedSrvIds = new Set<string>();
     // Inicializar servicios preservando campos manuales y de proveedor
     const srvInit: ServicioPropuesta[] = combinedRawServices.map((sv: any, idx: number) => {
       const isStr = typeof sv === "string";
       const svObj = isStr ? { id: `srv_${idx}`, name: sv, price: 0, category: "Taller" } : sv;
+      let uniqueSrvId = String(svObj.id || `srv_${idx}`);
+      if (usedSrvIds.has(uniqueSrvId)) {
+        uniqueSrvId = `${uniqueSrvId}_${idx}`;
+      }
+      usedSrvIds.add(uniqueSrvId);
       const esManualSrv = Boolean(
         svObj.isManual ||
         String(svObj.id || "").startsWith("reg-") ||
@@ -966,6 +996,7 @@ export default function PaginaDetallePropuesta() {
       const precioSrvResuelto = resolverPrecioServicioCatalogo(svObj.name, svObj.price, esManualSrv);
       return {
         ...svObj,
+        id: uniqueSrvId,
         price: precioSrvResuelto,
         qty: Number(svObj.qty || 1),
         agregadoEnPropuesta: Boolean(
@@ -996,10 +1027,16 @@ export default function PaginaDetallePropuesta() {
       };
     });
 
+    const usedItemIds = new Set<string>();
     // Inicializar repuestos con origen deducido y flag de inStock
     const itemsInit: ItemPropuesta[] = rawItemsList
       .filter((it: any) => it && it.type !== "SERVICE")
-      .map((it: any) => {
+      .map((it: any, idx: number) => {
+        let uniqueItemId = String(it.id || `rep_${idx}`);
+        if (usedItemIds.has(uniqueItemId)) {
+          uniqueItemId = `${uniqueItemId}_${idx}`;
+        }
+        usedItemIds.add(uniqueItemId);
         const esManualPart = Boolean(
           it.isManual ||
           String(it.id || "").startsWith("reg-") ||
@@ -1009,6 +1046,7 @@ export default function PaginaDetallePropuesta() {
         const cantProd = Number(it.qty || 1);
         return {
           ...it,
+          id: uniqueItemId,
           price: precioProdResuelto,
           subtotalVenta: Number((precioProdResuelto * cantProd).toFixed(2)),
           agregadoEnPropuesta: Boolean(
@@ -1230,7 +1268,12 @@ export default function PaginaDetallePropuesta() {
     },
     onRefresh: () => {
       const activeOrderId = orden?.id || id;
-      if (!guardando && estadoSync !== "guardando" && activeOrderId) {
+      if (
+        !guardando &&
+        estadoSync !== "guardando" &&
+        Date.now() - lastLocalEditAtRef.current > 5000 &&
+        activeOrderId
+      ) {
         void cargarDetallePorId(activeOrderId, true);
       }
     },
@@ -1241,12 +1284,19 @@ export default function PaginaDetallePropuesta() {
     const activeOrderId = orden?.id || id;
     if (!activeOrderId || !orden) return;
     const syncRespuestasProveedor = async () => {
-      if (guardando || estadoSync === "guardando") return;
+      if (
+        guardando ||
+        estadoSync === "guardando" ||
+        Date.now() - lastLocalEditAtRef.current < 5000
+      ) {
+        return;
+      }
       try {
         const res = await fetch(`/api/presupuestos/detalle?id=${encodeURIComponent(activeOrderId)}`, { cache: "no-store" });
         if (!res.ok) return;
         const data = await res.json();
         if (!data?.success || !data?.order || data.order.id !== activeOrderId) return;
+        if (Date.now() - lastLocalEditAtRef.current < 5000) return;
         const ordServer = data.order;
 
         setRepuestos((prev) =>
@@ -1255,22 +1305,20 @@ export default function PaginaDetallePropuesta() {
               (srvIt: any) => srvIt.id === it.id || (srvIt.name && it.name && srvIt.name.toLowerCase() === it.name.toLowerCase())
             );
             if (!match) return it;
-            if (
-              match.supplierAvailability !== it.supplierAvailability ||
-              match.deliveryTime !== it.deliveryTime ||
-              match.shippingMethod !== it.shippingMethod ||
-              (match.supplierPrice && Number(match.supplierPrice) !== Number(it.costPrice))
-            ) {
+            const respondioNuevo =
+              Boolean(match.supplierRespondedAt) &&
+              match.supplierRespondedAt !== it.supplierRespondedAt;
+            if (respondioNuevo) {
               const newCost = match.supplierPrice ? Number(match.supplierPrice) : Number(match.costPrice ?? it.costPrice);
-              const newPrice = Number(match.price ?? it.price);
+              const keepPrice = Number(it.price || 0);
               const qty = Number(it.qty || 1);
               return {
                 ...it,
                 costPrice: newCost,
-                price: newPrice,
+                price: keepPrice,
                 subtotalCosto: Number((newCost * qty).toFixed(2)),
-                subtotalVenta: Number((newPrice * qty).toFixed(2)),
-                margin: Number(((newPrice - newCost) * qty).toFixed(2)),
+                subtotalVenta: Number((keepPrice * qty).toFixed(2)),
+                margin: Number(((keepPrice - newCost) * qty).toFixed(2)),
                 supplierAvailability: match.supplierAvailability ?? it.supplierAvailability,
                 supplierPrice: match.supplierPrice ?? it.supplierPrice,
                 deliveryTime: match.deliveryTime ?? it.deliveryTime,
@@ -1290,16 +1338,14 @@ export default function PaginaDetallePropuesta() {
               (srvIt: any) => srvIt.id === sv.id || (srvIt.name && sv.name && srvIt.name.toLowerCase() === sv.name.toLowerCase())
             );
             if (!match) return sv;
-            if (
-              match.supplierAvailability !== sv.supplierAvailability ||
-              match.deliveryTime !== sv.deliveryTime ||
-              match.shippingMethod !== sv.shippingMethod ||
-              (match.supplierPrice && Number(match.supplierPrice) !== Number(sv.costPrice || 0))
-            ) {
+            const respondioNuevo =
+              Boolean(match.supplierRespondedAt) &&
+              match.supplierRespondedAt !== sv.supplierRespondedAt;
+            if (respondioNuevo) {
               return {
                 ...sv,
                 costPrice: match.supplierPrice ? Number(match.supplierPrice) : Number(match.costPrice ?? sv.costPrice ?? 0),
-                price: Number(match.price ?? sv.price),
+                price: Number(sv.price || 0),
                 supplierAvailability: match.supplierAvailability ?? sv.supplierAvailability,
                 supplierPrice: match.supplierPrice ?? sv.supplierPrice,
                 deliveryTime: match.deliveryTime ?? sv.deliveryTime,
@@ -1395,10 +1441,21 @@ export default function PaginaDetallePropuesta() {
     nuevosFind?: any[],
     nuevasNotas?: string
   ) => {
+    lastLocalEditAtRef.current = Date.now();
     setEstadoSync("guardando");
     if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
     debounceTimerRef.current = setTimeout(() => {
       void sincronizarConNeon(nuevosRep, nuevosSrv, nuevosFind, nuevasNotas).catch(() => { });
+    }, 600);
+  };
+
+  // Guardar IVA / Descuento en Neon (debounced)
+  const guardarImpuestosDebounced = (nuevoIva: number, nuevoDescuento: number) => {
+    lastLocalEditAtRef.current = Date.now();
+    setEstadoSync("guardando");
+    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+    debounceTimerRef.current = setTimeout(() => {
+      void sincronizarConNeon(undefined, undefined, undefined, undefined, nuevoIva, nuevoDescuento).catch(() => { });
     }, 600);
   };
 
@@ -2177,10 +2234,10 @@ export default function PaginaDetallePropuesta() {
     mostrarToast("✓ Nuevo hallazgo registrado y guardado en Neon PostgreSQL.");
   };
 
-  // Totales financieros calculados en tiempo real estilo liquidación de Factura
+  // Totales financieros calculados en tiempo real: suma directa de los valores mostrados en la columna PVP
   const calculos = useMemo(() => {
-    const subtotalRepuestos = repuestos.reduce((acc, it) => acc + (it.price * it.qty), 0);
-    const subtotalServicios = servicios.reduce((acc, sv) => acc + (sv.price * (sv.qty || 1)), 0);
+    const subtotalRepuestos = repuestos.reduce((acc, it) => acc + Number(it.price || 0), 0);
+    const subtotalServicios = servicios.reduce((acc, sv) => acc + Number(sv.price || 0), 0);
     const subtotalBruto = Number((subtotalRepuestos + subtotalServicios).toFixed(2));
 
     const descuento = Number((subtotalBruto * (porcentajeDescuento / 100)).toFixed(2));
@@ -4059,7 +4116,7 @@ export default function PaginaDetallePropuesta() {
 
             {/* SUBTOTAL / PVP */}
             <td className="py-2 px-2.5 text-right font-mono font-medium text-zinc-900 dark:text-white">
-              ${Number(item.subtotal ?? item.subtotalVenta ?? (item.price * (item.qty || 1))).toFixed(2)}
+              ${formatearPrecioLimpio(item.subtotal ?? item.subtotalVenta ?? (item.price * (item.qty || 1)))}
             </td>
           </>
         )}
@@ -4072,16 +4129,16 @@ export default function PaginaDetallePropuesta() {
                 <span className="text-[9px] text-zinc-400 uppercase font-semibold leading-none mb-1">Costo</span>
                 <input
                   type="number"
-                  step="0.01"
+                  step="any"
                   min="0"
-                  value={item.costPrice || 0}
+                  value={item.costPrice || ""}
                   onChange={(e) =>
                     esServicio
                       ? handleUpdateItemFields(item.id, true, { costPrice: parseFloat(e.target.value) || 0 })
                       : handleUpdatePrice(item.id, "costPrice", e.target.value)
                   }
                   className="w-16 h-6 px-1 text-right rounded bg-zinc-50 dark:bg-black border border-zinc-200 dark:border-white/10 font-mono text-zinc-700 dark:text-zinc-300 text-xs"
-                  placeholder="0.00"
+                  placeholder=""
                 />
               </div>
             </td>
@@ -4091,12 +4148,12 @@ export default function PaginaDetallePropuesta() {
                 <span className="text-[9px] text-zinc-400 uppercase font-semibold leading-none mb-1">PVP</span>
                 <input
                   type="number"
-                  step="0.01"
+                  step="any"
                   min="0"
-                  value={item.price || 0}
+                  value={item.price || ""}
                   onChange={(e) => (esServicio ? handleUpdateServicePrice(item.id, e.target.value) : handleUpdatePrice(item.id, "price", e.target.value))}
                   className="w-16 h-6 px-1 text-right rounded bg-purple-50/50 dark:bg-black border border-purple-500/30 font-mono text-purple-700 dark:text-purple-300 font-bold text-xs"
-                  placeholder="0.00"
+                  placeholder=""
                 />
               </div>
             </td>
@@ -5036,7 +5093,7 @@ export default function PaginaDetallePropuesta() {
                                             inputMode="decimal"
                                             step="any"
                                             min="0"
-                                            placeholder="0"
+                                            placeholder=""
                                             value={it.price || ""}
                                             onChange={(e) => handleUpdateServicePrice(it.id, e.target.value)}
                                             className="w-full bg-transparent text-right text-base sm:text-xs font-bold font-mono text-zinc-800 dark:text-zinc-100 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
@@ -5044,7 +5101,7 @@ export default function PaginaDetallePropuesta() {
                                         </div>
                                       ) : (
                                         <span className="font-mono text-sm font-bold text-zinc-800 dark:text-zinc-100 shrink-0">
-                                          ${Number(it.price || 0).toFixed(2)}
+                                          ${formatearPrecioLimpio(it.price)}
                                         </span>
                                       )}
                                     </div>
@@ -5190,7 +5247,7 @@ export default function PaginaDetallePropuesta() {
                                                 inputMode="decimal"
                                                 step="any"
                                                 min="0"
-                                                placeholder="0"
+                                                placeholder=""
                                                 value={it.price || ""}
                                                 onChange={(e) => handleUpdateServicePrice(it.id, e.target.value)}
                                                 className="w-full bg-transparent text-right text-xs font-bold font-mono text-zinc-800 dark:text-zinc-100 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
@@ -5198,7 +5255,7 @@ export default function PaginaDetallePropuesta() {
                                             </div>
                                           ) : (
                                             <span className="inline-block font-mono text-xs font-bold text-zinc-800 dark:text-zinc-100">
-                                              ${Number(it.price || 0).toFixed(2)}
+                                              ${formatearPrecioLimpio(it.price)}
                                             </span>
                                           )}
                                         </td>
@@ -5347,7 +5404,7 @@ export default function PaginaDetallePropuesta() {
                                             inputMode="decimal"
                                             step="any"
                                             min="0"
-                                            placeholder="0"
+                                            placeholder=""
                                             value={it.price || ""}
                                             onChange={(e) => handleUpdatePrice(it.id, "price", e.target.value)}
                                             className="w-full bg-transparent text-right text-base sm:text-xs font-bold font-mono text-zinc-800 dark:text-zinc-100 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
@@ -5355,7 +5412,7 @@ export default function PaginaDetallePropuesta() {
                                         </div>
                                       ) : (
                                         <span className="font-mono text-sm font-bold text-zinc-800 dark:text-zinc-100 shrink-0">
-                                          ${Number(it.price || 0).toFixed(2)}
+                                          ${formatearPrecioLimpio(it.price)}
                                         </span>
                                       )}
                                     </div>
@@ -5501,7 +5558,7 @@ export default function PaginaDetallePropuesta() {
                                                 inputMode="decimal"
                                                 step="any"
                                                 min="0"
-                                                placeholder="0"
+                                                placeholder=""
                                                 value={it.price || ""}
                                                 onChange={(e) => handleUpdatePrice(it.id, "price", e.target.value)}
                                                 className="w-full bg-transparent text-right text-xs font-bold font-mono text-zinc-800 dark:text-zinc-100 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
@@ -5509,7 +5566,7 @@ export default function PaginaDetallePropuesta() {
                                             </div>
                                           ) : (
                                             <span className="inline-block font-mono text-xs font-bold text-zinc-800 dark:text-zinc-100">
-                                              ${Number(it.price || 0).toFixed(2)}
+                                              ${formatearPrecioLimpio(it.price)}
                                             </span>
                                           )}
                                         </td>
@@ -5545,14 +5602,14 @@ export default function PaginaDetallePropuesta() {
                       <div className="flex items-center justify-between text-xs text-zinc-600 dark:text-zinc-400">
                         <span className="font-normal">Productos:</span>
                         <span className="font-medium text-zinc-900 dark:text-white">
-                          ${calculos.subtotalRepuestos.toFixed(2)}
+                          ${formatoMontoLiquidacion(calculos.subtotalRepuestos)}
                         </span>
                       </div>
 
                       <div className="flex items-center justify-between text-xs text-zinc-600 dark:text-zinc-400">
                         <span className="font-normal">Servicios:</span>
                         <span className="font-medium text-zinc-900 dark:text-white">
-                          ${calculos.subtotalServicios.toFixed(2)}
+                          ${formatoMontoLiquidacion(calculos.subtotalServicios)}
                         </span>
                       </div>
 
@@ -5561,7 +5618,7 @@ export default function PaginaDetallePropuesta() {
                       <div className="flex items-center justify-between text-xs text-zinc-700 dark:text-zinc-300">
                         <span className="font-normal">Subtotal:</span>
                         <span className="font-semibold text-zinc-900 dark:text-white text-sm">
-                          ${calculos.subtotalBruto.toFixed(2)}
+                          ${formatoMontoLiquidacion(calculos.subtotalBruto)}
                         </span>
                       </div>
 
@@ -5576,14 +5633,18 @@ export default function PaginaDetallePropuesta() {
                               min="0"
                               max="100"
                               value={porcentajeDescuento}
-                              onChange={(e) => setPorcentajeDescuento(parseFloat(e.target.value) || 0)}
+                              onChange={(e) => {
+                                const val = Math.min(100, Math.max(0, parseFloat(e.target.value) || 0));
+                                setPorcentajeDescuento(val);
+                                guardarImpuestosDebounced(porcentajeIva, val);
+                              }}
                               className="w-14 sm:w-12 h-8 sm:h-6 px-1.5 sm:px-1 text-center rounded-lg sm:rounded bg-white dark:bg-black border border-zinc-300 dark:border-white/10 text-base sm:text-xs font-normal"
                             />
                             <span className="text-[10px]">%</span>
                           </div>
                         </div>
                         <span className="text-rose-500 font-medium">
-                          -${calculos.descuento.toFixed(2)}
+                          -${formatoMontoLiquidacion(calculos.descuento)}
                         </span>
                       </div>
 
@@ -5594,7 +5655,11 @@ export default function PaginaDetallePropuesta() {
                           <div className="inline-flex items-center gap-1 print:hidden">
                             <select
                               value={porcentajeIva}
-                              onChange={(e) => setPorcentajeIva(Number(e.target.value))}
+                              onChange={(e) => {
+                                const val = Number(e.target.value);
+                                setPorcentajeIva(val);
+                                guardarImpuestosDebounced(val, porcentajeDescuento);
+                              }}
                               className="h-8 sm:h-6 px-1.5 sm:px-1 rounded-lg sm:rounded bg-white dark:bg-black border border-zinc-300 dark:border-white/10 text-base sm:text-[11px]"
                             >
                               <option value={15}>15%</option>
@@ -5604,7 +5669,7 @@ export default function PaginaDetallePropuesta() {
                           </div>
                         </div>
                         <span className="font-medium text-zinc-800 dark:text-zinc-200">
-                          ${calculos.iva.toFixed(2)}
+                          ${formatoMontoLiquidacion(calculos.iva)}
                         </span>
                       </div>
 
@@ -5616,7 +5681,7 @@ export default function PaginaDetallePropuesta() {
                           </span>
                         </div>
                         <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                          ${calculos.totalFacturaCliente.toFixed(2)}
+                          ${formatoMontoLiquidacion(calculos.totalFacturaCliente)}
                         </span>
                       </div>
 
