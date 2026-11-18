@@ -153,6 +153,25 @@ const modules = [
   },
 ];
 
+const moduleSections: Array<{ title: string; items: typeof modules }> = [
+  {
+    title: "Ventas y Caja",
+    items: modules.filter((m) =>
+      ["Venta", "Caja", "Facturas", "Créditos"].includes(m.title)
+    ),
+  },
+  {
+    title: "Catálogo y Órdenes",
+    items: modules.filter((m) =>
+      ["Productos", "Servicios", "Cotizaciones", "Órdenes"].includes(m.title)
+    ),
+  },
+  {
+    title: "Clientes y Vehículos",
+    items: modules.filter((m) => ["Clientes", "Vehículos"].includes(m.title)),
+  },
+];
+
 export default function PosPanel() {
   // Estado de Caja (igual que en POS de Venta)
   const [cajaActiva, setCajaActiva] = useState<any | null>(null);
@@ -342,45 +361,58 @@ export default function PosPanel() {
           </div>
         </div>
 
-        {/* Módulos POS */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-6">
-          {modules.map((mod, index) => (
-            <Link 
-              key={mod.href} 
-              href={mod.href}
-              className="group block bg-white dark:bg-zinc-900 rounded-2xl sm:rounded-3xl p-5 sm:p-6 min-h-[96px] sm:min-h-[104px] border border-zinc-200/80 dark:border-zinc-800 hover:border-blue-500/60 dark:hover:border-blue-500/60 transition-all duration-300 ease-out hover:-translate-y-1.5 shadow-[0_2px_12px_-3px_rgba(0,0,0,0.06)] hover:shadow-xl hover:shadow-blue-500/10 active:scale-[0.97] overflow-hidden relative flex flex-col justify-center"
-            >
-              {/* Esquina con color suave: más nítido y pastel en modo claro */}
-              <div
-                style={{ animationDelay: `${index * 0.4}s` }}
-                className={`absolute top-0 right-0 w-32 h-32 ${mod.color} opacity-[0.08] dark:opacity-5 rounded-bl-full -mr-10 -mt-10 transition-all duration-500 ease-out group-hover:scale-125 group-hover:opacity-20 dark:group-hover:opacity-15 auto-corner-mobile sm:animate-none pointer-events-none`}
-              />
-              {/* Destello de brillo diagonal: visible tanto en modo claro como oscuro */}
-              <div 
-                style={{ animationDelay: `${index * 0.4}s` }}
-                className="absolute inset-0 -translate-x-full group-hover:translate-x-full auto-shine-mobile sm:animate-none transition-transform duration-700 ease-out bg-gradient-to-r from-transparent via-zinc-400/15 dark:via-white/[0.07] to-transparent pointer-events-none" 
-              />
-
-              <div className="flex items-center justify-between gap-3 min-w-0 relative z-10 w-full">
-                <div className="flex items-center gap-3.5 sm:gap-4 min-w-0">
-                  <div
-                    className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-br ${mod.gradient} shadow-md flex items-center justify-center flex-shrink-0 transition-transform duration-300 ease-out group-hover:scale-110 group-hover:-rotate-3`}
-                  >
-                    {mod.icon}
-                  </div>
-                  <h3 className="text-base sm:text-lg font-normal text-zinc-800 dark:text-zinc-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors duration-200 truncate">
-                    {mod.title}
-                  </h3>
-                </div>
-
-                {/* Flecha a la derecha con animación sutil en hover */}
-                <div className="w-8 h-8 rounded-xl bg-zinc-100 dark:bg-zinc-800/60 border border-zinc-200/70 dark:border-transparent flex items-center justify-center text-zinc-500 dark:text-zinc-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 group-hover:bg-blue-50 dark:group-hover:bg-blue-500/10 group-hover:border-blue-200 dark:group-hover:border-transparent group-hover:translate-x-1 transition-all duration-200 shrink-0">
-                  <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M9 5l7 7-7 7" />
-                  </svg>
-                </div>
+        {/* Módulos POS divididos en secciones */}
+        <div className="space-y-8">
+          {moduleSections.map((section, sIdx) => (
+            <section key={section.title} className="space-y-3.5">
+              <div className="flex items-center gap-3">
+                <h2 className="text-xs sm:text-sm font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+                  {section.title}
+                </h2>
+                <div className="h-px flex-1 bg-zinc-200/80 dark:bg-zinc-800" />
               </div>
-            </Link>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-6">
+                {section.items.map((mod, index) => (
+                  <Link 
+                    key={mod.href} 
+                    href={mod.href}
+                    className="group block bg-white dark:bg-zinc-900 rounded-2xl sm:rounded-3xl p-5 sm:p-6 min-h-[96px] sm:min-h-[104px] border border-zinc-200/80 dark:border-zinc-800 hover:border-blue-500/60 dark:hover:border-blue-500/60 transition-all duration-300 ease-out hover:-translate-y-1.5 shadow-[0_2px_12px_-3px_rgba(0,0,0,0.06)] hover:shadow-xl hover:shadow-blue-500/10 active:scale-[0.97] overflow-hidden relative flex flex-col justify-center"
+                  >
+                    {/* Esquina con color suave: más nítido y pastel en modo claro */}
+                    <div
+                      style={{ animationDelay: `${(sIdx * 3 + index) * 0.4}s` }}
+                      className={`absolute top-0 right-0 w-32 h-32 ${mod.color} opacity-[0.08] dark:opacity-5 rounded-bl-full -mr-10 -mt-10 transition-all duration-500 ease-out group-hover:scale-125 group-hover:opacity-20 dark:group-hover:opacity-15 auto-corner-mobile sm:animate-none pointer-events-none`}
+                    />
+                    {/* Destello de brillo diagonal: visible tanto en modo claro como oscuro */}
+                    <div 
+                      style={{ animationDelay: `${(sIdx * 3 + index) * 0.4}s` }}
+                      className="absolute inset-0 -translate-x-full group-hover:translate-x-full auto-shine-mobile sm:animate-none transition-transform duration-700 ease-out bg-gradient-to-r from-transparent via-zinc-400/15 dark:via-white/[0.07] to-transparent pointer-events-none" 
+                    />
+
+                    <div className="flex items-center justify-between gap-3 min-w-0 relative z-10 w-full">
+                      <div className="flex items-center gap-3.5 sm:gap-4 min-w-0">
+                        <div
+                          className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-br ${mod.gradient} shadow-md flex items-center justify-center flex-shrink-0 transition-transform duration-300 ease-out group-hover:scale-110 group-hover:-rotate-3`}
+                        >
+                          {mod.icon}
+                        </div>
+                        <h3 className="text-base sm:text-lg font-normal text-zinc-800 dark:text-zinc-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors duration-200 truncate">
+                          {mod.title}
+                        </h3>
+                      </div>
+
+                      {/* Flecha a la derecha con animación sutil en hover */}
+                      <div className="w-8 h-8 rounded-xl bg-zinc-100 dark:bg-zinc-800/60 border border-zinc-200/70 dark:border-transparent flex items-center justify-center text-zinc-500 dark:text-zinc-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 group-hover:bg-blue-50 dark:group-hover:bg-blue-500/10 group-hover:border-blue-200 dark:group-hover:border-transparent group-hover:translate-x-1 transition-all duration-200 shrink-0">
+                        <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M9 5l7 7-7 7" />
+                        </svg>
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </section>
           ))}
         </div>
       </main>
