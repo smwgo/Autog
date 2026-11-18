@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Header } from "@/components/Header";
 import { OficinaMobileNav } from "@/components/OficinaMobileNav";
 import { CollapsibleMetrics } from "@/components/CollapsibleMetrics";
+import { Paginacion, paginarLista } from "@/components/Paginacion";
 import { useEffect, useState } from "react";
 
 export default function ComprasProveedores() {
@@ -240,6 +241,20 @@ export default function ComprasProveedores() {
     `${o.orderNumber} ${o.supplierName} ${o.status}`.toLowerCase().includes(search.toLowerCase())
   );
 
+  const [paginaActual, setPaginaActual] = useState(1);
+  useEffect(() => {
+    setPaginaActual(1);
+  }, [tab, search]);
+
+  const { itemsPaginados: suppliersPaginados, paginaValida: paginaValidaSuppliers } = paginarLista(
+    filteredSuppliers,
+    paginaActual
+  );
+  const { itemsPaginados: ordersPaginadas, paginaValida: paginaValidaOrders } = paginarLista(
+    filteredOrders,
+    paginaActual
+  );
+
   const totalPayable = proveedores.reduce((acc, p) => acc + Number(p.balance || 0), 0);
   const transitOrders = ordenes.filter((o) => o.status === "En Tránsito" || o.status === "Solicitado").length;
   const totalPurchases = ordenes.reduce((acc, o) => acc + Number(o.total || 0), 0);
@@ -384,7 +399,7 @@ export default function ComprasProveedores() {
                 Cargando...
               </div>
             ) : tab === "proveedores" ? (
-              filteredSuppliers.map((row) => {
+              suppliersPaginados.map((row) => {
                 let cats: string[] = [];
                 try {
                   cats = JSON.parse(row.categories || "[]");
@@ -479,7 +494,7 @@ export default function ComprasProveedores() {
                 );
               })
             ) : (
-              filteredOrders.map((row) => (
+              ordersPaginadas.map((row) => (
                 <div
                   key={row.id}
                   className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-4 space-y-3 shadow-xs hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors"
@@ -589,7 +604,7 @@ export default function ComprasProveedores() {
                       <td colSpan={6} className="px-6 py-8 text-center text-zinc-500">Cargando...</td>
                     </tr>
                   ) : tab === 'proveedores' ? (
-                    filteredSuppliers.map((row) => {
+                    suppliersPaginados.map((row) => {
                       let cats: string[] = [];
                       try {
                         cats = JSON.parse(row.categories || "[]");
@@ -652,7 +667,7 @@ export default function ComprasProveedores() {
                       );
                     })
                   ) : (
-                    filteredOrders.map((row) => (
+                    ordersPaginadas.map((row) => (
                       <tr key={row.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/40 transition-colors">
                         <td className="py-3.5 px-4">
                           <span className="font-bold text-indigo-600 dark:text-indigo-400 font-mono text-xs">#{row.orderNumber}</span>
@@ -708,9 +723,11 @@ export default function ComprasProveedores() {
               </table>
             </div>
           </div>
-          <div className="p-3.5 sm:p-4 border-t border-zinc-100 dark:border-zinc-800 flex justify-between items-center text-xs sm:text-sm text-zinc-500">
-            <span>Mostrando {tab === 'proveedores' ? filteredSuppliers.length : filteredOrders.length} registros</span>
-          </div>
+          <Paginacion
+            paginaActual={tab === "proveedores" ? paginaValidaSuppliers : paginaValidaOrders}
+            totalElementos={tab === "proveedores" ? filteredSuppliers.length : filteredOrders.length}
+            onCambiarPagina={setPaginaActual}
+          />
         </div>
       </main>
 

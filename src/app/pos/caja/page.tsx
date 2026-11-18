@@ -7,6 +7,7 @@ import { PosMobileNav } from "@/components/PosMobileNav";
 import { CollapsibleMetrics } from "@/components/CollapsibleMetrics";
 import { BranchTabs } from "@/components/pos/BranchTabs";
 import { getClientUserBranch, getClientActiveBranch } from "@/lib/branch";
+import { Paginacion, paginarLista } from "@/components/Paginacion";
 
 interface CashSession {
   id: string;
@@ -171,6 +172,16 @@ export default function GestionCaja() {
     if (filtro === "cerradas") return s.status === "CERRADA";
     return true;
   });
+
+  const [paginaActual, setPaginaActual] = useState(1);
+  useEffect(() => {
+    setPaginaActual(1);
+  }, [busqueda, filtro]);
+
+  const { itemsPaginados: sesionesPaginadas, paginaValida } = paginarLista(
+    sesionesFiltradas,
+    paginaActual
+  );
 
   // Atajos de incremento para conteo físico en cierre
   const agregarEfectivo = (suma: number) => {
@@ -522,7 +533,7 @@ export default function GestionCaja() {
                 <span className="text-zinc-500 dark:text-zinc-400 font-medium">Sin sesiones de caja</span>
               </div>
             ) : (
-              sesionesFiltradas.map((s) => {
+              sesionesPaginadas.map((s) => {
                 const esAbierta = s.status === "ABIERTA";
                 const fechaTexto = new Date(s.openedAt).toLocaleDateString("es-EC", {
                   day: "2-digit",
@@ -713,7 +724,7 @@ export default function GestionCaja() {
                     </td>
                   </tr>
                 ) : (
-                  sesionesFiltradas.map((s) => (
+                  sesionesPaginadas.map((s) => (
                     <tr
                       key={s.id}
                       className="hover:bg-zinc-50/80 dark:hover:bg-zinc-800/20 transition-colors"
@@ -811,6 +822,11 @@ export default function GestionCaja() {
               </tbody>
             </table>
           </div>
+          <Paginacion
+            paginaActual={paginaValida}
+            totalElementos={sesionesFiltradas.length}
+            onCambiarPagina={setPaginaActual}
+          />
         </div>
       </main>
 

@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback, useMemo, Suspense } from "reac
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Header } from "@/components/Header";
+import { Paginacion, paginarLista } from "@/components/Paginacion";
 
 interface OilChangeRecord {
   id: string;
@@ -376,6 +377,12 @@ function HistorialAceitesContenido() {
     };
   }, [cambios, cliente, placa, vehiculo]);
 
+  const [paginaActual, setPaginaActual] = useState(1);
+  const { itemsPaginados: cambiosPaginados, paginaValida } = paginarLista(
+    cambios,
+    paginaActual
+  );
+
   return (
     <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans pb-16">
       <Header />
@@ -464,7 +471,7 @@ function HistorialAceitesContenido() {
               </p>
             </div>
           ) : (
-            cambios.map((c, idx) => {
+            cambiosPaginados.map((c, idx) => {
               const tiempo = calcularTiempoTranscurrido(c.fechaMs, c.fecha);
               return (
                 <div
@@ -484,7 +491,7 @@ function HistorialAceitesContenido() {
                         {tiempo.texto}
                       </span>
 
-                      {idx === 0 && (
+                      {paginaValida === 1 && idx === 0 && (
                         <span className="px-2 py-0.5 rounded-full text-[11px] font-normal bg-blue-100 text-blue-800 dark:bg-blue-500/25 dark:text-blue-300 border border-blue-200 dark:border-blue-500/30">
                           Último
                         </span>
@@ -542,6 +549,16 @@ function HistorialAceitesContenido() {
                 </div>
               );
             })
+          )}
+          {!cargando && cambios.length > 0 && (
+            <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-2xs overflow-hidden">
+              <Paginacion
+                paginaActual={paginaValida}
+                totalElementos={cambios.length}
+                onCambiarPagina={setPaginaActual}
+                className="border-t-0"
+              />
+            </div>
           )}
         </div>
       </main>

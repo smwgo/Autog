@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Header } from "@/components/Header";
 import { OficinaMobileNav } from "@/components/OficinaMobileNav";
 import { CollapsibleMetrics } from "@/components/CollapsibleMetrics";
+import { Paginacion, paginarLista } from "@/components/Paginacion";
 import { useEffect, useState, useMemo, useRef } from "react";
 
 type PeriodoFiltro = "todos" | "semana" | "quincena" | "mes";
@@ -311,6 +312,16 @@ export default function FacturacionSRI() {
         f.estadoSri === "EN_PROCESO"
     );
   }, [filteredFacturas]);
+
+  const [paginaActual, setPaginaActual] = useState(1);
+  useEffect(() => {
+    setPaginaActual(1);
+  }, [search, periodo, estadoFiltro]);
+
+  const { itemsPaginados: facturasPaginadas, paginaValida } = paginarLista(
+    filteredFacturas,
+    paginaActual
+  );
 
   // Métricas globales
   const totalAutorizado = facturas
@@ -767,7 +778,7 @@ export default function FacturacionSRI() {
                 Cargando documentos...
               </div>
             ) : filteredFacturas.length === 0 ? null : (
-              filteredFacturas.map((row) => {
+              facturasPaginadas.map((row) => {
                 const esPendiente =
                   row.estadoSri === "PENDIENTE_ENVIO" ||
                   row.estadoSri === "PENDIENTE" ||
@@ -917,7 +928,7 @@ export default function FacturacionSRI() {
                       <td colSpan={8} className="px-6 py-8 text-center text-zinc-500">Cargando comprobantes...</td>
                     </tr>
                   ) : filteredFacturas.length === 0 ? null : (
-                    filteredFacturas.map((row) => {
+                    facturasPaginadas.map((row) => {
                       const esPendiente =
                         row.estadoSri === "PENDIENTE_ENVIO" ||
                         row.estadoSri === "PENDIENTE" ||
@@ -1075,12 +1086,11 @@ export default function FacturacionSRI() {
                 </tbody>
               </table>
             </div>
-            <div className="p-3.5 border-t border-zinc-100 dark:border-zinc-800 flex justify-between items-center text-xs text-zinc-500">
-              <span>Mostrando {filteredFacturas.length} comprobantes</span>
-              {selectedIds.length > 0 && (
-                <span className="font-bold text-purple-600">{selectedIds.length} seleccionadas</span>
-              )}
-            </div>
+            <Paginacion
+              paginaActual={paginaValida}
+              totalElementos={filteredFacturas.length}
+              onCambiarPagina={setPaginaActual}
+            />
           </div>
         </div>
       </main>

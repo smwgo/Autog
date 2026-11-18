@@ -3,6 +3,7 @@
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { PublicMobileNav } from "@/components/PublicMobileNav";
+import { Paginacion, paginarLista } from "@/components/Paginacion";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -22,6 +23,11 @@ export default function NotificacionesPage() {
   const router = useRouter();
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [paginaActual, setPaginaActual] = useState(1);
+  const { itemsPaginados: notificationsPaginadas, paginaValida } = paginarLista(
+    notifications,
+    paginaActual
+  );
 
   const loadNotifications = async () => {
     try {
@@ -93,8 +99,9 @@ export default function NotificacionesPage() {
               <p className="text-zinc-500 dark:text-zinc-400">No tienes notificaciones en este momento.</p>
             </div>
           ) : (
-            <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
-              {notifications.map((n) => (
+            <>
+              <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
+              {notificationsPaginadas.map((n) => (
                 <div key={n.id} className={`p-4 sm:p-6 flex gap-3 sm:gap-4 transition-colors ${!n.read ? 'bg-blue-50/30 dark:bg-blue-900/10' : ''}`}>
                   <div className="mt-1 shrink-0 text-lg">
                     {n.icon || (
@@ -132,6 +139,12 @@ export default function NotificacionesPage() {
                 </div>
               ))}
             </div>
+            <Paginacion
+              paginaActual={paginaValida}
+              totalElementos={notifications.length}
+              onCambiarPagina={setPaginaActual}
+            />
+            </>
           )}
         </div>
       </main>

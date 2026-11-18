@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Header } from "@/components/Header";
 import { TallerMobileNav } from "@/components/TallerMobileNav";
 import { CollapsibleMetrics } from "@/components/CollapsibleMetrics";
+import { Paginacion, paginarLista } from "@/components/Paginacion";
 
 interface TimeRecord {
   id: string;
@@ -251,6 +252,16 @@ export default function ControlTiemposPage() {
     const matchMechanic = !filterMechanic || r.mechanic === filterMechanic;
     return matchSearch && matchMechanic;
   });
+
+  const [paginaActual, setPaginaActual] = useState(1);
+  useEffect(() => {
+    setPaginaActual(1);
+  }, [searchTerm, filterMechanic]);
+
+  const { itemsPaginados: recordsPaginados, paginaValida } = paginarLista(
+    recordsFiltrados,
+    paginaActual
+  );
 
   return (
     <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans pb-24 md:pb-0">
@@ -522,7 +533,7 @@ export default function ControlTiemposPage() {
               <>
                 {/* Mobile View: Cards adaptadas a diseño facturas */}
                 <div className="block md:hidden space-y-3.5 p-4">
-                  {recordsFiltrados.map((record) => (
+                  {recordsPaginados.map((record) => (
                     <div
                       key={record.dbId || record.id}
                       className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-4 space-y-3 shadow-xs hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors"
@@ -603,7 +614,7 @@ export default function ControlTiemposPage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
-                      {recordsFiltrados.map((record) => (
+                      {recordsPaginados.map((record) => (
                         <tr
                           key={record.dbId || record.id}
                           className="hover:bg-zinc-50 dark:hover:bg-zinc-800/40 transition-colors"
@@ -664,6 +675,11 @@ export default function ControlTiemposPage() {
                     </tbody>
                   </table>
                 </div>
+                <Paginacion
+                  paginaActual={paginaValida}
+                  totalElementos={recordsFiltrados.length}
+                  onCambiarPagina={setPaginaActual}
+                />
               </>
             )}
           </div>

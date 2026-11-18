@@ -8,6 +8,7 @@ import { PosMobileNav } from "@/components/PosMobileNav";
 import { BranchTabs } from "@/components/pos/BranchTabs";
 import { getClientUserBranch, getClientActiveBranch } from "@/lib/branch";
 import { useRealtimeSync } from "@/hooks/useRealtimeSync";
+import { Paginacion, paginarLista } from "@/components/Paginacion";
 
 interface OrderItem {
   id: string;
@@ -347,6 +348,16 @@ export default function PosOrdenesPage() {
     return matchEstado && matchSearch;
   });
 
+  const [paginaActual, setPaginaActual] = useState(1);
+  useEffect(() => {
+    setPaginaActual(1);
+  }, [searchTerm, filtroEstado, seccionActiva]);
+
+  const { itemsPaginados: ordenesPaginadas, paginaValida } = paginarLista(
+    ordenesFiltradas,
+    paginaActual
+  );
+
   const totalOrdenes = baseSeccion.length;
   const totalPagados = baseSeccion.filter(
     (o) =>
@@ -678,7 +689,7 @@ export default function PosOrdenesPage() {
           <div className="space-y-4">
             {/* Vista Móvil (Ordenada como Clientes: Cabecera, 2 recuadros, servicios deslizables y barra de botones abajo) */}
             <div className="md:hidden space-y-3">
-              {ordenesFiltradas.map((ord, idx) => {
+              {ordenesPaginadas.map((ord, idx) => {
                 const estadoCfg = getEstadoSimplificado(ord);
                 const cleanPhone = (ord.clientPhone || "").replace(/\D/g, "");
                 const waPhone = cleanPhone.startsWith("0")
@@ -876,6 +887,15 @@ export default function PosOrdenesPage() {
               })}
             </div>
 
+            <div className="md:hidden bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-xs overflow-hidden">
+              <Paginacion
+                paginaActual={paginaValida}
+                totalElementos={ordenesFiltradas.length}
+                onCambiarPagina={setPaginaActual}
+                className="border-t-0"
+              />
+            </div>
+
             {/* Vista Desktop / Tablet (Tabla compacta idéntica a Clientes) */}
             <div className="hidden md:block bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden shadow-sm">
               <div className="overflow-x-auto">
@@ -891,7 +911,7 @@ export default function PosOrdenesPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
-                    {ordenesFiltradas.map((ord, idx) => {
+                    {ordenesPaginadas.map((ord, idx) => {
                       const estadoCfg = getEstadoSimplificado(ord);
 
                       return (
@@ -1033,6 +1053,11 @@ export default function PosOrdenesPage() {
                   </tbody>
                 </table>
               </div>
+              <Paginacion
+                paginaActual={paginaValida}
+                totalElementos={ordenesFiltradas.length}
+                onCambiarPagina={setPaginaActual}
+              />
             </div>
           </div>
         )}

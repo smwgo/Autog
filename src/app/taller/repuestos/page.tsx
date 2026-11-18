@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Header } from "@/components/Header";
 import { TallerMobileNav } from "@/components/TallerMobileNav";
 import { CollapsibleMetrics } from "@/components/CollapsibleMetrics";
+import { Paginacion, paginarLista } from "@/components/Paginacion";
 
 interface RequestedPartItem {
   name: string;
@@ -244,6 +245,16 @@ export default function SolicitudRepuestosPage() {
     return <span className="text-zinc-500 text-sm">Normal</span>;
   };
 
+  const [paginaActual, setPaginaActual] = useState(1);
+  useEffect(() => {
+    setPaginaActual(1);
+  }, [searchTerm, filterStatus, requests.length]);
+
+  const { itemsPaginados: requestsPaginadas, paginaValida } = paginarLista(
+    requests,
+    paginaActual
+  );
+
   return (
     <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans pb-24 md:pb-0">
       <Header />
@@ -412,7 +423,7 @@ export default function SolicitudRepuestosPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-            {requests.map((req) => (
+            {requestsPaginadas.map((req) => (
               <div
                 key={req.dbId || req.id}
                 className="bg-white dark:bg-zinc-900 rounded-3xl overflow-hidden border border-zinc-200 dark:border-zinc-800 hover:border-indigo-400 dark:hover:border-indigo-500 transition-all shadow-sm flex flex-col"
@@ -543,6 +554,16 @@ export default function SolicitudRepuestosPage() {
                 </p>
               </div>
             )}
+          </div>
+        )}
+        {!cargando && (
+          <div className="mt-4 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-xs overflow-hidden">
+            <Paginacion
+              paginaActual={paginaValida}
+              totalElementos={requests.length}
+              onCambiarPagina={setPaginaActual}
+              className="border-t-0"
+            />
           </div>
         )}
         </div>

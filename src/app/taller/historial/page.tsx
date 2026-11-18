@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Header } from "@/components/Header";
 import { TallerMobileNav } from "@/components/TallerMobileNav";
 import { CollapsibleMetrics } from "@/components/CollapsibleMetrics";
+import { Paginacion, paginarLista } from "@/components/Paginacion";
 
 interface HistoryRecord {
   id: string;
@@ -169,6 +170,16 @@ export default function HistorialServiciosPage() {
     document.body.removeChild(link);
   };
 
+  const [paginaActual, setPaginaActual] = useState(1);
+  useEffect(() => {
+    setPaginaActual(1);
+  }, [searchTerm, records.length]);
+
+  const { itemsPaginados: recordsPaginados, paginaValida } = paginarLista(
+    records,
+    paginaActual
+  );
+
   return (
     <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans pb-24 md:pb-0">
       <Header />
@@ -293,7 +304,7 @@ export default function HistorialServiciosPage() {
           </div>
         ) : (
           <div className="space-y-4 sm:space-y-6">
-            {records.map((record) => (
+            {recordsPaginados.map((record) => (
               <div
                 key={record.dbId || record.id}
                 className="bg-white dark:bg-zinc-900 p-5 sm:p-6 rounded-3xl border border-zinc-200 dark:border-zinc-800 hover:border-purple-300 dark:hover:border-purple-700 transition-colors shadow-sm flex flex-col md:flex-row gap-4 sm:gap-6"
@@ -398,6 +409,15 @@ export default function HistorialServiciosPage() {
                 </p>
               </div>
             )}
+
+            <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-xs overflow-hidden">
+              <Paginacion
+                paginaActual={paginaValida}
+                totalElementos={records.length}
+                onCambiarPagina={setPaginaActual}
+                className="border-t-0"
+              />
+            </div>
           </div>
         )}
         </div>

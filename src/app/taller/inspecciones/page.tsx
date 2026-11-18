@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Header } from "@/components/Header";
 import { TallerMobileNav } from "@/components/TallerMobileNav";
 import { CollapsibleMetrics } from "@/components/CollapsibleMetrics";
+import { Paginacion, paginarLista } from "@/components/Paginacion";
 
 interface InspectionItem {
   id: string;
@@ -101,6 +102,15 @@ export default function InspeccionesPage() {
   };
 
   const [deleteConfirm, setDeleteConfirm] = useState<{ inspId: string; inspNumber: string } | null>(null);
+  const [paginaActual, setPaginaActual] = useState(1);
+  useEffect(() => {
+    setPaginaActual(1);
+  }, [searchTerm, filterStatus, inspections.length]);
+
+  const { itemsPaginados: inspectionsPaginadas, paginaValida } = paginarLista(
+    inspections,
+    paginaActual
+  );
 
   const handleEjecutarEliminar = async () => {
     if (!deleteConfirm) return;
@@ -294,7 +304,7 @@ export default function InspeccionesPage() {
         {/* Inspections Mobile Cards View (md:hidden) adaptada a facturas */}
         {!cargando && (
           <div className="md:hidden space-y-3.5">
-            {inspections.map((insp) => (
+            {inspectionsPaginadas.map((insp) => (
               <div
                 key={insp.dbId || insp.id}
                 className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-4 space-y-3 shadow-xs hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors"
@@ -402,6 +412,14 @@ export default function InspeccionesPage() {
                 </Link>
               </div>
             )}
+            <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-xs overflow-hidden">
+              <Paginacion
+                paginaActual={paginaValida}
+                totalElementos={inspections.length}
+                onCambiarPagina={setPaginaActual}
+                className="border-t-0"
+              />
+            </div>
           </div>
         )}
 
@@ -422,7 +440,7 @@ export default function InspeccionesPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
-                  {inspections.map((insp) => (
+                  {inspectionsPaginadas.map((insp) => (
                     <tr
                       key={insp.dbId || insp.id}
                       className="hover:bg-zinc-50 dark:hover:bg-zinc-800/40 transition-colors"
@@ -541,10 +559,11 @@ export default function InspeccionesPage() {
               </table>
             </div>
 
-            <div className="px-6 py-3 border-t border-zinc-100 dark:border-zinc-800 flex justify-between items-center text-xs text-zinc-500">
-              <span>Mostrando {inspections.length} {inspections.length === 1 ? "inspección" : "inspecciones"}</span>
-              <span className="font-semibold text-zinc-700 dark:text-zinc-300">Inspecciones de Taller</span>
-            </div>
+            <Paginacion
+              paginaActual={paginaValida}
+              totalElementos={inspections.length}
+              onCambiarPagina={setPaginaActual}
+            />
           </div>
         )}
         </div>

@@ -10,6 +10,7 @@ import { ProductoFotoPicker } from "@/components/pos/ProductoFotoPicker";
 import CamposTaxonomiaProducto from "@/components/pos/CamposTaxonomiaProducto";
 import { getClientActiveBranch } from "@/lib/branch";
 import { BranchTabs } from "@/components/pos/BranchTabs";
+import { Paginacion, paginarLista } from "@/components/Paginacion";
 
 interface Product {
   id: string;
@@ -323,6 +324,16 @@ export default function CatalogoPage() {
     }
     return true;
   });
+
+  const [paginaActual, setPaginaActual] = useState(1);
+  useEffect(() => {
+    setPaginaActual(1);
+  }, [searchTerm, selectedCategory, selectedEstado]);
+
+  const { itemsPaginados: productosPaginados, paginaValida } = paginarLista(
+    productosFiltrados,
+    paginaActual
+  );
 
   const hayFiltroActivo = Boolean(selectedCategory) || selectedEstado !== "TODOS";
 
@@ -731,7 +742,7 @@ export default function CatalogoPage() {
             <>
               {/* Vista Móvil (md:hidden): Tarjetas estructuradas idénticas a Clientes */}
               <div className="md:hidden space-y-3.5">
-                {productosFiltrados.map((item) => (
+                {productosPaginados.map((item) => (
                   <div
                     key={item.id}
                     className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-xs overflow-hidden active:bg-zinc-50 dark:active:bg-zinc-800/40 transition-colors"
@@ -872,7 +883,7 @@ export default function CatalogoPage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
-                      {productosFiltrados.map((item) => (
+                      {productosPaginados.map((item) => (
                         <tr
                           key={item.id}
                           className="hover:bg-zinc-50 dark:hover:bg-zinc-800/40 transition-colors"
@@ -999,9 +1010,11 @@ export default function CatalogoPage() {
               </div>
             </>
           )}
-          <div className="p-4 border-t border-zinc-100 dark:border-zinc-800 flex justify-between items-center text-sm text-zinc-500">
-            <span>Mostrando {productos.length} productos</span>
-          </div>
+          <Paginacion
+            paginaActual={paginaValida}
+            totalElementos={productosFiltrados.length}
+            onCambiarPagina={setPaginaActual}
+          />
         </div>
 
         {/* Modal: Crear / Editar Producto */}

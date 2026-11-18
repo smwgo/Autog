@@ -5,6 +5,7 @@ import { Header } from "@/components/Header";
 import { GerenciaMobileNav } from "@/components/GerenciaMobileNav";
 import { CollapsibleMetrics } from "@/components/CollapsibleMetrics";
 import { useEffect, useRef, useState } from "react";
+import { Paginacion, paginarLista } from "@/components/Paginacion";
 
 const departmentOptions = [
   { value: "Todos", label: "Todos" },
@@ -243,6 +244,16 @@ export default function GestionPersonal() {
     return true;
   });
 
+  const [paginaActual, setPaginaActual] = useState(1);
+  useEffect(() => {
+    setPaginaActual(1);
+  }, [deptFilter, search]);
+
+  const { itemsPaginados: filteredPaginados, paginaValida } = paginarLista(
+    filtered,
+    paginaActual
+  );
+
   const activeCount = employees.filter((e) => e.status === "Activo").length;
   const inactiveCount = employees.length - activeCount;
 
@@ -416,7 +427,7 @@ export default function GestionPersonal() {
               No se encontraron empleados
             </div>
           ) : (
-            filtered.map((row) => (
+            filteredPaginados.map((row) => (
               <div 
                 key={row.id} 
                 className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-4 space-y-3 shadow-xs hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors"
@@ -507,7 +518,7 @@ export default function GestionPersonal() {
                     <tr>
                       <td colSpan={6} className="px-6 py-8 text-center text-zinc-500">No se encontraron empleados</td>
                     </tr>
-                  ) : filtered.map((row) => (
+                  ) : filteredPaginados.map((row) => (
                     <tr key={row.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/40 transition-colors">
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-3">
@@ -559,9 +570,11 @@ export default function GestionPersonal() {
                 </tbody>
               </table>
             </div>
-            <div className="py-3 px-4 border-t border-zinc-200 dark:border-zinc-800 flex justify-between items-center text-xs text-zinc-500 dark:text-zinc-400">
-              <span>Mostrando {filtered.length} de {employees.length} empleados</span>
-            </div>
+            <Paginacion
+              paginaActual={paginaValida}
+              totalElementos={filtered.length}
+              onCambiarPagina={setPaginaActual}
+            />
           </div>
         </div>
       </main>

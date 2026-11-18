@@ -6,6 +6,7 @@ import { Header } from "@/components/Header";
 import { PosMobileNav } from "@/components/PosMobileNav";
 import { BranchTabs } from "@/components/pos/BranchTabs";
 import { getClientUserBranch, getClientActiveBranch } from "@/lib/branch";
+import { Paginacion, paginarLista } from "@/components/Paginacion";
 
 interface SaleItem {
   id: string;
@@ -216,6 +217,16 @@ export default function FacturasPosPage() {
     if (filtroEstado === "ANULADA") return v.status?.toLowerCase() === "anulada";
     return true;
   });
+
+  const [paginaActual, setPaginaActual] = useState(1);
+  useEffect(() => {
+    setPaginaActual(1);
+  }, [searchTerm, filtroEstado]);
+
+  const { itemsPaginados: ventasPaginadas, paginaValida } = paginarLista(
+    ventasFiltradas,
+    paginaActual
+  );
 
   // Estadísticas en tiempo real
   const totalFacturado = ventas
@@ -450,7 +461,7 @@ export default function FacturasPosPage() {
             <>
               {/* Vista Móvil (Tarjetas adaptadas con orden idéntico a Clientes) */}
               <div className="md:hidden space-y-3.5">
-                {ventasFiltradas.map((v) => {
+                {ventasPaginadas.map((v) => {
                   const esAnulada = v.status?.toLowerCase() === "anulada";
                   const fecha = new Date(v.createdAt).toLocaleDateString("es-EC", {
                     day: "numeric",
@@ -545,6 +556,15 @@ export default function FacturasPosPage() {
                 })}
               </div>
 
+              <div className="md:hidden bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-xs overflow-hidden">
+                <Paginacion
+                  paginaActual={paginaValida}
+                  totalElementos={ventasFiltradas.length}
+                  onCambiarPagina={setPaginaActual}
+                  className="border-t-0"
+                />
+              </div>
+
               {/* Vista Desktop (Tabla) */}
               <div className="hidden md:block bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden">
                 <div className="overflow-x-auto">
@@ -561,7 +581,7 @@ export default function FacturasPosPage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
-                      {ventasFiltradas.map((v) => {
+                      {ventasPaginadas.map((v) => {
                         const esAnulada = v.status?.toLowerCase() === "anulada";
                         const fecha = new Date(v.createdAt).toLocaleString("es-EC", {
                           day: "2-digit",
@@ -630,6 +650,11 @@ export default function FacturasPosPage() {
                     </tbody>
                   </table>
                 </div>
+                <Paginacion
+                  paginaActual={paginaValida}
+                  totalElementos={ventasFiltradas.length}
+                  onCambiarPagina={setPaginaActual}
+                />
               </div>
             </>
           )}

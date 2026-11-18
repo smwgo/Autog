@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback, useMemo, Suspense } from "reac
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { Header } from "@/components/Header";
+import { Paginacion, paginarLista } from "@/components/Paginacion";
 
 interface CarWashServiceItem {
   id?: string;
@@ -422,6 +423,12 @@ function HistorialCarWashContenido() {
     };
   }, [registros, cliente, placaLimpia, vehiculo]);
 
+  const [paginaActual, setPaginaActual] = useState(1);
+  const { itemsPaginados: registrosPaginados, paginaValida } = paginarLista(
+    registros,
+    paginaActual
+  );
+
   return (
     <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans pb-16">
       <Header />
@@ -522,7 +529,7 @@ function HistorialCarWashContenido() {
               </p>
             </div>
           ) : (
-            registros.map((reg, idx) => {
+            registrosPaginados.map((reg, idx) => {
               const tiempo = calcularTiempoTranscurrido(reg.fechaMs, reg.fecha);
               return (
                 <div
@@ -541,7 +548,7 @@ function HistorialCarWashContenido() {
                         {tiempo.texto}
                       </span>
 
-                      {idx === 0 && (
+                      {paginaValida === 1 && idx === 0 && (
                         <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-800 dark:bg-blue-500/25 dark:text-blue-300 border border-blue-200 dark:border-blue-500/30">
                           Último
                         </span>
@@ -609,6 +616,16 @@ function HistorialCarWashContenido() {
                 </div>
               );
             })
+          )}
+          {!cargando && registros.length > 0 && (
+            <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-2xs overflow-hidden">
+              <Paginacion
+                paginaActual={paginaValida}
+                totalElementos={registros.length}
+                onCambiarPagina={setPaginaActual}
+                className="border-t-0"
+              />
+            </div>
           )}
         </div>
       </main>

@@ -8,6 +8,7 @@ import { PosMobileNav } from "@/components/PosMobileNav";
 import { CollapsibleMetrics } from "@/components/CollapsibleMetrics";
 import { parsearModulos } from "@/components/pos/SelectorModulos";
 import { BranchTabs } from "@/components/pos/BranchTabs";
+import { Paginacion, paginarLista } from "@/components/Paginacion";
 
 interface WorkshopService {
   id: string;
@@ -116,6 +117,16 @@ export default function ServiciosPosPage() {
     if (selectedEstado === "PAUSADOS") return !s.active;
     return true;
   });
+
+  const [paginaActual, setPaginaActual] = useState(1);
+  useEffect(() => {
+    setPaginaActual(1);
+  }, [searchTerm, selectedCategory, selectedEstado]);
+
+  const { itemsPaginados: serviciosPaginados, paginaValida } = paginarLista(
+    serviciosFiltrados,
+    paginaActual
+  );
 
   // Métricas
   const totalActivos = servicios.filter((s) => s.active).length;
@@ -511,7 +522,7 @@ export default function ServiciosPosPage() {
           <div>
             {/* Vista Móvil (md:hidden): Tarjetas estructuradas idénticas a Clientes y Productos */}
             <div className="md:hidden space-y-3.5">
-              {serviciosFiltrados.map((s) => (
+              {serviciosPaginados.map((s) => (
                 <div
                   key={s.id}
                   className={`bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-xs overflow-hidden active:bg-zinc-50 dark:active:bg-zinc-800/40 transition-colors ${
@@ -618,6 +629,15 @@ export default function ServiciosPosPage() {
               ))}
             </div>
 
+            <div className="md:hidden bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-xs overflow-hidden">
+              <Paginacion
+                paginaActual={paginaValida}
+                totalElementos={serviciosFiltrados.length}
+                onCambiarPagina={setPaginaActual}
+                className="border-t-0"
+              />
+            </div>
+
             {/* Desktop Table (hidden md:block) */}
             <div className="hidden md:block bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden">
               <div className="overflow-x-auto">
@@ -634,7 +654,7 @@ export default function ServiciosPosPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
-                    {serviciosFiltrados.map((s) => (
+                    {serviciosPaginados.map((s) => (
                       <tr
                         key={s.id}
                         className={`hover:bg-zinc-50 dark:hover:bg-zinc-800/40 transition-colors ${
@@ -731,10 +751,11 @@ export default function ServiciosPosPage() {
                   </tbody>
                 </table>
               </div>
-              <div className="px-6 py-3 border-t border-zinc-100 dark:border-zinc-800 flex justify-between items-center text-xs text-zinc-500">
-                <span>Mostrando {servicios.length} {servicios.length === 1 ? "servicio" : "servicios"}</span>
-                <span className="font-semibold text-zinc-700 dark:text-zinc-300">Catálogo de Servicios de Taller</span>
-              </div>
+              <Paginacion
+                paginaActual={paginaValida}
+                totalElementos={serviciosFiltrados.length}
+                onCambiarPagina={setPaginaActual}
+              />
             </div>
           </div>
         )}

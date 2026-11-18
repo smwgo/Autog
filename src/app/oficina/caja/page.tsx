@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Header } from "@/components/Header";
 import { OficinaMobileNav } from "@/components/OficinaMobileNav";
 import { CollapsibleMetrics } from "@/components/CollapsibleMetrics";
+import { Paginacion, paginarLista } from "@/components/Paginacion";
 
 interface CashMovement {
   id: string;
@@ -164,6 +165,16 @@ export default function OficinaCajaPage() {
     }
     return true;
   });
+
+  const [paginaActual, setPaginaActual] = useState(1);
+  useEffect(() => {
+    setPaginaActual(1);
+  }, [search, tab]);
+
+  const { itemsPaginados: filteredSessionsPaginadas, paginaValida } = paginarLista(
+    filteredSessions,
+    paginaActual
+  );
 
   // Métricas
   const totalCajas = sessions.length;
@@ -326,7 +337,7 @@ export default function OficinaCajaPage() {
                 0 registros
               </div>
             ) : (
-              filteredSessions.map((row) => (
+              filteredSessionsPaginadas.map((row) => (
                 <div
                   key={row.id}
                   className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-4 space-y-3 shadow-xs hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors"
@@ -441,7 +452,7 @@ export default function OficinaCajaPage() {
                       </td>
                     </tr>
                   ) : (
-                    filteredSessions.map((row) => (
+                    filteredSessionsPaginadas.map((row) => (
                       <tr key={row.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/40 transition-colors">
                         <td className="py-3.5 px-4">
                           <p className="font-bold text-indigo-600 dark:text-indigo-400 font-mono text-xs">
@@ -525,9 +536,11 @@ export default function OficinaCajaPage() {
             </div>
           </div>
 
-          <div className="p-3.5 sm:p-4 border-t border-zinc-100 dark:border-zinc-800 flex justify-between items-center text-xs sm:text-sm text-zinc-500">
-            <span>{filteredSessions.length} registros</span>
-          </div>
+          <Paginacion
+            paginaActual={paginaValida}
+            totalElementos={filteredSessions.length}
+            onCambiarPagina={setPaginaActual}
+          />
         </div>
       </main>
 

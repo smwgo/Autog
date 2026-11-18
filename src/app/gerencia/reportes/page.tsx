@@ -5,6 +5,7 @@ import { Header } from "@/components/Header";
 import { GerenciaMobileNav } from "@/components/GerenciaMobileNav";
 import { CollapsibleMetrics } from "@/components/CollapsibleMetrics";
 import { useEffect, useRef, useState } from "react";
+import { Paginacion, paginarLista } from "@/components/Paginacion";
 
 const categoryOptions = [
   { value: "Todos", label: "Todas" },
@@ -248,6 +249,16 @@ export default function ReportesFinancieros() {
     return true;
   });
 
+  const [paginaActual, setPaginaActual] = useState(1);
+  useEffect(() => {
+    setPaginaActual(1);
+  }, [catFilter, search]);
+
+  const { itemsPaginados: filteredPaginados, paginaValida } = paginarLista(
+    filtered,
+    paginaActual
+  );
+
   return (
     <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans">
       <Header />
@@ -404,7 +415,7 @@ export default function ReportesFinancieros() {
           ) : filtered.length === 0 ? (
             <div className="p-6 text-center text-sm text-zinc-500">No se encontraron transacciones</div>
           ) : (
-            filtered.map((row) => (
+            filteredPaginados.map((row) => (
               <div key={row.id} className="p-4 flex flex-col gap-2.5">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
@@ -458,7 +469,7 @@ export default function ReportesFinancieros() {
                   <tr>
                     <td colSpan={6} className="px-6 py-8 text-center text-zinc-500">Cargando reportes...</td>
                   </tr>
-                ) : filtered.map((row) => (
+                ) : filteredPaginados.map((row) => (
                   <tr key={row.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/20 transition-colors">
                     <td className="px-6 py-4 text-zinc-500 dark:text-zinc-400 whitespace-nowrap">{row.dateLabel}</td>
                     <td className="px-6 py-4 font-medium text-zinc-900 dark:text-zinc-100">{row.description}</td>
@@ -494,9 +505,11 @@ export default function ReportesFinancieros() {
               </tbody>
             </table>
           </div>
-          <div className="p-4 border-t border-zinc-100 dark:border-zinc-800 flex justify-between items-center text-sm text-zinc-500">
-            <span>Mostrando {filtered.length} de {transactions.length} transacciones</span>
-          </div>
+          <Paginacion
+            paginaActual={paginaValida}
+            totalElementos={filtered.length}
+            onCambiarPagina={setPaginaActual}
+          />
         </div>
         </div>
       </main>

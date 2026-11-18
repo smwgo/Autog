@@ -7,6 +7,7 @@ import { PosMobileNav } from "@/components/PosMobileNav";
 import { CollapsibleMetrics } from "@/components/CollapsibleMetrics";
 import { BranchTabs } from "@/components/pos/BranchTabs";
 import { getClientUserBranch, getClientActiveBranch } from "@/lib/branch";
+import { Paginacion, paginarLista } from "@/components/Paginacion";
 
 interface CreditAccount {
   id: string;
@@ -164,6 +165,16 @@ export default function CreditosPage() {
     if (filtroEstado !== "TODOS" && c.status !== filtroEstado) return false;
     return true;
   });
+
+  const [paginaActual, setPaginaActual] = useState(1);
+  useEffect(() => {
+    setPaginaActual(1);
+  }, [searchTerm, filtroEstado]);
+
+  const { itemsPaginados: filtradosPaginados, paginaValida } = paginarLista(
+    filtrados,
+    paginaActual
+  );
 
   const carteraTotal = creditos.reduce((acc, c) => acc + c.currentBalance, 0);
   const cupoTotalOtorgado = creditos.reduce((acc, c) => acc + c.creditLimit, 0);
@@ -396,7 +407,7 @@ export default function CreditosPage() {
             <>
               {/* Mobile Card List (md:hidden) - Ordenado como Clientes */}
               <div className="space-y-3 md:hidden">
-                {filtrados.map((cuenta) => {
+                {filtradosPaginados.map((cuenta) => {
                   const porcentajeUso = Math.min(
                     100,
                     Math.round((cuenta.currentBalance / Math.max(1, cuenta.creditLimit)) * 100)
@@ -571,7 +582,7 @@ export default function CreditosPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
-                    {filtrados.map((cuenta) => {
+                    {filtradosPaginados.map((cuenta) => {
                       const porcentajeUso = Math.min(
                         100,
                         Math.round((cuenta.currentBalance / Math.max(1, cuenta.creditLimit)) * 100)
@@ -668,6 +679,11 @@ export default function CreditosPage() {
                   </tbody>
                 </table>
               </div>
+              <Paginacion
+                paginaActual={paginaValida}
+                totalElementos={filtrados.length}
+                onCambiarPagina={setPaginaActual}
+              />
             </>
           )}
         </div>

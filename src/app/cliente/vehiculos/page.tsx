@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Header } from "@/components/Header";
 import { ClienteMobileNav } from "@/components/ClienteMobileNav";
 import { CollapsibleMetrics } from "@/components/CollapsibleMetrics";
+import { Paginacion, paginarLista } from "@/components/Paginacion";
 
 // Estructura del Vehículo en Neon PostgreSQL
 interface NeonVehicle {
@@ -300,6 +301,16 @@ export default function MisVehiculosPage() {
     return matchesSearch && matchesBrand;
   });
 
+  const [paginaActual, setPaginaActual] = useState(1);
+  useEffect(() => {
+    setPaginaActual(1);
+  }, [searchTerm, brandFilter]);
+
+  const { itemsPaginados: vehiclesPaginados, paginaValida } = paginarLista(
+    filteredVehicles,
+    paginaActual
+  );
+
   return (
     <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans pb-24 md:pb-0">
       <Header />
@@ -483,7 +494,7 @@ export default function MisVehiculosPage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredVehicles.map((vehicle) => {
+              {vehiclesPaginados.map((vehicle) => {
               const statusInfo = getVehicleStatus(vehicle.mileage);
               const icon = getVehicleIcon(vehicle.brand, vehicle.model);
 
@@ -602,6 +613,16 @@ export default function MisVehiculosPage() {
               </button>
             </div>
           )
+        )}
+        {!loading && filteredVehicles.length > 0 && (
+          <div className="mt-6 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-xs overflow-hidden">
+            <Paginacion
+              paginaActual={paginaValida}
+              totalElementos={filteredVehicles.length}
+              onCambiarPagina={setPaginaActual}
+              className="border-t-0"
+            />
+          </div>
         )}
       </main>
 

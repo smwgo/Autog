@@ -7,6 +7,7 @@ import { Header } from "@/components/Header";
 import { CollapsibleMetrics } from "@/components/CollapsibleMetrics";
 import { isProtectedAdminEmail } from "@/lib/admin-accounts";
 import { useRealtimeSync } from "@/hooks/useRealtimeSync";
+import { Paginacion, paginarLista } from "@/components/Paginacion";
 
 // ============================================================================
 // INTERFACES Y TIPOS
@@ -556,6 +557,16 @@ export default function PanelPresupuestosPage() {
     onRefresh: () => cargarOrdenes(true),
   });
 
+  const [paginaActual, setPaginaActual] = useState(1);
+  useEffect(() => {
+    setPaginaActual(1);
+  }, [busqueda, filtroEstado]);
+
+  const { itemsPaginados: ordenesPaginadas, paginaValida } = paginarLista(
+    ordenes,
+    paginaActual
+  );
+
   // ============================================================================
   // RENDER PRINCIPAL
   // ============================================================================
@@ -786,7 +797,7 @@ export default function PanelPresupuestosPage() {
               <>
                 {/* Vista Móvil Compacta (optimizada iOS y Android) */}
                 <div className="md:hidden space-y-2.5">
-                  {ordenes.map((orden, idx) => {
+                  {ordenesPaginadas.map((orden, idx) => {
                     const estaTrabajando =
                       ordenesTrabajandoIds.includes(orden.id) ||
                       ordenesTrabajandoIds.includes(orden.orderNumber) ||
@@ -896,6 +907,15 @@ export default function PanelPresupuestosPage() {
                   })}
                 </div>
 
+                <div className="md:hidden bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-xs overflow-hidden">
+                  <Paginacion
+                    paginaActual={paginaValida}
+                    totalElementos={ordenes.length}
+                    onCambiarPagina={setPaginaActual}
+                    className="border-t-0"
+                  />
+                </div>
+
                 {/* Vista Escritorio Minimalista */}
                 <div className="hidden md:block bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden">
                   <div className="overflow-x-auto">
@@ -913,7 +933,7 @@ export default function PanelPresupuestosPage() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800 text-xs font-normal">
-                        {ordenes.map((orden, idx) => {
+                        {ordenesPaginadas.map((orden, idx) => {
                           const estaTrabajando =
                             ordenesTrabajandoIds.includes(orden.id) ||
                             ordenesTrabajandoIds.includes(orden.orderNumber) ||
@@ -1013,6 +1033,11 @@ export default function PanelPresupuestosPage() {
                       </tbody>
                     </table>
                   </div>
+                  <Paginacion
+                    paginaActual={paginaValida}
+                    totalElementos={ordenes.length}
+                    onCambiarPagina={setPaginaActual}
+                  />
                 </div>
               </>
             )}

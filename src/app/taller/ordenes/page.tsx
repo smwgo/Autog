@@ -6,6 +6,7 @@ import { Header } from "@/components/Header";
 import { TallerMobileNav } from "@/components/TallerMobileNav";
 import { CollapsibleMetrics } from "@/components/CollapsibleMetrics";
 import { getClientActiveBranch, getClientUserBranch, SedeType } from "@/lib/branch";
+import { Paginacion, paginarLista } from "@/components/Paginacion";
 
 interface OrderItem {
   id: string;
@@ -211,6 +212,16 @@ export default function ActiveOrdersPage() {
   const ordenesActivasList = orders.filter((o) => !esOrdenEnHistorial(o));
   const ordenesHistorialList = orders.filter((o) => esOrdenEnHistorial(o));
   const ordenesMostradas = seccionActiva === "HISTORIAL" ? ordenesHistorialList : ordenesActivasList;
+
+  const [paginaActual, setPaginaActual] = useState(1);
+  useEffect(() => {
+    setPaginaActual(1);
+  }, [searchTerm, filterStatus, seccionActiva]);
+
+  const { itemsPaginados: ordenesPaginadas, paginaValida } = paginarLista(
+    ordenesMostradas,
+    paginaActual
+  );
 
   return (
     <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans text-zinc-900 dark:text-zinc-100 pb-24 md:pb-0">
@@ -426,7 +437,7 @@ export default function ActiveOrdersPage() {
         {/* Orders Mobile Card View (md:hidden) adaptada al diseño de facturas */}
         {!cargando && (
           <div className="md:hidden space-y-3.5">
-            {ordenesMostradas.map((order) => (
+            {ordenesPaginadas.map((order) => (
               <div
                 key={order.dbId || order.id}
                 className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-4 space-y-3 shadow-xs hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors"
@@ -578,6 +589,14 @@ export default function ActiveOrdersPage() {
                 </Link>
               </div>
             )}
+            <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-xs overflow-hidden">
+              <Paginacion
+                paginaActual={paginaValida}
+                totalElementos={ordenesMostradas.length}
+                onCambiarPagina={setPaginaActual}
+                className="border-t-0"
+              />
+            </div>
           </div>
         )}
 
@@ -598,7 +617,7 @@ export default function ActiveOrdersPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
-                  {ordenesMostradas.map((order) => (
+                  {ordenesPaginadas.map((order) => (
                     <tr
                       key={order.dbId || order.id}
                       className="hover:bg-zinc-50 dark:hover:bg-zinc-800/40 transition-colors"
@@ -761,12 +780,11 @@ export default function ActiveOrdersPage() {
               </table>
             </div>
 
-            <div className="px-6 py-3 border-t border-zinc-100 dark:border-zinc-800 flex justify-between items-center text-xs text-zinc-500">
-              <span>Mostrando {ordenesMostradas.length} {ordenesMostradas.length === 1 ? "orden" : "órdenes"}</span>
-              <span className="font-semibold text-zinc-700 dark:text-zinc-300">
-                {seccionActiva === "HISTORIAL" ? "Historial de Órdenes" : "Órdenes de Taller"}
-              </span>
-            </div>
+            <Paginacion
+              paginaActual={paginaValida}
+              totalElementos={ordenesMostradas.length}
+              onCambiarPagina={setPaginaActual}
+            />
           </div>
         )}
         </div>

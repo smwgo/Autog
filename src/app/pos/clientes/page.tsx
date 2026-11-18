@@ -8,6 +8,7 @@ import { getClientActiveBranch, getClientUserBranch, SedeType, FiltroSedeType } 
 import { BranchTabs } from "@/components/pos/BranchTabs";
 import { useRealtimeSync } from "@/hooks/useRealtimeSync";
 import { getAuthHeaders } from "@/lib/auth-headers";
+import { Paginacion, paginarLista } from "@/components/Paginacion";
 
 interface Vehicle {
   id: string;
@@ -96,106 +97,23 @@ export default function GestionClientes() {
 
   // Paginación (por defecto 20 clientes por página)
   const [paginaActual, setPaginaActual] = useState(1);
-  const [porPagina, setPorPagina] = useState(20);
 
   // Reiniciar a página 1 cuando cambia la búsqueda, filtro o sede
   useEffect(() => {
     setPaginaActual(1);
   }, [busqueda, filtro, sedeActiva]);
 
-  const totalElementos = clientes.length;
-  const totalPaginas = Math.max(1, Math.ceil(totalElementos / porPagina));
-  const paginaValida = Math.min(Math.max(1, paginaActual), totalPaginas);
-  const indiceInicio = (paginaValida - 1) * porPagina;
-  const indiceFin = Math.min(indiceInicio + porPagina, totalElementos);
-  const clientesPaginados = clientes.slice(indiceInicio, indiceFin);
+  const { itemsPaginados: clientesPaginados, paginaValida } = paginarLista(
+    clientes,
+    paginaActual
+  );
 
   const renderPaginacion = () => (
-    <div className="p-3.5 sm:p-4 border-t border-zinc-100 dark:border-zinc-800 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs sm:text-sm text-zinc-500">
-      <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto justify-between sm:justify-start">
-        <span>
-          {totalElementos === 0 ? (
-            "0 de 0"
-          ) : (
-            <>
-              <strong className="text-zinc-800 dark:text-zinc-200 font-semibold">{indiceInicio + 1}-{indiceFin}</strong> de <strong className="text-zinc-800 dark:text-zinc-200 font-semibold">{totalElementos}</strong>
-            </>
-          )}
-        </span>
-
-        <div className="flex items-center shrink-0">
-          <select
-            id="clientes-por-pagina"
-            aria-label="Clientes por página"
-            value={porPagina}
-            onChange={(e) => {
-              setPorPagina(Number(e.target.value));
-              setPaginaActual(1);
-            }}
-            className="h-8 px-2 rounded-lg bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-xs font-semibold text-zinc-700 dark:text-zinc-200 focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
-          >
-            <option value={20}>20 / pág</option>
-            <option value={50}>50 / pág</option>
-            <option value={100}>100 / pág</option>
-          </select>
-        </div>
-      </div>
-
-      <div className="flex items-center gap-1 sm:gap-1.5 w-full sm:w-auto justify-between sm:justify-end">
-        <button
-          type="button"
-          onClick={() => setPaginaActual((prev) => Math.max(1, prev - 1))}
-          disabled={paginaValida <= 1}
-          className="h-8 px-2.5 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 text-xs font-medium hover:bg-zinc-50 dark:hover:bg-zinc-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer flex items-center gap-1 shadow-xs"
-        >
-          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
-          </svg>
-          <span className="hidden sm:inline">Anterior</span>
-        </button>
-
-        <div className="flex items-center gap-1">
-          {Array.from({ length: totalPaginas }, (_, i) => i + 1)
-            .filter((num) => {
-              if (totalPaginas <= 7) return true;
-              if (num === 1 || num === totalPaginas) return true;
-              if (Math.abs(num - paginaValida) <= 1) return true;
-              return false;
-            })
-            .map((num, idx, arr) => {
-              const prevNum = arr[idx - 1];
-              const showEllipsis = prevNum && num - prevNum > 1;
-              return (
-                <span key={num} className="flex items-center gap-1">
-                  {showEllipsis && <span className="px-1 text-zinc-400 select-none">...</span>}
-                  <button
-                    type="button"
-                    onClick={() => setPaginaActual(num)}
-                    className={`min-w-8 h-8 px-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${paginaValida === num
-                      ? "bg-blue-600 text-white shadow-xs shadow-blue-500/20"
-                      : "border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-700"
-                      }`}
-                  >
-                    {num}
-                  </button>
-                </span>
-              );
-            })}
-        </div>
-
-        <button
-          type="button"
-          onClick={() => setPaginaActual((prev) => Math.min(totalPaginas, prev + 1))}
-          disabled={paginaValida >= totalPaginas || totalElementos === 0}
-          className="h-8 px-2.5 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 text-xs font-medium hover:bg-zinc-50 dark:hover:bg-zinc-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer flex items-center gap-1 shadow-xs"
-        >
-          <span className="hidden sm:inline">Siguiente</span>
-          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
-          </svg>
-        </button>
-      </div>
-    </div>
+    <Paginacion
+      paginaActual={paginaValida}
+      totalElementos={clientes.length}
+      onCambiarPagina={setPaginaActual}
+    />
   );
 
   const cargarClientes = useCallback(async () => {

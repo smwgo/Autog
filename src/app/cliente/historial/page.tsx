@@ -6,6 +6,7 @@ import { useSearchParams } from 'next/navigation';
 import { Header } from "@/components/Header";
 import { ClienteMobileNav } from "@/components/ClienteMobileNav";
 import { CollapsibleMetrics } from "@/components/CollapsibleMetrics";
+import { Paginacion, paginarLista } from "@/components/Paginacion";
 
 interface ServiceItem {
   dbId?: string;
@@ -197,6 +198,16 @@ function HistorialServiciosContent() {
     );
   });
 
+  const [paginaActual, setPaginaActual] = useState(1);
+  useEffect(() => {
+    setPaginaActual(1);
+  }, [searchTerm, selectedVehicle]);
+
+  const { itemsPaginados: historyPaginado, paginaValida } = paginarLista(
+    filteredHistory,
+    paginaActual
+  );
+
   return (
     <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans pb-24 md:pb-0">
       <Header />
@@ -370,7 +381,7 @@ function HistorialServiciosContent() {
               )}
             </div>
           ) : (
-            filteredHistory.map((record) => (
+            historyPaginado.map((record) => (
               <div
                 key={record.dbId || record.id}
                 className="bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800 p-6 md:p-8 shadow-sm hover:shadow-md hover:border-amber-300 dark:hover:border-amber-700 transition-all flex flex-col md:flex-row gap-6 relative overflow-hidden group"
@@ -461,6 +472,16 @@ function HistorialServiciosContent() {
                 </div>
               </div>
             ))
+          )}
+          {!loading && filteredHistory.length > 0 && (
+            <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-xs overflow-hidden">
+              <Paginacion
+                paginaActual={paginaValida}
+                totalElementos={filteredHistory.length}
+                onCambiarPagina={setPaginaActual}
+                className="border-t-0"
+              />
+            </div>
           )}
         </div>
       </main>

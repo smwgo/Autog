@@ -8,6 +8,7 @@ import { PosMobileNav } from "@/components/PosMobileNav";
 import { CollapsibleMetrics } from "@/components/CollapsibleMetrics";
 import { BranchTabs } from "@/components/pos/BranchTabs";
 import { getClientUserBranch, getClientActiveBranch } from "@/lib/branch";
+import { Paginacion, paginarLista } from "@/components/Paginacion";
 
 interface CotizacionItem {
   id?: string;
@@ -232,6 +233,16 @@ export default function CotizacionesPosPage() {
     if (filtroEstado === "ANULADA") return st === "ANULADA" || st === "CANCELADA";
     return true;
   });
+
+  const [paginaActual, setPaginaActual] = useState(1);
+  useEffect(() => {
+    setPaginaActual(1);
+  }, [searchTerm, filtroEstado]);
+
+  const { itemsPaginados: cotizacionesPaginadas, paginaValida } = paginarLista(
+    cotizacionesFiltradas,
+    paginaActual
+  );
 
   // KPIs
   const totalCotizado = cotizaciones
@@ -506,7 +517,7 @@ export default function CotizacionesPosPage() {
             <>
               {/* Vista Móvil (Ordenada como Clientes: Cabecera, 2 recuadros, ítems deslizables y barra de botones abajo) */}
               <div className="md:hidden space-y-3">
-                {cotizacionesFiltradas.map((c) => {
+                {cotizacionesPaginadas.map((c) => {
                   const estado = (c.status || "PENDIENTE").toUpperCase();
                   const esAnulada = estado === "ANULADA";
                   const esAprobada = estado === "APROBADA" || estado === "COMPLETADA" || estado === "FACTURADA";
@@ -685,6 +696,15 @@ export default function CotizacionesPosPage() {
                 })}
               </div>
 
+              <div className="md:hidden bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-xs overflow-hidden">
+                <Paginacion
+                  paginaActual={paginaValida}
+                  totalElementos={cotizacionesFiltradas.length}
+                  onCambiarPagina={setPaginaActual}
+                  className="border-t-0"
+                />
+              </div>
+
               {/* Vista Escritorio (Tabla completa y fluida) */}
               <div className="hidden md:block bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden">
                 <div className="overflow-x-auto">
@@ -701,7 +721,7 @@ export default function CotizacionesPosPage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
-                      {cotizacionesFiltradas.map((c) => {
+                      {cotizacionesPaginadas.map((c) => {
                         const estado = (c.status || "PENDIENTE").toUpperCase();
                         const esAnulada = estado === "ANULADA";
                         const esAprobada = estado === "APROBADA" || estado === "COMPLETADA";
@@ -793,6 +813,11 @@ export default function CotizacionesPosPage() {
                     </tbody>
                   </table>
                 </div>
+                <Paginacion
+                  paginaActual={paginaValida}
+                  totalElementos={cotizacionesFiltradas.length}
+                  onCambiarPagina={setPaginaActual}
+                />
               </div>
             </>
           )}

@@ -5,6 +5,7 @@ import { Header } from "@/components/Header";
 import { GerenciaMobileNav } from "@/components/GerenciaMobileNav";
 import { CollapsibleMetrics } from "@/components/CollapsibleMetrics";
 import { useEffect, useState } from "react";
+import { Paginacion, paginarLista } from "@/components/Paginacion";
 
 export default function InventarioGlobal() {
   const [products, setProducts] = useState<any[]>([]);
@@ -141,6 +142,16 @@ export default function InventarioGlobal() {
     if (search && !`${p.code} ${p.name} ${p.category}`.toLowerCase().includes(search.toLowerCase())) return false;
     return true;
   });
+
+  const [paginaActual, setPaginaActual] = useState(1);
+  useEffect(() => {
+    setPaginaActual(1);
+  }, [catFilter, search]);
+
+  const { itemsPaginados: filteredPaginados, paginaValida } = paginarLista(
+    filtered,
+    paginaActual
+  );
 
   const totalValue = products.reduce(
     (acc, p) => acc + Number(p.price || 0) * (Number(p.stock || 0) + Number(p.stockNorte ?? 0)),
@@ -280,7 +291,7 @@ export default function InventarioGlobal() {
                 No se encontraron productos
               </div>
             ) : (
-              filtered.map((row) => {
+              filteredPaginados.map((row) => {
                 const s1 = Number(row.stock ?? 0);
                 const s2 = Number(row.stockNorte ?? 0);
                 const min = Number(row.minStock ?? 5);
@@ -385,7 +396,7 @@ export default function InventarioGlobal() {
                     <tr>
                       <td colSpan={7} className="px-6 py-8 text-center text-zinc-500">Cargando inventario...</td>
                     </tr>
-                  ) : filtered.map((row) => {
+                  ) : filteredPaginados.map((row) => {
                     const s1 = Number(row.stock ?? 0);
                     const s2 = Number(row.stockNorte ?? 0);
                     const min = Number(row.minStock ?? 5);
@@ -451,9 +462,11 @@ export default function InventarioGlobal() {
                 </tbody>
               </table>
             </div>
-            <div className="p-4 border-t border-zinc-100 dark:border-zinc-800 flex justify-between items-center text-sm text-zinc-500">
-              <span>Mostrando {filtered.length} de {products.length} productos</span>
-            </div>
+            <Paginacion
+              paginaActual={paginaValida}
+              totalElementos={filtered.length}
+              onCambiarPagina={setPaginaActual}
+            />
           </div>
         </div>
       </main>

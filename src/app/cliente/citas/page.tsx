@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Header } from "@/components/Header";
 import { ClienteMobileNav } from "@/components/ClienteMobileNav";
 import { CollapsibleMetrics } from "@/components/CollapsibleMetrics";
+import { Paginacion, paginarLista } from "@/components/Paginacion";
 
 interface VehicleOption {
   id: string;
@@ -251,6 +252,16 @@ export default function AgendarCitaPage() {
     return matchesSearch && matchesStatus;
   });
 
+  const [paginaActual, setPaginaActual] = useState(1);
+  useEffect(() => {
+    setPaginaActual(1);
+  }, [searchAppointments, statusFilter]);
+
+  const { itemsPaginados: appointmentsPaginados, paginaValida } = paginarLista(
+    filteredAppointments,
+    paginaActual
+  );
+
   if (isSubmitted) {
     return (
       <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans pb-24 md:pb-0">
@@ -450,7 +461,7 @@ export default function AgendarCitaPage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {filteredAppointments.map((cita) => (
+              {appointmentsPaginados.map((cita) => (
                 <div
                   key={cita.id}
                   className="bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800 p-6 shadow-sm flex flex-col justify-between gap-4 hover:border-emerald-400 transition-all"
@@ -507,6 +518,16 @@ export default function AgendarCitaPage() {
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+          {!loadingAppointments && filteredAppointments.length > 0 && (
+            <div className="mt-4 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-xs overflow-hidden">
+              <Paginacion
+                paginaActual={paginaValida}
+                totalElementos={filteredAppointments.length}
+                onCambiarPagina={setPaginaActual}
+                className="border-t-0"
+              />
             </div>
           )}
         </div>

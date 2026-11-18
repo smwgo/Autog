@@ -5,6 +5,7 @@ import { Header } from "@/components/Header";
 import { OficinaMobileNav } from "@/components/OficinaMobileNav";
 import { CollapsibleMetrics } from "@/components/CollapsibleMetrics";
 import { useCallback, useEffect, useState } from "react";
+import { Paginacion, paginarLista } from "@/components/Paginacion";
 
 type Appointment = {
   id: string;
@@ -231,6 +232,16 @@ export default function CitasAgenda() {
   const filtered = appointmentsForDate
     .filter((appointment) => techFilter === "TODOS" || (appointment.tech || "Sin Asignar") === techFilter)
     .sort((a, b) => getTimeSortValue(a.timeSlot) - getTimeSortValue(b.timeSlot));
+
+  const [paginaActual, setPaginaActual] = useState(1);
+  useEffect(() => {
+    setPaginaActual(1);
+  }, [selectedDate, techFilter]);
+
+  const { itemsPaginados: filteredPaginados, paginaValida } = paginarLista(
+    filtered,
+    paginaActual
+  );
   const waitingCount = appointmentsForDate.filter((appointment) =>
     appointment.status === "Esperando" || appointment.status === "Solicitada"
   ).length;
@@ -373,7 +384,7 @@ export default function CitasAgenda() {
               </button>
             </div>
           ) : (
-            filtered.map((row) => (
+            filteredPaginados.map((row) => (
               <div key={row.id} className="bg-white dark:bg-[#0d121c] rounded-2xl p-4 border border-zinc-200 dark:border-zinc-800 shadow-sm flex flex-col gap-3">
                 <div className="flex items-center justify-between">
                   <span className="px-2.5 py-1 rounded-lg bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 text-xs font-extrabold">
@@ -455,7 +466,7 @@ export default function CitasAgenda() {
                       </button>
                     </td>
                   </tr>
-                ) : filtered.map((row) => (
+                ) : filteredPaginados.map((row) => (
                   <tr key={row.id} className="hover:bg-zinc-50/70 dark:hover:bg-zinc-800/30 transition-colors">
                     <td className="px-5 py-4">
                       <span className="font-bold text-zinc-900 dark:text-zinc-100">{row.timeSlot}</span>
@@ -520,6 +531,11 @@ export default function CitasAgenda() {
               </tbody>
             </table>
           </div>
+          <Paginacion
+            paginaActual={paginaValida}
+            totalElementos={filtered.length}
+            onCambiarPagina={setPaginaActual}
+          />
         </div>
         </div>
       </main>

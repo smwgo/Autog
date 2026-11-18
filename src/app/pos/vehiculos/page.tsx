@@ -9,6 +9,7 @@ import { CollapsibleMetrics } from "@/components/CollapsibleMetrics";
 import { BranchTabs } from "@/components/pos/BranchTabs";
 import { useRealtimeSync } from "@/hooks/useRealtimeSync";
 import { getAuthHeaders } from "@/lib/auth-headers";
+import { Paginacion, paginarLista } from "@/components/Paginacion";
 
 interface VehicleItem {
   id: string;
@@ -283,6 +284,16 @@ export default function PosVehiculosPage() {
     });
   }, [vehicles, filtroOrigen]);
 
+  const [paginaActual, setPaginaActual] = useState(1);
+  useEffect(() => {
+    setPaginaActual(1);
+  }, [searchTerm, filtroOrigen]);
+
+  const { itemsPaginados: vehiculosPaginados, paginaValida } = paginarLista(
+    vehiculosFiltrados,
+    paginaActual
+  );
+
   // Métricas
   const totalVehiculos = vehicles.length;
   const totalTaller = vehicles.filter((v) => v.origin === "Taller" || v.tallerVisits > 0).length;
@@ -509,7 +520,7 @@ export default function PosVehiculosPage() {
               <>
                 {/* Vista Móvil (Tarjetas estructuradas idénticas a Clientes) */}
                 <div className="md:hidden space-y-3.5">
-                  {vehiculosFiltrados.map((v) => (
+                  {vehiculosPaginados.map((v) => (
                     <div
                       key={v.id}
                       className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-xs overflow-hidden active:bg-zinc-50 dark:active:bg-zinc-800/40 transition-colors"
@@ -662,6 +673,15 @@ export default function PosVehiculosPage() {
                   ))}
                 </div>
 
+              <div className="md:hidden bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-xs overflow-hidden">
+                <Paginacion
+                  paginaActual={paginaValida}
+                  totalElementos={vehiculosFiltrados.length}
+                  onCambiarPagina={setPaginaActual}
+                  className="border-t-0"
+                />
+              </div>
+
               {/* Vista Escritorio (Tabla fluida) */}
               <div className="hidden md:block bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden">
                 <div className="overflow-x-auto">
@@ -677,7 +697,7 @@ export default function PosVehiculosPage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
-                      {vehiculosFiltrados.map((v) => (
+                      {vehiculosPaginados.map((v) => (
                         <tr key={v.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/40 transition-colors">
                           <td className="py-3.5 px-4 whitespace-nowrap">
                             <div className="flex items-center gap-2.5">
@@ -792,6 +812,11 @@ export default function PosVehiculosPage() {
                     </tbody>
                   </table>
                 </div>
+                <Paginacion
+                  paginaActual={paginaValida}
+                  totalElementos={vehiculosFiltrados.length}
+                  onCambiarPagina={setPaginaActual}
+                />
               </div>
             </>
           )}

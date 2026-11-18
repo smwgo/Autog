@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Header } from "@/components/Header";
 import { OficinaMobileNav } from "@/components/OficinaMobileNav";
 import { CollapsibleMetrics } from "@/components/CollapsibleMetrics";
+import { Paginacion, paginarLista } from "@/components/Paginacion";
 
 function MinimalSelect<T extends string>({
   label,
@@ -275,6 +276,20 @@ export default function OrdenesCotizaciones() {
     });
   }, [orders, statusFilter, search]);
 
+  const [paginaActual, setPaginaActual] = useState(1);
+  useEffect(() => {
+    setPaginaActual(1);
+  }, [view, statusFilter, search]);
+
+  const { itemsPaginados: quotesPaginadas, paginaValida: paginaValidaQuotes } = paginarLista(
+    filteredQuotes,
+    paginaActual
+  );
+  const { itemsPaginados: ordersPaginadas, paginaValida: paginaValidaOrders } = paginarLista(
+    filteredOrders,
+    paginaActual
+  );
+
   const pendingQuotesCount = quotes.filter((q) => (q.status || "").toLowerCase().includes("pendiente")).length;
   const activeOrdersCount = orders.filter((o) => o.status !== "Terminado" && o.status !== "Entregado").length;
   const finishedOrdersCount = orders.filter((o) => o.status === "Terminado" || o.status === "Entregado").length;
@@ -479,7 +494,7 @@ export default function OrdenesCotizaciones() {
               </div>
             ) : view === "cotizaciones" ? (
               filteredQuotes.length === 0 ? null : (
-                filteredQuotes.map((row) => (
+                quotesPaginadas.map((row) => (
                   <div
                     key={row.id}
                     className="bg-white dark:bg-[#0d121c] rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 p-4 space-y-3 shadow-xs"
@@ -548,7 +563,7 @@ export default function OrdenesCotizaciones() {
                 ))
               )
             ) : filteredOrders.length === 0 ? null : (
-              filteredOrders.map((row) => (
+              ordersPaginadas.map((row) => (
                 <div
                   key={row.id}
                   className="bg-white dark:bg-[#0d121c] rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 p-4 space-y-3 shadow-xs"
@@ -632,7 +647,7 @@ export default function OrdenesCotizaciones() {
                     </tr>
                   ) : view === "cotizaciones" ? (
                     filteredQuotes.length === 0 ? null : (
-                      filteredQuotes.map((row) => (
+                      quotesPaginadas.map((row) => (
                         <tr key={row.id} className="hover:bg-zinc-50/70 dark:hover:bg-zinc-800/30 transition-colors">
                           <td className="py-4 px-5">
                             <span className="font-bold text-amber-500 font-mono text-xs">#{row.quoteNumber}</span>
@@ -692,7 +707,7 @@ export default function OrdenesCotizaciones() {
                     )
                   ) : (
                     filteredOrders.length === 0 ? null : (
-                      filteredOrders.map((row) => (
+                      ordersPaginadas.map((row) => (
                         <tr key={row.id} className="hover:bg-zinc-50/70 dark:hover:bg-zinc-800/30 transition-colors">
                           <td className="py-4 px-5">
                             <span className="font-bold text-blue-500 font-mono text-xs">#{row.orderNumber}</span>
@@ -745,10 +760,11 @@ export default function OrdenesCotizaciones() {
               </table>
             </div>
 
-            {/* Footer con conteo exacto */}
-            <div className="p-4 sm:p-5 border-t border-zinc-200/80 dark:border-zinc-800/80 flex justify-between items-center text-xs sm:text-sm text-zinc-500">
-              <span>Mostrando {view === "cotizaciones" ? filteredQuotes.length : filteredOrders.length} de {view === "cotizaciones" ? quotes.length : orders.length} registros</span>
-            </div>
+            <Paginacion
+              paginaActual={view === "cotizaciones" ? paginaValidaQuotes : paginaValidaOrders}
+              totalElementos={view === "cotizaciones" ? filteredQuotes.length : filteredOrders.length}
+              onCambiarPagina={setPaginaActual}
+            />
           </div>
         </div>
       </main>

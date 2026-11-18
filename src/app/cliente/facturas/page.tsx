@@ -6,6 +6,7 @@ import { useSearchParams } from 'next/navigation';
 import { Header } from "@/components/Header";
 import { ClienteMobileNav } from "@/components/ClienteMobileNav";
 import { CollapsibleMetrics } from "@/components/CollapsibleMetrics";
+import { Paginacion, paginarLista } from "@/components/Paginacion";
 
 interface InvoiceItem {
   dbId?: string;
@@ -252,6 +253,16 @@ function FacturasPagosContent() {
     return matchesSearch && matchesStatus;
   });
 
+  const [paginaActual, setPaginaActual] = useState(1);
+  useEffect(() => {
+    setPaginaActual(1);
+  }, [searchTerm, statusFilter]);
+
+  const { itemsPaginados: invoicesPaginadas, paginaValida } = paginarLista(
+    filteredInvoices,
+    paginaActual
+  );
+
   return (
     <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans pb-24 md:pb-0">
       <Header />
@@ -433,7 +444,7 @@ function FacturasPagosContent() {
               )}
             </div>
           ) : (
-            filteredInvoices.map((inv) => (
+            invoicesPaginadas.map((inv) => (
               <div 
                 key={inv.id} 
                 className="bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800 p-6 md:p-8 shadow-sm hover:shadow-md hover:border-indigo-300 dark:hover:border-indigo-700 transition-all flex flex-col md:flex-row gap-6 items-center group"
@@ -522,6 +533,16 @@ function FacturasPagosContent() {
 
               </div>
             ))
+          )}
+          {!loading && filteredInvoices.length > 0 && (
+            <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-xs overflow-hidden">
+              <Paginacion
+                paginaActual={paginaValida}
+                totalElementos={filteredInvoices.length}
+                onCambiarPagina={setPaginaActual}
+                className="border-t-0"
+              />
+            </div>
           )}
         </div>
       </main>

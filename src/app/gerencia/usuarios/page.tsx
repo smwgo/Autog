@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Header } from "@/components/Header";
 import { GerenciaMobileNav } from "@/components/GerenciaMobileNav";
 import { CollapsibleMetrics } from "@/components/CollapsibleMetrics";
+import { Paginacion, paginarLista } from "@/components/Paginacion";
 
 interface AppUserRecord {
   id: string;
@@ -61,6 +62,16 @@ function SeccionUsuariosGrupo({
   totalUsuarios,
   onSolicitarEliminar,
 }: SeccionUsuariosGrupoProps) {
+  const [paginaActual, setPaginaActual] = useState(1);
+  useEffect(() => {
+    setPaginaActual(1);
+  }, [lista.length]);
+
+  const { itemsPaginados: listaPaginada, paginaValida } = paginarLista(
+    lista,
+    paginaActual
+  );
+
   return (
     <div className="space-y-3.5">
       {/* Encabezado del Grupo */}
@@ -125,7 +136,7 @@ function SeccionUsuariosGrupo({
         <>
           {/* Vista Móvil (Tarjetas con Número de Fila y 1 Acceso Único) */}
           <div className="md:hidden space-y-3">
-            {lista.map((row, idx) => {
+            {listaPaginada.map((row, idx) => {
               const esAdmin = row.role?.toLowerCase().includes("admin");
               const acceso = obtenerAccesoUnico(row);
 
@@ -214,6 +225,15 @@ function SeccionUsuariosGrupo({
             })}
           </div>
 
+          <div className="md:hidden bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-xs overflow-hidden">
+            <Paginacion
+              paginaActual={paginaValida}
+              totalElementos={lista.length}
+              onCambiarPagina={setPaginaActual}
+              className="border-t-0"
+            />
+          </div>
+
           {/* Vista Tabla Desktop con Columna # y 1 Acceso Único por Correo */}
           <div className="hidden md:block bg-white dark:bg-zinc-900 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
@@ -231,7 +251,7 @@ function SeccionUsuariosGrupo({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
-                  {lista.map((row, idx) => {
+                  {listaPaginada.map((row, idx) => {
                     const esAdmin = row.role?.toLowerCase().includes("admin");
                     const acceso = obtenerAccesoUnico(row);
 
@@ -343,11 +363,11 @@ function SeccionUsuariosGrupo({
                 </tbody>
               </table>
             </div>
-            <div className="p-3.5 sm:p-4 border-t border-zinc-100 dark:border-zinc-800 flex justify-between items-center text-xs sm:text-sm text-zinc-500">
-              <span>
-                {lista.length} {lista.length === 1 ? "usuario" : "usuarios"} en {titulo}
-              </span>
-            </div>
+            <Paginacion
+              paginaActual={paginaValida}
+              totalElementos={lista.length}
+              onCambiarPagina={setPaginaActual}
+            />
           </div>
         </>
       )}
