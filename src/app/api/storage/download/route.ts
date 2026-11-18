@@ -43,6 +43,7 @@ function buildBufferResponseWithRange(
     "Accept-Ranges": "bytes",
     "Content-Disposition": `${isInline ? "inline" : "attachment"}; filename="${baseName}"`,
     "Cache-Control": "public, max-age=3600",
+    "X-Content-Type-Options": "nosniff",
   };
 
   if (rangeHeader && rangeHeader.startsWith("bytes=")) {
@@ -78,6 +79,18 @@ function buildBufferResponseWithRange(
   });
 }
 
+function isSafeMediaMime(mime: string): boolean {
+  const m = mime.trim().toLowerCase();
+  if (m === "image/svg+xml" || m.includes("html") || m.includes("javascript")) return false;
+  return (
+    m.startsWith("image/") ||
+    m.startsWith("audio/") ||
+    m.startsWith("video/") ||
+    m === "application/pdf" ||
+    m === "application/octet-stream"
+  );
+}
+
 function buildDataUriResponse(
   dataUri: string,
   isInline: boolean,
@@ -88,6 +101,12 @@ function buildDataUriResponse(
   if (!match) {
     return NextResponse.json(
       { success: false, error: "Formato data URI inválido." },
+      { status: 400 }
+    );
+  }
+  if (!isSafeMediaMime(match[1])) {
+    return NextResponse.json(
+      { success: false, error: "Tipo de archivo no permitido." },
       { status: 400 }
     );
   }

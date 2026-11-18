@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { checkRateLimit, getClientIpFromRequest } from "@/lib/rate-limit";
 
 // GET: Consultar solicitudes de Landing Page, Tienda o Taller en Neon
 export async function GET(request: Request) {
@@ -60,6 +61,18 @@ export async function GET(request: Request) {
 // POST: Crear nueva solicitud desde Landing Page, Tienda o Taller
 export async function POST(request: Request) {
   try {
+    const clientIp = getClientIpFromRequest(request);
+    const rl = checkRateLimit("public:solicitudes", clientIp, 10, 15 * 60 * 1000);
+    if (!rl.allowed) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Has enviado demasiadas solicitudes. Intenta nuevamente en unos minutos.",
+        },
+        { status: 429, headers: { "Retry-After": String(rl.retryAfterSeconds) } }
+      );
+    }
+
     const body = await request.json();
     const {
       type = "TIENDA",

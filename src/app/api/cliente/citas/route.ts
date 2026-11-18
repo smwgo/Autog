@@ -2,35 +2,9 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getVerifiedSessionFromRequest, isStaffSession } from "@/lib/signed-tokens";
 import { resolveSessionCustomerScope } from "@/lib/client-scope";
+import { ensureSchemaOnce } from "@/lib/runtime-ddl";
 
 export const dynamic = "force-dynamic";
-
-const SEED_APPOINTMENTS = [
-  {
-    appointmentNumber: "CIT-1042",
-    vehicle: "Toyota Hilux 2020",
-    plate: "ABC-123",
-    clientName: "Juan Pérez",
-    clientPhone: "+593 99 111 2233",
-    serviceName: "Mantenimiento Preventivo (Aceite y Filtros)",
-    date: "2026-10-20",
-    timeSlot: "08:00 AM",
-    status: "Confirmada",
-    notes: "Revisión de los 45,000 km y cambio de filtro de cabina.",
-  },
-  {
-    appointmentNumber: "CIT-1048",
-    vehicle: "Honda Civic 2018",
-    plate: "XYZ-987",
-    clientName: "Juan Pérez",
-    clientPhone: "+593 99 111 2233",
-    serviceName: "Alineación 3D y Balanceo Computarizado",
-    date: "2026-10-24",
-    timeSlot: "10:00 AM",
-    status: "Programada",
-    notes: "Ligera vibración en volante a velocidad de autopista.",
-  },
-];
 
 function generateId(): string {
   return "cit_" + Math.random().toString(36).substring(2, 9) + Date.now().toString(36);
@@ -52,24 +26,26 @@ async function withRetry<T>(fn: () => Promise<T>, maxRetries = 3, delayMs = 600)
 }
 
 async function ensureTableExists() {
-  await prisma.$executeRawUnsafe(`
-    CREATE TABLE IF NOT EXISTS "ClientAppointment" (
-      "id" TEXT NOT NULL,
-      "appointmentNumber" TEXT NOT NULL,
-      "vehicle" TEXT NOT NULL,
-      "plate" TEXT NOT NULL,
-      "clientName" TEXT NOT NULL DEFAULT 'Juan Pérez',
-      "clientPhone" TEXT,
-      "serviceName" TEXT NOT NULL,
-      "date" TEXT NOT NULL,
-      "timeSlot" TEXT NOT NULL,
-      "status" TEXT NOT NULL DEFAULT 'Programada',
-      "notes" TEXT,
-      "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      CONSTRAINT "ClientAppointment_pkey" PRIMARY KEY ("id")
-    );
-  `);
+  await ensureSchemaOnce("ClientAppointment", async () => {
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "ClientAppointment" (
+        "id" TEXT NOT NULL,
+        "appointmentNumber" TEXT NOT NULL,
+        "vehicle" TEXT NOT NULL,
+        "plate" TEXT NOT NULL,
+        "clientName" TEXT NOT NULL DEFAULT 'Cliente',
+        "clientPhone" TEXT,
+        "serviceName" TEXT NOT NULL,
+        "date" TEXT NOT NULL,
+        "timeSlot" TEXT NOT NULL,
+        "status" TEXT NOT NULL DEFAULT 'Programada',
+        "notes" TEXT,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "ClientAppointment_pkey" PRIMARY KEY ("id")
+      );
+    `);
+  });
 }
 
 export async function GET(request: Request) {

@@ -1,24 +1,27 @@
 import { NextResponse } from "next/server";
 import { prisma, withRetry } from "@/lib/prisma";
+import { ensureSchemaOnce } from "@/lib/runtime-ddl";
 
 async function ensureTables() {
-  await prisma.$executeRawUnsafe(`
-    CREATE TABLE IF NOT EXISTS "ClientQuote" (
-      "id" TEXT NOT NULL PRIMARY KEY,
-      "quoteNumber" TEXT NOT NULL UNIQUE,
-      "date" TEXT NOT NULL,
-      "vehicle" TEXT NOT NULL,
-      "plate" TEXT,
-      "clientName" TEXT NOT NULL DEFAULT 'Cliente',
-      "status" TEXT NOT NULL DEFAULT 'Pendiente',
-      "itemsJson" TEXT NOT NULL DEFAULT '[]',
-      "subtotal" DECIMAL(12,2) NOT NULL DEFAULT 0,
-      "total" DECIMAL(12,2) NOT NULL DEFAULT 0,
-      "notes" TEXT,
-      "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
-    );
-  `);
+  await ensureSchemaOnce("OficinaOrdenes", async () => {
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "ClientQuote" (
+        "id" TEXT NOT NULL PRIMARY KEY,
+        "quoteNumber" TEXT NOT NULL UNIQUE,
+        "date" TEXT NOT NULL,
+        "vehicle" TEXT NOT NULL,
+        "plate" TEXT,
+        "clientName" TEXT NOT NULL DEFAULT 'Cliente',
+        "status" TEXT NOT NULL DEFAULT 'Pendiente',
+        "itemsJson" TEXT NOT NULL DEFAULT '[]',
+        "subtotal" DECIMAL(12,2) NOT NULL DEFAULT 0,
+        "total" DECIMAL(12,2) NOT NULL DEFAULT 0,
+        "notes" TEXT,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+  });
 }
 
 export async function GET() {

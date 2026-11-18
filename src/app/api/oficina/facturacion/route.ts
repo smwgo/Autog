@@ -2,61 +2,64 @@ import { NextResponse } from "next/server";
 import { prisma, withRetry } from "@/lib/prisma";
 import { emitirFacturaElectronica } from "@/lib/sri/facturaService";
 import { createAuditLog } from "@/lib/audit";
+import { ensureSchemaOnce } from "@/lib/runtime-ddl";
 
 async function ensureFacturacionTables() {
-  await prisma.$executeRawUnsafe(`
-    CREATE TABLE IF NOT EXISTS "ClientInvoice" (
-      "id" TEXT NOT NULL PRIMARY KEY,
-      "invoiceNumber" TEXT NOT NULL UNIQUE,
-      "uuid" TEXT NOT NULL UNIQUE,
-      "claveAcceso" TEXT,
-      "date" TEXT NOT NULL,
-      "concept" TEXT NOT NULL,
-      "vehicle" TEXT,
-      "clientName" TEXT NOT NULL DEFAULT 'Consumidor Final',
-      "clientRfc" TEXT NOT NULL DEFAULT '9999999999999',
-      "tipoIdentificacion" TEXT DEFAULT '07',
-      "clientEmail" TEXT,
-      "clientPhone" TEXT,
-      "clientAddress" TEXT,
-      "amount" DECIMAL(12,2) NOT NULL DEFAULT 0,
-      "subtotal" DECIMAL(12,2) NOT NULL DEFAULT 0,
-      "iva" DECIMAL(12,2) NOT NULL DEFAULT 0,
-      "propina" DECIMAL(12,2) NOT NULL DEFAULT 0,
-      "status" TEXT NOT NULL DEFAULT 'Pendiente',
-      "estadoSri" TEXT NOT NULL DEFAULT 'PENDIENTE',
-      "numeroAutorizacion" TEXT,
-      "fechaAutorizacion" TEXT,
-      "mensajesSri" TEXT,
-      "xmlFirmado" TEXT,
-      "xmlAutorizado" TEXT,
-      "correoEnviado" BOOLEAN NOT NULL DEFAULT false,
-      "fechaEnvioCorreo" TIMESTAMP(3),
-      "paymentMethod" TEXT NOT NULL DEFAULT 'Efectivo',
-      "itemsJson" TEXT NOT NULL DEFAULT '[]',
-      "orderId" TEXT,
-      "saleId" TEXT,
-      "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
-    );
-  `);
+  await ensureSchemaOnce("OficinaFacturacion", async () => {
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "ClientInvoice" (
+        "id" TEXT NOT NULL PRIMARY KEY,
+        "invoiceNumber" TEXT NOT NULL UNIQUE,
+        "uuid" TEXT NOT NULL UNIQUE,
+        "claveAcceso" TEXT,
+        "date" TEXT NOT NULL,
+        "concept" TEXT NOT NULL,
+        "vehicle" TEXT,
+        "clientName" TEXT NOT NULL DEFAULT 'Consumidor Final',
+        "clientRfc" TEXT NOT NULL DEFAULT '9999999999999',
+        "tipoIdentificacion" TEXT DEFAULT '07',
+        "clientEmail" TEXT,
+        "clientPhone" TEXT,
+        "clientAddress" TEXT,
+        "amount" DECIMAL(12,2) NOT NULL DEFAULT 0,
+        "subtotal" DECIMAL(12,2) NOT NULL DEFAULT 0,
+        "iva" DECIMAL(12,2) NOT NULL DEFAULT 0,
+        "propina" DECIMAL(12,2) NOT NULL DEFAULT 0,
+        "status" TEXT NOT NULL DEFAULT 'Pendiente',
+        "estadoSri" TEXT NOT NULL DEFAULT 'PENDIENTE',
+        "numeroAutorizacion" TEXT,
+        "fechaAutorizacion" TEXT,
+        "mensajesSri" TEXT,
+        "xmlFirmado" TEXT,
+        "xmlAutorizado" TEXT,
+        "correoEnviado" BOOLEAN NOT NULL DEFAULT false,
+        "fechaEnvioCorreo" TIMESTAMP(3),
+        "paymentMethod" TEXT NOT NULL DEFAULT 'Efectivo',
+        "itemsJson" TEXT NOT NULL DEFAULT '[]',
+        "orderId" TEXT,
+        "saleId" TEXT,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
 
-  await prisma.$executeRawUnsafe(`
-    CREATE TABLE IF NOT EXISTS "CreditNote" (
-      "id" TEXT NOT NULL PRIMARY KEY,
-      "noteNumber" TEXT NOT NULL UNIQUE,
-      "date" TEXT NOT NULL,
-      "clientName" TEXT NOT NULL,
-      "clientRuc" TEXT NOT NULL DEFAULT '9999999999999',
-      "invoiceRef" TEXT NOT NULL,
-      "total" DECIMAL(12,2) NOT NULL DEFAULT 0,
-      "status" TEXT NOT NULL DEFAULT 'Autorizado',
-      "accessKey" TEXT NOT NULL DEFAULT '',
-      "reason" TEXT,
-      "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
-    );
-  `);
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "CreditNote" (
+        "id" TEXT NOT NULL PRIMARY KEY,
+        "noteNumber" TEXT NOT NULL UNIQUE,
+        "date" TEXT NOT NULL,
+        "clientName" TEXT NOT NULL,
+        "clientRuc" TEXT NOT NULL DEFAULT '9999999999999',
+        "invoiceRef" TEXT NOT NULL,
+        "total" DECIMAL(12,2) NOT NULL DEFAULT 0,
+        "status" TEXT NOT NULL DEFAULT 'Autorizado',
+        "accessKey" TEXT NOT NULL DEFAULT '',
+        "reason" TEXT,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+  });
 }
 
 export async function GET(req: Request) {

@@ -9,6 +9,7 @@ import {
   signSessionCookieValue,
   createSignedSessionToken,
 } from "@/lib/signed-tokens";
+import { checkRateLimit, getClientIpFromRequest } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +20,18 @@ const LoginSchema = z.object({
 
 export async function POST(req: Request) {
   try {
+    const clientIp = getClientIpFromRequest(req);
+    const rl = checkRateLimit("auth:login", clientIp, 15, 15 * 60 * 1000);
+    if (!rl.allowed) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: `Demasiados intentos de inicio de sesión. Intenta nuevamente en ${Math.ceil(rl.retryAfterSeconds / 60)} min.`,
+        },
+        { status: 429, headers: { "Retry-After": String(rl.retryAfterSeconds) } }
+      );
+    }
+
     const body = await req.json();
     const result = LoginSchema.safeParse(body);
 
@@ -32,8 +45,6 @@ export async function POST(req: Request) {
     const { email, password } = result.data;
     const cleanEmail = email.trim().toLowerCase();
     const cleanPassword = password.trim();
-
-    console.log(`[LOGIN ATTEMPT] Identifier: '${cleanEmail}'`);
 
     let authenticatedUser: any = null;
     let redirectTo = "/gerencia";
@@ -179,7 +190,13 @@ export async function POST(req: Request) {
       );
     }
 
-    const sessionJson = JSON.stringify(authenticatedUser);
+    const nowMs = Date.now();
+    const sessionPayload = {
+      ...authenticatedUser,
+      iat: nowMs,
+      exp: nowMs + 1000 * 60 * 60 * 24 * 7,
+    };
+    const sessionJson = JSON.stringify(sessionPayload);
     const sessionToken = createSignedSessionToken(sessionJson);
 
     const response = NextResponse.json({

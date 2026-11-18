@@ -2,42 +2,9 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getVerifiedSessionFromRequest, isStaffSession } from "@/lib/signed-tokens";
 import { resolveSessionCustomerScope } from "@/lib/client-scope";
+import { ensureSchemaOnce } from "@/lib/runtime-ddl";
 
 export const dynamic = "force-dynamic";
-
-const SEED_QUOTES = [
-  {
-    quoteNumber: "COT-2026-1045",
-    date: "2026-10-14",
-    vehicle: "Toyota Hilux 2020 (ABC-123)",
-    plate: "ABC-123",
-    clientName: "Juan Pérez",
-    status: "Pendiente",
-    itemsJson: JSON.stringify([
-      { name: "Amortiguadores Delanteros (Par)", price: 120.0, qty: 1 },
-      { name: "Mano de Obra - Suspensión", price: 80.0, qty: 1 },
-      { name: "Alineación Computarizada 3D", price: 25.0, qty: 1 },
-    ]),
-    subtotal: 225.0,
-    total: 261.0,
-    notes: "Se detectó desgaste prematuro en el amortiguador derecho. Se recomienda cambio en par.",
-  },
-  {
-    quoteNumber: "COT-2026-0892",
-    date: "2026-10-02",
-    vehicle: "Honda Civic 2018 (XYZ-987)",
-    plate: "XYZ-987",
-    clientName: "Juan Pérez",
-    status: "Aprobada",
-    itemsJson: JSON.stringify([
-      { name: "Batería 12V Libre Mantenimiento", price: 110.0, qty: 1 },
-      { name: "Instalación y Diagnóstico de Alternador", price: 15.0, qty: 1 },
-    ]),
-    subtotal: 125.0,
-    total: 145.0,
-    notes: "Batería anterior con voltaje bajo en arranque en frío.",
-  },
-];
 
 function generateId(): string {
   return "cot_" + Math.random().toString(36).substring(2, 9) + Date.now().toString(36);
@@ -59,24 +26,26 @@ async function withRetry<T>(fn: () => Promise<T>, maxRetries = 3, delayMs = 600)
 }
 
 async function ensureTableExists() {
-  await prisma.$executeRawUnsafe(`
-    CREATE TABLE IF NOT EXISTS "ClientQuote" (
-      "id" TEXT NOT NULL,
-      "quoteNumber" TEXT NOT NULL,
-      "date" TEXT NOT NULL,
-      "vehicle" TEXT NOT NULL,
-      "plate" TEXT,
-      "clientName" TEXT NOT NULL DEFAULT 'Juan Pérez',
-      "status" TEXT NOT NULL DEFAULT 'Pendiente',
-      "itemsJson" TEXT NOT NULL DEFAULT '[]',
-      "subtotal" DECIMAL(12,2) NOT NULL DEFAULT 0,
-      "total" DECIMAL(12,2) NOT NULL DEFAULT 0,
-      "notes" TEXT,
-      "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      CONSTRAINT "ClientQuote_pkey" PRIMARY KEY ("id")
-    );
-  `);
+  await ensureSchemaOnce("ClientQuote", async () => {
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "ClientQuote" (
+        "id" TEXT NOT NULL,
+        "quoteNumber" TEXT NOT NULL,
+        "date" TEXT NOT NULL,
+        "vehicle" TEXT NOT NULL,
+        "plate" TEXT,
+        "clientName" TEXT NOT NULL DEFAULT 'Cliente',
+        "status" TEXT NOT NULL DEFAULT 'Pendiente',
+        "itemsJson" TEXT NOT NULL DEFAULT '[]',
+        "subtotal" DECIMAL(12,2) NOT NULL DEFAULT 0,
+        "total" DECIMAL(12,2) NOT NULL DEFAULT 0,
+        "notes" TEXT,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "ClientQuote_pkey" PRIMARY KEY ("id")
+      );
+    `);
+  });
 }
 
 export async function GET(request: Request) {
@@ -139,7 +108,7 @@ export async function GET(request: Request) {
           date: r.date,
           vehicle: r.vehicle,
           plate: r.plate || "",
-          clientName: r.clientName || "Juan Pérez",
+          clientName: r.clientName || "Cliente",
           status: r.status || "Pendiente",
           items: items.map((i: any) => ({
             name: String(i.name || "Servicio"),
@@ -202,7 +171,7 @@ export async function POST(request: Request) {
         dateStr,
         vehicle.trim(),
         plate ? plate.trim().toUpperCase() : null,
-        clientName ? clientName.trim() : "Juan Pérez",
+        clientName ? clientName.trim() : "Cliente",
         JSON.stringify(cleanItems),
         subtotal,
         total,
@@ -304,7 +273,7 @@ export async function PUT(request: Request) {
               ordNumber,
               q.vehicle,
               q.plate || "ABC-123",
-              q.clientName || "Juan Pérez",
+              q.clientName || "Cliente",
               JSON.stringify(srvNames),
               `Generada por aprobación de cotización ${q.quoteNumber}. ${q.notes || ""}`,
               Number(q.total || 0)

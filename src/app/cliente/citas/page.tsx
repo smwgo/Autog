@@ -30,12 +30,6 @@ interface ClientAppointmentItem {
   createdAt: string;
 }
 
-const FALLBACK_VEHICLES: VehicleOption[] = [
-  { id: 'VEH-001', name: 'Toyota Hilux 2020', plate: 'ABC-123' },
-  { id: 'VEH-002', name: 'Honda Civic 2018', plate: 'XYZ-987' },
-  { id: 'VEH-003', name: 'Ford Escape 2021', plate: 'QWE-554' }
-];
-
 const SERVICES: ServiceOption[] = [
   { id: 'SRV-01', name: 'Mantenimiento Preventivo (Cambio de aceite, filtros)', time: '1-2 hrs' },
   { id: 'SRV-02', name: 'Revisión General y Diagnóstico', time: '1 hr' },
@@ -45,7 +39,7 @@ const SERVICES: ServiceOption[] = [
 ];
 
 export default function AgendarCitaPage() {
-  const [vehicles, setVehicles] = useState<VehicleOption[]>(FALLBACK_VEHICLES);
+  const [vehicles, setVehicles] = useState<VehicleOption[]>([]);
   const [appointments, setAppointments] = useState<ClientAppointmentItem[]>([]);
   const [loadingAppointments, setLoadingAppointments] = useState(true);
   const [searchAppointments, setSearchAppointments] = useState('');

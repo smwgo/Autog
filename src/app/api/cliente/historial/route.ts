@@ -192,7 +192,7 @@ export async function POST(request: Request) {
         finalDate,
         vehicle.trim(),
         plate.trim().toUpperCase(),
-        (client || "Juan Pérez").trim(),
+        (client || "Cliente").trim(),
         servicesJson,
         numCost,
         mileage ? mileage.trim() : "N/A",

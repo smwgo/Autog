@@ -70,7 +70,7 @@ export async function GET(request: Request) {
     await ensureCreditsTable();
 
     const rows: any[] = await prisma.$queryRawUnsafe(
-      `SELECT * FROM "PosCreditAccount" ORDER BY "createdAt" DESC`
+      `SELECT * FROM "PosCreditAccount" ORDER BY "createdAt" DESC LIMIT 500`
     );
     const allCredits = rows.map(mapCreditRow);
     const creditos = allCredits.filter((c: any) => {

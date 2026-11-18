@@ -103,31 +103,7 @@ export default function ClienteTallerPage() {
         if (data.success && data.activeOrder) {
           setOrden(data.activeOrder);
         } else {
-          // Datos demostración si no hay orden activa en DB
-          setOrden({
-            id: "ord-1042",
-            orderNumber: "1042",
-            plate: "KXPT45",
-            vehicle: "Toyota Corolla 2019",
-            client: data.customer?.name || "Camila Rojas",
-            mechanic: "Diego Muñoz",
-            status: "En Reparación",
-            progress: 62,
-            totalCost: 172.514,
-            paidAmount: 50.0,
-            dateIn: "16 oct 2026",
-            estimatedOut: "19 oct 2026",
-            generalCondition: "Mantención de los 85.000 km y ruido al frenar",
-            completedCount: 1,
-            totalCount: 4,
-            checklistItems: [
-              { id: "c1", name: "Revisión de frenos delanteros", completed: true, status: "Listo", price: 35.0 },
-              { id: "c2", name: "Cambio de aceite y filtro", completed: false, status: "En Proceso", price: 35.0 },
-              { id: "c3", name: "Cambio de pastillas de freno", completed: false, status: "Pendiente", price: 62.514 },
-              { id: "c4", name: "Prueba de ruta", completed: false, status: "Pendiente", price: 40.0 },
-            ],
-            internalChat: [],
-          });
+          setOrden(null);
         }
       } catch (err) {
         console.error("Error al cargar orden:", err);

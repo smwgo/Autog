@@ -82,6 +82,7 @@ export interface SignedSessionPayload {
   accessTaller?: boolean;
   permissions?: string[];
   iat?: number;
+  exp?: number;
 }
 
 export function isStaffSession(session?: SignedSessionPayload | null): boolean {
@@ -123,6 +124,9 @@ export function verifySignedSessionCookie(
   try {
     const parsed = JSON.parse(verifiedRaw);
     if (!parsed || typeof parsed !== "object") return null;
+    if (typeof parsed.exp === "number" && Date.now() > parsed.exp) {
+      return null;
+    }
     return parsed as SignedSessionPayload;
   } catch {
     return null;

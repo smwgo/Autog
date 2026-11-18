@@ -72,7 +72,7 @@ export async function GET(request: Request) {
         pIdx++;
       }
 
-      query += ' ORDER BY "createdAt" DESC';
+      query += ' ORDER BY "createdAt" DESC LIMIT 500';
 
       const rows: any = await prisma.$queryRawUnsafe(query, ...params);
 

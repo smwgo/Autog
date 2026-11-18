@@ -400,7 +400,7 @@ function mapOrderRow(r: any) {
   const assignedTechnicians =
     rawAssignedTechs.length > 0
       ? rawAssignedTechs
-      : (r.mechanic || "Hernan Marquez")
+      : (r.mechanic || "Sin asignar")
         .split(",")
         .map((m: string) => m.trim())
         .filter(Boolean)
@@ -559,41 +559,20 @@ export async function GET(request: Request) {
       if (trackingOrderParam || searchParams.get("trackingLatest") === "true") {
         if (!trackingOrderParam) {
           const isStaff = isStaffSession(getVerifiedSessionFromRequest(request));
+          if (!isStaff) {
+            return NextResponse.json(
+              { success: false, error: "No autorizado. Ingresa tu número de orden y PIN." },
+              { status: 401 }
+            );
+          }
           const rows: any[] = await prisma.$queryRawUnsafe(
             `SELECT * FROM "WorkshopOrder" ORDER BY "updatedAt" DESC LIMIT 1`
           );
           if (rows.length === 0) {
             return NextResponse.json({ success: false, error: "No hay órdenes en base de datos." }, { status: 404 });
           }
-          const mappedDemo = mapOrderRow(rows[0]);
-          if (!isStaff) {
-            return NextResponse.json({
-              success: true,
-              order: {
-                id: mappedDemo.id,
-                orderNumber: mappedDemo.orderNumber,
-                vehicle: mappedDemo.vehicle,
-                plate: "DEMO-001",
-                client: "Cliente Demo",
-                clientPhone: "",
-                clientEmail: null,
-                clientIdDoc: null,
-                mechanic: mappedDemo.mechanic,
-                status: mappedDemo.status,
-                progress: mappedDemo.progress,
-                dateIn: mappedDemo.dateIn,
-                estimatedOut: (rows[0] as any)?.estimatedOut || null,
-                services: mappedDemo.services,
-                items: [],
-                internalChat: [],
-                inspectionFindings: [],
-                receptionInventory: [],
-                receptionPhotos: [],
-                evidencePhotos: [],
-              },
-            });
-          }
-          return NextResponse.json({ success: true, order: mappedDemo });
+          const mappedLatest = mapOrderRow(rows[0]);
+          return NextResponse.json({ success: true, order: mappedLatest });
         }
         const cleanOrder = trackingOrderParam.replace(/^#/, "").trim();
         const rows: any[] = await prisma.$queryRawUnsafe(
@@ -1804,8 +1783,8 @@ export async function POST(request: Request) {
           telefono,
           email,
           direccion,
-          ingresadoPor = "Gonzalo Rojas",
-          mechanic = "Hernan Marquez",
+          ingresadoPor = "Sin asignar",
+          mechanic = "Sin asignar",
           motivoIngreso = "",
           placa,
           marca,
@@ -2041,7 +2020,7 @@ export async function POST(request: Request) {
         const assignedTechsCreateJson = JSON.stringify(
           incomingAssignedTechs.length > 0
             ? incomingAssignedTechs
-            : String(mechanic || "Hernan Marquez")
+            : String(mechanic || "Sin asignar")
               .split(",")
               .map((m: string) => m.trim())
               .filter(Boolean)
@@ -2076,7 +2055,7 @@ export async function POST(request: Request) {
             customer.identification || "",
             finalOrderEmailCreate,
             finalOrderAddressCreate,
-            mechanic || "Hernan Marquez",
+            mechanic || "Sin asignar",
             assignedTechsCreateJson,
             kmNum || null,
             nextOilKm,
@@ -2105,7 +2084,7 @@ export async function POST(request: Request) {
               clientIdDoc: customer.identification || "",
               clientEmail: finalOrderEmailCreate,
               clientAddress: finalOrderAddressCreate,
-              mechanic: mechanic || "Hernan Marquez",
+              mechanic: mechanic || "Sin asignar",
               assignedTechniciansJson: assignedTechsCreateJson,
               status: "En Pista",
               progress: 10,
@@ -2206,8 +2185,8 @@ export async function POST(request: Request) {
           telefono,
           email,
           direccion,
-          ingresadoPor = "Gonzalo Rojas",
-          mechanic = "Hernan Marquez",
+          ingresadoPor = "Sin asignar",
+          mechanic = "Sin asignar",
           motivoIngreso = "",
           placa,
           marca,
@@ -2442,7 +2421,7 @@ export async function POST(request: Request) {
         const jsonVoiceNotes = JSON.stringify(
           Array.isArray(voiceNotes) ? voiceNotes : safeParseJson(existingOrder.voiceNotesJson, [])
         );
-        const finalMechanicEdit = mechanic || existingOrder.mechanic || "Hernan Marquez";
+        const finalMechanicEdit = mechanic || existingOrder.mechanic || "Sin asignar";
         const incomingAssignedTechsEdit = Array.isArray(body.assignedTechnicians)
           ? body.assignedTechnicians
             .map((t: any) => ({
@@ -2781,7 +2760,7 @@ export async function POST(request: Request) {
               "notes", "estimatedOut", "totalCost", "dateIn", "createdAt", "updatedAt"
             ) VALUES (
               $1, $2, $3, $4, $5, $6,
-              $7, $8, $9, 'Hernan Marquez', 'En Pista', 20,
+              $7, $8, $9, 'Sin asignar', 'En Pista', 20,
               $10, $11, $12, $13, $14,
               '[]', '[]', $15, '[]',
               $16, 'Hoy', 0, NOW(), NOW(), NOW()
@@ -2824,7 +2803,7 @@ export async function POST(request: Request) {
             vehicleTitle,
             cleanPlate,
             currentOrder?.client || "Cliente Taller",
-            currentOrder?.mechanic || "Hernan Marquez",
+            currentOrder?.mechanic || "Sin asignar",
             nivelCombustible,
             kmNum ? `${kmNum} km` : "N/A",
             JSON.stringify({
@@ -2970,7 +2949,7 @@ export async function POST(request: Request) {
             current.vehicle,
             current.plate,
             current.client,
-            current.mechanic || "Hernan Marquez",
+            current.mechanic || "Sin asignar",
             current.fuelLevel || "1/2",
             current.mileage ? `${current.mileage} km` : "N/A",
             JSON.stringify({
@@ -3304,7 +3283,7 @@ export async function POST(request: Request) {
           .map((t: any) => (typeof t === "string" ? t : t?.name))
           .filter(Boolean);
         const mechanicLabel =
-          techNamesList.length > 0 ? techNamesList.join(", ") : current.mechanic || "Hernan Marquez";
+          techNamesList.length > 0 ? techNamesList.join(", ") : current.mechanic || "Sin asignar";
 
         // Calcular progreso automático según el avance de los ítems
         let progress = Number(current.progress || 50);

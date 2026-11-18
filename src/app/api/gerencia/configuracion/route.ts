@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma, withRetry } from "@/lib/prisma";
-import { getVerifiedSessionFromRequest, isAdminSession } from "@/lib/signed-tokens";
+import { getVerifiedSessionFromRequest, isAdminSession, isStaffSession } from "@/lib/signed-tokens";
 import { createAuditLog } from "@/lib/audit";
 
 export const dynamic = "force-dynamic";
@@ -23,8 +23,14 @@ function requireGerenciaAdmin(req: Request): NextResponse | null {
 }
 
 export async function GET(req: Request) {
-  const authError = requireGerenciaAdmin(req);
-  if (authError) return authError;
+  const session = getVerifiedSessionFromRequest(req);
+  if (!session) {
+    return NextResponse.json({ error: "No autorizado. Inicia sesión." }, { status: 401 });
+  }
+  const isAdmin = isAdminSession(session);
+  if (!isAdmin && !isStaffSession(session)) {
+    return NextResponse.json({ error: "Acceso denegado." }, { status: 403 });
+  }
   try {
     const data = await withRetry(async () => {
       // 1. Consultar configuración de empresa real desde Neon
@@ -74,31 +80,45 @@ export async function GET(req: Request) {
         estabSecuencial: company.estabSecuencial || "001",
         ptoEmiSecuencial: company.ptoEmiSecuencial || "001",
         secuencialFactura: company.secuencialFactura ?? 1,
-        smtpHost: company.smtpHost || "",
-        smtpPort: company.smtpPort ?? 587,
-        smtpUser: company.smtpUser || "",
-        smtpPass: company.smtpPass ? MASKED_SECRET : "",
-        hasSmtpPass: Boolean(company.smtpPass),
-        smtpFrom: company.smtpFrom || "",
+        smtpHost: isAdmin ? company.smtpHost || "" : "",
+        smtpPort: isAdmin ? (company.smtpPort ?? 587) : 587,
+        smtpUser: isAdmin ? company.smtpUser || "" : "",
+        smtpPass: isAdmin && company.smtpPass ? MASKED_SECRET : "",
+        hasSmtpPass: isAdmin ? Boolean(company.smtpPass) : false,
+        smtpFrom: isAdmin ? company.smtpFrom || "" : "",
         alertasStockBajo: company.alertasStockBajo ?? true,
         umbralStockBajo: company.umbralStockBajo ?? 5,
-        alertaDestinoWhatsapp: company.alertaDestinoWhatsapp || "",
-        alertaDestinoCorreo: company.alertaDestinoCorreo || "",
+        alertaDestinoWhatsapp: isAdmin ? company.alertaDestinoWhatsapp || "" : "",
+        alertaDestinoCorreo: isAdmin ? company.alertaDestinoCorreo || "" : "",
         recordatoriosClientes: company.recordatoriosClientes ?? true,
         resumenDiarioCaja: company.resumenDiarioCaja ?? true,
-        firmaElectronica: {
-          archivoNombre: company.firmaArchivoNombre || "",
-          archivoTamano: company.firmaArchivoTamano || "",
-          tieneArchivo: Boolean(company.firmaArchivoBase64),
-          fechaCarga: company.firmaFechaCarga || "",
-          fechaExpiracion: company.firmaFechaExpiracion || "",
-          entidadEmisora: company.entidadEmisora || "",
-          ambienteSri: company.ambienteSri || "2",
-          tipoEmision: company.tipoEmision || "1",
-          claveFirma: company.firmaClave ? MASKED_SECRET : "",
-          hasClaveFirma: Boolean(company.firmaClave),
-          estado: company.firmaEstado || "Pendiente",
-        },
+        firmaElectronica: isAdmin
+          ? {
+              archivoNombre: company.firmaArchivoNombre || "",
+              archivoTamano: company.firmaArchivoTamano || "",
+              tieneArchivo: Boolean(company.firmaArchivoBase64),
+              fechaCarga: company.firmaFechaCarga || "",
+              fechaExpiracion: company.firmaFechaExpiracion || "",
+              entidadEmisora: company.entidadEmisora || "",
+              ambienteSri: company.ambienteSri || "2",
+              tipoEmision: company.tipoEmision || "1",
+              claveFirma: company.firmaClave ? MASKED_SECRET : "",
+              hasClaveFirma: Boolean(company.firmaClave),
+              estado: company.firmaEstado || "Pendiente",
+            }
+          : {
+              archivoNombre: "",
+              archivoTamano: "",
+              tieneArchivo: Boolean(company.firmaArchivoBase64),
+              fechaCarga: "",
+              fechaExpiracion: "",
+              entidadEmisora: "",
+              ambienteSri: company.ambienteSri || "2",
+              tipoEmision: company.tipoEmision || "1",
+              claveFirma: "",
+              hasClaveFirma: false,
+              estado: company.firmaEstado || "Pendiente",
+            },
       };
 
       // 2. Consultar sucursales reales desde Neon

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getVerifiedSessionFromRequest, isStaffSession } from "@/lib/signed-tokens";
+import { ensureSchemaOnce } from "@/lib/runtime-ddl";
 
 export const dynamic = "force-dynamic";
 
@@ -14,76 +15,6 @@ async function resolveSessionCustomerScope(session: { id?: string; email?: strin
     select: { id: true, name: true, identification: true, email: true },
   });
 }
-
-const SEED_INVOICES = [
-  {
-    invoiceNumber: "F-2023-0899",
-    uuid: "A1B2C3D4-E5F6-7890-9988-1234567890AB",
-    date: "2026-09-15",
-    concept: "Servicio de Mantenimiento Preventivo (Hilux)",
-    vehicle: "Toyota Hilux 2020 (ABC-123)",
-    clientName: "Juan Pérez",
-    clientRfc: "XAXX010101000",
-    amount: 185.0,
-    status: "Pagada",
-    paymentMethod: "Tarjeta de Crédito",
-    itemsJson: JSON.stringify([
-      { description: "Mano de obra especializada (Mantenimiento)", amount: 65.0 },
-      { description: "Aceite sintético 5W-30 y filtro de aceite", amount: 94.48 },
-    ]),
-    orderId: "ORD-2023-1045",
-  },
-  {
-    invoiceNumber: "F-2023-0850",
-    uuid: "B2C3D4E5-F6G7-8901-7766-2345678901BC",
-    date: "2026-07-02",
-    concept: "Reparación de Frenos (Civic)",
-    vehicle: "Honda Civic 2018 (XYZ-987)",
-    clientName: "Juan Pérez",
-    clientRfc: "XAXX010101000",
-    amount: 210.5,
-    status: "Pagada",
-    paymentMethod: "Transferencia Bancaria",
-    itemsJson: JSON.stringify([
-      { description: "Mano de obra: Reemplazo y purgado de frenos", amount: 80.0 },
-      { description: "Pastillas delanteras de cerámica y rectificación", amount: 101.47 },
-    ]),
-    orderId: "ORD-2023-0892",
-  },
-  {
-    invoiceNumber: "F-2023-0910",
-    uuid: "C3D4E5F6-G7H8-9012-3322-8765432109DE",
-    date: "2026-10-08",
-    concept: "Compra de Repuestos y Diagnóstico Electrónico",
-    vehicle: "Toyota Hilux 2020 (ABC-123)",
-    clientName: "Juan Pérez",
-    clientRfc: "XAXX010101000",
-    amount: 65.0,
-    status: "Pendiente",
-    paymentMethod: "Por Definir",
-    itemsJson: JSON.stringify([
-      { description: "Juego de plumillas limpiaparabrisas Bosch 24\"", amount: 38.79 },
-      { description: "Escaneo OBD2 preventivo", amount: 17.24 },
-    ]),
-    orderId: "ORD-2023-001",
-  },
-  {
-    invoiceNumber: "F-2022-0412",
-    uuid: "D4E5F6G7-H8I9-0123-5544-3456789012CD",
-    date: "2026-05-10",
-    concept: "Alineación 3D y Balanceo (Escape)",
-    vehicle: "Ford Escape 2021 (QWE-554)",
-    clientName: "Juan Pérez",
-    clientRfc: "XAXX010101000",
-    amount: 45.0,
-    status: "Pagada",
-    paymentMethod: "Efectivo",
-    itemsJson: JSON.stringify([
-      { description: "Alineación 3D computarizada y plomos de balanceo", amount: 38.79 },
-    ]),
-    orderId: "ORD-2022-1205",
-  },
-];
 
 function generateId(): string {
   return "inv_" + Math.random().toString(36).substring(2, 9) + Date.now().toString(36);
@@ -110,26 +41,28 @@ async function withRetry<T>(fn: () => Promise<T>, maxRetries = 3, delayMs = 600)
 }
 
 async function ensureTableExists() {
-  await prisma.$executeRawUnsafe(`
-    CREATE TABLE IF NOT EXISTS "ClientInvoice" (
-      "id" TEXT NOT NULL,
-      "invoiceNumber" TEXT NOT NULL,
-      "uuid" TEXT NOT NULL,
-      "date" TEXT NOT NULL,
-      "concept" TEXT NOT NULL,
-      "vehicle" TEXT,
-      "clientName" TEXT NOT NULL DEFAULT 'Juan Pérez',
-      "clientRfc" TEXT NOT NULL DEFAULT 'XAXX010101000',
-      "amount" DECIMAL(12,2) NOT NULL DEFAULT 0,
-      "status" TEXT NOT NULL DEFAULT 'Pendiente',
-      "paymentMethod" TEXT NOT NULL DEFAULT 'Por Definir',
-      "itemsJson" TEXT NOT NULL DEFAULT '[]',
-      "orderId" TEXT,
-      "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      CONSTRAINT "ClientInvoice_pkey" PRIMARY KEY ("id")
-    );
-  `);
+  await ensureSchemaOnce("ClientInvoice_cliente", async () => {
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "ClientInvoice" (
+        "id" TEXT NOT NULL,
+        "invoiceNumber" TEXT NOT NULL,
+        "uuid" TEXT NOT NULL,
+        "date" TEXT NOT NULL,
+        "concept" TEXT NOT NULL,
+        "vehicle" TEXT,
+        "clientName" TEXT NOT NULL DEFAULT 'Cliente',
+        "clientRfc" TEXT NOT NULL DEFAULT '9999999999999',
+        "amount" DECIMAL(12,2) NOT NULL DEFAULT 0,
+        "status" TEXT NOT NULL DEFAULT 'Pendiente',
+        "paymentMethod" TEXT NOT NULL DEFAULT 'Por Definir',
+        "itemsJson" TEXT NOT NULL DEFAULT '[]',
+        "orderId" TEXT,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "ClientInvoice_pkey" PRIMARY KEY ("id")
+      );
+    `);
+  });
 }
 
 export async function GET(request: Request) {
@@ -176,7 +109,7 @@ export async function GET(request: Request) {
           new Set(
             [customerScope?.identification]
               .map((v) => String(v || "").trim().toUpperCase())
-              .filter((v) => Boolean(v) && v !== "XAXX010101000")
+              .filter((v) => Boolean(v) && v !== "9999999999999")
           )
         );
         const scopeClauses: string[] = [];
@@ -223,8 +156,8 @@ export async function GET(request: Request) {
           date: r.date,
           concept: r.concept,
           vehicle: r.vehicle || "",
-          clientName: r.clientName || "Juan Pérez",
-          clientRfc: r.clientRfc || "XAXX010101000",
+          clientName: r.clientName || "Cliente",
+          clientRfc: r.clientRfc || "9999999999999",
           amount: Number(r.amount || 0),
           status: (r.status === "Pagada" ? "Pagada" : "Pendiente") as "Pagada" | "Pendiente",
           paymentMethod: r.paymentMethod || "Por Definir",
@@ -292,8 +225,8 @@ export async function POST(request: Request) {
         dateStr,
         concept.trim(),
         vehicle ? vehicle.trim() : null,
-        clientName ? clientName.trim() : "Juan Pérez",
-        clientRfc ? clientRfc.trim().toUpperCase() : "XAXX010101000",
+        clientName ? clientName.trim() : "Cliente",
+        clientRfc ? clientRfc.trim().toUpperCase() : "9999999999999",
         numAmount,
         status || "Pendiente",
         paymentMethod || "Por Definir",
@@ -350,7 +283,7 @@ export async function PUT(request: Request) {
           .map((s) => String(s).trim().toLowerCase());
         const allowedRfc =
           customerScope?.identification &&
-          customerScope.identification !== "XAXX010101000"
+          customerScope.identification !== "9999999999999"
             ? customerScope.identification.trim().toUpperCase()
             : "";
         const ownsInvoice =

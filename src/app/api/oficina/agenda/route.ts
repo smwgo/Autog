@@ -15,22 +15,22 @@ async function ensureAgendaTable() {
       "appointmentNumber" TEXT NOT NULL UNIQUE,
       "vehicle" TEXT NOT NULL,
       "plate" TEXT NOT NULL,
-      "clientName" TEXT NOT NULL DEFAULT 'Juan Pérez',
+      "clientName" TEXT NOT NULL DEFAULT 'Cliente',
       "clientPhone" TEXT,
       "serviceName" TEXT NOT NULL,
       "date" TEXT NOT NULL,
       "timeSlot" TEXT NOT NULL,
       "status" TEXT NOT NULL DEFAULT 'Confirmada',
       "notes" TEXT,
-      "tech" TEXT DEFAULT 'Carlos Ruiz',
+      "tech" TEXT DEFAULT 'Sin asignar',
       "bay" TEXT DEFAULT 'Bahía 1',
       "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
       "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
   `);
-  await prisma.$executeRawUnsafe(`ALTER TABLE "ClientAppointment" ADD COLUMN IF NOT EXISTS "tech" TEXT DEFAULT 'Carlos Ruiz';`);
+  await prisma.$executeRawUnsafe(`ALTER TABLE "ClientAppointment" ADD COLUMN IF NOT EXISTS "tech" TEXT DEFAULT 'Sin asignar';`);
   await prisma.$executeRawUnsafe(`ALTER TABLE "ClientAppointment" ADD COLUMN IF NOT EXISTS "bay" TEXT DEFAULT 'Bahía 1';`);
-  await prisma.$executeRawUnsafe(`UPDATE "ClientAppointment" SET "tech" = 'Carlos Ruiz' WHERE "tech" IS NULL`);
+  await prisma.$executeRawUnsafe(`UPDATE "ClientAppointment" SET "tech" = 'Sin asignar' WHERE "tech" IS NULL`);
   await prisma.$executeRawUnsafe(`UPDATE "ClientAppointment" SET "bay" = 'Bahía 1' WHERE "bay" IS NULL`);
   agendaTableEnsured = true;
 }
@@ -40,7 +40,7 @@ export async function GET() {
     const appointments = await withRetry(async () => {
       await ensureAgendaTable();
 
-      const rows: any[] = await prisma.$queryRawUnsafe(`SELECT * FROM "ClientAppointment" ORDER BY "createdAt" ASC`);
+      const rows: any[] = await prisma.$queryRawUnsafe(`SELECT * FROM "ClientAppointment" ORDER BY "createdAt" DESC LIMIT 500`);
       return rows;
     });
 

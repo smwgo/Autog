@@ -1,38 +1,41 @@
 import { NextResponse } from "next/server";
 import { prisma, withRetry } from "@/lib/prisma";
+import { ensureSchemaOnce } from "@/lib/runtime-ddl";
 
 async function ensureProveedoresTables() {
-  await prisma.$executeRawUnsafe(`
-    CREATE TABLE IF NOT EXISTS "Supplier" (
-      "id" TEXT NOT NULL PRIMARY KEY,
-      "ruc" TEXT NOT NULL UNIQUE,
-      "name" TEXT NOT NULL,
-      "contact" TEXT NOT NULL,
-      "email" TEXT,
-      "phone" TEXT,
-      "categories" TEXT NOT NULL DEFAULT '[]',
-      "balance" DECIMAL(12,2) NOT NULL DEFAULT 0,
-      "status" TEXT NOT NULL DEFAULT 'Activo',
-      "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
-    );
-  `).catch(() => {});
+  await ensureSchemaOnce("OficinaProveedores", async () => {
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "Supplier" (
+        "id" TEXT NOT NULL PRIMARY KEY,
+        "ruc" TEXT NOT NULL UNIQUE,
+        "name" TEXT NOT NULL,
+        "contact" TEXT NOT NULL,
+        "email" TEXT,
+        "phone" TEXT,
+        "categories" TEXT NOT NULL DEFAULT '[]',
+        "balance" DECIMAL(12,2) NOT NULL DEFAULT 0,
+        "status" TEXT NOT NULL DEFAULT 'Activo',
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );
+    `).catch(() => {});
 
-  await prisma.$executeRawUnsafe(`
-    CREATE TABLE IF NOT EXISTS "PurchaseOrder" (
-      "id" TEXT NOT NULL PRIMARY KEY,
-      "orderNumber" TEXT NOT NULL UNIQUE,
-      "supplierName" TEXT NOT NULL,
-      "supplierRuc" TEXT,
-      "expectedDate" TEXT NOT NULL,
-      "itemsJson" TEXT NOT NULL DEFAULT '[]',
-      "total" DECIMAL(12,2) NOT NULL DEFAULT 0,
-      "status" TEXT NOT NULL DEFAULT 'Solicitado',
-      "notes" TEXT,
-      "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
-    );
-  `).catch(() => {});
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "PurchaseOrder" (
+        "id" TEXT NOT NULL PRIMARY KEY,
+        "orderNumber" TEXT NOT NULL UNIQUE,
+        "supplierName" TEXT NOT NULL,
+        "supplierRuc" TEXT,
+        "expectedDate" TEXT NOT NULL,
+        "itemsJson" TEXT NOT NULL DEFAULT '[]',
+        "total" DECIMAL(12,2) NOT NULL DEFAULT 0,
+        "status" TEXT NOT NULL DEFAULT 'Solicitado',
+        "notes" TEXT,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );
+    `).catch(() => {});
+  });
 }
 
 export async function GET() {

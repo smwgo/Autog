@@ -596,7 +596,7 @@ export default function ClientePanel() {
           <div class="grid-info">
             <div>
               <strong>DATOS DEL CLIENTE</strong><br/>
-              Nombre: <strong>${cliente?.name || "Juan Pérez González"}</strong><br/>
+              Nombre: <strong>${cliente?.name || "Cliente"}</strong><br/>
               Cédula / RUC: ${cliente?.identification || "0923849120"}<br/>
               Teléfono: ${cliente?.phone || "+593 99 876 5432"}<br/>
               Dirección: ${cliente?.address || "Guayaquil, Ecuador"}
@@ -983,34 +983,7 @@ export default function ClientePanel() {
     ? getEtapaDetalladaIndex(ordenActivaVehiculo.status)
     : 4; // Por defecto paso 5 (En Reparación) como en la captura
 
-  const ordenMostrada = ordenActivaVehiculo || ordenActiva || {
-    id: "ord-demo-1042",
-    orderNumber: "1042",
-    plate: vehiculoActivo?.plate || "KXPT45",
-    vehicle: vehiculoActivo ? `${vehiculoActivo.brand} ${vehiculoActivo.model}` : "Toyota Corolla 2019",
-    client: cliente?.name || "Camila Rojas",
-    mechanic: "Diego Muñoz",
-    status: "En Reparación",
-    progress: 62,
-    checklistProgress: 25,
-    mileage: 85000,
-    generalCondition: "Mantención de los 85.000 km y ruido al frenar",
-    totalCost: 172.514,
-    paidAmount: 50.0,
-    hasPriceAuthorized: true,
-    trackingPin: "8492",
-    dateIn: "16 oct 2026",
-    estimatedOut: "19 oct 2026",
-    checklistItems: [
-      { id: "c1", name: "Revisión de frenos delanteros", completed: true, status: "Listo", price: 35.0 },
-      { id: "c2", name: "Cambio de aceite y filtro", completed: false, status: "En Proceso", price: 35.0 },
-      { id: "c3", name: "Cambio de pastillas de freno", completed: false, status: "Pendiente", price: 62.514 },
-      { id: "c4", name: "Prueba de ruta", completed: false, status: "Pendiente", price: 40.0 },
-    ],
-    completedCount: 1,
-    totalCount: 4,
-    internalChat: [],
-  };
+  const ordenMostrada = ordenActivaVehiculo || ordenActiva || null;
 
   const modulosCliente = [
     {
@@ -1317,7 +1290,7 @@ export default function ClientePanel() {
                     {vehiculoActivo ? `${vehiculoActivo.brand} ${vehiculoActivo.model}` : "Vehículo en taller"}
                   </span>
                   <span className="font-mono font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded">
-                    {vehiculoActivo?.plate || ordenMostrada.plate}
+                    {vehiculoActivo?.plate || ordenMostrada?.plate || "Sin placa"}
                   </span>
                 </div>
               </div>

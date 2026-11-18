@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { ensureSchemaOnce } from "@/lib/runtime-ddl";
 
 export const dynamic = "force-dynamic";
 
@@ -23,33 +24,35 @@ async function withRetry<T>(fn: () => Promise<T>, maxRetries = 3, delayMs = 600)
 }
 
 async function ensureTableExists() {
-  await prisma.$executeRawUnsafe(`
-    CREATE TABLE IF NOT EXISTS "WorkshopHistory" (
-      "id" TEXT NOT NULL,
-      "serviceCode" TEXT NOT NULL,
-      "date" TEXT NOT NULL,
-      "vehicle" TEXT NOT NULL,
-      "plate" TEXT NOT NULL,
-      "client" TEXT NOT NULL,
-      "servicesJson" TEXT NOT NULL DEFAULT '[]',
-      "cost" DECIMAL(12,2) NOT NULL DEFAULT 0,
-      "mechanic" TEXT NOT NULL DEFAULT 'Carlos Rodríguez',
-      "mileage" TEXT DEFAULT 'N/A',
-      "nextOilChangeKm" INTEGER,
-      "photosJson" TEXT DEFAULT '[]',
-      "notes" TEXT,
-      "orderNumber" TEXT,
-      "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      CONSTRAINT "WorkshopHistory_pkey" PRIMARY KEY ("id")
-    );
-  `);
-  await prisma.$executeRawUnsafe(
-    `ALTER TABLE "WorkshopHistory" ADD COLUMN IF NOT EXISTS "nextOilChangeKm" INTEGER`
-  ).catch(() => {});
-  await prisma.$executeRawUnsafe(
-    `ALTER TABLE "WorkshopHistory" ADD COLUMN IF NOT EXISTS "photosJson" TEXT DEFAULT '[]'`
-  ).catch(() => {});
+  await ensureSchemaOnce("WorkshopHistory", async () => {
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "WorkshopHistory" (
+        "id" TEXT NOT NULL,
+        "serviceCode" TEXT NOT NULL,
+        "date" TEXT NOT NULL,
+        "vehicle" TEXT NOT NULL,
+        "plate" TEXT NOT NULL,
+        "client" TEXT NOT NULL,
+        "servicesJson" TEXT NOT NULL DEFAULT '[]',
+        "cost" DECIMAL(12,2) NOT NULL DEFAULT 0,
+        "mechanic" TEXT NOT NULL DEFAULT 'Sin asignar',
+        "mileage" TEXT DEFAULT 'N/A',
+        "nextOilChangeKm" INTEGER,
+        "photosJson" TEXT DEFAULT '[]',
+        "notes" TEXT,
+        "orderNumber" TEXT,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "WorkshopHistory_pkey" PRIMARY KEY ("id")
+      );
+    `);
+    await prisma.$executeRawUnsafe(
+      `ALTER TABLE "WorkshopHistory" ADD COLUMN IF NOT EXISTS "nextOilChangeKm" INTEGER`
+    ).catch(() => {});
+    await prisma.$executeRawUnsafe(
+      `ALTER TABLE "WorkshopHistory" ADD COLUMN IF NOT EXISTS "photosJson" TEXT DEFAULT '[]'`
+    ).catch(() => {});
+  });
 }
 
 export async function GET(request: Request) {

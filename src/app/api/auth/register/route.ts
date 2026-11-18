@@ -8,6 +8,7 @@ import {
   signSessionCookieValue,
   createSignedSessionToken,
 } from "@/lib/signed-tokens";
+import { checkRateLimit, getClientIpFromRequest } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -37,6 +38,18 @@ const RegisterSchema = z.object({
 
 export async function POST(req: Request) {
   try {
+    const clientIp = getClientIpFromRequest(req);
+    const rl = checkRateLimit("auth:register", clientIp, 8, 15 * 60 * 1000);
+    if (!rl.allowed) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: `Demasiados registros desde esta red. Intenta nuevamente en ${Math.ceil(rl.retryAfterSeconds / 60)} min.`,
+        },
+        { status: 429, headers: { "Retry-After": String(rl.retryAfterSeconds) } }
+      );
+    }
+
     const rawBody = await req.json();
     const parseResult = RegisterSchema.safeParse(rawBody);
 
@@ -177,6 +190,7 @@ export async function POST(req: Request) {
       })
     );
 
+    const nowMs = Date.now();
     const sessionUser = {
       id: result.user.id,
       name: result.user.name,
@@ -187,6 +201,8 @@ export async function POST(req: Request) {
       accessOficina: false,
       accessPos: false,
       accessTaller: false,
+      iat: nowMs,
+      exp: nowMs + 1000 * 60 * 60 * 24 * 7,
     };
 
     const sessionJson = JSON.stringify(sessionUser);
