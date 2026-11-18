@@ -56,18 +56,18 @@ export function Footer() {
         
         {/* Social Icons */}
         <div className="flex items-center gap-2 sm:gap-4">
-          <a href="#" aria-label="Facebook" className="text-zinc-400 hover:text-white transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center">
+          <Link href="/contacto" aria-label="Facebook" title="Contáctanos" className="text-zinc-400 hover:text-white transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center">
             <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M18.77 7.46H14.5v-1.9c0-.9.6-1.1 1-1.1h3V.5h-4.33C10.24.5 9.5 3.44 9.5 5.32v2.15h-3v4h3v12h5v-12h3.85l.42-4z"/></svg>
-          </a>
-          <a href="#" aria-label="Instagram" className="text-zinc-400 hover:text-white transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center">
+          </Link>
+          <Link href="/contacto" aria-label="Instagram" title="Contáctanos" className="text-zinc-400 hover:text-white transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg>
-          </a>
-          <a href="#" aria-label="TikTok" className="text-zinc-400 hover:text-white transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center">
+          </Link>
+          <Link href="/contacto" aria-label="TikTok" title="Contáctanos" className="text-zinc-400 hover:text-white transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center">
             <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-5.2-1.74 2.89 2.89 0 012.89-2.88 2.85 2.85 0 011.54.46v-3.6a6.3 6.3 0 00-1.54-.18 6.33 6.33 0 106.33 6.33V8.69a8.16 8.16 0 004.77 1.52v-3.4a4.85 4.85 0 01-1.57-.12z"/></svg>
-          </a>
-          <a href="#" aria-label="WhatsApp" className="text-zinc-400 hover:text-white transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center">
+          </Link>
+          <Link href="/contacto" aria-label="WhatsApp" title="Contáctanos" className="text-zinc-400 hover:text-white transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M3 21l1.65-3.8a9 9 0 1 1 3.4 2.9L3 21"></path><path d="M9 10a.5.5 0 0 0 1 0V9a.5.5 0 0 0-1 0v1a5 5 0 0 0 5 5h1a.5.5 0 0 0 0-1h-1a.5.5 0 0 0 0 1"></path></svg>
-          </a>
+          </Link>
         </div>
 
         <div className="flex gap-4">

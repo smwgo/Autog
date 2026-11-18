@@ -381,6 +381,7 @@ export default function LubricentroExpress({
   useEffect(() => {
     if (etapaActiva !== 4 || !ordenActiva?.id) return;
     const pollTimer = setInterval(async () => {
+      if (document.visibilityState !== "visible") return;
       try {
         const res = await fetch("/api/taller/operacion");
         if (!res.ok) return;
@@ -398,7 +399,7 @@ export default function LubricentroExpress({
           }
         }
       } catch {}
-    }, 4000);
+    }, 12000);
     return () => clearInterval(pollTimer);
   }, [
     etapaActiva,

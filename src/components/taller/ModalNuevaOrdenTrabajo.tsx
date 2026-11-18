@@ -2356,7 +2356,7 @@ export default function ModalNuevaOrdenTrabajo({
       setListaClientes(clientesCatalogo);
     }
     if (!isOpen) return;
-    fetch(`/api/clientes?t=${Date.now()}`, { cache: "no-store" })
+    fetch(`/api/clientes?lite=1&t=${Date.now()}`, { cache: "no-store" })
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
         if (d?.success && Array.isArray(d.clientes)) {
@@ -2484,11 +2484,14 @@ export default function ModalNuevaOrdenTrabajo({
 
       let clienteExistente = (listaClientes || []).find(coincideCliente) || null;
 
-      if (!clienteExistente) {
+      if (!clienteExistente && listaClientes.length === 0) {
         const qBuscar = nuevoClienteIdentificacion.trim();
         if (qBuscar.length >= 5) {
           try {
-            const res = await fetch(`/api/taller/operacion?searchCustomer=${encodeURIComponent(qBuscar)}`);
+            const res = await fetch(
+              `/api/taller/operacion?searchCustomer=${encodeURIComponent(qBuscar)}`,
+              { signal: AbortSignal.timeout(2500) }
+            );
             const data = await res.json().catch(() => null);
             if (data?.success && Array.isArray(data.clientes)) {
               clienteExistente = data.clientes.find(coincideCliente) || null;
@@ -3542,7 +3545,6 @@ export default function ModalNuevaOrdenTrabajo({
                   { id: "tipo" as const, label: "Tipo", icon: "👤" },
                   { id: "nombre" as const, label: tipoCliente === "Empresa" ? "Razón Social" : "Nombre", icon: "📝" },
                   { id: "identificacion" as const, label: tipoCliente === "Empresa" ? "RUC" : "Cédula", icon: "🪪" },
-                  { id: "telefono" as const, label: "Teléfono", icon: "📱" },
                   { id: "telefono" as const, label: "WhatsApp", icon: "💬" },
                   { id: "email" as const, label: "Correo", icon: "✉️" },
                   { id: "direccion" as const, label: "Dirección", icon: "📍" },
@@ -4002,20 +4004,6 @@ export default function ModalNuevaOrdenTrabajo({
                           </div>
 
                           <div>
-                            <input
-                              type="tel"
-                              value={nuevoClienteTelefono}
-                              onChange={(e) => setNuevoClienteTelefono(e.target.value)}
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter") {
-                                  e.preventDefault();
-                                  avanzarCliente();
-                                }
-                              }}
-                              placeholder="Ej: 0991234567"
-                              className="w-full h-14 px-4 rounded-2xl bg-zinc-50 dark:bg-black/50 border-2 border-zinc-300 dark:border-white/15 focus:border-emerald-500 text-zinc-900 dark:text-white font-mono text-xl font-bold placeholder:text-zinc-300 dark:placeholder:text-zinc-600 focus:outline-none shadow-sm"
-                              autoFocus
-                            />
                             <div className={`flex items-center h-14 rounded-2xl bg-zinc-50 dark:bg-black/50 border-2 shadow-sm overflow-hidden transition-colors ${!whatsappParteLocal(nuevoClienteTelefono)
                                 ? "border-zinc-300 dark:border-white/15 focus-within:border-emerald-500"
                                 : validarWhatsAppEcuador(nuevoClienteTelefono)
@@ -4465,9 +4453,12 @@ export default function ModalNuevaOrdenTrabajo({
                       }
                     }
 
-                    if (!vehiculoExistente) {
+                    if (!vehiculoExistente && listaClientes.length === 0) {
                       try {
-                        const res = await fetch(`/api/taller/operacion?q=${encodeURIComponent(placaLimpia)}`);
+                        const res = await fetch(
+                          `/api/taller/operacion?q=${encodeURIComponent(placaLimpia)}`,
+                          { signal: AbortSignal.timeout(1500) }
+                        );
                         const data = await res.json().catch(() => null);
                         if (data?.success && data?.found) {
                           const vehs = Array.isArray(data.customer?.vehicles)

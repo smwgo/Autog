@@ -272,10 +272,12 @@ export function useRealtimeSync({
       }
     };
 
-    void verifyOnFocusOrVisible();
+    // Solo hacer polling de respaldo si el SSE no está abierto (p.ej. proxy/serverless que cierre streams)
     pollTimer = setInterval(() => {
+      if (document.visibilityState === "hidden") return;
+      if (eventSource && eventSource.readyState === EventSource.OPEN) return;
       void verifyOnFocusOrVisible();
-    }, 1500);
+    }, 20000);
 
     const handleVisibility = () => {
       if (document.visibilityState === "visible") {

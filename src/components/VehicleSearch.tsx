@@ -155,6 +155,7 @@ export function VehicleSearch() {
 
   useRealtimeSync({
     channels: ["taller", "presupuestos"],
+    enabled: Boolean(placaActiva),
     onRefresh: () => {
       if (placaActiva) {
         void consultarPorPlaca(placaActiva, true);
@@ -381,20 +382,6 @@ export function VehicleSearch() {
             </div>
           </div>
         )}
-
-        <button
-          type="button"
-          onClick={() =>
-            abrirModalPara(
-              vehiculoActivo
-                ? `${vehiculoActivo.vehicle} (${vehiculoActivo.plate})`
-                : ""
-            )
-          }
-          className="mt-auto w-full h-11 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 hover:border-cyan-500/50 text-xs font-bold text-zinc-700 dark:text-zinc-200 transition-colors cursor-pointer"
-        >
-          Solicitar cita o repuesto
-        </button>
       </div>
 
       {/* Columna Derecha: Buscador por Placa y Estado Individual en Taller */}

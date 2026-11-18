@@ -7,6 +7,10 @@ let isTableEnsured = false;
 
 async function ensureCreditsTable() {
   if (isTableEnsured) return;
+  if (process.env.NODE_ENV === "production" && process.env.RUN_RUNTIME_DDL !== "true") {
+    isTableEnsured = true;
+    return;
+  }
 
   try {
     await prisma.$executeRawUnsafe(`
@@ -22,11 +26,13 @@ async function ensureCreditsTable() {
         "lastPaymentDate" TEXT,
         "lastPaymentAmount" DECIMAL(12,2),
         "notes" TEXT,
+        "branch" TEXT DEFAULT 'PRINCIPAL',
         "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
         "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
         CONSTRAINT "PosCreditAccount_pkey" PRIMARY KEY ("id")
       );
     `);
+    await prisma.$executeRawUnsafe(`ALTER TABLE "PosCreditAccount" ADD COLUMN IF NOT EXISTS "branch" TEXT DEFAULT 'PRINCIPAL'`).catch(() => {});
     isTableEnsured = true;
   } catch (err) {
     console.warn("ensureCreditsTable warning:", err);
@@ -62,7 +68,6 @@ export async function GET(request: Request) {
     const isAmbos = !isSucursal && (sedeParam === "AMBOS" || sedeParam === "AMBAS");
 
     await ensureCreditsTable();
-    await prisma.$executeRawUnsafe(`ALTER TABLE "PosCreditAccount" ADD COLUMN IF NOT EXISTS "branch" TEXT DEFAULT 'PRINCIPAL'`).catch(() => {});
 
     const rows: any[] = await prisma.$queryRawUnsafe(
       `SELECT * FROM "PosCreditAccount" ORDER BY "createdAt" DESC`
@@ -122,7 +127,6 @@ export async function POST(req: Request) {
 
     const created = await withRetry(async () => {
       await ensureCreditsTable();
-      await prisma.$executeRawUnsafe(`ALTER TABLE "PosCreditAccount" ADD COLUMN IF NOT EXISTS "branch" TEXT DEFAULT 'PRINCIPAL'`).catch(() => {});
 
       // Verificar si ya existe una cuenta de crédito con esa identificación en esta sede
       const existingRows: any[] = await prisma.$queryRawUnsafe(

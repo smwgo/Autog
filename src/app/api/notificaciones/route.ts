@@ -67,7 +67,7 @@ export async function GET(req: Request) {
     const settingId = getReadSettingId(req);
 
     return await withRetry(async () => {
-      const [orders, pendingRequests, products, readSetting] = await Promise.all([
+      const [orders, pendingRequests, lowStockRows, readSetting] = await Promise.all([
         prisma.workshopOrder.findMany({
           select: {
             id: true,
@@ -90,9 +90,9 @@ export async function GET(req: Request) {
           take: 5,
           orderBy: { createdAt: "desc" },
         }).catch(() => []),
-        prisma.product.findMany({
-          select: { id: true, name: true, stock: true, stockNorte: true, minStock: true },
-        }).catch(() => []),
+        prisma.$queryRawUnsafe<Array<{ cnt: number }>>(
+          `SELECT COUNT(*)::int AS cnt FROM "Product" WHERE ("stock" + "stockNorte") <= "minStock"`
+        ).catch(() => [{ cnt: 0 }]),
         prisma.systemSetting.findUnique({ where: { id: settingId } }).catch(() => null),
       ]);
 
@@ -104,7 +104,7 @@ export async function GET(req: Request) {
         } catch {}
       }
 
-      const lowStockProducts = products.filter((p) => p.stock + p.stockNorte <= p.minStock);
+      const lowStockCount = Array.isArray(lowStockRows) && lowStockRows[0] ? Number(lowStockRows[0].cnt || 0) : 0;
 
       const orderItems = orders.map((o) => {
         const { etapa, type, icon } = classifyOrderNotification(o);
@@ -143,16 +143,16 @@ export async function GET(req: Request) {
       });
 
       const stockItems =
-        lowStockProducts.length > 0
+        lowStockCount > 0
           ? [
               {
-                id: `stock-alert-${lowStockProducts.length}`,
+                id: `stock-alert-${lowStockCount}`,
                 type: "WARNING",
                 icon: "⚠️",
                 title: "Alerta de Inventario",
-                text: `${lowStockProducts.length} producto(s) con stock igual o menor al mínimo.`,
+                text: `${lowStockCount} producto(s) con stock igual o menor al mínimo.`,
                 date: "Ahora",
-                read: readIds.has(`stock-alert-${lowStockProducts.length}`),
+                read: readIds.has(`stock-alert-${lowStockCount}`),
                 link: "/gerencia/inventario",
               },
             ]

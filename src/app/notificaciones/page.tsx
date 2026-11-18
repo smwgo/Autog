@@ -7,6 +7,7 @@ import { Paginacion, paginarLista } from "@/components/Paginacion";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { getAuthHeaders } from "@/lib/auth-headers";
 
 interface NotificationItem {
   id: string;
@@ -32,7 +33,10 @@ export default function NotificacionesPage() {
   const loadNotifications = async () => {
     try {
       setLoading(true);
-      const res = await fetch("/api/notificaciones");
+      const res = await fetch("/api/notificaciones", {
+        headers: getAuthHeaders(),
+        credentials: "include",
+      });
       const data = await res.json();
       if (res.ok && data.success && Array.isArray(data.notificaciones)) {
         setNotifications(data.notificaciones);
@@ -48,12 +52,27 @@ export default function NotificacionesPage() {
     loadNotifications();
   }, []);
 
+  const persistReadIds = async (ids: string[]) => {
+    if (ids.length === 0) return;
+    try {
+      await fetch("/api/notificaciones", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+        credentials: "include",
+        body: JSON.stringify({ ids }),
+      });
+    } catch {}
+  };
+
   const markAllAsRead = () => {
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    const unreadIds = notifications.filter((n) => !n.read).map((n) => String(n.id));
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    void persistReadIds(unreadIds);
   };
 
   const deleteNotification = (id: string) => {
-    setNotifications(prev => prev.filter(n => n.id !== id));
+    setNotifications((prev) => prev.filter((n) => n.id !== id));
+    void persistReadIds([String(id)]);
   };
 
   return (

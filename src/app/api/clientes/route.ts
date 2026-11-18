@@ -39,12 +39,12 @@ async function ensureCustomerBranchSchema() {
 // GET: Consultar clientes y estadísticas en Neon
 export async function GET(request: Request) {
   try {
-    await ensureCustomerBranchSchema();
     const { searchParams } = new URL(request.url);
     const busqueda = searchParams.get("busqueda")?.trim().toLowerCase() || "";
     const filtro = searchParams.get("filtro") || "todos";
     const sedeParam = (searchParams.get("sede") || "").toUpperCase();
     const userBranchParam = (searchParams.get("userBranch") || "PRINCIPAL").toUpperCase();
+    const isLite = searchParams.get("lite") === "1";
 
     const where: any = {};
 
@@ -72,7 +72,7 @@ export async function GET(request: Request) {
       ];
     }
 
-    // Traer clientes filtrados en PostgreSQL con límite controlado
+    // Traer clientes filtrados en PostgreSQL con límite controlado (ya incluye branch, avatar, imageUrl y vehicles)
     const rawCustomers = await prisma.customer.findMany({
       where,
       include: {
@@ -81,59 +81,31 @@ export async function GET(request: Request) {
       orderBy: {
         createdAt: "desc",
       },
-      take: 1000,
-    });
-
-    // Consultar branch y assignedToSucursal directo de Neon para máxima compatibilidad
-    // Consultar branch, assignedToSucursal, avatar e imageUrl directo de Neon
-    const branchRows = (await prisma
-      .$queryRawUnsafe(`SELECT "id", "branch", "assignedToSucursal", "avatar", "imageUrl" FROM "Customer"`)
-      .catch(() => [])) as any[];
-    const branchMap = new Map<string, { branch: string; assignedToSucursal: boolean; avatar: string | null; imageUrl: string | null }>();
-    branchRows.forEach((r) => {
-      branchMap.set(r.id, {
-        branch: r.branch || "PRINCIPAL",
-        assignedToSucursal: Boolean(r.assignedToSucursal),
-        avatar: r.avatar || r.imageUrl || null,
-        imageUrl: r.imageUrl || r.avatar || null,
-      });
-    });
-
-    const vehicleExtraRows = (await prisma
-      .$queryRawUnsafe(`SELECT "id", "imageUrl", "photosJson" FROM "Vehicle"`)
-      .catch(() => [])) as any[];
-    const vehicleExtraMap = new Map<string, { imageUrl: string | null; photosJson: string }>();
-    vehicleExtraRows.forEach((r) => {
-      let parsedPhoto = r.imageUrl || null;
-      if (!parsedPhoto && r.photosJson) {
-        try {
-          const arr = JSON.parse(r.photosJson);
-          if (Array.isArray(arr) && arr.length > 0) parsedPhoto = arr[0];
-        } catch {}
-      }
-      vehicleExtraMap.set(r.id, {
-        imageUrl: parsedPhoto,
-        photosJson: r.photosJson || "[]",
-      });
+      take: isLite ? 250 : 1000,
     });
 
     const customers = rawCustomers
       .map((c) => {
-        const bInfo = branchMap.get(c.id) || { branch: "PRINCIPAL", assignedToSucursal: false, avatar: null, imageUrl: null };
         const vehiclesConFotos = (c.vehicles || []).map((v) => {
-          const vExtra = vehicleExtraMap.get(v.id);
+          let parsedPhoto = v.imageUrl || null;
+          if (!parsedPhoto && v.photosJson) {
+            try {
+              const arr = JSON.parse(v.photosJson);
+              if (Array.isArray(arr) && arr.length > 0) parsedPhoto = arr[0];
+            } catch {}
+          }
           return {
             ...v,
-            imageUrl: vExtra?.imageUrl || null,
-            photosJson: vExtra?.photosJson || "[]",
+            imageUrl: parsedPhoto,
+            photosJson: v.photosJson || "[]",
           };
         });
         return {
           ...c,
-          branch: bInfo.branch,
-          assignedToSucursal: bInfo.assignedToSucursal,
-          avatar: bInfo.avatar,
-          imageUrl: bInfo.imageUrl,
+          branch: c.branch || "PRINCIPAL",
+          assignedToSucursal: Boolean(c.assignedToSucursal),
+          avatar: c.avatar || c.imageUrl || null,
+          imageUrl: c.imageUrl || c.avatar || null,
           vehicles: vehiclesConFotos,
         };
       })
@@ -193,6 +165,14 @@ export async function GET(request: Request) {
     const allPlates = customersDeduplicated.flatMap((c) => c.vehicles.map((v: any) => v.plate.trim())).filter(Boolean);
     const platesSet = Array.from(new Set(allPlates.flatMap((p) => [p, p.toUpperCase()])));
     const visitsMap: Record<string, number> = {};
+
+    if (isLite) {
+      return NextResponse.json({
+        success: true,
+        clientes: customersDeduplicated,
+        stats: null,
+      });
+    }
 
     if (platesSet.length > 0) {
       try {

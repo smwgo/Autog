@@ -13,6 +13,10 @@ let schemaEnsured = false;
 
 async function ensureTallerSchema() {
   if (schemaEnsured) return;
+  if (process.env.NODE_ENV === "production" && process.env.RUN_RUNTIME_DDL !== "true") {
+    schemaEnsured = true;
+    return;
+  }
   try {
     const statements = [
       `ALTER TABLE "Vehicle" ADD COLUMN IF NOT EXISTS "vehicleType" TEXT DEFAULT 'Auto'`,
@@ -1104,24 +1108,32 @@ export async function GET(request: Request) {
       // 2.5 Búsqueda de clientes para Flotante 01 (Etapa 1: Cliente - por nombre, RUC/RUT, teléfono o correo)
       const searchCustomerRaw = (searchParams.get("searchCustomer") || "").trim();
       if (searchCustomerRaw) {
-        const [customersFound, custBranchRows] = await Promise.all([
-          prisma.customer.findMany({
-            where: {
-              OR: [
-                { name: { contains: searchCustomerRaw, mode: "insensitive" } },
-                { identification: { contains: searchCustomerRaw, mode: "insensitive" } },
-                { phone: { contains: searchCustomerRaw, mode: "insensitive" } },
-                { email: { contains: searchCustomerRaw, mode: "insensitive" } },
-              ],
-            },
-            include: {
-              vehicles: true,
-            },
-            orderBy: { updatedAt: "desc" },
-            take: 15,
-          }),
-          prisma.$queryRawUnsafe(`SELECT "id", COALESCE("branch", 'PRINCIPAL') AS "branch", COALESCE("assignedToSucursal", false) AS "assignedToSucursal" FROM "Customer"`).catch(() => []) as Promise<any[]>,
-        ]);
+        const customersFound = await prisma.customer.findMany({
+          where: {
+            OR: [
+              { name: { contains: searchCustomerRaw, mode: "insensitive" } },
+              { identification: { contains: searchCustomerRaw, mode: "insensitive" } },
+              { phone: { contains: searchCustomerRaw, mode: "insensitive" } },
+              { email: { contains: searchCustomerRaw, mode: "insensitive" } },
+            ],
+          },
+          include: {
+            vehicles: true,
+          },
+          orderBy: { updatedAt: "desc" },
+          take: 15,
+        });
+
+        const foundIds = customersFound.map((c: any) => c.id);
+        const custBranchRows =
+          foundIds.length > 0
+            ? ((await prisma
+                .$queryRawUnsafe(
+                  `SELECT "id", COALESCE("branch", 'PRINCIPAL') AS "branch", COALESCE("assignedToSucursal", false) AS "assignedToSucursal" FROM "Customer" WHERE "id" = ANY($1)`,
+                  foundIds
+                )
+                .catch(() => [])) as any[])
+            : [];
 
         const branchMap = new Map<string, { branch: string; assignedToSucursal: boolean }>();
         for (const r of custBranchRows) {
@@ -1850,13 +1862,13 @@ export async function POST(request: Request) {
           if (!vehicle) {
             const alnumPlate = cleanPlateInput.replace(/[^A-Z0-9]/g, "");
             if (alnumPlate.length >= 3) {
-              const allVehs = await prisma.vehicle
-                .findMany({ take: 500 })
-                .catch(() => []);
-              vehicle =
-                allVehs.find(
-                  (v: any) => String(v.plate || "").toUpperCase().replace(/[^A-Z0-9]/g, "") === alnumPlate
-                ) || null;
+              const matchedVehRows = (await prisma
+                .$queryRawUnsafe(
+                  `SELECT * FROM "Vehicle" WHERE REGEXP_REPLACE(UPPER("plate"), '[^A-Z0-9]', '', 'g') = $1 LIMIT 1`,
+                  alnumPlate
+                )
+                .catch(() => [])) as any[];
+              vehicle = matchedVehRows[0] || null;
             }
           }
 
@@ -1946,63 +1958,8 @@ export async function POST(request: Request) {
             0
           );
 
-        // Garantizar que Customer y Vehicle existan en PostgreSQL para evitar fallos de Foreign Key
         const finalOrderEmailCreate = hasEmailFieldCreate ? cleanEmail : (customer.email || null);
         const finalOrderAddressCreate = hasAddressFieldCreate ? (cleanAddress || null) : (customer.address || null);
-        const custAvatarCreate = (body.avatar || body.imageUrl || customer.avatar || customer.imageUrl || "").toString().trim() || null;
-        if (customer?.id) {
-          try {
-            await prisma.$executeRawUnsafe(
-              `INSERT INTO "Customer" ("id", "identification", "name", "phone", "email", "address", "type", "avatar", "imageUrl", "createdAt", "updatedAt")
-               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())
-               ON CONFLICT ("id") DO UPDATE SET
-                 "name" = EXCLUDED."name",
-                 "identification" = EXCLUDED."identification",
-                 "phone" = EXCLUDED."phone",
-                 "email" = $5,
-                 "address" = $6,
-                 "type" = EXCLUDED."type",
-                 "avatar" = COALESCE(EXCLUDED."avatar", "Customer"."avatar"),
-                 "imageUrl" = COALESCE(EXCLUDED."imageUrl", "Customer"."imageUrl"),
-                 "updatedAt" = NOW()`,
-              customer.id,
-              customer.identification || cleanIdent,
-              cleanName,
-              cleanPhone,
-              finalOrderEmailCreate,
-              finalOrderAddressCreate,
-              dbType,
-              custAvatarCreate,
-              custAvatarCreate
-            );
-          } catch { }
-        }
-        const vehicleImgCreate = (body.vehicleImageUrl || body.vehiculoFoto || vehicle?.imageUrl || "").toString().trim() || null;
-        if (vehicle?.id) {
-          try {
-            await prisma.$executeRawUnsafe(
-              `INSERT INTO "Vehicle" ("id", "customerId", "plate", "brand", "model", "year", "vehicleType", "mileage", "imageUrl", "createdAt", "updatedAt")
-               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())
-               ON CONFLICT ("id") DO UPDATE SET
-                 "brand" = EXCLUDED."brand",
-                 "model" = EXCLUDED."model",
-                 "year" = EXCLUDED."year",
-                 "vehicleType" = EXCLUDED."vehicleType",
-                 "mileage" = COALESCE(EXCLUDED."mileage", "Vehicle"."mileage"),
-                 "imageUrl" = COALESCE(EXCLUDED."imageUrl", "Vehicle"."imageUrl"),
-                 "updatedAt" = NOW()`,
-              vehicle.id,
-              customer.id,
-              finalPlate,
-              (marca || "Vehículo").trim(),
-              (modelo || "General").trim(),
-              body.anio ? parseInt(String(body.anio), 10) || new Date().getFullYear() : new Date().getFullYear(),
-              (body.tipoVehiculo || "Auto").trim(),
-              kmNum || 0,
-              vehicleImgCreate
-            );
-          } catch { }
-        }
 
         const incomingAssignedTechs = Array.isArray(body.assignedTechnicians)
           ? body.assignedTechnicians

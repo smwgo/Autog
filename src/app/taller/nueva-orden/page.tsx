@@ -1,12 +1,13 @@
 "use client";
 
 import React, { Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Header } from "@/components/Header";
 import { TallerMobileNav } from "@/components/TallerMobileNav";
 import ModalNuevaOrdenTrabajo from "@/components/taller/ModalNuevaOrdenTrabajo";
 
 function NuevaOrdenContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const placa = searchParams.get("placa") || "";
   const cliente = searchParams.get("cliente") || "";
@@ -24,9 +25,7 @@ function NuevaOrdenContent() {
           clienteInicial={cliente}
           editOrderId={editId}
           onClose={() => {
-            if (typeof window !== "undefined") {
-              window.location.href = "/taller";
-            }
+            router.push("/taller");
           }}
           onOrdenCreada={(orden) => {
             if (typeof window !== "undefined") {

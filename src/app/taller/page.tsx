@@ -4291,7 +4291,11 @@ Hola *${clienteNom}*, actualización de su vehículo *${vehiculoDesc}* (Placa: *
         }
       } catch { }
     };
-    const pollTimer = setInterval(sincronizarEstado, 4000);
+    const pollTimer = setInterval(() => {
+      if (document.visibilityState === "visible") {
+        void sincronizarEstado();
+      }
+    }, 15000);
     const onFocusOrVisible = () => {
       if (document.visibilityState === "visible") {
         void sincronizarEstado();

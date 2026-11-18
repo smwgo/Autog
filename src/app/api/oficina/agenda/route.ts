@@ -1,7 +1,14 @@
 import { NextResponse } from "next/server";
 import { prisma, withRetry } from "@/lib/prisma";
 
+let agendaTableEnsured = false;
+
 async function ensureAgendaTable() {
+  if (agendaTableEnsured) return;
+  if (process.env.NODE_ENV === "production" && process.env.RUN_RUNTIME_DDL !== "true") {
+    agendaTableEnsured = true;
+    return;
+  }
   await prisma.$executeRawUnsafe(`
     CREATE TABLE IF NOT EXISTS "ClientAppointment" (
       "id" TEXT NOT NULL PRIMARY KEY,
@@ -23,15 +30,15 @@ async function ensureAgendaTable() {
   `);
   await prisma.$executeRawUnsafe(`ALTER TABLE "ClientAppointment" ADD COLUMN IF NOT EXISTS "tech" TEXT DEFAULT 'Carlos Ruiz';`);
   await prisma.$executeRawUnsafe(`ALTER TABLE "ClientAppointment" ADD COLUMN IF NOT EXISTS "bay" TEXT DEFAULT 'Bahía 1';`);
+  await prisma.$executeRawUnsafe(`UPDATE "ClientAppointment" SET "tech" = 'Carlos Ruiz' WHERE "tech" IS NULL`);
+  await prisma.$executeRawUnsafe(`UPDATE "ClientAppointment" SET "bay" = 'Bahía 1' WHERE "bay" IS NULL`);
+  agendaTableEnsured = true;
 }
 
 export async function GET() {
   try {
     const appointments = await withRetry(async () => {
       await ensureAgendaTable();
-
-      await prisma.$executeRawUnsafe(`UPDATE "ClientAppointment" SET "tech" = 'Carlos Ruiz' WHERE "tech" IS NULL`);
-      await prisma.$executeRawUnsafe(`UPDATE "ClientAppointment" SET "bay" = 'Bahía 1' WHERE "bay" IS NULL`);
 
       const rows: any[] = await prisma.$queryRawUnsafe(`SELECT * FROM "ClientAppointment" ORDER BY "createdAt" ASC`);
       return rows;

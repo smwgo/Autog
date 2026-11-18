@@ -6,6 +6,19 @@ import path from "path";
 
 export const dynamic = "force-dynamic";
 
+let ordenesSchemaEnsured = false;
+
+async function ensureOrdenesSchema() {
+  if (ordenesSchemaEnsured) return;
+  if (process.env.NODE_ENV === "production" && process.env.RUN_RUNTIME_DDL !== "true") {
+    ordenesSchemaEnsured = true;
+    return;
+  }
+  await prisma.$executeRawUnsafe(`ALTER TABLE "WorkshopOrder" ADD COLUMN IF NOT EXISTS "branch" TEXT DEFAULT 'PRINCIPAL'`).catch(() => {});
+  await prisma.$executeRawUnsafe(`ALTER TABLE "WorkshopOrder" ADD COLUMN IF NOT EXISTS "transferredFrom" TEXT`).catch(() => {});
+  ordenesSchemaEnsured = true;
+}
+
 function generateId(): string {
   return "ord_" + Math.random().toString(36).substring(2, 9) + Date.now().toString(36);
 }
@@ -36,8 +49,7 @@ export async function GET(request: Request) {
     const userBranch = (searchParams.get("userBranch") || "PRINCIPAL").toUpperCase();
 
     return await withRetry(async () => {
-      await prisma.$executeRawUnsafe(`ALTER TABLE "WorkshopOrder" ADD COLUMN IF NOT EXISTS "branch" TEXT DEFAULT 'PRINCIPAL'`).catch(() => {});
-      await prisma.$executeRawUnsafe(`ALTER TABLE "WorkshopOrder" ADD COLUMN IF NOT EXISTS "transferredFrom" TEXT`).catch(() => {});
+      await ensureOrdenesSchema();
 
       let query = 'SELECT * FROM "WorkshopOrder" WHERE 1=1';
       const params: any[] = [];
@@ -76,16 +88,20 @@ export async function GET(request: Request) {
           });
 
       // Consultar facturas para verificar estado de facturación de cada orden
+      const orderIds = filteredRows.map((r: any) => r.id).filter(Boolean);
       let invoiceByOrder = new Map<string, any>();
       try {
-        const invoices = await prisma.clientInvoice.findMany({
-          select: { id: true, invoiceNumber: true, orderId: true, status: true, amount: true, date: true, paymentMethod: true },
-        });
-        invoices.forEach((inv) => {
-          if (inv.orderId) {
-            invoiceByOrder.set(inv.orderId, inv);
-          }
-        });
+        if (orderIds.length > 0) {
+          const invoices = await prisma.clientInvoice.findMany({
+            where: { orderId: { in: orderIds } },
+            select: { id: true, invoiceNumber: true, orderId: true, status: true, amount: true, date: true, paymentMethod: true },
+          });
+          invoices.forEach((inv) => {
+            if (inv.orderId) {
+              invoiceByOrder.set(inv.orderId, inv);
+            }
+          });
+        }
       } catch (invErr) {
         console.warn("Aviso al consultar facturas de clientes:", invErr);
       }

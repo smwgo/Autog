@@ -539,10 +539,6 @@ export default function PanelPresupuestosPage() {
 
   useEffect(() => {
     cargarOrdenes(false);
-    const interval = setInterval(() => {
-      cargarOrdenes(true);
-    }, 15000);
-    return () => clearInterval(interval);
   }, [cargarOrdenes]);
 
   useRealtimeSync({

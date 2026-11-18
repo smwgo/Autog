@@ -32,16 +32,48 @@ function parseChannels(raw: string | null): Set<RealtimeChannel> {
   return new Set(parts);
 }
 
+const SNAPSHOT_TTL_MS = 4000;
+let cachedSnapshot: {
+  versions: Record<RealtimeChannel, number>;
+  fingerprints: Partial<Record<RealtimeChannel, string>>;
+  fetchedAt: number;
+} | null = null;
+let snapshotInFlight: Promise<{
+  versions: Record<RealtimeChannel, number>;
+  fingerprints: Partial<Record<RealtimeChannel, string>>;
+}> | null = null;
+
+async function getCachedRealtimeSnapshot() {
+  const now = Date.now();
+  if (cachedSnapshot && now - cachedSnapshot.fetchedAt < SNAPSHOT_TTL_MS) {
+    return {
+      versions: cachedSnapshot.versions,
+      fingerprints: cachedSnapshot.fingerprints,
+    };
+  }
+  if (!snapshotInFlight) {
+    snapshotInFlight = Promise.all([
+      getSharedRealtimeVersions(),
+      getRealtimeFingerprintsFromDb(),
+    ])
+      .then(([versions, fingerprints]) => {
+        cachedSnapshot = { versions, fingerprints, fetchedAt: Date.now() };
+        return { versions, fingerprints };
+      })
+      .finally(() => {
+        snapshotInFlight = null;
+      });
+  }
+  return snapshotInFlight;
+}
+
 /**
  * Endpoint SSE para sincronización en tiempo real entre sesiones, pestañas y dispositivos.
  * También responde ?versions=1 en JSON para verificación rápida al recuperar foco.
  */
 export async function GET(request: NextRequest) {
   if (request.nextUrl.searchParams.get("versions") === "1") {
-    const [versions, fingerprints] = await Promise.all([
-      getSharedRealtimeVersions(),
-      getRealtimeFingerprintsFromDb(),
-    ]);
+    const { versions, fingerprints } = await getCachedRealtimeSnapshot();
     return Response.json(
       { versions, fingerprints },
       { headers: { "Cache-Control": "no-store, no-cache, must-revalidate" } }
@@ -78,10 +110,7 @@ export async function GET(request: NextRequest) {
         safeEnqueue(`${lines.join("\n")}\n`);
       };
 
-      void Promise.all([
-        getSharedRealtimeVersions(),
-        getRealtimeFingerprintsFromDb(),
-      ]).then(([sharedVersions, sharedFingerprints]) => {
+      void getCachedRealtimeSnapshot().then(({ versions: sharedVersions, fingerprints: sharedFingerprints }) => {
         if (closed) return;
         lastKnownVersions = sharedVersions;
         lastKnownFingerprints = sharedFingerprints;
@@ -105,10 +134,7 @@ export async function GET(request: NextRequest) {
 
       const dbPollInterval = setInterval(() => {
         if (closed) return;
-        void Promise.all([
-          getSharedRealtimeVersions(),
-          getRealtimeFingerprintsFromDb(),
-        ]).then(([sharedVersions, sharedFingerprints]) => {
+        void getCachedRealtimeSnapshot().then(({ versions: sharedVersions, fingerprints: sharedFingerprints }) => {
           if (closed) return;
           const channelsToCheck: Exclude<RealtimeChannel, "all">[] = [
             "taller",
@@ -148,7 +174,7 @@ export async function GET(request: NextRequest) {
             lastKnownFingerprints.all = sharedFingerprints.all;
           }
         });
-      }, 1500);
+      }, 6000);
 
       const heartbeat = setInterval(() => {
         safeEnqueue(`: ping ${Date.now()}\n\n`);

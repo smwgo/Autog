@@ -43,15 +43,54 @@ export function Header() {
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
+  const persistReadNotificationIds = (ids: Array<string | number>) => {
+    const strIds = ids.map(String).filter(Boolean);
+    if (strIds.length === 0) return;
+    fetch("/api/notificaciones", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+      credentials: "include",
+      body: JSON.stringify({ ids: strIds }),
+    }).catch(() => {});
+  };
+
   const markAsRead = (id: string | number) => {
-    setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+    setNotifications((prev) => {
+      const next = prev.map((n) => (n.id === id ? { ...n, read: true } : n));
+      cachedHeaderNotifications = next;
+      return next;
+    });
+    persistReadNotificationIds([id]);
   };
   
   const deleteNotification = (id: string | number) => {
-    setNotifications(prev => prev.filter(n => n.id !== id));
+    setNotifications((prev) => {
+      const next = prev.filter((n) => n.id !== id);
+      cachedHeaderNotifications = next;
+      return next;
+    });
+    persistReadNotificationIds([id]);
   };
 
   useEffect(() => {
+    const isProtectedPath =
+      pathname.startsWith("/pos") ||
+      pathname.startsWith("/taller") ||
+      pathname.startsWith("/oficina") ||
+      pathname.startsWith("/gerencia") ||
+      pathname.startsWith("/cliente") ||
+      pathname.startsWith("/modulos") ||
+      pathname.startsWith("/presupuestos") ||
+      pathname.startsWith("/notificaciones");
+
+    const hasLocalSession =
+      typeof window !== "undefined" &&
+      (Boolean(localStorage.getItem("currentUser")) || Boolean(getAuthHeaders().Authorization));
+
+    if (!isProtectedPath && !hasLocalSession && !currentUser) {
+      return;
+    }
+
     const now = Date.now();
     if (cachedHeaderNotifications && now - lastHeaderNotifFetchAt < HEADER_NOTIF_TTL_MS) {
       setNotifications(cachedHeaderNotifications);
@@ -61,7 +100,7 @@ export function Header() {
       headers: getAuthHeaders(),
       credentials: "include",
     })
-      .then((res) => res.json())
+      .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (data?.success && Array.isArray(data.notificaciones)) {
           cachedHeaderNotifications = data.notificaciones;
@@ -70,7 +109,7 @@ export function Header() {
         }
       })
       .catch(() => {});
-  }, [pathname]);
+  }, [pathname, currentUser]);
 
   useEffect(() => {
     setMounted(true);

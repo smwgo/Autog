@@ -49,13 +49,15 @@ function getRawPrisma(): PrismaClient {
   }
 
   if (!globalForPrisma.prisma) {
-    try {
-      Object.keys(require.cache).forEach((key) => {
-        if (key.includes("prisma")) {
-          delete require.cache[key];
-        }
-      });
-    } catch {}
+    if (process.env.NODE_ENV !== "production") {
+      try {
+        Object.keys(require.cache).forEach((key) => {
+          if (key.includes("prisma")) {
+            delete require.cache[key];
+          }
+        });
+      } catch {}
+    }
 
     const { PrismaClient: FreshClient } = require("@prisma/client");
     globalForPrisma.prisma = new FreshClient({

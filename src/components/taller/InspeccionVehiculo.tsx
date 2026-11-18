@@ -867,7 +867,11 @@ export default function InspeccionVehiculo({
 
     // Ejecutar inmediatamente al montar/cambiar orden para traer lo grabado en móvil
     pullDesdeNeon();
-    const timer = setInterval(pullDesdeNeon, 2500);
+    const timer = setInterval(() => {
+      if (document.visibilityState === "visible") {
+        pullDesdeNeon();
+      }
+    }, 12000);
     const onFocusOrVisible = () => {
       if (document.visibilityState === "visible") {
         pullDesdeNeon();

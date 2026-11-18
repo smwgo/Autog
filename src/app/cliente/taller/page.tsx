@@ -137,6 +137,7 @@ export default function ClienteTallerPage() {
     }
     cargar();
     const interval = setInterval(async () => {
+      if (document.visibilityState !== "visible") return;
       try {
         const res = await fetch("/api/cliente/dashboard");
         const data = await res.json();
@@ -144,7 +145,7 @@ export default function ClienteTallerPage() {
           setOrden(data.activeOrder);
         }
       } catch {}
-    }, 5000);
+    }, 15000);
     return () => clearInterval(interval);
   }, []);
 
