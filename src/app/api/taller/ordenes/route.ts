@@ -334,7 +334,7 @@ export async function POST(request: Request) {
         const existingVehicle = await prisma.vehicle.findUnique({ where: { plate: cleanPlate } });
         if (!existingVehicle) {
           let customer = await prisma.customer.findFirst({
-            where: { name: { contains: client.trim(), mode: "insensitive" } },
+            where: { name: { equals: client.trim(), mode: "insensitive" } },
           });
           if (!customer) {
             customer = await prisma.customer.create({

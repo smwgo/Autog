@@ -1777,7 +1777,7 @@ export default function ModalNuevaOrdenTrabajo({
 
       // 2. Consultar en tiempo real a Neon PostgreSQL (/api/taller/operacion?query=...)
       if (!clienteHallado || !vehiculoHallado) {
-        const res = await fetch(`/api/taller/operacion?query=${encodeURIComponent(placaLimpia)}`);
+        const res = await fetch(`/api/taller/operacion?q=${encodeURIComponent(placaLimpia)}`);
         const data = await res.json().catch(() => null);
         if (data?.success && data?.found && data?.customer) {
           // Verificar que realmente coincida por vehículo/placa
@@ -2354,17 +2354,17 @@ export default function ModalNuevaOrdenTrabajo({
   useEffect(() => {
     if (Array.isArray(clientesCatalogo) && clientesCatalogo.length > 0) {
       setListaClientes(clientesCatalogo);
-    } else {
-      fetch("/api/clientes")
-        .then((r) => (r.ok ? r.json() : null))
-        .then((d) => {
-          if (d.success && Array.isArray(d.clientes)) {
-            setListaClientes(d.clientes);
-          }
-        })
-        .catch(() => { });
     }
-  }, [clientesCatalogo]);
+    if (!isOpen) return;
+    fetch(`/api/clientes?t=${Date.now()}`, { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (d?.success && Array.isArray(d.clientes)) {
+          setListaClientes(d.clientes);
+        }
+      })
+      .catch(() => {});
+  }, [clientesCatalogo, isOpen]);
 
   // Filtrado reactivo en catálogo de clientes
   const clientesFiltrados = useMemo(() => {
@@ -2464,34 +2464,29 @@ export default function ModalNuevaOrdenTrabajo({
 
     // Si está creando (no editando un cliente ya seleccionado explícitamente), detectar si ya existe en BD/catálogo
     if (!editOrderId && !clienteSeleccionado?.id) {
-      const nomNorm = nuevoClienteNombre.trim().toLowerCase();
       const identNorm = nuevoClienteIdentificacion.trim().toLowerCase();
-      const telDigits = nuevoClienteTelefono.replace(/\D/g, "");
-      const emailNorm = nuevoClienteEmail.trim().toLowerCase();
 
       const coincideCliente = (c: any) => {
         if (!c) return false;
         const cIdent = String(c.identification || "").trim().toLowerCase();
-        const cName = String(c.name || "").trim().toLowerCase();
-        const cTel = String(c.phone || "").replace(/\D/g, "");
-        const cEmail = String(c.email || "").trim().toLowerCase();
-
-        if (identNorm && identNorm.length >= 4 && cIdent === identNorm) return true;
-        if (emailNorm && cEmail && cEmail === emailNorm) return true;
-        if (telDigits.length >= 7 && cTel.length >= 7 && cTel === telDigits) return true;
-        if (nomNorm && cName === nomNorm) return true;
+        // Solo vincular automáticamente si coincide la identificación real (cédula/RUC), nunca por nombre/teléfono/email
+        if (
+          identNorm &&
+          identNorm.length >= 5 &&
+          !identNorm.startsWith("cli-") &&
+          !identNorm.startsWith("tmp-") &&
+          cIdent === identNorm
+        ) {
+          return true;
+        }
         return false;
       };
 
       let clienteExistente = (listaClientes || []).find(coincideCliente) || null;
 
       if (!clienteExistente) {
-        const qBuscar =
-          nuevoClienteIdentificacion.trim() ||
-          nuevoClienteTelefono.trim() ||
-          nuevoClienteEmail.trim() ||
-          nuevoClienteNombre.trim();
-        if (qBuscar.length >= 3) {
+        const qBuscar = nuevoClienteIdentificacion.trim();
+        if (qBuscar.length >= 5) {
           try {
             const res = await fetch(`/api/taller/operacion?searchCustomer=${encodeURIComponent(qBuscar)}`);
             const data = await res.json().catch(() => null);
@@ -4472,7 +4467,7 @@ export default function ModalNuevaOrdenTrabajo({
 
                     if (!vehiculoExistente) {
                       try {
-                        const res = await fetch(`/api/taller/operacion?query=${encodeURIComponent(placaLimpia)}`);
+                        const res = await fetch(`/api/taller/operacion?q=${encodeURIComponent(placaLimpia)}`);
                         const data = await res.json().catch(() => null);
                         if (data?.success && data?.found) {
                           const vehs = Array.isArray(data.customer?.vehicles)

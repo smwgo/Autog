@@ -381,12 +381,12 @@ export function GerenciaExecutiveKpis({ onDataLoaded, className = "", backHref =
                 <path strokeLinecap="round" strokeLinejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
               </svg>
             </div>
-            <span className="text-xs sm:text-sm font-bold text-zinc-700 dark:text-zinc-200 uppercase tracking-wider truncate">
+            <span className="text-xs sm:text-sm font-normal text-zinc-700 dark:text-zinc-200 uppercase tracking-wider truncate">
               Ventas
             </span>
           </div>
           <div className="relative z-10 pt-1">
-            <p className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-zinc-900 dark:text-white tracking-tight truncate">
+            <p className="text-xl sm:text-2xl lg:text-3xl font-normal text-zinc-900 dark:text-white tracking-tight truncate">
               {mostrarMoneda(metrics?.ventasTotales ?? metrics?.capitalActivo)}
             </p>
           </div>
@@ -403,12 +403,12 @@ export function GerenciaExecutiveKpis({ onDataLoaded, className = "", backHref =
                 <path d="M6 12h.01M18 12h.01" />
               </svg>
             </div>
-            <span className="text-xs sm:text-sm font-bold text-zinc-700 dark:text-zinc-200 uppercase tracking-wider truncate">
+            <span className="text-xs sm:text-sm font-normal text-zinc-700 dark:text-zinc-200 uppercase tracking-wider truncate">
               Cobrado
             </span>
           </div>
           <div className="relative z-10 pt-1">
-            <p className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-emerald-600 dark:text-emerald-400 tracking-tight truncate">
+            <p className="text-xl sm:text-2xl lg:text-3xl font-normal text-emerald-600 dark:text-emerald-400 tracking-tight truncate">
               {mostrarMoneda(metrics?.cobradoEnCaja ?? metrics?.cobrado)}
             </p>
           </div>
@@ -421,12 +421,12 @@ export function GerenciaExecutiveKpis({ onDataLoaded, className = "", backHref =
             <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-sky-50 dark:bg-sky-500/10 border border-sky-100 dark:border-sky-500/20 text-sky-600 dark:text-sky-400 flex items-center justify-center shrink-0">
               <span className="font-bold text-sm">$</span>
             </div>
-            <span className="text-xs sm:text-sm font-bold text-zinc-700 dark:text-zinc-200 uppercase tracking-wider truncate">
+            <span className="text-xs sm:text-sm font-normal text-zinc-700 dark:text-zinc-200 uppercase tracking-wider truncate">
               Hoy
             </span>
           </div>
           <div className="relative z-10 pt-1">
-            <p className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-sky-600 dark:text-sky-400 tracking-tight truncate">
+            <p className="text-xl sm:text-2xl lg:text-3xl font-normal text-sky-600 dark:text-sky-400 tracking-tight truncate">
               {mostrarMoneda(metrics?.montoHoy)}
             </p>
           </div>
@@ -441,12 +441,12 @@ export function GerenciaExecutiveKpis({ onDataLoaded, className = "", backHref =
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
               </svg>
             </div>
-            <span className="text-xs sm:text-sm font-bold text-zinc-700 dark:text-zinc-200 uppercase tracking-wider truncate">
+            <span className="text-xs sm:text-sm font-normal text-zinc-700 dark:text-zinc-200 uppercase tracking-wider truncate">
               Ticket
             </span>
           </div>
           <div className="relative z-10 pt-1">
-            <p className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-zinc-900 dark:text-white tracking-tight truncate">
+            <p className="text-xl sm:text-2xl lg:text-3xl font-normal text-zinc-900 dark:text-white tracking-tight truncate">
               {mostrarMoneda(metrics?.ticketPromedio)}
             </p>
           </div>
@@ -463,12 +463,12 @@ export function GerenciaExecutiveKpis({ onDataLoaded, className = "", backHref =
                 <circle cx="17" cy="17" r="2" />
               </svg>
             </div>
-            <span className="text-xs sm:text-sm font-bold text-zinc-700 dark:text-zinc-200 uppercase tracking-wider truncate">
+            <span className="text-xs sm:text-sm font-normal text-zinc-700 dark:text-zinc-200 uppercase tracking-wider truncate">
               Pista
             </span>
           </div>
           <div className="relative z-10 pt-1">
-            <p className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-zinc-900 dark:text-white tracking-tight truncate">
+            <p className="text-xl sm:text-2xl lg:text-3xl font-normal text-zinc-900 dark:text-white tracking-tight truncate">
               {mostrarCantidad(metrics?.autosEnPista ?? metrics?.autosActivos)}
             </p>
           </div>
@@ -483,12 +483,12 @@ export function GerenciaExecutiveKpis({ onDataLoaded, className = "", backHref =
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
-            <span className="text-xs sm:text-sm font-bold text-zinc-700 dark:text-zinc-200 uppercase tracking-wider truncate">
+            <span className="text-xs sm:text-sm font-normal text-zinc-700 dark:text-zinc-200 uppercase tracking-wider truncate">
               Entregados
             </span>
           </div>
           <div className="relative z-10 pt-1">
-            <p className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-zinc-900 dark:text-white tracking-tight truncate">
+            <p className="text-xl sm:text-2xl lg:text-3xl font-normal text-zinc-900 dark:text-white tracking-tight truncate">
               {mostrarCantidad(metrics?.autosEntregados ?? metrics?.pagadosTotal)}
             </p>
           </div>
@@ -503,12 +503,12 @@ export function GerenciaExecutiveKpis({ onDataLoaded, className = "", backHref =
                 <path strokeLinecap="round" strokeLinejoin="round" d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" />
               </svg>
             </div>
-            <span className="text-xs sm:text-sm font-bold text-zinc-700 dark:text-zinc-200 uppercase tracking-wider truncate">
+            <span className="text-xs sm:text-sm font-normal text-zinc-700 dark:text-zinc-200 uppercase tracking-wider truncate">
               Gastos
             </span>
           </div>
           <div className="relative z-10 pt-1">
-            <p className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-rose-600 dark:text-rose-400 tracking-tight truncate">
+            <p className="text-xl sm:text-2xl lg:text-3xl font-normal text-rose-600 dark:text-rose-400 tracking-tight truncate">
               {mostrarMoneda(metrics?.gastosYRepuestos ?? metrics?.egresosTotal)}
             </p>
           </div>
@@ -524,12 +524,12 @@ export function GerenciaExecutiveKpis({ onDataLoaded, className = "", backHref =
                 <polyline points="12 6 12 12 16 14" />
               </svg>
             </div>
-            <span className="text-xs sm:text-sm font-bold text-zinc-700 dark:text-zinc-200 uppercase tracking-wider truncate">
+            <span className="text-xs sm:text-sm font-normal text-zinc-700 dark:text-zinc-200 uppercase tracking-wider truncate">
               Cobrar
             </span>
           </div>
           <div className="relative z-10 pt-1">
-            <p className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-amber-600 dark:text-amber-400 tracking-tight truncate">
+            <p className="text-xl sm:text-2xl lg:text-3xl font-normal text-amber-600 dark:text-amber-400 tracking-tight truncate">
               {mostrarMoneda(metrics?.cuentasPorCobrar ?? metrics?.moraTotal)}
             </p>
           </div>

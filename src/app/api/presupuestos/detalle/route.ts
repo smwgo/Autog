@@ -318,29 +318,7 @@ export async function GET(request: Request) {
         }
       });
 
-      // Auto-resolver vehiclePhoto si está vacía o era un blob temporal
-      if (!vehiclePhoto) {
-        const candidateEv = evidencias.find((e: any) => e.type === "image" && e.url && !e.url.startsWith("blob:"));
-        if (candidateEv) {
-          vehiclePhoto = candidateEv.url;
-        } else {
-          const candidatePhoto = todasLasFotosOrden.find((p: any) => typeof p === "string" && p.trim() && !p.startsWith("blob:"));
-          if (candidatePhoto) {
-            vehiclePhoto = candidatePhoto.startsWith("http") || candidatePhoto.startsWith("/") || candidatePhoto.startsWith("data:")
-              ? candidatePhoto
-              : `/api/storage/download?key=${encodeURIComponent(candidatePhoto)}`;
-          }
-        }
-
-        // Si encontramos una foto real y hay registro de vehículo, guardar en Neon para persistencia
-        if (vehiclePhoto && vehicleRecord?.id) {
-          await prisma.$executeRawUnsafe(
-            `UPDATE "Vehicle" SET "imageUrl" = $1, "updatedAt" = CURRENT_TIMESTAMP WHERE "id" = $2`,
-            vehiclePhoto,
-            vehicleRecord.id
-          ).catch(() => {});
-        }
-      }
+      // La foto de perfil del vehículo viene únicamente de Vehicle.imageUrl (no sobrescribir con fotos de ingreso o evidencias)
 
       // Cargar catálogo de productos y servicios para resolver precios de ítems no manuales con precio 0
       let catalogProducts: any[] = [];
@@ -546,18 +524,16 @@ export async function GET(request: Request) {
         let catalogPrice = 0;
         if (!isManual && rawPrice <= 0) {
           const normName = String(name || "").trim().toLowerCase().replace(/^\d+x\s+/i, "");
-          if (PRECIOS_RAPIDOS_MAP[normName]) {
+          const matchSrv = catalogServices.find(
+            (s: any) =>
+              (!isString && sv.id && s.id === sv.id) ||
+              (!isString && sv.code && s.code && String(s.code).toLowerCase() === String(sv.code).toLowerCase()) ||
+              (normName && String(s.name || "").trim().toLowerCase() === normName)
+          );
+          if (matchSrv && Number(matchSrv.price) > 0) {
+            catalogPrice = Number(matchSrv.price);
+          } else if (PRECIOS_RAPIDOS_MAP[normName]) {
             catalogPrice = PRECIOS_RAPIDOS_MAP[normName];
-          } else {
-            const matchSrv = catalogServices.find(
-              (s: any) =>
-                (!isString && sv.id && s.id === sv.id) ||
-                (!isString && sv.code && s.code && String(s.code).toLowerCase() === String(sv.code).toLowerCase()) ||
-                (normName && String(s.name || "").trim().toLowerCase() === normName)
-            );
-            if (matchSrv && Number(matchSrv.price) > 0) {
-              catalogPrice = Number(matchSrv.price);
-            }
           }
         }
         const price =

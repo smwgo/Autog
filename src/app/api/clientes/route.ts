@@ -150,22 +150,13 @@ export async function GET(request: Request) {
         return true;
       });
 
-    // Deduplicar clientes (misma cédula real, mismo email o mismo nombre+teléfono) y sus vehículos por placa normalizada
+    // Deduplicar clientes únicamente por cédula/RUC real (nunca mezclar vehículos por nombre/teléfono/email)
     const clientesUnicosMap = new Map<string, any>();
     for (const c of customers) {
       const identClean = String(c.identification || "").trim().toUpperCase();
       const esIdentReal = identClean && !identClean.startsWith("CLI-");
-      const nameClean = String(c.name || "").trim().toLowerCase();
-      const phoneClean = String(c.phone || "").replace(/\D/g, "");
-      const emailClean = String(c.email || "").trim().toLowerCase();
 
-      const dedupKey = esIdentReal
-        ? `id:${identClean}`
-        : emailClean
-        ? `em:${emailClean}`
-        : nameClean && phoneClean.length >= 7
-        ? `np:${nameClean}|${phoneClean}`
-        : `cid:${c.id}`;
+      const dedupKey = esIdentReal ? `id:${identClean}` : `cid:${c.id}`;
 
       const prev = clientesUnicosMap.get(dedupKey);
       if (!prev) {

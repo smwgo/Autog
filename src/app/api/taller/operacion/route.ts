@@ -943,15 +943,9 @@ export async function GET(request: Request) {
         const cleanQ = queryRaw.toUpperCase();
         const alnumQ = cleanQ.replace(/[^A-Z0-9]/g, "");
 
-        // Buscar primero vehículo por placa exacta, parcial o normalizada sin guiones/espacios
+        // Buscar primero vehículo por placa exacta; solo si no hay exacta, buscar parcial
         let vehiclesFound: any[] = await prisma.vehicle.findMany({
-          where: {
-            OR: [
-              { plate: { equals: cleanQ, mode: "insensitive" } },
-              { plate: { contains: queryRaw, mode: "insensitive" } },
-              { vin: { contains: queryRaw, mode: "insensitive" } },
-            ],
-          },
+          where: { plate: { equals: cleanQ, mode: "insensitive" } },
           include: {
             customer: {
               include: { vehicles: true },
@@ -959,6 +953,23 @@ export async function GET(request: Request) {
           },
           take: 5,
         });
+
+        if (vehiclesFound.length === 0) {
+          vehiclesFound = await prisma.vehicle.findMany({
+            where: {
+              OR: [
+                { plate: { contains: queryRaw, mode: "insensitive" } },
+                { vin: { contains: queryRaw, mode: "insensitive" } },
+              ],
+            },
+            include: {
+              customer: {
+                include: { vehicles: true },
+              },
+            },
+            take: 5,
+          });
+        }
 
         if (vehiclesFound.length === 0 && alnumQ.length >= 4) {
           const rawNormalizedIds = (await prisma
@@ -1009,8 +1020,16 @@ export async function GET(request: Request) {
           });
 
           if (customersFound.length > 0) {
-            matchedCustomer = customersFound[0];
-            matchedVehicle = matchedCustomer.vehicles?.[0] || null;
+            const exactById = customersFound.find(
+              (c) => String(c.identification || "").trim().toLowerCase() === queryRaw.toLowerCase()
+            );
+            if (exactById) {
+              matchedCustomer = exactById;
+              matchedVehicle = matchedCustomer.vehicles?.[0] || null;
+            } else if (customersFound.length === 1) {
+              matchedCustomer = customersFound[0];
+              matchedVehicle = matchedCustomer.vehicles?.[0] || null;
+            }
           }
         }
 
@@ -1664,35 +1683,6 @@ export async function POST(request: Request) {
             })
             .catch(() => null);
         }
-        if (!customer && cleanEmail) {
-          customer = await prisma.customer
-            .findFirst({
-              where: { email: { equals: cleanEmail, mode: "insensitive" } },
-              include: { vehicles: true },
-            })
-            .catch(() => null);
-        }
-        if (!customer && cleanPhone !== "S/N" && cleanPhone.replace(/\D/g, "").length >= 7) {
-          customer = await prisma.customer
-            .findFirst({
-              where: { phone: cleanPhone },
-              include: { vehicles: true },
-            })
-            .catch(() => null);
-        }
-        if (
-          !customer &&
-          cleanName &&
-          !cleanName.toLowerCase().includes("consumidor final") &&
-          !cleanName.toLowerCase().includes("cliente mostrador")
-        ) {
-          customer = await prisma.customer
-            .findFirst({
-              where: { name: { equals: cleanName, mode: "insensitive" } },
-              include: { vehicles: true },
-            })
-            .catch(() => null);
-        }
 
         if (!customer) {
           customer = await prisma.customer.create({
@@ -1816,35 +1806,6 @@ export async function POST(request: Request) {
             })
             .catch(() => null);
         }
-        if (!customer && cleanEmail) {
-          customer = await prisma.customer
-            .findFirst({
-              where: { email: { equals: cleanEmail, mode: "insensitive" } },
-              include: { vehicles: true },
-            })
-            .catch(() => null);
-        }
-        if (!customer && cleanPhone !== "S/N" && cleanPhone.replace(/\D/g, "").length >= 7) {
-          customer = await prisma.customer
-            .findFirst({
-              where: { phone: cleanPhone },
-              include: { vehicles: true },
-            })
-            .catch(() => null);
-        }
-        if (
-          !customer &&
-          cleanName &&
-          !cleanName.toLowerCase().includes("consumidor final") &&
-          !cleanName.toLowerCase().includes("cliente mostrador")
-        ) {
-          customer = await prisma.customer
-            .findFirst({
-              where: { name: { equals: cleanName, mode: "insensitive" } },
-              include: { vehicles: true },
-            })
-            .catch(() => null);
-        }
 
         if (!customer) {
           customer = await prisma.customer.create({
@@ -1930,8 +1891,6 @@ export async function POST(request: Request) {
               },
             }).catch(() => vehicle);
           }
-        } else if (customer.vehicles && customer.vehicles.length > 0) {
-          vehicle = customer.vehicles[0];
         }
 
         const orderId =

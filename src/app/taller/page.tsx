@@ -1988,10 +1988,7 @@ export default function TallerPanel() {
           ingresadoPor: etapa1IngresadoPor.trim() || "Gonzalo Rojas",
           mechanic: etapa1Tecnico || mecanicos[0] || "Hernan Marquez",
           motivoIngreso: etapa1MotivoIngreso.trim(),
-          placa:
-            etapa1PlacaOpcional.trim() ||
-            clienteSeleccionadoEtapa1?.vehicles?.[0]?.plate ||
-            undefined,
+          placa: etapa1PlacaOpcional.trim() || undefined,
         }),
       });
 

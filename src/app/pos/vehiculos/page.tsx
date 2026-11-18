@@ -623,28 +623,12 @@ export default function PosVehiculosPage() {
                         </div>
                       )}
 
-                      {/* Fila 4: Botones grandes abajo (Venta, Taller, Ver, Editar, Eliminar) */}
+                      {/* Fila 4: Botones grandes abajo (Ver, Editar, Eliminar) */}
                       <div className="flex items-stretch border-t border-zinc-100 dark:border-zinc-800 divide-x divide-zinc-100 dark:divide-zinc-800">
-                        <Link
-                          href={`/pos/venta?placa=${encodeURIComponent(v.plate)}`}
-                          className="flex-1 h-11 flex items-center justify-center gap-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400 active:bg-emerald-50 dark:active:bg-emerald-500/10 transition-colors cursor-pointer"
-                          title="Cobrar en POS Venta"
-                        >
-                          <span>🛒</span>
-                          <span>Venta</span>
-                        </Link>
-                        <Link
-                          href={`/taller/ordenes/nueva?placa=${encodeURIComponent(v.plate)}&cliente=${encodeURIComponent(v.customerName)}`}
-                          className="flex-1 h-11 flex items-center justify-center gap-1 text-xs font-semibold text-amber-600 dark:text-amber-400 active:bg-amber-50 dark:active:bg-amber-500/10 transition-colors cursor-pointer"
-                          title="Crear Orden en Taller"
-                        >
-                          <span>🔧</span>
-                          <span>Taller</span>
-                        </Link>
                         <button
                           type="button"
                           onClick={() => setVehiculoDetalle(v)}
-                          className="w-11 h-11 flex items-center justify-center text-zinc-600 dark:text-zinc-300 active:bg-zinc-100 dark:active:bg-zinc-800 transition-colors cursor-pointer shrink-0"
+                          className="flex-1 h-11 flex items-center justify-center text-zinc-600 dark:text-zinc-300 active:bg-zinc-100 dark:active:bg-zinc-800 transition-colors cursor-pointer"
                           title="Ver Detalle"
                         >
                           👁️
@@ -759,26 +743,6 @@ export default function PosVehiculosPage() {
                           </td>
                           <td className="py-3.5 px-4 text-center whitespace-nowrap">
                             <div className="flex justify-center items-center gap-1.5">
-                              {/* Cobrar en Venta */}
-                              <Link
-                                href={`/pos/venta?placa=${encodeURIComponent(v.plate)}`}
-                                className="px-2.5 h-8 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/25 transition-all active:scale-95 flex items-center gap-1 cursor-pointer text-xs font-semibold"
-                                title="Crear venta o cobrar repuestos para este vehículo"
-                              >
-                                <span>🛒</span>
-                                <span>Venta</span>
-                              </Link>
-
-                              {/* Crear Orden de Taller */}
-                              <Link
-                                href={`/taller/ordenes/nueva?placa=${encodeURIComponent(v.plate)}&cliente=${encodeURIComponent(v.customerName)}`}
-                                className="px-2.5 h-8 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/25 transition-all active:scale-95 flex items-center gap-1 cursor-pointer text-xs font-semibold"
-                                title="Abrir nueva orden de trabajo en Taller"
-                              >
-                                <span>🔧</span>
-                                <span>Taller</span>
-                              </Link>
-
                               {/* Ver Detalle */}
                               <button
                                 onClick={() => setVehiculoDetalle(v)}

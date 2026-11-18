@@ -78,36 +78,7 @@ export async function GET(request: Request) {
       });
     }
 
-    // 4. Agregar vehículos registrados en Taller que aún no estén en prisma.vehicle
-    for (const [alnum, t] of tallerMap.entries()) {
-      if (!platesVistas.has(alnum)) {
-        platesVistas.add(alnum);
-        const displayPlate = String(t.plate || alnum).trim().toUpperCase();
-        const parts = (t.vehicle || "").trim().split(" ");
-        const brand = parts[0] || "General";
-        const model = parts.slice(1).join(" ") || "Vehículo Taller";
-
-        listaVehiculos.push({
-          id: `taller-${displayPlate}`,
-          plate: displayPlate,
-          brand: brand,
-          model: model,
-          year: null,
-          color: null,
-          mileage: null,
-          vin: null,
-          fuelType: "Gasolina",
-          customerId: null,
-          customerName: t.client || "Cliente Taller",
-          customerPhone: t.clientPhone || null,
-          customerIdentification: null,
-          origin: "Taller",
-          tallerVisits: t.visits || 1,
-          lastVisit: t.lastVisit,
-          createdAt: t.lastVisit,
-        });
-      }
-    }
+    // 4. Solo se muestran vehículos reales registrados en la tabla Vehicle (no resucitar órdenes huérfanas/eliminadas)
 
     // 5. Filtrar por búsqueda si aplica
     const filtrados = listaVehiculos.filter((item) => {
