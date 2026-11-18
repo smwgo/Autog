@@ -21,6 +21,7 @@ import { getClientActiveBranch, getClientUserBranch } from "@/lib/branch";
 import { VoiceNoteRecord } from "@/lib/transcription";
 import { procesarYNormalizarAudioBlob } from "@/lib/taller-audio-processor";
 import { useRealtimeSync } from "@/hooks/useRealtimeSync";
+import { getAuthHeaders } from "@/lib/auth-headers";
 
 // ============================================================================
 // INTERFACES Y TIPOS OPERATIVOS
@@ -1199,7 +1200,8 @@ export default function TallerPanel() {
     try {
       const res = await fetch("/api/taller/operacion", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+        credentials: "include",
         body: JSON.stringify({
           action: "ELIMINAR_ORDEN",
           orderId: auto.id,
@@ -1209,10 +1211,12 @@ export default function TallerPanel() {
       if (res.ok && data?.success) {
         mostrarToast(`Orden #${limpiarNumeroOrden(auto.orderNumber)} eliminada`, "ok");
       } else {
+        setAutosEnPista((prev) => (prev.some((o) => o.id === auto.id) ? prev : [auto, ...prev]));
         mostrarToast(data?.error || "No se pudo eliminar la orden", "err");
       }
     } catch (err) {
       console.error("Error al eliminar orden:", err);
+      setAutosEnPista((prev) => (prev.some((o) => o.id === auto.id) ? prev : [auto, ...prev]));
       mostrarToast("Error al eliminar la orden", "err");
     }
   };
@@ -5371,6 +5375,50 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
     });
   }, [autosEnPista, busquedaListaTaller, filtroEstadoListaTaller]);
 
+  const modalEliminarOrden = ordenAEliminar ? (
+    <div
+      className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in"
+      onClick={() => setOrdenAEliminar(null)}
+    >
+      <div
+        className="w-full max-w-sm bg-white dark:bg-[#18181b] border border-zinc-200 dark:border-white/10 rounded-2xl shadow-2xl p-5 space-y-4 animate-scale-in"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-500/20 flex items-center justify-center text-lg shrink-0">
+            🗑️
+          </div>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-zinc-900 dark:text-white leading-snug">
+              ¿Eliminar orden #{limpiarNumeroOrden(ordenAEliminar.orderNumber)}?
+            </p>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 truncate">
+              {ordenAEliminar.client || "Cliente"} • {ordenAEliminar.plate || ordenAEliminar.vehicle || "Vehículo"}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-end gap-2.5 pt-1">
+          <button
+            type="button"
+            onClick={() => setOrdenAEliminar(null)}
+            className="px-4 py-2 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-xs sm:text-sm font-medium text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-white/10 transition-all cursor-pointer active:scale-95"
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            onClick={() => void confirmarEliminarOrden()}
+            className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs sm:text-sm font-semibold transition-all cursor-pointer shadow-sm shadow-rose-600/30 active:scale-95 flex items-center gap-1.5"
+          >
+            <span>🗑️</span>
+            <span>Eliminar</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  ) : null;
+
   if (vistaListaTaller) {
     const abrirOrdenEnTaller = (auto: UnifiedOrder) => {
       handleSeleccionarAutoYVolver(auto);
@@ -5823,6 +5871,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
           </div>
         </main>
 
+        {modalEliminarOrden}
         <TallerMobileNav />
       </div>
     );
@@ -7733,43 +7782,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
       )}
 
       {/* MODAL FLOTANTE DE CONFIRMACIÓN PARA ELIMINAR ORDEN DE TALLER */}
-      {ordenAEliminar && (
-        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in" onClick={() => setOrdenAEliminar(null)}>
-          <div className="w-full max-w-sm bg-white dark:bg-[#18181b] border border-zinc-200 dark:border-white/10 rounded-2xl shadow-2xl p-5 space-y-4 animate-scale-in" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-500/20 flex items-center justify-center text-lg shrink-0">
-                🗑️
-              </div>
-              <div className="min-w-0">
-                <p className="text-sm font-semibold text-zinc-900 dark:text-white leading-snug">
-                  ¿Eliminar orden #{limpiarNumeroOrden(ordenAEliminar.orderNumber)}?
-                </p>
-                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 truncate">
-                  {ordenAEliminar.client || "Cliente"} • {ordenAEliminar.plate || ordenAEliminar.vehicle || "Vehículo"}
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-end gap-2.5 pt-1">
-              <button
-                type="button"
-                onClick={() => setOrdenAEliminar(null)}
-                className="px-4 py-2 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-xs sm:text-sm font-medium text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-white/10 transition-all cursor-pointer active:scale-95"
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                onClick={() => void confirmarEliminarOrden()}
-                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs sm:text-sm font-semibold transition-all cursor-pointer shadow-sm shadow-rose-600/30 active:scale-95 flex items-center gap-1.5"
-              >
-                <span>🗑️</span>
-                <span>Eliminar</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {modalEliminarOrden}
 
       {/* Modal Flotante de Inicio: Nueva Orden de Trabajo (Cliente + Vehículo + Técnico) */}
       <ModalNuevaOrdenTrabajo

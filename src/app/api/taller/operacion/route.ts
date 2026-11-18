@@ -1688,12 +1688,46 @@ export async function POST(request: Request) {
             .catch(() => null);
         }
         if (!customer && identificacion?.trim()) {
-          customer = await prisma.customer
-            .findUnique({
-              where: { identification: identificacion.trim() },
-              include: { vehicles: true },
-            })
-            .catch(() => null);
+          const identLower = identificacion.trim().toLowerCase();
+          const identGenericas = new Set(["9999999999", "9999999999999", "0000000000", "0000000000000", "s/n", "n/a"]);
+          if (!identGenericas.has(identLower)) {
+            customer = await prisma.customer
+              .findUnique({
+                where: { identification: identificacion.trim() },
+                include: { vehicles: true },
+              })
+              .catch(() => null);
+          }
+        }
+        if (!customer && cleanPhone && cleanPhone !== "S/N") {
+          const digits = cleanPhone.replace(/\D/g, "");
+          if (digits.length >= 7 && !/^0+$/.test(digits) && !/^9+$/.test(digits)) {
+            const last9 = digits.slice(-9);
+            const matchedPhone = (await prisma
+              .$queryRawUnsafe(
+                `SELECT "id" FROM "Customer" WHERE RIGHT(REGEXP_REPLACE(COALESCE("phone", ''), '[^0-9]', '', 'g'), 9) = $1 LIMIT 1`,
+                last9
+              )
+              .catch(() => [])) as Array<{ id: string }>;
+            if (matchedPhone[0]?.id) {
+              customer = await prisma.customer
+                .findUnique({ where: { id: matchedPhone[0].id }, include: { vehicles: true } })
+                .catch(() => null);
+            }
+          }
+        }
+        if (!customer && cleanName.length >= 4 && !identificacion?.trim()) {
+          const matchedName = (await prisma
+            .$queryRawUnsafe(
+              `SELECT "id" FROM "Customer" WHERE LOWER(TRIM("name")) = LOWER($1) LIMIT 1`,
+              cleanName
+            )
+            .catch(() => [])) as Array<{ id: string }>;
+          if (matchedName[0]?.id) {
+            customer = await prisma.customer
+              .findUnique({ where: { id: matchedName[0].id }, include: { vehicles: true } })
+              .catch(() => null);
+          }
         }
 
         if (!customer) {
@@ -1811,12 +1845,46 @@ export async function POST(request: Request) {
             .catch(() => null);
         }
         if (!customer && identificacion?.trim()) {
-          customer = await prisma.customer
-            .findUnique({
-              where: { identification: identificacion.trim() },
-              include: { vehicles: true },
-            })
-            .catch(() => null);
+          const identLower = identificacion.trim().toLowerCase();
+          const identGenericas = new Set(["9999999999", "9999999999999", "0000000000", "0000000000000", "s/n", "n/a"]);
+          if (!identGenericas.has(identLower)) {
+            customer = await prisma.customer
+              .findUnique({
+                where: { identification: identificacion.trim() },
+                include: { vehicles: true },
+              })
+              .catch(() => null);
+          }
+        }
+        if (!customer && cleanPhone && cleanPhone !== "S/N") {
+          const digits = cleanPhone.replace(/\D/g, "");
+          if (digits.length >= 7 && !/^0+$/.test(digits) && !/^9+$/.test(digits)) {
+            const last9 = digits.slice(-9);
+            const matchedPhone = (await prisma
+              .$queryRawUnsafe(
+                `SELECT "id" FROM "Customer" WHERE RIGHT(REGEXP_REPLACE(COALESCE("phone", ''), '[^0-9]', '', 'g'), 9) = $1 LIMIT 1`,
+                last9
+              )
+              .catch(() => [])) as Array<{ id: string }>;
+            if (matchedPhone[0]?.id) {
+              customer = await prisma.customer
+                .findUnique({ where: { id: matchedPhone[0].id }, include: { vehicles: true } })
+                .catch(() => null);
+            }
+          }
+        }
+        if (!customer && cleanName.length >= 4 && !identificacion?.trim()) {
+          const matchedName = (await prisma
+            .$queryRawUnsafe(
+              `SELECT "id" FROM "Customer" WHERE LOWER(TRIM("name")) = LOWER($1) LIMIT 1`,
+              cleanName
+            )
+            .catch(() => [])) as Array<{ id: string }>;
+          if (matchedName[0]?.id) {
+            customer = await prisma.customer
+              .findUnique({ where: { id: matchedName[0].id }, include: { vehicles: true } })
+              .catch(() => null);
+          }
         }
 
         if (!customer) {
@@ -5038,7 +5106,7 @@ export async function POST(request: Request) {
         }
 
         const existing: any[] = await prisma.$queryRawUnsafe(
-          `SELECT "id", "orderNumber" FROM "WorkshopOrder" WHERE "id" = $1 OR "orderNumber" = $1 LIMIT 1`,
+          `SELECT "id", "orderNumber", "vehicleId" FROM "WorkshopOrder" WHERE "id" = $1 OR "orderNumber" = $1 LIMIT 1`,
           orderId
         );
 
@@ -5049,10 +5117,28 @@ export async function POST(request: Request) {
           );
         }
 
+        const deletedVehicleId = existing[0].vehicleId;
+
         await prisma.$executeRawUnsafe(
           `DELETE FROM "WorkshopOrder" WHERE "id" = $1`,
           existing[0].id
         );
+
+        // Si el vehículo de la orden eliminada quedó huérfano (sin otras órdenes ni historial), eliminarlo para que no reaparezca
+        if (deletedVehicleId) {
+          const refs = (await prisma
+            .$queryRawUnsafe(
+              `SELECT
+                (SELECT COUNT(*)::int FROM "WorkshopOrder" WHERE "vehicleId" = $1) AS orders_cnt,
+                (SELECT COUNT(*)::int FROM "WorkshopHistory" WHERE "vehicleId" = $1) AS hist_cnt`,
+              deletedVehicleId
+            )
+            .catch(() => [])) as any[];
+          const r = refs[0];
+          if (r && Number(r.orders_cnt || 0) === 0 && Number(r.hist_cnt || 0) === 0) {
+            await prisma.vehicle.delete({ where: { id: deletedVehicleId } }).catch(() => {});
+          }
+        }
 
         return NextResponse.json({
           success: true,

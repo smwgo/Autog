@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { getClientActiveBranch } from "@/lib/branch";
@@ -22,6 +22,7 @@ import {
   esDispositivoMovilAudio,
 } from "@/lib/taller-audio-processor";
 import { MiniAudioPlayer } from "@/components/taller/MiniAudioPlayer";
+import { getAuthHeaders } from "@/lib/auth-headers";
 
 export interface ModalNuevaOrdenProps {
   isOpen?: boolean;
@@ -2356,7 +2357,11 @@ export default function ModalNuevaOrdenTrabajo({
       setListaClientes(clientesCatalogo);
     }
     if (!isOpen) return;
-    fetch(`/api/clientes?lite=1&t=${Date.now()}`, { cache: "no-store" })
+    fetch(`/api/clientes?lite=1&t=${Date.now()}`, {
+      cache: "no-store",
+      headers: getAuthHeaders(),
+      credentials: "include",
+    })
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
         if (d?.success && Array.isArray(d.clientes)) {
@@ -2448,7 +2453,125 @@ export default function ModalNuevaOrdenTrabajo({
     setNuevoClienteEmail("");
     setNuevoClienteDireccion("");
     setNuevoClienteFoto(null);
+    setVehiculoSeleccionadoId("NUEVO");
+    setVehiculoPlaca("");
+    setVehiculoMarca("");
+    setVehiculoModelo("");
+    setVehiculoKm("");
+    setVehiculoFoto(null);
+    setMostrarFormNuevoVehiculo(false);
   };
+
+  const normalizarTextoDuplicado = (val: string) =>
+    String(val || "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, " ");
+
+  const normalizarTelefonoDuplicado = (val: string) => {
+    const digits = String(val || "").replace(/\D/g, "");
+    if (digits.length < 7) return "";
+    if (/^0+$/.test(digits) || /^9+$/.test(digits)) return "";
+    return digits.slice(-9);
+  };
+
+  const buscarClienteDuplicado = useCallback(
+    (
+      datos: { nombre?: string; identificacion?: string; telefono?: string },
+      fuente: any[] = listaClientes
+    ): { cliente: any; motivo: "cédula/RUC" | "WhatsApp" | "nombre" } | null => {
+      const identGenericas = new Set([
+        "9999999999",
+        "9999999999999",
+        "0000000000",
+        "0000000000000",
+        "s/n",
+        "n/a",
+      ]);
+      const identNorm = String(datos.identificacion || "")
+        .replace(/[\s.-]/g, "")
+        .trim()
+        .toLowerCase();
+      const telNorm = normalizarTelefonoDuplicado(datos.telefono || "");
+      const nombreNorm = normalizarTextoDuplicado(datos.nombre || "");
+
+      // 1. Prioridad máxima: misma cédula / RUC
+      if (
+        identNorm.length >= 5 &&
+        !identGenericas.has(identNorm) &&
+        !identNorm.startsWith("cli-") &&
+        !identNorm.startsWith("tmp-")
+      ) {
+        const matchIdent = (fuente || []).find((c) => {
+          const cIdent = String(c?.identification || "")
+            .replace(/[\s.-]/g, "")
+            .trim()
+            .toLowerCase();
+          return cIdent === identNorm;
+        });
+        if (matchIdent) return { cliente: matchIdent, motivo: "cédula/RUC" };
+      }
+
+      // 2. Segunda prioridad: mismo número de WhatsApp / teléfono
+      if (telNorm) {
+        const matchTel = (fuente || []).find(
+          (c) => normalizarTelefonoDuplicado(c?.phone || "") === telNorm
+        );
+        if (matchTel) return { cliente: matchTel, motivo: "WhatsApp" };
+      }
+
+      // 3. Tercera prioridad: mismo nombre exacto
+      if (nombreNorm.length >= 4) {
+        const matchNombre = (fuente || []).find(
+          (c) => normalizarTextoDuplicado(c?.name || "") === nombreNorm
+        );
+        if (matchNombre) return { cliente: matchNombre, motivo: "nombre" };
+      }
+
+      return null;
+    },
+    [listaClientes]
+  );
+
+  const clienteDuplicadoEnVivo = useMemo(() => {
+    if (!mostrarFormNuevoCliente || editOrderId || clienteSeleccionado?.id) return null;
+    return buscarClienteDuplicado({
+      nombre: nuevoClienteNombre,
+      identificacion: nuevoClienteIdentificacion,
+      telefono: nuevoClienteTelefono,
+    });
+  }, [
+    mostrarFormNuevoCliente,
+    editOrderId,
+    clienteSeleccionado?.id,
+    nuevoClienteNombre,
+    nuevoClienteIdentificacion,
+    nuevoClienteTelefono,
+    buscarClienteDuplicado,
+  ]);
+
+  const vehiculoDuplicadoEnVivo = useMemo(() => {
+    const alnum = vehiculoPlaca.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+    if (alnum.length < 3 || editOrderId) return null;
+
+    for (const v of clienteSeleccionado?.vehicles || []) {
+      if (String(v.plate || "").toUpperCase().replace(/[^A-Z0-9]/g, "") === alnum) {
+        return { vehiculo: v, duenio: clienteSeleccionado, esDeOtroCliente: false };
+      }
+    }
+    for (const c of listaClientes || []) {
+      const vMatch = (c.vehicles || []).find(
+        (v: any) => String(v.plate || "").toUpperCase().replace(/[^A-Z0-9]/g, "") === alnum
+      );
+      if (vMatch) {
+        const esDeOtro = Boolean(clienteSeleccionado?.id) && c.id !== clienteSeleccionado.id;
+        return { vehiculo: vMatch, duenio: c, esDeOtroCliente: esDeOtro };
+      }
+    }
+    return null;
+  }, [vehiculoPlaca, editOrderId, clienteSeleccionado, listaClientes]);
 
   // Validar datos del cliente nuevo en memoria, detectar si ya existe para no duplicar y pasar al paso de vehículo
   const handleGuardarClienteYPasarVehiculo = async () => {
@@ -2464,29 +2587,18 @@ export default function ModalNuevaOrdenTrabajo({
 
     // Si está creando (no editando un cliente ya seleccionado explícitamente), detectar si ya existe en BD/catálogo
     if (!editOrderId && !clienteSeleccionado?.id) {
-      const identNorm = nuevoClienteIdentificacion.trim().toLowerCase();
+      let hallazgo = buscarClienteDuplicado({
+        nombre: nuevoClienteNombre,
+        identificacion: nuevoClienteIdentificacion,
+        telefono: nuevoClienteTelefono,
+      });
 
-      const coincideCliente = (c: any) => {
-        if (!c) return false;
-        const cIdent = String(c.identification || "").trim().toLowerCase();
-        // Solo vincular automáticamente si coincide la identificación real (cédula/RUC), nunca por nombre/teléfono/email
-        if (
-          identNorm &&
-          identNorm.length >= 5 &&
-          !identNorm.startsWith("cli-") &&
-          !identNorm.startsWith("tmp-") &&
-          cIdent === identNorm
-        ) {
-          return true;
-        }
-        return false;
-      };
-
-      let clienteExistente = (listaClientes || []).find(coincideCliente) || null;
-
-      if (!clienteExistente && listaClientes.length === 0) {
-        const qBuscar = nuevoClienteIdentificacion.trim();
-        if (qBuscar.length >= 5) {
+      if (!hallazgo && listaClientes.length === 0) {
+        const qBuscar =
+          nuevoClienteIdentificacion.trim() ||
+          nuevoClienteTelefono.trim() ||
+          nuevoClienteNombre.trim();
+        if (qBuscar.length >= 4) {
           try {
             const res = await fetch(
               `/api/taller/operacion?searchCustomer=${encodeURIComponent(qBuscar)}`,
@@ -2494,10 +2606,18 @@ export default function ModalNuevaOrdenTrabajo({
             );
             const data = await res.json().catch(() => null);
             if (data?.success && Array.isArray(data.clientes)) {
-              clienteExistente = data.clientes.find(coincideCliente) || null;
-              if (clienteExistente) {
+              hallazgo = buscarClienteDuplicado(
+                {
+                  nombre: nuevoClienteNombre,
+                  identificacion: nuevoClienteIdentificacion,
+                  telefono: nuevoClienteTelefono,
+                },
+                data.clientes
+              );
+              if (hallazgo?.cliente) {
+                const encontrado = hallazgo.cliente;
                 setListaClientes((prev) =>
-                  prev.some((item) => item.id === clienteExistente.id) ? prev : [clienteExistente, ...prev]
+                  prev.some((item) => item.id === encontrado.id) ? prev : [encontrado, ...prev]
                 );
               }
             }
@@ -2505,7 +2625,8 @@ export default function ModalNuevaOrdenTrabajo({
         }
       }
 
-      if (clienteExistente) {
+      if (hallazgo?.cliente) {
+        const clienteExistente = hallazgo.cliente;
         setClienteSeleccionado(clienteExistente);
         setMostrarFormNuevoCliente(false);
         setBusquedaCliente(clienteExistente.name || nuevoClienteNombre.trim());
@@ -2516,7 +2637,7 @@ export default function ModalNuevaOrdenTrabajo({
         setEmailContacto(nuevoClienteEmail.trim() || clienteExistente.email || "");
         setNuevoClienteDireccion(nuevoClienteDireccion.trim() || clienteExistente.address || "");
         mostrarToast(
-          `Cliente existente detectado: ${clienteExistente.name}. Selecciona o registra su vehículo.`,
+          `Cliente ya registrado (coincide ${hallazgo.motivo}): ${clienteExistente.name}. Selecciona o registra su vehículo.`,
           "ok"
         );
         setPasoActivo(2);
@@ -2634,7 +2755,8 @@ export default function ModalNuevaOrdenTrabajo({
 
       const res = await fetch("/api/taller/operacion", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+        credentials: "include",
         body: JSON.stringify({
           action: editOrderId ? "EDITAR_ORDEN_ETAPA_1" : "CREAR_ORDEN_ETAPA_1",
           orderId: editOrderId || undefined,
@@ -3584,6 +3706,15 @@ export default function ModalNuevaOrdenTrabajo({
                       return;
                     }
                     setNuevoClienteIdentificacion(nuevoClienteIdentificacion.replace(/[\s.-]/g, "").toUpperCase());
+                    const dupIdent = buscarClienteDuplicado({ identificacion: nuevoClienteIdentificacion });
+                    if (dupIdent?.cliente) {
+                      mostrarToast(
+                        `Ya existe un cliente con esa cédula/RUC: ${dupIdent.cliente.name}. Cargando sus datos.`,
+                        "ok"
+                      );
+                      handleSeleccionarCliente(dupIdent.cliente);
+                      return;
+                    }
                     setSubPasoCliente("telefono");
                   } else if (subPasoCliente === "telefono") {
                     const errWa = validarWhatsAppEcuador(nuevoClienteTelefono);
@@ -3591,7 +3722,17 @@ export default function ModalNuevaOrdenTrabajo({
                       mostrarToast(errWa, "err");
                       return;
                     }
-                    setNuevoClienteTelefono(`593${whatsappParteLocal(nuevoClienteTelefono)}`);
+                    const waFinal = `593${whatsappParteLocal(nuevoClienteTelefono)}`;
+                    setNuevoClienteTelefono(waFinal);
+                    const dupWa = buscarClienteDuplicado({ telefono: waFinal });
+                    if (dupWa?.cliente) {
+                      mostrarToast(
+                        `Ya existe un cliente con ese WhatsApp: ${dupWa.cliente.name}. Cargando sus datos.`,
+                        "ok"
+                      );
+                      handleSeleccionarCliente(dupWa.cliente);
+                      return;
+                    }
                     setSubPasoCliente("email");
                   } else if (subPasoCliente === "email") {
                     setSubPasoCliente("direccion");
@@ -3632,6 +3773,28 @@ export default function ModalNuevaOrdenTrabajo({
                         ← Volver
                       </button>
                     </div>
+
+                    {clienteDuplicadoEnVivo && (
+                      <div className="p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-500/10 border border-amber-300 dark:border-amber-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold text-amber-800 dark:text-amber-300">
+                            ⚠️ Cliente ya registrado (coincide {clienteDuplicadoEnVivo.motivo})
+                          </p>
+                          <p className="text-xs text-amber-900/90 dark:text-amber-100/90 truncate mt-0.5">
+                            {clienteDuplicadoEnVivo.cliente.name}
+                            {clienteDuplicadoEnVivo.cliente.identification ? ` • ${clienteDuplicadoEnVivo.cliente.identification}` : ""}
+                            {clienteDuplicadoEnVivo.cliente.phone ? ` • ${clienteDuplicadoEnVivo.cliente.phone}` : ""}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleSeleccionarCliente(clienteDuplicadoEnVivo.cliente)}
+                          className="shrink-0 px-3 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold transition-all cursor-pointer active:scale-95"
+                        >
+                          Usar este cliente →
+                        </button>
+                      </div>
+                    )}
 
                     {/* Barra de Progreso Deslizable / Breadcrumbs Interactivos */}
                     <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
@@ -4479,34 +4642,41 @@ export default function ModalNuevaOrdenTrabajo({
                     }
 
                     if (vehiculoExistente) {
-                      const placaReal = (vehiculoExistente.plate || placaLimpia).toUpperCase();
-                      setVehiculoSeleccionadoId(vehiculoExistente.id || "NUEVO");
-                      setVehiculoPlaca(placaReal);
-                      setVehiculoMarca(vehiculoExistente.brand || "");
-                      setVehiculoModelo(vehiculoExistente.model || "");
-                      if (vehiculoExistente.year) setVehiculoAnio(String(vehiculoExistente.year));
-                      if (vehiculoExistente.vehicleType) setVehiculoTipo(vehiculoExistente.vehicleType);
-                      setVehiculoKm(vehiculoExistente.mileage ? String(vehiculoExistente.mileage) : "");
-                      setVehiculoFoto(vehiculoExistente.imageUrl || null);
-                      setMostrarFormNuevoVehiculo(false);
+                      const esDeOtroCliente =
+                        Boolean(clienteSeleccionado?.id) &&
+                        Boolean(duenioVehiculo?.id) &&
+                        duenioVehiculo.id !== clienteSeleccionado.id;
 
-                      if (!clienteSeleccionado && duenioVehiculo) {
-                        setClienteSeleccionado(duenioVehiculo);
-                        setBusquedaCliente(duenioVehiculo.name || "");
-                        setNuevoClienteNombre(duenioVehiculo.name || "");
-                        setNuevoClienteIdentificacion(duenioVehiculo.identification || "");
-                        setNuevoClienteTelefono(duenioVehiculo.phone || "");
-                        setNuevoClienteEmail(duenioVehiculo.email || "");
-                        setEmailContacto(duenioVehiculo.email || "");
-                        setNuevoClienteDireccion(duenioVehiculo.address || "");
+                      if (!esDeOtroCliente) {
+                        const placaReal = (vehiculoExistente.plate || placaLimpia).toUpperCase();
+                        setVehiculoSeleccionadoId(vehiculoExistente.id || "NUEVO");
+                        setVehiculoPlaca(placaReal);
+                        setVehiculoMarca(vehiculoExistente.brand || "");
+                        setVehiculoModelo(vehiculoExistente.model || "");
+                        if (vehiculoExistente.year) setVehiculoAnio(String(vehiculoExistente.year));
+                        if (vehiculoExistente.vehicleType) setVehiculoTipo(vehiculoExistente.vehicleType);
+                        setVehiculoKm(vehiculoExistente.mileage ? String(vehiculoExistente.mileage) : "");
+                        setVehiculoFoto(vehiculoExistente.imageUrl || null);
+                        setMostrarFormNuevoVehiculo(false);
+
+                        if (!clienteSeleccionado && duenioVehiculo) {
+                          setClienteSeleccionado(duenioVehiculo);
+                          setBusquedaCliente(duenioVehiculo.name || "");
+                          setNuevoClienteNombre(duenioVehiculo.name || "");
+                          setNuevoClienteIdentificacion(duenioVehiculo.identification || "");
+                          setNuevoClienteTelefono(duenioVehiculo.phone || "");
+                          setNuevoClienteEmail(duenioVehiculo.email || "");
+                          setEmailContacto(duenioVehiculo.email || "");
+                          setNuevoClienteDireccion(duenioVehiculo.address || "");
+                        }
+
+                        mostrarToast(
+                          `Vehículo existente detectado (${placaReal}${vehiculoExistente.brand ? ` • ${vehiculoExistente.brand} ${vehiculoExistente.model || ""}` : ""}). Pasando al ingreso.`,
+                          "ok"
+                        );
+                        setPasoActivo(3);
+                        return;
                       }
-
-                      mostrarToast(
-                        `Vehículo existente detectado (${placaReal}${vehiculoExistente.brand ? ` • ${vehiculoExistente.brand} ${vehiculoExistente.model || ""}` : ""}). Pasando al ingreso.`,
-                        "ok"
-                      );
-                      setPasoActivo(3);
-                      return;
                     }
 
                     setSubPasoVehiculo("marca");
@@ -4628,7 +4798,7 @@ export default function ModalNuevaOrdenTrabajo({
                               onKeyDown={(e) => {
                                 if (e.key === "Enter" && vehiculoPlaca.trim()) {
                                   e.preventDefault();
-                                  setSubPasoVehiculo("marca");
+                                  void irASiguiente();
                                 }
                               }}
                               placeholder="Ej: ABC-1234"
@@ -4636,6 +4806,59 @@ export default function ModalNuevaOrdenTrabajo({
                               autoFocus
                             />
                           </div>
+
+                          {vehiculoDuplicadoEnVivo && (
+                            <div
+                              className={`p-3.5 rounded-2xl border flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 ${
+                                vehiculoDuplicadoEnVivo.esDeOtroCliente
+                                  ? "bg-amber-50 dark:bg-amber-500/10 border-amber-300 dark:border-amber-500/30"
+                                  : "bg-blue-50 dark:bg-blue-500/10 border-blue-300 dark:border-blue-500/30"
+                              }`}
+                            >
+                              <div className="min-w-0">
+                                <p
+                                  className={`text-xs font-bold ${
+                                    vehiculoDuplicadoEnVivo.esDeOtroCliente
+                                      ? "text-amber-800 dark:text-amber-300"
+                                      : "text-blue-800 dark:text-blue-300"
+                                  }`}
+                                >
+                                  {vehiculoDuplicadoEnVivo.esDeOtroCliente
+                                    ? `⚠️ Placa ya registrada a nombre de ${vehiculoDuplicadoEnVivo.duenio?.name || "otro cliente"}`
+                                    : "🚗 Vehículo ya registrado en el sistema"}
+                                </p>
+                                <p className="text-xs text-zinc-700 dark:text-zinc-300 truncate mt-0.5">
+                                  {vehiculoDuplicadoEnVivo.vehiculo.plate} •{" "}
+                                  {[vehiculoDuplicadoEnVivo.vehiculo.brand, vehiculoDuplicadoEnVivo.vehiculo.model]
+                                    .filter(Boolean)
+                                    .join(" ") || "Vehículo"}
+                                  {vehiculoDuplicadoEnVivo.vehiculo.year ? ` (${vehiculoDuplicadoEnVivo.vehiculo.year})` : ""}
+                                </p>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (vehiculoDuplicadoEnVivo.duenio && !clienteSeleccionado?.id) {
+                                    setClienteSeleccionado(vehiculoDuplicadoEnVivo.duenio);
+                                    setBusquedaCliente(vehiculoDuplicadoEnVivo.duenio.name || "");
+                                  } else if (vehiculoDuplicadoEnVivo.esDeOtroCliente && vehiculoDuplicadoEnVivo.duenio) {
+                                    setClienteSeleccionado(vehiculoDuplicadoEnVivo.duenio);
+                                    setBusquedaCliente(vehiculoDuplicadoEnVivo.duenio.name || "");
+                                  }
+                                  handleSeleccionarVehiculo(vehiculoDuplicadoEnVivo.vehiculo);
+                                }}
+                                className={`shrink-0 px-3 py-2 rounded-xl text-white text-xs font-bold transition-all cursor-pointer active:scale-95 ${
+                                  vehiculoDuplicadoEnVivo.esDeOtroCliente
+                                    ? "bg-amber-600 hover:bg-amber-500"
+                                    : "bg-blue-600 hover:bg-blue-500"
+                                }`}
+                              >
+                                {vehiculoDuplicadoEnVivo.esDeOtroCliente
+                                  ? "Usar ese cliente y vehículo →"
+                                  : "Usar este vehículo →"}
+                              </button>
+                            </div>
+                          )}
 
                           <div className="pt-2 relative z-10">
                             <button
