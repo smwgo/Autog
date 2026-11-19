@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { emitRealtimeEvent } from "@/lib/realtime";
 
+export const dynamic = "force-dynamic";
+const NO_STORE_HEADERS = { "Cache-Control": "no-store, no-cache, must-revalidate" };
+
 let customerBranchSchemaEnsured = false;
 
 async function ensureCustomerBranchSchema() {
@@ -167,11 +170,14 @@ export async function GET(request: Request) {
     const visitsMap: Record<string, number> = {};
 
     if (isLite) {
-      return NextResponse.json({
-        success: true,
-        clientes: customersDeduplicated,
-        stats: null,
-      });
+      return NextResponse.json(
+        {
+          success: true,
+          clientes: customersDeduplicated,
+          stats: null,
+        },
+        { headers: NO_STORE_HEADERS }
+      );
     }
 
     if (platesSet.length > 0) {
@@ -232,11 +238,14 @@ export async function GET(request: Request) {
       stats = { totalClientes, totalVehiculos, totalVip, totalNuevos };
     }
 
-    return NextResponse.json({
-      success: true,
-      clientes: customersWithVisits,
-      stats,
-    });
+    return NextResponse.json(
+      {
+        success: true,
+        clientes: customersWithVisits,
+        stats,
+      },
+      { headers: NO_STORE_HEADERS }
+    );
   } catch (error: any) {
     console.error("Error al obtener clientes de base de datos:", error);
     return NextResponse.json(

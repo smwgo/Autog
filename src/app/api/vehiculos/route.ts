@@ -2,6 +2,10 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getVerifiedSessionFromRequest, isStaffSession } from "@/lib/signed-tokens";
 import { resolveSessionCustomerScope } from "@/lib/client-scope";
+import { emitRealtimeEvent } from "@/lib/realtime";
+
+export const dynamic = "force-dynamic";
+const NO_STORE_HEADERS = { "Cache-Control": "no-store, no-cache, must-revalidate" };
 
 // GET: Obtener vehículos de Neon (acotados al cliente si no es personal)
 export async function GET(request: Request) {
@@ -31,11 +35,14 @@ export async function GET(request: Request) {
       },
     });
 
-    return NextResponse.json({
-      success: true,
-      vehicles,
-      count: vehicles.length,
-    });
+    return NextResponse.json(
+      {
+        success: true,
+        vehicles,
+        count: vehicles.length,
+      },
+      { headers: NO_STORE_HEADERS }
+    );
   } catch (error: any) {
     console.error("Error al obtener vehículos de base de datos:", error);
     return NextResponse.json(
@@ -230,9 +237,26 @@ export async function DELETE(request: Request) {
       }
     }
 
+    await prisma
+      .$executeRawUnsafe(
+        `UPDATE "WorkshopOrder" SET "vehicleId" = NULL WHERE "vehicleId" = $1`,
+        id
+      )
+      .catch(() => {});
+
+    await prisma
+      .$executeRawUnsafe(
+        `UPDATE "WorkshopEvidence" SET "vehicleId" = NULL WHERE "vehicleId" = $1`,
+        id
+      )
+      .catch(() => {});
+
     const deletedVehicle = await prisma.vehicle.delete({
       where: { id },
     });
+
+    emitRealtimeEvent({ channel: "vehiculos", action: "deleted", entityId: id });
+    emitRealtimeEvent({ channel: "clientes", action: "updated" });
 
     return NextResponse.json({
       success: true,

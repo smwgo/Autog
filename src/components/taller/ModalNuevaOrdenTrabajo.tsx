@@ -1778,7 +1778,11 @@ export default function ModalNuevaOrdenTrabajo({
 
       // 2. Consultar en tiempo real a Neon PostgreSQL (/api/taller/operacion?query=...)
       if (!clienteHallado || !vehiculoHallado) {
-        const res = await fetch(`/api/taller/operacion?q=${encodeURIComponent(placaLimpia)}`);
+        const res = await fetch(`/api/taller/operacion?q=${encodeURIComponent(placaLimpia)}&t=${Date.now()}`, {
+          cache: "no-store",
+          headers: getAuthHeaders(),
+          credentials: "include",
+        });
         const data = await res.json().catch(() => null);
         if (data?.success && data?.found && data?.customer) {
           // Verificar que realmente coincida por vehículo/placa
@@ -2352,24 +2356,46 @@ export default function ModalNuevaOrdenTrabajo({
 
   const [listaClientes, setListaClientes] = useState<any[]>(clientesCatalogo || []);
 
+  const sincronizarClientesFrescos = useCallback(async () => {
+    try {
+      const r = await fetch(`/api/clientes?lite=1&t=${Date.now()}`, {
+        cache: "no-store",
+        headers: getAuthHeaders(),
+        credentials: "include",
+      });
+      const d = r.ok ? await r.json() : null;
+      if (d?.success && Array.isArray(d.clientes)) {
+        setListaClientes(d.clientes);
+        setClienteSeleccionado((prev: any) => {
+          if (!prev) return prev;
+          const actualizado = d.clientes.find(
+            (c: any) =>
+              (prev.id && c.id === prev.id) ||
+              (prev.identification &&
+                c.identification &&
+                String(c.identification).trim().toUpperCase() ===
+                  String(prev.identification).trim().toUpperCase())
+          );
+          if (!actualizado) return prev;
+          return {
+            ...actualizado,
+            vehicles: Array.isArray(actualizado.vehicles) ? actualizado.vehicles : [],
+          };
+        });
+      }
+    } catch {}
+  }, []);
+
   useEffect(() => {
-    if (Array.isArray(clientesCatalogo) && clientesCatalogo.length > 0) {
-      setListaClientes(clientesCatalogo);
-    }
     if (!isOpen) return;
-    fetch(`/api/clientes?lite=1&t=${Date.now()}`, {
-      cache: "no-store",
-      headers: getAuthHeaders(),
-      credentials: "include",
-    })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d) => {
-        if (d?.success && Array.isArray(d.clientes)) {
-          setListaClientes(d.clientes);
-        }
-      })
-      .catch(() => {});
-  }, [clientesCatalogo, isOpen]);
+    sincronizarClientesFrescos();
+  }, [isOpen, sincronizarClientesFrescos]);
+
+  // Al entrar al Paso 2 (Vehículo), refrescar siempre desde BD para no mostrar vehículos eliminados o cacheados en otro navegador
+  useEffect(() => {
+    if (!isOpen || pasoActivo !== 2 || !clienteSeleccionado?.id) return;
+    sincronizarClientesFrescos();
+  }, [isOpen, pasoActivo, clienteSeleccionado?.id, sincronizarClientesFrescos]);
 
   // Filtrado reactivo en catálogo de clientes
   const clientesFiltrados = useMemo(() => {
@@ -2601,8 +2627,13 @@ export default function ModalNuevaOrdenTrabajo({
         if (qBuscar.length >= 4) {
           try {
             const res = await fetch(
-              `/api/taller/operacion?searchCustomer=${encodeURIComponent(qBuscar)}`,
-              { signal: AbortSignal.timeout(2500) }
+              `/api/taller/operacion?searchCustomer=${encodeURIComponent(qBuscar)}&t=${Date.now()}`,
+              {
+                cache: "no-store",
+                headers: getAuthHeaders(),
+                credentials: "include",
+                signal: AbortSignal.timeout(2500),
+              }
             );
             const data = await res.json().catch(() => null);
             if (data?.success && Array.isArray(data.clientes)) {
@@ -4167,19 +4198,20 @@ export default function ModalNuevaOrdenTrabajo({
                           </div>
 
                           <div>
-                            <div className={`flex items-center h-14 rounded-2xl bg-zinc-50 dark:bg-black/50 border-2 shadow-sm overflow-hidden transition-colors ${!whatsappParteLocal(nuevoClienteTelefono)
+                            <div className={`flex flex-nowrap items-stretch h-14 rounded-2xl bg-zinc-50 dark:bg-black/50 border-2 shadow-sm overflow-hidden transition-colors ${!whatsappParteLocal(nuevoClienteTelefono)
                                 ? "border-zinc-300 dark:border-white/15 focus-within:border-emerald-500"
                                 : validarWhatsAppEcuador(nuevoClienteTelefono)
                                   ? "border-amber-500"
                                   : "border-emerald-500"
                               }`}>
-                              <span className="h-full px-3.5 flex items-center gap-1.5 bg-zinc-100 dark:bg-white/5 border-r-2 border-zinc-300 dark:border-white/10 text-zinc-700 dark:text-zinc-200 font-mono text-xl font-bold shrink-0 select-none">
-                                <span className="text-base">🇪🇨</span>
-                                +593
+                              <span className="px-3.5 flex items-center gap-1.5 whitespace-nowrap leading-none bg-zinc-100 dark:bg-white/5 border-r-2 border-zinc-300 dark:border-white/10 text-zinc-700 dark:text-zinc-200 font-mono text-xl font-bold shrink-0 select-none">
+                                <span className="text-xs font-extrabold tracking-tight leading-none">EC</span>
+                                <span>+593</span>
                               </span>
                               <input
                                 type="tel"
                                 inputMode="numeric"
+                                autoComplete="off"
                                 maxLength={12}
                                 value={whatsappParteLocal(nuevoClienteTelefono)}
                                 onChange={(e) => {
@@ -4193,7 +4225,7 @@ export default function ModalNuevaOrdenTrabajo({
                                   }
                                 }}
                                 placeholder="991234567"
-                                className="flex-1 min-w-0 h-full px-3.5 bg-transparent text-zinc-900 dark:text-white font-mono text-xl font-bold placeholder:text-zinc-300 dark:placeholder:text-zinc-600 focus:outline-none"
+                                className="flex-1 min-w-0 px-3.5 bg-transparent border-0 shadow-none ring-0 appearance-none text-zinc-900 dark:text-white font-mono text-xl font-bold placeholder:text-zinc-300 dark:placeholder:text-zinc-600 focus:outline-none focus:ring-0"
                                 autoFocus
                               />
                             </div>
