@@ -638,17 +638,23 @@ export async function GET(request: Request) {
       let lastSaleNumber: string | null = null;
 
       try {
-        const reqBaseNum = order.orderNumber.startsWith("OT-")
-          ? order.orderNumber
-          : `OT-${order.orderNumber}`;
+        const trimmedOrd = String(order.orderNumber || "").trim();
+        const reqBaseNum = /^OT[-\s#]/i.test(trimmedOrd)
+          ? trimmedOrd
+          : `OT-${trimmedOrd}`;
+        const legacyBaseNum = `OT-${trimmedOrd}`;
         const posReqs = (await prisma.$queryRawUnsafe(
           `SELECT "id", "requestNumber", "status" FROM "OrderRequest"
            WHERE "requestNumber" = $1
               OR "requestNumber" LIKE $2
+              OR "requestNumber" = $4
+              OR "requestNumber" LIKE $5
               OR "id" = $3`,
           reqBaseNum,
           `${reqBaseNum}-%`,
-          order.posRequestId || ""
+          order.posRequestId || "",
+          legacyBaseNum,
+          `${legacyBaseNum}-%`
         ).catch(() => [])) as any[];
 
         if (Array.isArray(posReqs)) {

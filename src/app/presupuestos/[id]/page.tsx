@@ -2248,10 +2248,16 @@ export default function PaginaDetallePropuesta() {
     mostrarToast("✓ Nuevo hallazgo registrado y guardado en Neon PostgreSQL.");
   };
 
-  // Totales financieros calculados en tiempo real: suma directa de los valores mostrados en la columna PVP
+  // Totales financieros calculados en tiempo real: suma de (precio * cantidad) de productos y servicios
   const calculos = useMemo(() => {
-    const subtotalRepuestos = repuestos.reduce((acc, it) => acc + Number(it.price || 0), 0);
-    const subtotalServicios = servicios.reduce((acc, sv) => acc + Number(sv.price || 0), 0);
+    const subtotalRepuestos = repuestos.reduce(
+      (acc, it) => acc + Number(it.price || 0) * Math.max(1, Number(it.qty || 1)),
+      0
+    );
+    const subtotalServicios = servicios.reduce(
+      (acc, sv) => acc + Number(sv.price || 0) * Math.max(1, Number(sv.qty || 1)),
+      0
+    );
     const subtotalBruto = Number((subtotalRepuestos + subtotalServicios).toFixed(2));
 
     const descuento = Number((subtotalBruto * (porcentajeDescuento / 100)).toFixed(2));
@@ -2266,19 +2272,24 @@ export default function PaginaDetallePropuesta() {
       .map((r) => ({ ...r, isService: false }));
     const serviciosPorComprar = servicios
       .filter((s) => s.inStock === false || (s.isManual && s.purchaseStatus === "POR_PEDIR"))
-      .map((s) => ({
-        ...s,
-        qty: 1,
-        costPrice: Number(s.costPrice || 0),
-        subtotalVenta: Number(s.price || 0),
-        subtotalCosto: Number(s.costPrice || 0),
-        margin: Number((s.price || 0) - Number(s.costPrice || 0)),
-        marginPercent: s.price > 0 ? Math.round(((s.price - Number(s.costPrice || 0)) / s.price) * 100) : 100,
-        supplierName: s.supplierName || "Proveedor General",
-        purchaseStatus: s.purchaseStatus || "POR_PEDIR",
-        inStock: false,
-        isService: true,
-      }));
+      .map((s) => {
+        const sQty = Math.max(1, Number(s.qty || 1));
+        const sPrice = Number(s.price || 0);
+        const sCost = Number(s.costPrice || 0);
+        return {
+          ...s,
+          qty: sQty,
+          costPrice: sCost,
+          subtotalVenta: Number((sPrice * sQty).toFixed(2)),
+          subtotalCosto: Number((sCost * sQty).toFixed(2)),
+          margin: Number(((sPrice - sCost) * sQty).toFixed(2)),
+          marginPercent: sPrice > 0 ? Math.round(((sPrice - sCost) / sPrice) * 100) : 100,
+          supplierName: s.supplierName || "Proveedor General",
+          purchaseStatus: s.purchaseStatus || "POR_PEDIR",
+          inStock: false,
+          isService: true,
+        };
+      });
 
     const itemsPorComprar = [...repuestosPorComprar, ...serviciosPorComprar];
     const itemsEnBodega = repuestos.filter((r) => r.inStock);
@@ -2578,12 +2589,15 @@ export default function PaginaDetallePropuesta() {
           if (Array.isArray(pin.linkedItems) && pin.linkedItems.some((li: any) => li.id === s.id || (li.code && s.code && li.code === s.code) || (li.name && s.name && li.name.toLowerCase() === s.name.toLowerCase()))) return true;
           return false;
         })
-        .map((s) => ({
-          ...s,
-          qty: 1,
-          isService: true,
-          subtotal: Number(s.price || 0),
-        }));
+        .map((s) => {
+          const sQty = Math.max(1, Number(s.qty || 1));
+          return {
+            ...s,
+            qty: sQty,
+            isService: true,
+            subtotal: Number((Number(s.price || 0) * sQty).toFixed(2)),
+          };
+        });
 
       const todos = [...prods, ...srvs];
       const vistos = new Set<string>();
@@ -2616,12 +2630,15 @@ export default function PaginaDetallePropuesta() {
 
     const srvsTaller = servicios
       .filter((s) => !idsEnPines.has(String(s.id)))
-      .map((s) => ({
-        ...s,
-        qty: 1,
-        isService: true,
-        subtotal: Number(s.price || 0),
-      }));
+      .map((s) => {
+        const sQty = Math.max(1, Number(s.qty || 1));
+        return {
+          ...s,
+          qty: sQty,
+          isService: true,
+          subtotal: Number((Number(s.price || 0) * sQty).toFixed(2)),
+        };
+      });
 
     return [...prodsTaller, ...srvsTaller];
   }, [repuestos, servicios, hallazgos, obtenerItemsDePin]);
@@ -5129,23 +5146,37 @@ export default function PaginaDetallePropuesta() {
                                       </div>
 
                                       {esManual ? (
-                                        <div className="inline-flex items-center gap-1 px-2.5 h-8 rounded-xl border border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-white/[0.04] w-28 shrink-0">
-                                          <span className="text-xs text-zinc-400 font-semibold">$</span>
-                                          <input
-                                            type="number"
-                                            inputMode="decimal"
-                                            step="any"
-                                            min="0"
-                                            placeholder=""
-                                            value={it.price || ""}
-                                            onChange={(e) => handleUpdateServicePrice(it.id, e.target.value)}
-                                            className="w-full bg-transparent text-right text-base sm:text-xs font-bold font-mono text-zinc-800 dark:text-zinc-100 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                          />
+                                        <div className="flex flex-col items-end gap-0.5 shrink-0">
+                                          <div className="inline-flex items-center gap-1 px-2.5 h-8 rounded-xl border border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-white/[0.04] w-28">
+                                            <span className="text-xs text-zinc-400 font-semibold">$</span>
+                                            <input
+                                              type="number"
+                                              inputMode="decimal"
+                                              step="any"
+                                              min="0"
+                                              placeholder=""
+                                              value={it.price || ""}
+                                              onChange={(e) => handleUpdateServicePrice(it.id, e.target.value)}
+                                              className="w-full bg-transparent text-right text-base sm:text-xs font-bold font-mono text-zinc-800 dark:text-zinc-100 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                            />
+                                          </div>
+                                          {cant > 1 && Number(it.price || 0) > 0 && (
+                                            <span className="text-[10px] font-mono text-zinc-500 dark:text-zinc-400">
+                                              Total: ${formatearPrecioLimpio(Number(it.price || 0) * cant)}
+                                            </span>
+                                          )}
                                         </div>
                                       ) : (
-                                        <span className="font-mono text-sm font-bold text-zinc-800 dark:text-zinc-100 shrink-0">
-                                          ${formatearPrecioLimpio(it.price)}
-                                        </span>
+                                        <div className="flex flex-col items-end shrink-0">
+                                          <span className="font-mono text-sm font-bold text-zinc-800 dark:text-zinc-100">
+                                            ${formatearPrecioLimpio(Number(it.price || 0) * cant)}
+                                          </span>
+                                          {cant > 1 && (
+                                            <span className="text-[10px] font-mono text-zinc-500 dark:text-zinc-400">
+                                              ${formatearPrecioLimpio(it.price)} c/u
+                                            </span>
+                                          )}
+                                        </div>
                                       )}
                                     </div>
                                   </div>
@@ -5283,23 +5314,37 @@ export default function PaginaDetallePropuesta() {
                                         </td>
                                         <td className="py-2 px-2.5 text-center">
                                           {esManual ? (
-                                            <div className="inline-flex items-center gap-1 px-2 py-1 rounded-lg border border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-white/[0.04] w-24">
-                                              <span className="text-[11px] text-zinc-400 font-semibold">$</span>
-                                              <input
-                                                type="number"
-                                                inputMode="decimal"
-                                                step="any"
-                                                min="0"
-                                                placeholder=""
-                                                value={it.price || ""}
-                                                onChange={(e) => handleUpdateServicePrice(it.id, e.target.value)}
-                                                className="w-full bg-transparent text-right text-xs font-bold font-mono text-zinc-800 dark:text-zinc-100 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                              />
+                                            <div className="inline-flex flex-col items-center gap-0.5">
+                                              <div className="inline-flex items-center gap-1 px-2 py-1 rounded-lg border border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-white/[0.04] w-24">
+                                                <span className="text-[11px] text-zinc-400 font-semibold">$</span>
+                                                <input
+                                                  type="number"
+                                                  inputMode="decimal"
+                                                  step="any"
+                                                  min="0"
+                                                  placeholder=""
+                                                  value={it.price || ""}
+                                                  onChange={(e) => handleUpdateServicePrice(it.id, e.target.value)}
+                                                  className="w-full bg-transparent text-right text-xs font-bold font-mono text-zinc-800 dark:text-zinc-100 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                                />
+                                              </div>
+                                              {cant > 1 && Number(it.price || 0) > 0 && (
+                                                <span className="text-[10px] font-mono text-zinc-500 dark:text-zinc-400">
+                                                  Total: ${formatearPrecioLimpio(Number(it.price || 0) * cant)}
+                                                </span>
+                                              )}
                                             </div>
                                           ) : (
-                                            <span className="inline-block font-mono text-xs font-bold text-zinc-800 dark:text-zinc-100">
-                                              ${formatearPrecioLimpio(it.price)}
-                                            </span>
+                                            <div className="inline-flex flex-col items-center">
+                                              <span className="inline-block font-mono text-xs font-bold text-zinc-800 dark:text-zinc-100">
+                                                ${formatearPrecioLimpio(Number(it.price || 0) * cant)}
+                                              </span>
+                                              {cant > 1 && (
+                                                <span className="text-[10px] font-mono text-zinc-500 dark:text-zinc-400">
+                                                  ${formatearPrecioLimpio(it.price)} c/u
+                                                </span>
+                                              )}
+                                            </div>
                                           )}
                                         </td>
                                         <td className="py-2 px-2 text-center">
@@ -5440,23 +5485,37 @@ export default function PaginaDetallePropuesta() {
                                       </div>
 
                                       {esManual ? (
-                                        <div className="inline-flex items-center gap-1 px-2.5 h-8 rounded-xl border border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-white/[0.04] w-28 shrink-0">
-                                          <span className="text-xs text-zinc-400 font-semibold">$</span>
-                                          <input
-                                            type="number"
-                                            inputMode="decimal"
-                                            step="any"
-                                            min="0"
-                                            placeholder=""
-                                            value={it.price || ""}
-                                            onChange={(e) => handleUpdatePrice(it.id, "price", e.target.value)}
-                                            className="w-full bg-transparent text-right text-base sm:text-xs font-bold font-mono text-zinc-800 dark:text-zinc-100 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                          />
+                                        <div className="flex flex-col items-end gap-0.5 shrink-0">
+                                          <div className="inline-flex items-center gap-1 px-2.5 h-8 rounded-xl border border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-white/[0.04] w-28">
+                                            <span className="text-xs text-zinc-400 font-semibold">$</span>
+                                            <input
+                                              type="number"
+                                              inputMode="decimal"
+                                              step="any"
+                                              min="0"
+                                              placeholder=""
+                                              value={it.price || ""}
+                                              onChange={(e) => handleUpdatePrice(it.id, "price", e.target.value)}
+                                              className="w-full bg-transparent text-right text-base sm:text-xs font-bold font-mono text-zinc-800 dark:text-zinc-100 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                            />
+                                          </div>
+                                          {cant > 1 && Number(it.price || 0) > 0 && (
+                                            <span className="text-[10px] font-mono text-zinc-500 dark:text-zinc-400">
+                                              Total: ${formatearPrecioLimpio(Number(it.price || 0) * cant)}
+                                            </span>
+                                          )}
                                         </div>
                                       ) : (
-                                        <span className="font-mono text-sm font-bold text-zinc-800 dark:text-zinc-100 shrink-0">
-                                          ${formatearPrecioLimpio(it.price)}
-                                        </span>
+                                        <div className="flex flex-col items-end shrink-0">
+                                          <span className="font-mono text-sm font-bold text-zinc-800 dark:text-zinc-100">
+                                            ${formatearPrecioLimpio(Number(it.price || 0) * cant)}
+                                          </span>
+                                          {cant > 1 && (
+                                            <span className="text-[10px] font-mono text-zinc-500 dark:text-zinc-400">
+                                              ${formatearPrecioLimpio(it.price)} c/u
+                                            </span>
+                                          )}
+                                        </div>
                                       )}
                                     </div>
                                   </div>
@@ -5594,23 +5653,37 @@ export default function PaginaDetallePropuesta() {
                                         </td>
                                         <td className="py-2 px-2.5 text-center">
                                           {esManual ? (
-                                            <div className="inline-flex items-center gap-1 px-2 py-1 rounded-lg border border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-white/[0.04] w-24">
-                                              <span className="text-[11px] text-zinc-400 font-semibold">$</span>
-                                              <input
-                                                type="number"
-                                                inputMode="decimal"
-                                                step="any"
-                                                min="0"
-                                                placeholder=""
-                                                value={it.price || ""}
-                                                onChange={(e) => handleUpdatePrice(it.id, "price", e.target.value)}
-                                                className="w-full bg-transparent text-right text-xs font-bold font-mono text-zinc-800 dark:text-zinc-100 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                              />
+                                            <div className="inline-flex flex-col items-center gap-0.5">
+                                              <div className="inline-flex items-center gap-1 px-2 py-1 rounded-lg border border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-white/[0.04] w-24">
+                                                <span className="text-[11px] text-zinc-400 font-semibold">$</span>
+                                                <input
+                                                  type="number"
+                                                  inputMode="decimal"
+                                                  step="any"
+                                                  min="0"
+                                                  placeholder=""
+                                                  value={it.price || ""}
+                                                  onChange={(e) => handleUpdatePrice(it.id, "price", e.target.value)}
+                                                  className="w-full bg-transparent text-right text-xs font-bold font-mono text-zinc-800 dark:text-zinc-100 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                                />
+                                              </div>
+                                              {cant > 1 && Number(it.price || 0) > 0 && (
+                                                <span className="text-[10px] font-mono text-zinc-500 dark:text-zinc-400">
+                                                  Total: ${formatearPrecioLimpio(Number(it.price || 0) * cant)}
+                                                </span>
+                                              )}
                                             </div>
                                           ) : (
-                                            <span className="inline-block font-mono text-xs font-bold text-zinc-800 dark:text-zinc-100">
-                                              ${formatearPrecioLimpio(it.price)}
-                                            </span>
+                                            <div className="inline-flex flex-col items-center">
+                                              <span className="inline-block font-mono text-xs font-bold text-zinc-800 dark:text-zinc-100">
+                                                ${formatearPrecioLimpio(Number(it.price || 0) * cant)}
+                                              </span>
+                                              {cant > 1 && (
+                                                <span className="text-[10px] font-mono text-zinc-500 dark:text-zinc-400">
+                                                  ${formatearPrecioLimpio(it.price)} c/u
+                                                </span>
+                                              )}
+                                            </div>
                                           )}
                                         </td>
                                         <td className="py-2 px-2 text-center">

@@ -737,7 +737,12 @@ export async function POST(request: Request) {
             : Number(it.costPrice || 0);
         const qty = Number(it.qty || 1);
         const currentPvp = Number(it.price || 0);
-        const nextPvp = availability === "SI_HAY" ? unitCost : currentPvp;
+        const nextPvp =
+          availability === "SI_HAY"
+            ? currentPvp > unitCost
+              ? currentPvp
+              : unitCost
+            : currentPvp;
 
         const subtotalCosto = Number((unitCost * qty).toFixed(2));
         const subtotalVenta = Number((nextPvp * qty).toFixed(2));

@@ -30,9 +30,15 @@ export async function POST(request: Request) {
     }
 
     return await withRetry(async () => {
-      // Calcular total de la orden sumando los valores de la columna PVP de productos y servicios
-      const totalRepuestos = items.reduce((acc: number, it: any) => acc + Number(it.price || 0), 0);
-      const totalServicios = services.reduce((acc: number, sv: any) => acc + Number(sv.price || 0), 0);
+      // Calcular total de la orden sumando precio * cantidad de productos y servicios
+      const totalRepuestos = items.reduce(
+        (acc: number, it: any) => acc + Number(it.price || 0) * Math.max(1, Number(it.qty || 1)),
+        0
+      );
+      const totalServicios = services.reduce(
+        (acc: number, sv: any) => acc + Number(sv.price || 0) * Math.max(1, Number(sv.qty || 1)),
+        0
+      );
       const subtotalCalculado = Number((totalRepuestos + totalServicios).toFixed(2));
 
       const taxRate = Number(quoteTaxRate !== undefined ? quoteTaxRate : 15);
@@ -52,6 +58,7 @@ export async function POST(request: Request) {
              "quoteTaxRate" = COALESCE($7, "quoteTaxRate"),
              "quoteDiscount" = COALESCE($8, "quoteDiscount"),
              "inspectionFindingsJson" = COALESCE($9, "inspectionFindingsJson"),
+             "quoteNumber" = COALESCE("quoteNumber", 'COT-' || "orderNumber"),
              "updatedAt" = CURRENT_TIMESTAMP
          WHERE "id" = $1 OR "orderNumber" = $1`,
         orderId,

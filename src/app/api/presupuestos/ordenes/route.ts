@@ -222,17 +222,48 @@ export async function GET(request: Request) {
           findings = typeof r.inspectionFindingsJson === "string" ? JSON.parse(r.inspectionFindingsJson) : (r.inspectionFindingsJson || []);
         } catch { findings = []; }
 
+        // Separar repuestos reales de servicios que pudieran venir en itemsJson desde Taller y deduplicar servicios
+        const partsOnly = (Array.isArray(items) ? items : []).filter(
+          (it: any) => it && typeof it === "object" && it.type !== "SERVICE"
+        );
+        const extraServicesFromItems = (Array.isArray(items) ? items : []).filter(
+          (it: any) => it && typeof it === "object" && it.type === "SERVICE"
+        );
+        const seenSrvKeys = new Set<string>();
+        const uniqueServices: any[] = [];
+        for (const sv of [...(Array.isArray(services) ? services : []), ...extraServicesFromItems]) {
+          if (!sv) continue;
+          const obj = typeof sv === "string" ? { name: sv, price: 0, qty: 1 } : sv;
+          const key = String(obj.id || obj.name || "").trim().toLowerCase();
+          if (key && seenSrvKeys.has(key)) continue;
+          if (key) seenSrvKeys.add(key);
+          uniqueServices.push(obj);
+        }
+
         // Calcular costo total de compra y valor total de venta con cantidades, descuento e IVA
-        const totalVentaRepuestos = items.reduce((acc, it) => acc + (Number(it.price || 0) * Number(it.qty || 1)), 0);
-        const totalCostoRepuestos = items.reduce((acc, it) => acc + (Number(it.costPrice || 0) * Number(it.qty || 1)), 0);
-        const totalVentaServicios = services.reduce((acc, sv) => acc + (Number(sv.price || 0) * Number(sv.qty || 1)), 0);
+        const totalVentaRepuestos = partsOnly.reduce(
+          (acc, it) => acc + Number(it.price || 0) * Math.max(1, Number(it.qty || 1)),
+          0
+        );
+        const totalCostoRepuestos = partsOnly.reduce(
+          (acc, it) => acc + Number(it.costPrice || 0) * Math.max(1, Number(it.qty || 1)),
+          0
+        );
+        const totalVentaServicios = uniqueServices.reduce(
+          (acc, sv) => acc + Number(sv.price || 0) * Math.max(1, Number(sv.qty || 1)),
+          0
+        );
+        const totalCostoServicios = uniqueServices.reduce(
+          (acc, sv) => acc + Number(sv.costPrice || 0) * Math.max(1, Number(sv.qty || 1)),
+          0
+        );
         const rawItemsSum = totalVentaRepuestos + totalVentaServicios;
         const discount = Number(r.quoteDiscount ?? 0);
         const taxRate = r.quoteTaxRate !== null && r.quoteTaxRate !== undefined ? Number(r.quoteTaxRate) : 15;
         const baseImponible = Math.max(0, rawItemsSum - (rawItemsSum * discount) / 100);
         const totalConIva = Number((baseImponible * (1 + taxRate / 100)).toFixed(2));
         const totalVentaEstimada = rawItemsSum > 0 ? totalConIva : Number(r.totalCost || 0);
-        const totalCostoEstimado = totalCostoRepuestos;
+        const totalCostoEstimado = totalCostoRepuestos + totalCostoServicios;
         const utilidadEstimada = totalVentaEstimada - totalCostoEstimado;
         const margenPercent = totalVentaEstimada > 0 ? Math.round((utilidadEstimada / totalVentaEstimada) * 100) : 0;
 
@@ -293,8 +324,8 @@ export async function GET(request: Request) {
           posRequestId: r.posRequestId,
           supplierSig: signSupplierScope(r.id),
           dailySupplierSig: signSupplierScope("daily"),
-          itemsCount: items.length,
-          servicesCount: services.length,
+          itemsCount: partsOnly.length,
+          servicesCount: uniqueServices.length,
           findingsCount: findings.length,
           pedidosCount,
           respuestasCount,

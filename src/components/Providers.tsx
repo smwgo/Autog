@@ -39,8 +39,33 @@ function installAuthFetchInterceptor() {
   };
 }
 
+import { useEffect } from "react";
+
 installAuthFetchInterceptor();
 
 export function Providers({ children }: { children: React.ReactNode }) {
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      if ("serviceWorker" in navigator) {
+        navigator.serviceWorker.getRegistrations().then((regs) => {
+          regs.forEach((reg) => {
+            reg.update().catch(() => {});
+            reg.unregister().catch(() => {});
+          });
+        }).catch(() => {});
+      }
+      if ("caches" in window) {
+        caches.keys().then((keys) => {
+          keys.forEach((k) => {
+            if (k.startsWith("autopro-cache")) {
+              caches.delete(k).catch(() => {});
+            }
+          });
+        }).catch(() => {});
+      }
+    } catch {}
+  }, []);
+
   return <>{children}</>;
 }

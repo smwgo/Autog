@@ -438,9 +438,7 @@ function mapOrderRow(r: any) {
   const totalCost =
     r.totalCost && Number(r.totalCost) > 0 && items.length === 0
       ? Number(r.totalCost)
-      : r.quoteNumber
-        ? calculatedTotalWithTax
-        : subtotalFromItems;
+      : calculatedTotalWithTax;
 
   const totalPaid = Number(
     payments
@@ -2966,9 +2964,20 @@ export async function POST(request: Request) {
           (acc: number, it: any) => acc + (Number(it.price) || 0) * (Number(it.qty) || 1),
           0
         );
-        const taxRateNum = Math.max(0, Number(taxRate) || 0);
-        const discountNum = Math.max(0, Number(discount) || 0);
-        const discType = discountType === "FIXED" ? "FIXED" : "PERCENT";
+        const taxRateNum =
+          taxRate !== undefined && taxRate !== null
+            ? Math.max(0, Number(taxRate) || 0)
+            : Number(current.quoteTaxRate ?? 15);
+        const discountNum =
+          discount !== undefined && discount !== null
+            ? Math.max(0, Number(discount) || 0)
+            : Number(current.quoteDiscount ?? 0);
+        const discType =
+          discountType === "FIXED"
+            ? "FIXED"
+            : current.quoteDiscountType === "FIXED" && discountType === undefined
+              ? "FIXED"
+              : "PERCENT";
 
         const discountAmount =
           discType === "FIXED"

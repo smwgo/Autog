@@ -46,13 +46,13 @@ export async function POST(request: Request) {
 
       const order = rows[0];
 
-      // 2. Consolidar ítems para POS aplicando los valores de la columna PVP, descuento e IVA de forma consistente
+      // 2. Consolidar ítems para POS aplicando precio * cantidad, descuento e IVA de forma consistente
       const totalRepuestos = items.reduce(
-        (acc: number, it: any) => acc + Number(it.price || 0),
+        (acc: number, it: any) => acc + Number(it.price || 0) * Math.max(1, Number(it.qty || 1)),
         0
       );
       const totalServicios = services.reduce(
-        (acc: number, sv: any) => acc + Number(sv.price || 0),
+        (acc: number, sv: any) => acc + Number(sv.price || 0) * Math.max(1, Number(sv.qty || 1)),
         0
       );
       const subtotalCalculado = Number((totalRepuestos + totalServicios).toFixed(2));
@@ -78,17 +78,26 @@ export async function POST(request: Request) {
       const posItemsPayload: any[] = [];
 
       items.forEach((it: any) => {
+        const rawId = String(it.productId || it.id || "");
+        const isTempId =
+          rawId.startsWith("rep_") ||
+          rawId.startsWith("reg-") ||
+          rawId.startsWith("man-") ||
+          rawId.startsWith("prod-");
         posItemsPayload.push({
           id: it.productId || it.id || `pos_rep_${Date.now()}`,
+          productId: it.productId || (!isTempId && rawId ? rawId : null),
           code: it.code || "REP",
           name: it.name,
           brand: `⚙️ Repuesto • ${it.supplierName || "Proveedor"} • ${order.plate}`,
           category: "Repuestos",
           price: Number(it.price) || 0,
           costPrice: Number(it.costPrice) || 0,
-          qty: Number(it.qty) || 1,
+          qty: Math.max(1, Number(it.qty) || 1),
           isService: false,
           empleado_nombre: order.mechanic || "Taller",
+          quoteTaxRate: taxRate,
+          quoteDiscount: discount,
         });
       });
 
@@ -100,20 +109,24 @@ export async function POST(request: Request) {
           brand: `👤 ${sv.mechanic || order.mechanic || "Taller"} • ${order.plate}`,
           category: sv.category || "Servicio Taller",
           price: Number(sv.price) || 0,
-          qty: Number(sv.qty) || 1,
+          qty: Math.max(1, Number(sv.qty) || 1),
           isService: true,
           empleado_nombre: sv.mechanic || order.mechanic || "Taller",
+          quoteTaxRate: taxRate,
+          quoteDiscount: discount,
         });
       });
 
       const itemsSummary = [
-        ...items.map((i: any) => `${Number(i.qty) || 1}x ${i.name}`),
-        ...services.map((s: any) => `${Number(s.qty) || 1}x ${s.name}`),
+        ...items.map((i: any) => `${Math.max(1, Number(i.qty) || 1)}x ${i.name}`),
+        ...services.map((s: any) => `${Math.max(1, Number(s.qty) || 1)}x ${s.name}`),
       ].join(", ");
 
-      const requestNumber = order.orderNumber.startsWith("OT-")
-        ? order.orderNumber
-        : `OT-${order.orderNumber}`;
+      const trimmedOrdNum = String(order.orderNumber || "").trim();
+      const requestNumber = /^OT[-\s#]/i.test(trimmedOrdNum)
+        ? trimmedOrdNum
+        : `OT-${trimmedOrdNum}`;
+      const legacyRequestNumber = `OT-${trimmedOrdNum}`;
 
       // 3. Crear o actualizar la solicitud en OrderRequest para que POS la reciba
       await prisma.$executeRawUnsafe(`
@@ -135,7 +148,7 @@ export async function POST(request: Request) {
       }
       if (!existingReq) {
         existingReq = await (prisma as any).orderRequest
-          .findUnique({ where: { requestNumber } })
+          .findFirst({ where: { requestNumber: { in: [requestNumber, legacyRequestNumber] } } })
           .catch(() => null);
       }
       const existingReqPaid = Boolean(
@@ -259,6 +272,7 @@ export async function POST(request: Request) {
              "servicesJson" = $4,
              "posRequestId" = $5,
              "posSendCount" = $10,
+             "quoteNumber" = COALESCE("quoteNumber", 'COT-' || "orderNumber"),
              "updatedAt" = CURRENT_TIMESTAMP
          WHERE "id" = $1`,
         order.id,

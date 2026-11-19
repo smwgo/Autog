@@ -3402,13 +3402,33 @@ export default function ModalNuevaOrdenTrabajo({
                     <label className="text-xs font-bold text-zinc-500 dark:text-zinc-500 mb-1 block">
                       WhatsApp
                     </label>
-                    <input
-                      type="tel"
-                      value={nuevoClienteTelefono}
-                      onChange={(e) => setNuevoClienteTelefono(e.target.value)}
-                      placeholder="Ej: 0991234567"
-                      className="w-full h-11 px-3.5 rounded-xl bg-white dark:bg-black/50 border border-zinc-300 dark:border-white/15 focus:border-amber-500 text-zinc-900 dark:text-white font-mono text-sm font-bold focus:outline-none"
-                    />
+                    <div
+                      className={`flex flex-nowrap items-stretch h-11 rounded-xl bg-white dark:bg-black/50 border overflow-hidden transition-colors ${
+                        !whatsappParteLocal(nuevoClienteTelefono)
+                          ? "border-zinc-300 dark:border-white/15 focus-within:border-amber-500"
+                          : validarWhatsAppEcuador(nuevoClienteTelefono)
+                            ? "border-amber-500"
+                            : "border-emerald-500"
+                      }`}
+                    >
+                      <span className="px-3 flex items-center gap-1 whitespace-nowrap leading-none bg-zinc-100 dark:bg-white/5 border-r border-zinc-300 dark:border-white/10 text-zinc-700 dark:text-zinc-200 font-mono text-sm font-bold shrink-0 select-none">
+                        <span className="text-[10px] font-extrabold tracking-tight leading-none">EC</span>
+                        <span>+593</span>
+                      </span>
+                      <input
+                        type="tel"
+                        inputMode="numeric"
+                        autoComplete="off"
+                        maxLength={12}
+                        value={whatsappParteLocal(nuevoClienteTelefono)}
+                        onChange={(e) => {
+                          const local = whatsappParteLocal(e.target.value);
+                          setNuevoClienteTelefono(local ? `593${local}` : "");
+                        }}
+                        placeholder="991234567"
+                        className="flex-1 min-w-0 px-3 bg-transparent border-0 shadow-none ring-0 appearance-none text-zinc-900 dark:text-white font-mono text-sm font-bold placeholder:text-zinc-300 dark:placeholder:text-zinc-600 focus:outline-none focus:ring-0"
+                      />
+                    </div>
                   </div>
 
                   <div>
