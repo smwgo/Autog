@@ -72,22 +72,71 @@ export async function GET() {
 
       return {
         quotes: formattedQuotes,
-        orders: rawOrders.map((o: any) => ({
-          id: o.id,
-          orderNumber: o.orderNumber,
-          client: o.client,
-          clientPhone: o.clientPhone || "",
-          vehicle: o.vehicle,
-          plate: o.plate || "",
-          mechanic: o.mechanic,
-          status: o.status,
-          progress: o.progress,
-          totalCost: Number(o.totalCost || 0),
-          isBilled: o.isBilled,
-          billingStatus: o.billingStatus,
-          createdAt: o.createdAt,
-          notes: o.notes || "",
-        })),
+        orders: rawOrders.map((o: any) => {
+          let computedCost = Number(o.totalCost || 0);
+          try {
+            const rawItems = typeof o.itemsJson === "string" ? JSON.parse(o.itemsJson) : (o.itemsJson || []);
+            const rawSrvs = typeof o.servicesJson === "string" ? JSON.parse(o.servicesJson) : (o.servicesJson || []);
+            const partsOnly = (Array.isArray(rawItems) ? rawItems : []).filter(
+              (it: any) => it && typeof it === "object" && it.type !== "SERVICE"
+            );
+            const extraSrvs = (Array.isArray(rawItems) ? rawItems : []).filter(
+              (it: any) => it && typeof it === "object" && it.type === "SERVICE"
+            );
+            const seenIds = new Set<string>();
+            const seenNames = new Set<string>();
+            const uniqueSrvs: any[] = [];
+            const rawSrvsArr = Array.isArray(rawSrvs) ? rawSrvs : [];
+            for (const sv of [
+              ...rawSrvsArr.filter((s: any) => s && typeof s === "object"),
+              ...extraSrvs,
+              ...rawSrvsArr.filter((s: any) => typeof s === "string"),
+            ]) {
+              if (!sv) continue;
+              const obj = typeof sv === "string" ? { name: sv, price: 0, qty: 1 } : sv;
+              const idKey = String(obj.id || "").trim().toLowerCase();
+              const nameKey = String(obj.name || obj.description || "").trim().toLowerCase().replace(/^\d+x\s+/i, "");
+              if (!idKey && !nameKey) continue;
+              if (idKey && seenIds.has(idKey)) continue;
+              if (nameKey && seenNames.has(nameKey)) continue;
+              if (idKey) seenIds.add(idKey);
+              if (nameKey) seenNames.add(nameKey);
+              uniqueSrvs.push(obj);
+            }
+            const sumParts = partsOnly.reduce(
+              (acc: number, it: any) => acc + Number(it.price || 0) * Math.max(1, Number(it.qty || 1)),
+              0
+            );
+            const sumSrvs = uniqueSrvs.reduce(
+              (acc: number, sv: any) => acc + Number(sv.price || 0) * Math.max(1, Number(sv.qty || 1)),
+              0
+            );
+            const subtotal = sumParts + sumSrvs;
+            if (subtotal > 0) {
+              const disc = Number(o.quoteDiscount ?? 0);
+              const tax = o.quoteTaxRate !== null && o.quoteTaxRate !== undefined ? Number(o.quoteTaxRate) : 15;
+              const base = Math.max(0, subtotal - (subtotal * disc) / 100);
+              computedCost = Number((base * (1 + tax / 100)).toFixed(2));
+            }
+          } catch {}
+
+          return {
+            id: o.id,
+            orderNumber: o.orderNumber,
+            client: o.client,
+            clientPhone: o.clientPhone || "",
+            vehicle: o.vehicle,
+            plate: o.plate || "",
+            mechanic: o.mechanic,
+            status: o.status,
+            progress: o.progress,
+            totalCost: computedCost,
+            isBilled: o.isBilled,
+            billingStatus: o.billingStatus,
+            createdAt: o.createdAt,
+            notes: o.notes || "",
+          };
+        }),
       };
     });
 

@@ -45,13 +45,23 @@ export async function GET() {
         });
       }
 
+      const normalizeOrderRef = (val?: string | null) =>
+        String(val || "")
+          .trim()
+          .toUpperCase()
+          .replace(/^(OT|ORD)[-\s#]*/gi, "")
+          .replace(/^(OT|ORD)[-\s#]*/gi, "")
+          .replace(/#+/g, "")
+          .trim();
+
       const billedOrderNumbers = new Set<string>();
       const billedSaleIds = new Set<string>();
       for (const s of sales) {
         billedSaleIds.add(s.id);
         const ref = (s.saleNumber || `VENTA-${s.id.slice(-4)}`).trim();
         if (s.sourceOrderNumber) {
-          billedOrderNumbers.add(s.sourceOrderNumber.trim().toUpperCase().replace(/^OT-/, ""));
+          const norm = normalizeOrderRef(s.sourceOrderNumber);
+          if (norm) billedOrderNumbers.add(norm);
         }
         if (existingRefs.has(ref.toUpperCase())) continue;
         existingRefs.add(ref.toUpperCase());
@@ -81,17 +91,56 @@ export async function GET() {
         if (!isPaidOrDone) continue;
 
         const ordRef = (o.orderNumber || "").trim();
-        const normOrdRef = ordRef.toUpperCase().replace(/^OT-/, "");
-        if (ordRef && (existingRefs.has(ordRef.toUpperCase()) || billedOrderNumbers.has(normOrdRef))) {
+        const normOrdRef = normalizeOrderRef(ordRef);
+        if (ordRef && (existingRefs.has(ordRef.toUpperCase()) || (normOrdRef && billedOrderNumbers.has(normOrdRef)))) {
           continue;
         }
 
         let amount = Number(o.totalCost || 0);
-        if (amount <= 0 && o.itemsJson) {
+        if (o.itemsJson || o.servicesJson) {
           try {
-            const items = typeof o.itemsJson === "string" ? JSON.parse(o.itemsJson) : o.itemsJson;
-            if (Array.isArray(items)) {
-              amount = items.reduce((acc: number, it: any) => acc + Number(it.price || 0) * Number(it.qty || 1), 0);
+            const rawItems = typeof o.itemsJson === "string" ? JSON.parse(o.itemsJson) : (o.itemsJson || []);
+            const rawSrvs = typeof o.servicesJson === "string" ? JSON.parse(o.servicesJson) : (o.servicesJson || []);
+            const partsOnly = (Array.isArray(rawItems) ? rawItems : []).filter(
+              (it: any) => it && typeof it === "object" && it.type !== "SERVICE"
+            );
+            const extraSrvs = (Array.isArray(rawItems) ? rawItems : []).filter(
+              (it: any) => it && typeof it === "object" && it.type === "SERVICE"
+            );
+            const seenIds = new Set<string>();
+            const seenNames = new Set<string>();
+            const uniqueSrvs: any[] = [];
+            const rawSrvsArr = Array.isArray(rawSrvs) ? rawSrvs : [];
+            for (const sv of [
+              ...rawSrvsArr.filter((s: any) => s && typeof s === "object"),
+              ...extraSrvs,
+              ...rawSrvsArr.filter((s: any) => typeof s === "string"),
+            ]) {
+              if (!sv) continue;
+              const obj = typeof sv === "string" ? { name: sv, price: 0, qty: 1 } : sv;
+              const idKey = String(obj.id || "").trim().toLowerCase();
+              const nameKey = String(obj.name || obj.description || "").trim().toLowerCase().replace(/^\d+x\s+/i, "");
+              if (!idKey && !nameKey) continue;
+              if (idKey && seenIds.has(idKey)) continue;
+              if (nameKey && seenNames.has(nameKey)) continue;
+              if (idKey) seenIds.add(idKey);
+              if (nameKey) seenNames.add(nameKey);
+              uniqueSrvs.push(obj);
+            }
+            const sumParts = partsOnly.reduce(
+              (acc: number, it: any) => acc + Number(it.price || 0) * Math.max(1, Number(it.qty || 1)),
+              0
+            );
+            const sumSrvs = uniqueSrvs.reduce(
+              (acc: number, sv: any) => acc + Number(sv.price || 0) * Math.max(1, Number(sv.qty || 1)),
+              0
+            );
+            const subtotal = sumParts + sumSrvs;
+            if (subtotal > 0) {
+              const disc = Number(o.quoteDiscount ?? 0);
+              const tax = o.quoteTaxRate !== null && o.quoteTaxRate !== undefined ? Number(o.quoteTaxRate) : 15;
+              const base = Math.max(0, subtotal - (subtotal * disc) / 100);
+              amount = Number((base * (1 + tax / 100)).toFixed(2));
             }
           } catch {}
         }

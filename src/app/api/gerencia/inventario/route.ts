@@ -66,7 +66,13 @@ export async function POST(req: Request) {
       const stock = Number(body.stock ?? 10);
       const stockNorte = Number(body.stockNorte ?? 0);
       const minStock = Number(body.minStock ?? 5);
-      const status = (stock <= minStock || stockNorte <= minStock) ? "Stock Bajo" : "En Stock";
+      const totalStock = stock + stockNorte;
+      const status =
+        totalStock <= 0
+          ? "Agotado"
+          : stock <= minStock || (stockNorte > 0 && stockNorte <= minStock)
+            ? "Bajo Stock"
+            : "En Stock";
 
       return await prisma.product.create({
         data: {
@@ -74,7 +80,7 @@ export async function POST(req: Request) {
           name: body.name || "Nuevo Producto",
           category: body.category || "General",
           price: Number(body.price || 0),
-          costPrice: Number(body.costPrice || (Number(body.price || 0) * 0.7)),
+          costPrice: Number(body.costPrice ?? Number(body.price || 0) * 0.7),
           stock,
           stockNorte,
           minStock,
@@ -96,6 +102,18 @@ export async function PUT(req: Request) {
     if (!id) return NextResponse.json({ error: "ID requerido" }, { status: 400 });
 
     const updated = await withRetry(async () => {
+      const existing = await prisma.product.findUnique({ where: { id } });
+      const nextStock = body.stock !== undefined ? Number(body.stock) : Number(existing?.stock ?? 0);
+      const nextStockNorte = body.stockNorte !== undefined ? Number(body.stockNorte) : Number(existing?.stockNorte ?? 0);
+      const nextMinStock = body.minStock !== undefined ? Number(body.minStock) : Number(existing?.minStock ?? 5);
+      const totalStock = nextStock + nextStockNorte;
+      const nextStatus =
+        totalStock <= 0
+          ? "Agotado"
+          : nextStock <= nextMinStock
+            ? "Bajo Stock"
+            : "En Stock";
+
       return await prisma.product.update({
         where: { id },
         data: {
@@ -103,9 +121,11 @@ export async function PUT(req: Request) {
           name: body.name !== undefined ? body.name : undefined,
           category: body.category !== undefined ? body.category : undefined,
           price: body.price !== undefined ? Number(body.price) : undefined,
-          stock: body.stock !== undefined ? Number(body.stock) : undefined,
-          stockNorte: body.stockNorte !== undefined ? Number(body.stockNorte) : undefined,
-          minStock: body.minStock !== undefined ? Number(body.minStock) : undefined,
+          costPrice: body.costPrice !== undefined ? Number(body.costPrice) : undefined,
+          stock: body.stock !== undefined ? nextStock : undefined,
+          stockNorte: body.stockNorte !== undefined ? nextStockNorte : undefined,
+          minStock: body.minStock !== undefined ? nextMinStock : undefined,
+          status: nextStatus,
         },
       });
     });

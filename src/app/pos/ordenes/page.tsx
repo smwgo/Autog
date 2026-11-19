@@ -24,9 +24,13 @@ interface OrderItem {
   dateIn: string;
   estimatedOut: string;
   color: string;
-  services: string[];
+  services: any[];
+  items?: any[];
   notes?: string;
   totalCost?: number;
+  quoteTaxRate?: number;
+  quoteDiscount?: number;
+  quoteDiscountType?: string;
   isBilled?: boolean;
   billingStatus?: string;
   quoteStatus?: string;
@@ -287,16 +291,83 @@ export default function PosOrdenesPage() {
   // Cargar orden directamente en POS Venta para cobrarla
   const handleCobrarEnPos = (ord: OrderItem) => {
     try {
-      const itemsFormatted = (ord.services && ord.services.length > 0
-        ? ord.services
-        : ["Servicio de Taller Mecánico"]
-      ).map((srv, idx) => ({
-        id: `ord-item-${idx}`,
-        code: `OT-${idx + 1}`,
-        name: srv,
-        price: ord.totalCost ? Number(ord.totalCost) / Math.max(1, ord.services.length) : 25,
-        qty: 1,
-      }));
+      const rawItems = Array.isArray(ord.items) ? ord.items : [];
+      const rawServices = Array.isArray(ord.services) ? ord.services : [];
+
+      const partsOnly = rawItems.filter((it: any) => it && typeof it === "object" && it.type !== "SERVICE");
+      const extraSrvs = rawItems.filter((it: any) => it && typeof it === "object" && it.type === "SERVICE");
+
+      const seenSrvIds = new Set<string>();
+      const seenSrvNames = new Set<string>();
+      const uniqueServices: any[] = [];
+      for (const sv of [
+        ...rawServices.filter((s: any) => s && typeof s === "object"),
+        ...extraSrvs,
+        ...rawServices.filter((s: any) => typeof s === "string"),
+      ]) {
+        if (!sv) continue;
+        const obj = typeof sv === "string" ? { name: sv, price: 0, qty: 1 } : sv;
+        const idKey = String(obj.id || "").trim().toLowerCase();
+        const nameKey = String(obj.name || obj.description || "").trim().toLowerCase().replace(/^\d+x\s+/i, "");
+        if (!idKey && !nameKey) continue;
+        if (idKey && seenSrvIds.has(idKey)) continue;
+        if (nameKey && seenSrvNames.has(nameKey)) continue;
+        if (idKey) seenSrvIds.add(idKey);
+        if (nameKey) seenSrvNames.add(nameKey);
+        uniqueServices.push(obj);
+      }
+
+      const qTax = ord.quoteTaxRate !== undefined && ord.quoteTaxRate !== null ? Number(ord.quoteTaxRate) : 15;
+      const qDisc = Number(ord.quoteDiscount ?? 0);
+      const qDiscType = ord.quoteDiscountType || "PERCENT";
+
+      const itemsFormatted: any[] = [];
+
+      partsOnly.forEach((it: any, idx: number) => {
+        itemsFormatted.push({
+          id: it.productId || it.id || `ord-rep-${idx}`,
+          productId: it.productId || null,
+          code: it.code || `REP-${idx + 1}`,
+          name: it.name || "Repuesto",
+          price: Number(it.price) || 0,
+          qty: Math.max(1, Number(it.qty) || 1),
+          isService: false,
+          quoteTaxRate: qTax,
+          quoteDiscount: qDisc,
+          quoteDiscountType: qDiscType,
+        });
+      });
+
+      uniqueServices.forEach((sv: any, idx: number) => {
+        itemsFormatted.push({
+          id: sv.id || `ord-srv-${idx}`,
+          code: sv.code || `OT-${idx + 1}`,
+          name: sv.name || "Servicio de Taller",
+          price: Number(sv.price) || 0,
+          qty: Math.max(1, Number(sv.qty) || 1),
+          isService: true,
+          quoteTaxRate: qTax,
+          quoteDiscount: qDisc,
+          quoteDiscountType: qDiscType,
+        });
+      });
+
+      if (itemsFormatted.length === 0) {
+        const basePriceWithoutTax = ord.totalCost
+          ? Number((Number(ord.totalCost) / (1 + qTax / 100)).toFixed(2))
+          : 25;
+        itemsFormatted.push({
+          id: "ord-item-0",
+          code: "OT-1",
+          name: "Servicio de Taller Mecánico",
+          price: basePriceWithoutTax,
+          qty: 1,
+          isService: true,
+          quoteTaxRate: qTax,
+          quoteDiscount: qDisc,
+          quoteDiscountType: qDiscType,
+        });
+      }
 
       const payload = {
         id: ord.id || ord.dbId,
@@ -307,6 +378,9 @@ export default function PosOrdenesPage() {
         vehicle: `${ord.vehicle} (${ord.plate})`,
         itemsSummary: `Orden ${ord.orderNumber} - ${ord.vehicle}`,
         totalEstimated: ord.totalCost || 0,
+        quoteTaxRate: qTax,
+        quoteDiscount: qDisc,
+        quoteDiscountType: qDiscType,
         itemsJson: itemsFormatted,
         notes: `Facturación de Orden ${ord.orderNumber} • Placa: ${ord.plate} • Mecánico: ${ord.mechanic}`,
       };

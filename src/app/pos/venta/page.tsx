@@ -854,13 +854,28 @@ export default function NuevaVentaPage() {
     }
 
     let loadedItems: { product: Product; qty: number }[] = [];
+    let orderTaxRate: number | null = item.quoteTaxRate !== undefined && item.quoteTaxRate !== null ? Number(item.quoteTaxRate) : null;
+    let orderDiscount: number | null = item.quoteDiscount !== undefined && item.quoteDiscount !== null ? Number(item.quoteDiscount) : null;
+    let orderDiscountType: "monto" | "porcentaje" = item.quoteDiscountType === "FIXED" ? "monto" : "porcentaje";
+
     if (item.itemsJson) {
       try {
         const parsed = typeof item.itemsJson === "string" ? JSON.parse(item.itemsJson) : item.itemsJson;
         if (Array.isArray(parsed) && parsed.length > 0) {
+          for (const p of parsed) {
+            if (orderTaxRate === null && p?.quoteTaxRate !== undefined && p?.quoteTaxRate !== null) {
+              orderTaxRate = Number(p.quoteTaxRate);
+            }
+            if (orderDiscount === null && p?.quoteDiscount !== undefined && p?.quoteDiscount !== null) {
+              orderDiscount = Number(p.quoteDiscount);
+              if (p?.quoteDiscountType === "FIXED") orderDiscountType = "monto";
+            }
+          }
           loadedItems = parsed.map((p: any, idx: number) => {
             const catItem = productos.find(
               (prod) =>
+                (p.productId && prod.id === String(p.productId)) ||
+                (p.id && prod.id === String(p.id)) ||
                 (p.code && prod.code.toLowerCase() === String(p.code).toLowerCase()) ||
                 (p.name && prod.name.toLowerCase() === String(p.name).toLowerCase())
             );
@@ -872,29 +887,41 @@ export default function NuevaVentaPage() {
                 : Number(item.totalEstimated) > 0 && parsed.length === 1
                 ? Number(item.totalEstimated)
                 : 15.0;
+            const isSrv = Boolean(p.isService ?? (p.type ? p.type !== "PART" : item.type === "TALLER"));
 
             return {
               product: {
-                id: p.id || `web-item-${idx}`,
-                code: p.code || `WEB-${idx + 1}`,
+                id: p.productId || catItem?.id || p.id || `web-item-${idx}`,
+                code: p.code || catItem?.code || `WEB-${idx + 1}`,
                 name: p.name || item.itemsSummary || "Solicitud de Cliente",
-                brand: p.brand || null,
-                category: p.category || item.type || "General",
+                brand: p.brand || catItem?.brand || null,
+                category: p.category || catItem?.category || item.type || "General",
                 price: resolvedBasePrice,
-                stock: 999,
-                minStock: 1,
+                stock: !isSrv && catItem ? Math.max(Number(catItem.stock || 0), Number(p.qty || p.quantity || 1)) : 999,
+                minStock: catItem?.minStock ?? 1,
                 status: "ACTIVO",
-                isService: Boolean(p.isService ?? item.type === "TALLER"),
+                isService: isSrv,
                 empleado_id: p.empleado_id || null,
                 empleado_nombre: p.empleado_nombre || null,
               },
-              qty: p.qty || p.quantity || 1,
+              qty: Math.max(1, Number(p.qty || p.quantity || 1)),
             };
           });
         }
       } catch {
         // fallback
       }
+    }
+
+    if (orderTaxRate !== null && Number.isFinite(orderTaxRate) && orderTaxRate >= 0) {
+      setIvaPorcentaje(orderTaxRate);
+      setIvaTempInput(String(orderTaxRate));
+    }
+    if (orderDiscount !== null && Number.isFinite(orderDiscount) && orderDiscount >= 0) {
+      setDescuentoTipo(orderDiscountType);
+      setDescuentoValor(orderDiscount);
+    } else {
+      setDescuentoValor(0);
     }
 
     if (loadedItems.length === 0) {
@@ -943,10 +970,23 @@ export default function NuevaVentaPage() {
         }
 
         let loadedItems: { product: Product; qty: number }[] = [];
+        let orderTaxRate: number | null = item.quoteTaxRate !== undefined && item.quoteTaxRate !== null ? Number(item.quoteTaxRate) : null;
+        let orderDiscount: number | null = item.quoteDiscount !== undefined && item.quoteDiscount !== null ? Number(item.quoteDiscount) : null;
+        let orderDiscountType: "monto" | "porcentaje" = item.quoteDiscountType === "FIXED" ? "monto" : "porcentaje";
+
         if (item.itemsJson) {
           try {
             const parsed = typeof item.itemsJson === "string" ? JSON.parse(item.itemsJson) : item.itemsJson;
             if (Array.isArray(parsed) && parsed.length > 0) {
+              for (const p of parsed) {
+                if (orderTaxRate === null && p?.quoteTaxRate !== undefined && p?.quoteTaxRate !== null) {
+                  orderTaxRate = Number(p.quoteTaxRate);
+                }
+                if (orderDiscount === null && p?.quoteDiscount !== undefined && p?.quoteDiscount !== null) {
+                  orderDiscount = Number(p.quoteDiscount);
+                  if (p?.quoteDiscountType === "FIXED") orderDiscountType = "monto";
+                }
+              }
               loadedItems = parsed.map((p: any, idx: number) => {
                 const resolvedBasePrice =
                   Number(p.price) > 0
@@ -954,10 +994,11 @@ export default function NuevaVentaPage() {
                     : Number(item.totalEstimated) > 0 && parsed.length === 1
                     ? Number(item.totalEstimated)
                     : 15.0;
+                const isSrv = Boolean(p.isService ?? (p.type ? p.type !== "PART" : item.type === "TALLER"));
 
                 return {
                   product: {
-                    id: p.id || `web-item-${idx}`,
+                    id: p.productId || p.id || `web-item-${idx}`,
                     code: p.code || `WEB-${idx + 1}`,
                     name: p.name || item.itemsSummary || "Solicitud de Cliente",
                     brand: p.brand || null,
@@ -966,17 +1007,26 @@ export default function NuevaVentaPage() {
                     stock: 999,
                     minStock: 1,
                     status: "ACTIVO",
-                    isService: Boolean(p.isService ?? item.type === "TALLER"),
+                    isService: isSrv,
                     empleado_id: p.empleado_id || null,
                     empleado_nombre: p.empleado_nombre || null,
                   },
-                  qty: p.qty || p.quantity || 1,
+                  qty: Math.max(1, Number(p.qty || p.quantity || 1)),
                 };
               });
             }
           } catch {
             // fallback
           }
+        }
+
+        if (orderTaxRate !== null && Number.isFinite(orderTaxRate) && orderTaxRate >= 0) {
+          setIvaPorcentaje(orderTaxRate);
+          setIvaTempInput(String(orderTaxRate));
+        }
+        if (orderDiscount !== null && Number.isFinite(orderDiscount) && orderDiscount >= 0) {
+          setDescuentoTipo(orderDiscountType);
+          setDescuentoValor(orderDiscount);
         }
 
         if (loadedItems.length === 0) {

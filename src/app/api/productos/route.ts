@@ -264,15 +264,12 @@ export async function PUT(request: Request) {
       : { stock: numStock };
     const currentProduct = await prisma.product.findUnique({
       where: { id },
-      select: { stock: true },
+      select: { stock: true, stockNorte: true },
     });
     if (!currentProduct) {
       return NextResponse.json({ success: false, error: "Producto no encontrado" }, { status: 404 });
     }
-    const status = calcularEstado(
-      branch === "SUCURSAL" ? Number(currentProduct.stock) : numStock,
-      numMinStock
-    );
+    const status = calcularEstado(numStock, numMinStock);
     const finalTipo = tipo !== undefined ? normalizarTipo(tipo) : undefined;
     const finalCategory = category !== undefined ? (String(category).trim() || "General") : undefined;
     const actualizado = await prisma.product.update({

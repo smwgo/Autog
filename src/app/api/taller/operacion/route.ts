@@ -4592,10 +4592,26 @@ export async function POST(request: Request) {
         const empleadosIntervinieron = Array.from(empleadosSet);
         const empleadosTexto = empleadosIntervinieron.join(", ") || "Taller";
 
+        const subtotalCompleted = completedItems.reduce(
+          (acc: number, it: any) => acc + (Number(it.price) || 0) * (Number(it.qty) || 1),
+          0
+        );
+        const ordTaxRate =
+          rows[0]?.quoteTaxRate !== undefined && rows[0]?.quoteTaxRate !== null
+            ? Number(rows[0].quoteTaxRate)
+            : 15;
+        const ordDiscount =
+          rows[0]?.quoteDiscount !== undefined && rows[0]?.quoteDiscount !== null
+            ? Number(rows[0].quoteDiscount)
+            : 0;
+        const ordDiscType = rows[0]?.quoteDiscountType || "PERCENT";
+        const ordDiscAmount =
+          ordDiscType === "FIXED"
+            ? Math.min(subtotalCompleted, Math.max(0, ordDiscount))
+            : Number(((subtotalCompleted * Math.min(100, Math.max(0, ordDiscount))) / 100).toFixed(2));
+        const ordBaseImp = Math.max(0, subtotalCompleted - ordDiscAmount);
         const totalCalculated = Number(
-          completedItems
-            .reduce((acc: number, it: any) => acc + (Number(it.price) || 0) * (Number(it.qty) || 1), 0)
-            .toFixed(2)
+          (ordBaseImp * (1 + Math.max(0, ordTaxRate) / 100)).toFixed(2)
         );
 
         const now = new Date();
@@ -4653,6 +4669,7 @@ export async function POST(request: Request) {
 
         const posItemsPayload = completedItems.map((i: any) => ({
           id: i.productId || i.id,
+          productId: i.productId || null,
           code: i.code || "TAL",
           name: i.name,
           brand: i.empleado_nombre ? `👤 ${i.empleado_nombre} • ${order.plate}` : order.plate,
@@ -4662,11 +4679,16 @@ export async function POST(request: Request) {
           isService: i.type !== "PART",
           empleado_id: i.empleado_id || null,
           empleado_nombre: i.empleado_nombre || order.mechanic || "Taller",
+          quoteTaxRate: ordTaxRate,
+          quoteDiscount: ordDiscount,
+          quoteDiscountType: ordDiscType,
         }));
 
-        const baseRequestNumber = order.orderNumber.startsWith("OT-")
-          ? order.orderNumber
-          : `OT-${order.orderNumber}`;
+        const trimmedOrdNumber = String(order.orderNumber || "").trim();
+        const baseRequestNumber = /^OT[-\s#]/i.test(trimmedOrdNumber)
+          ? trimmedOrdNumber
+          : `OT-${trimmedOrdNumber}`;
+        const legacyRequestNumber = `OT-${trimmedOrdNumber}`;
 
         const PAID_REQ_STATUSES = new Set(["DESPACHADO", "PAGADO", "COBRADO", "FACTURADO"]);
         let existingReq: any = null;
@@ -4677,7 +4699,7 @@ export async function POST(request: Request) {
         }
         if (!existingReq) {
           existingReq = await prisma.orderRequest
-            .findUnique({ where: { requestNumber: baseRequestNumber } })
+            .findFirst({ where: { requestNumber: { in: [baseRequestNumber, legacyRequestNumber] } } })
             .catch(() => null);
         }
 

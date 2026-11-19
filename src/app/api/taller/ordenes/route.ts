@@ -218,6 +218,57 @@ export async function GET(request: Request) {
         if (st.includes("repuestos")) color = "bg-rose-500";
         if (st.includes("listo") || st.includes("entregado")) color = "bg-emerald-500";
 
+        const partsOnly = (Array.isArray(items) ? items : []).filter(
+          (it: any) => it && typeof it === "object" && it.type !== "SERVICE"
+        );
+        const extraServices = (Array.isArray(items) ? items : []).filter(
+          (it: any) => it && typeof it === "object" && it.type === "SERVICE"
+        );
+        const seenSrvIds = new Set<string>();
+        const seenSrvNames = new Set<string>();
+        const uniqueServices: any[] = [];
+        const rawSrvsArr = Array.isArray(services) ? services : [];
+        const orderedCandidates = [
+          ...rawSrvsArr.filter((s: any) => s && typeof s === "object"),
+          ...extraServices,
+          ...rawSrvsArr.filter((s: any) => typeof s === "string"),
+        ];
+        for (const sv of orderedCandidates) {
+          if (!sv) continue;
+          const obj = typeof sv === "string" ? { name: sv, price: 0, qty: 1 } : sv;
+          const idKey = String(obj.id || "").trim().toLowerCase();
+          const nameKey = String(obj.name || obj.description || "").trim().toLowerCase().replace(/^\d+x\s+/i, "");
+          if (!idKey && !nameKey) continue;
+          if (idKey && seenSrvIds.has(idKey)) continue;
+          if (nameKey && seenSrvNames.has(nameKey)) continue;
+          if (idKey) seenSrvIds.add(idKey);
+          if (nameKey) seenSrvNames.add(nameKey);
+          uniqueServices.push(obj);
+        }
+        const sumParts = partsOnly.reduce(
+          (acc: number, it: any) => acc + Number(it.price || 0) * Math.max(1, Number(it.qty || 1)),
+          0
+        );
+        const sumSrvs = uniqueServices.reduce(
+          (acc: number, sv: any) => acc + Number(sv.price || 0) * Math.max(1, Number(sv.qty || 1)),
+          0
+        );
+        const rawSubtotal = Number((sumParts + sumSrvs).toFixed(2));
+        const qTaxRate = r.quoteTaxRate !== null && r.quoteTaxRate !== undefined ? Number(r.quoteTaxRate) : 15;
+        const qDiscount = Number(r.quoteDiscount ?? 0);
+        const qDiscType = r.quoteDiscountType || "PERCENT";
+        const qDiscAmount =
+          qDiscType === "FIXED"
+            ? Math.min(rawSubtotal, Math.max(0, qDiscount))
+            : Number(((rawSubtotal * Math.min(100, Math.max(0, qDiscount))) / 100).toFixed(2));
+        const qBaseImp = Math.max(0, rawSubtotal - qDiscAmount);
+        const computedTotalCost =
+          rawSubtotal > 0
+            ? Number((qBaseImp * (1 + Math.max(0, qTaxRate) / 100)).toFixed(2))
+            : r.totalCost
+              ? Number(r.totalCost)
+              : 0;
+
         return {
           id: r.orderNumber || r.id,
           dbId: r.id,
@@ -248,8 +299,11 @@ export async function GET(request: Request) {
           deliveryStatus: r.deliveryStatus,
           quoteNumber: r.quoteNumber,
           quoteStatus: r.quoteStatus,
+          quoteTaxRate: qTaxRate,
+          quoteDiscount: qDiscount,
+          quoteDiscountType: qDiscType,
           notes: r.notes,
-          totalCost: r.totalCost ? Number(r.totalCost) : 0,
+          totalCost: computedTotalCost,
           branch: r.branch || "PRINCIPAL",
           transferredFrom: r.transferredFrom || null,
           isBilled,

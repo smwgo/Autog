@@ -229,14 +229,25 @@ export async function GET(request: Request) {
         const extraServicesFromItems = (Array.isArray(items) ? items : []).filter(
           (it: any) => it && typeof it === "object" && it.type === "SERVICE"
         );
-        const seenSrvKeys = new Set<string>();
+        const seenSrvIds = new Set<string>();
+        const seenSrvNames = new Set<string>();
         const uniqueServices: any[] = [];
-        for (const sv of [...(Array.isArray(services) ? services : []), ...extraServicesFromItems]) {
+        const rawSrvsArr = Array.isArray(services) ? services : [];
+        const orderedCandidates = [
+          ...rawSrvsArr.filter((s: any) => s && typeof s === "object"),
+          ...extraServicesFromItems,
+          ...rawSrvsArr.filter((s: any) => typeof s === "string"),
+        ];
+        for (const sv of orderedCandidates) {
           if (!sv) continue;
           const obj = typeof sv === "string" ? { name: sv, price: 0, qty: 1 } : sv;
-          const key = String(obj.id || obj.name || "").trim().toLowerCase();
-          if (key && seenSrvKeys.has(key)) continue;
-          if (key) seenSrvKeys.add(key);
+          const idKey = String(obj.id || "").trim().toLowerCase();
+          const nameKey = String(obj.name || obj.description || "").trim().toLowerCase().replace(/^\d+x\s+/i, "");
+          if (!idKey && !nameKey) continue;
+          if (idKey && seenSrvIds.has(idKey)) continue;
+          if (nameKey && seenSrvNames.has(nameKey)) continue;
+          if (idKey) seenSrvIds.add(idKey);
+          if (nameKey) seenSrvNames.add(nameKey);
           uniqueServices.push(obj);
         }
 

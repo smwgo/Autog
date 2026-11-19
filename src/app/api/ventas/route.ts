@@ -249,20 +249,36 @@ export async function POST(request: Request) {
         typeof serviceOrderNumber === "string"
           ? serviceOrderNumber.trim().replace(/^OT-/i, "")
           : "";
-      const sourceRequest = sourceOrderNumber
+      const rawOrderDigits = sourceOrderNumber.replace(/^(OT|ORD)[-\s#]*/gi, "").replace(/#+/g, "").trim();
+      const orderNumCandidates = Array.from(
+        new Set(
+          [
+            sourceOrderNumber,
+            `OT-${sourceOrderNumber}`,
+            rawOrderDigits,
+            rawOrderDigits ? `#${rawOrderDigits}` : "",
+            rawOrderDigits ? `OT #${rawOrderDigits}` : "",
+            rawOrderDigits ? `OT-${rawOrderDigits}` : "",
+            rawOrderDigits ? `OT-OT #${rawOrderDigits}` : "",
+          ].filter(Boolean)
+        )
+      );
+      const sourceRequest = orderNumCandidates.length > 0
         ? await (tx as any).orderRequest.findFirst({
-            where: { requestNumber: { in: [sourceOrderNumber, `OT-${sourceOrderNumber}`] } },
+            where: { requestNumber: { in: orderNumCandidates } },
           })
         : null;
-      const serviceOrder = sourceOrderNumber
+      const serviceOrder = orderNumCandidates.length > 0
         ? await tx.workshopOrder.findFirst({
             where: {
               orderNumber: {
-                in: [sourceOrderNumber, `OT-${sourceOrderNumber}`],
+                in: orderNumCandidates,
               },
             },
             select: {
+              id: true,
               orderNumber: true,
+              stockDeducted: true,
               customerId: true,
               clientIdDoc: true,
               client: true,
@@ -351,23 +367,25 @@ export async function POST(request: Request) {
           name = dbProduct.name;
           code = dbProduct.code;
 
-          const curPrincipal = Number(dbProduct.stock || 0);
-          const curSucursal = Number((dbProduct as any).stockNorte || 0);
-          const availableInBranch = targetBranch === "SUCURSAL" ? curSucursal : curPrincipal;
-          if (availableInBranch < quantity) {
-            throw new Error(
-              `STOCK_INSUFICIENTE:Stock insuficiente para "${dbProduct.name}" en sede ${targetBranch} (disponible: ${availableInBranch}, solicitado: ${quantity}).`
-            );
+          if (!serviceOrder?.stockDeducted) {
+            const curPrincipal = Number(dbProduct.stock || 0);
+            const curSucursal = Number((dbProduct as any).stockNorte || 0);
+            const availableInBranch = targetBranch === "SUCURSAL" ? curSucursal : curPrincipal;
+            if (availableInBranch < quantity) {
+              throw new Error(
+                `STOCK_INSUFICIENTE:Stock insuficiente para "${dbProduct.name}" en sede ${targetBranch} (disponible: ${availableInBranch}, solicitado: ${quantity}).`
+              );
+            }
+            const nextPrincipal = targetBranch === "SUCURSAL" ? curPrincipal : curPrincipal - quantity;
+            const nextSucursal = targetBranch === "SUCURSAL" ? curSucursal - quantity : curSucursal;
+            const newStatus = calcularEstado(nextPrincipal + nextSucursal, dbProduct.minStock);
+            await tx.product.update({
+              where: { id: dbProduct.id },
+              data: targetBranch === "SUCURSAL"
+                ? { stockNorte: nextSucursal, status: newStatus }
+                : { stock: nextPrincipal, status: newStatus },
+            });
           }
-          const nextPrincipal = targetBranch === "SUCURSAL" ? curPrincipal : curPrincipal - quantity;
-          const nextSucursal = targetBranch === "SUCURSAL" ? curSucursal - quantity : curSucursal;
-          const newStatus = calcularEstado(nextPrincipal + nextSucursal, dbProduct.minStock);
-          await tx.product.update({
-            where: { id: dbProduct.id },
-            data: targetBranch === "SUCURSAL"
-              ? { stockNorte: nextSucursal, status: newStatus }
-              : { stock: nextPrincipal, status: newStatus },
-          });
         } else if (item.isService || (typeof item.code === "string" && item.code.trim())) {
           // Validar precio de catálogo cuando el ítem corresponde a un WorkshopService
           const dbService = await tx.workshopService
@@ -494,10 +512,12 @@ export async function POST(request: Request) {
              SET "status" = 'Pagado',
                  "quoteStatus" = 'Pagado',
                  "deliveryStatus" = 'Facturado',
+                 "stockDeducted" = true,
                  "updatedAt" = NOW()
-             WHERE "orderNumber" = $1 OR "orderNumber" = $2`,
+             WHERE "orderNumber" = $1 OR "orderNumber" = $2 OR "id" = $3`,
             orderNumKey,
-            `OT-${orderNumKey}`
+            `OT-${orderNumKey}`,
+            serviceOrder?.id || ""
           );
         } catch (ordErr) {
           console.warn("Aviso al actualizar WorkshopOrder como Pagado:", ordErr);
@@ -509,6 +529,7 @@ export async function POST(request: Request) {
              SET "status" = 'Pagado',
                  "quoteStatus" = 'Pagado',
                  "deliveryStatus" = 'Facturado',
+                 "stockDeducted" = true,
                  "updatedAt" = NOW()
              WHERE UPPER("plate") = UPPER($1)
                AND COALESCE("branch", 'PRINCIPAL') = $2
@@ -531,7 +552,7 @@ export async function POST(request: Request) {
           } else {
             await (tx as any).orderRequest.updateMany({
               where: {
-                requestNumber: { in: [orderNumKey, `OT-${orderNumKey}`] },
+                requestNumber: { in: [orderNumKey, `OT-${orderNumKey}`, ...orderNumCandidates] },
               },
               data: { status: "DESPACHADO" },
             });

@@ -134,6 +134,9 @@ export async function GET(request: Request) {
             updatedAt: true,
             completedAt: true,
             itemsJson: true,
+            servicesJson: true,
+            quoteTaxRate: true,
+            quoteDiscount: true,
             quoteNumber: true,
           },
         }),
@@ -166,22 +169,58 @@ export async function GET(request: Request) {
         if (q.quoteNumber) quoteMap.set(q.quoteNumber, Number(q.total || q.subtotal || 0));
       });
 
-      // Calcular valor de orden de trabajo
+      // Calcular valor de orden de trabajo (unificando repuestos + servicios deduplicados, descuento e IVA)
       const getOrderValue = (o: any): number => {
         if (o.quoteNumber && quoteMap.has(o.quoteNumber)) {
           const qVal = quoteMap.get(o.quoteNumber)!;
           if (qVal > 0) return qVal;
         }
+        try {
+          const rawItems = typeof o.itemsJson === "string" ? JSON.parse(o.itemsJson) : (o.itemsJson || []);
+          const rawSrvs = typeof o.servicesJson === "string" ? JSON.parse(o.servicesJson) : (o.servicesJson || []);
+          const partsOnly = (Array.isArray(rawItems) ? rawItems : []).filter(
+            (it: any) => it && typeof it === "object" && it.type !== "SERVICE"
+          );
+          const extraSrvs = (Array.isArray(rawItems) ? rawItems : []).filter(
+            (it: any) => it && typeof it === "object" && it.type === "SERVICE"
+          );
+          const seenIds = new Set<string>();
+          const seenNames = new Set<string>();
+          const uniqueSrvs: any[] = [];
+          const rawSrvsArr = Array.isArray(rawSrvs) ? rawSrvs : [];
+          for (const sv of [
+            ...rawSrvsArr.filter((s: any) => s && typeof s === "object"),
+            ...extraSrvs,
+            ...rawSrvsArr.filter((s: any) => typeof s === "string"),
+          ]) {
+            if (!sv) continue;
+            const obj = typeof sv === "string" ? { name: sv, price: 0, qty: 1 } : sv;
+            const idKey = String(obj.id || "").trim().toLowerCase();
+            const nameKey = String(obj.name || obj.description || "").trim().toLowerCase().replace(/^\d+x\s+/i, "");
+            if (!idKey && !nameKey) continue;
+            if (idKey && seenIds.has(idKey)) continue;
+            if (nameKey && seenNames.has(nameKey)) continue;
+            if (idKey) seenIds.add(idKey);
+            if (nameKey) seenNames.add(nameKey);
+            uniqueSrvs.push(obj);
+          }
+          const sumParts = partsOnly.reduce(
+            (acc: number, it: any) => acc + Number(it.price || 0) * Math.max(1, Number(it.qty || 1)),
+            0
+          );
+          const sumSrvs = uniqueSrvs.reduce(
+            (acc: number, sv: any) => acc + Number(sv.price || 0) * Math.max(1, Number(sv.qty || 1)),
+            0
+          );
+          const subtotal = sumParts + sumSrvs;
+          if (subtotal > 0) {
+            const disc = Number(o.quoteDiscount ?? 0);
+            const tax = o.quoteTaxRate !== null && o.quoteTaxRate !== undefined ? Number(o.quoteTaxRate) : 15;
+            const base = Math.max(0, subtotal - (subtotal * disc) / 100);
+            return Number((base * (1 + tax / 100)).toFixed(2));
+          }
+        } catch {}
         if (o.totalCost && Number(o.totalCost) > 0) return Number(o.totalCost);
-        if (o.itemsJson) {
-          try {
-            const items = typeof o.itemsJson === "string" ? JSON.parse(o.itemsJson) : o.itemsJson;
-            if (Array.isArray(items)) {
-              const sum = items.reduce((acc: number, it: any) => acc + (Number(it.price || 0) * Number(it.qty || 1)), 0);
-              if (sum > 0) return Number(sum.toFixed(2));
-            }
-          } catch {}
-        }
         return 0;
       };
 
@@ -247,9 +286,18 @@ export async function GET(request: Request) {
       });
 
       // Evitar doble conteo de órdenes de taller que ya tienen una venta POS asociada
+      const normalizeOrderRef = (val?: string | null) =>
+        String(val || "")
+          .trim()
+          .toUpperCase()
+          .replace(/^(OT|ORD)[-\s#]*/gi, "")
+          .replace(/^(OT|ORD)[-\s#]*/gi, "")
+          .replace(/#+/g, "")
+          .trim();
+
       const billedOrderNumbers = new Set(
         branchSalesPeriod
-          .map((s: any) => (s.sourceOrderNumber || "").trim().toUpperCase().replace(/^OT-/, ""))
+          .map((s: any) => normalizeOrderRef(s.sourceOrderNumber))
           .filter(Boolean)
       );
       const billedSaleIds = new Set(branchSalesPeriod.map((s: any) => s.id));
@@ -269,7 +317,7 @@ export async function GET(request: Request) {
       // 1. VENTAS TOTALES (Taller cobrado + Tienda POS + Facturas independientes sin Sale + Ingresos financieros)
       const ventasPosPeriodo = branchSalesPeriod.reduce((acc, s) => acc + Number(s.total || 0), 0);
       const tallerFacturadoPeriodo = ordersInPeriod.reduce((acc, o) => {
-        const normOrd = (o.orderNumber || "").trim().toUpperCase().replace(/^OT-/, "");
+        const normOrd = normalizeOrderRef(o.orderNumber);
         if (normOrd && billedOrderNumbers.has(normOrd)) return acc;
         if (!isClosedOrBilledOrder(o)) return acc;
         return acc + getOrderValue(o);
@@ -294,7 +342,7 @@ export async function GET(request: Request) {
         return acc + Number(s.total || 0);
       }, 0);
       const cobradoTaller = ordersInPeriod.reduce((acc, o) => {
-        const normOrd = (o.orderNumber || "").trim().toUpperCase().replace(/^OT-/, "");
+        const normOrd = normalizeOrderRef(o.orderNumber);
         if (normOrd && billedOrderNumbers.has(normOrd)) return acc;
         if (isClosedOrBilledOrder(o)) {
           return acc + getOrderValue(o);
@@ -311,7 +359,7 @@ export async function GET(request: Request) {
 
       // 3. VENTAS HOY (Órdenes cobradas de hoy + Ventas POS de hoy + Transacciones de hoy)
       const ordersToday = branchWorkshopOrders.filter((o) => {
-        const normOrd = (o.orderNumber || "").trim().toUpperCase().replace(/^OT-/, "");
+        const normOrd = normalizeOrderRef(o.orderNumber);
         if (normOrd && billedOrderNumbers.has(normOrd)) return false;
         if (!isClosedOrBilledOrder(o)) return false;
         const d = getRecordDate(o);
@@ -328,7 +376,7 @@ export async function GET(request: Request) {
       const totalTransacciones =
         branchSalesPeriod.length +
         ordersInPeriod.filter((o) => {
-          const normOrd = (o.orderNumber || "").trim().toUpperCase().replace(/^OT-/, "");
+          const normOrd = normalizeOrderRef(o.orderNumber);
           return isClosedOrBilledOrder(o) && (!normOrd || !billedOrderNumbers.has(normOrd));
         }).length +
         standaloneInvoicesInPeriod.length;
