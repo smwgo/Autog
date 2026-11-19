@@ -737,16 +737,13 @@ export async function POST(request: Request) {
             : Number(it.costPrice || 0);
         const qty = Number(it.qty || 1);
         const currentPvp = Number(it.price || 0);
-        // Si el PVP estaba en 0 o menor al nuevo costo, calcular automáticamente PVP sugerido (+30%)
-        const nextPvp =
-          availability === "SI_HAY" && unitCost > 0 && currentPvp <= unitCost
-            ? Number((unitCost * 1.3).toFixed(2))
-            : currentPvp;
+        const nextPvp = availability === "SI_HAY" ? unitCost : currentPvp;
 
         const subtotalCosto = Number((unitCost * qty).toFixed(2));
         const subtotalVenta = Number((nextPvp * qty).toFixed(2));
         const margin = Number(((nextPvp - unitCost) * qty).toFixed(2));
-        const marginPercent = nextPvp > 0 ? Math.round(((nextPvp - unitCost) / nextPvp) * 100) : 0;
+        const marginPercent =
+          nextPvp > 0 ? Math.round(((nextPvp - unitCost) / nextPvp) * 100) : 0;
 
         return {
           ...it,
@@ -787,7 +784,7 @@ export async function POST(request: Request) {
           const yaExiste = nuevosItems.some((it: any) => it.id === r.id);
           if (!yaExiste) {
             const unitCost = Math.max(0, Number(r.supplierPrice) || 0);
-            const nextPvp = unitCost > 0 ? Number((unitCost * 1.3).toFixed(2)) : 0;
+            const nextPvp = unitCost;
             nuevosItems.push({
               id: `rep_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
               findingId: pinId,
@@ -799,7 +796,8 @@ export async function POST(request: Request) {
               subtotalCosto: unitCost,
               subtotalVenta: nextPvp,
               margin: Number((nextPvp - unitCost).toFixed(2)),
-              marginPercent: nextPvp > 0 ? 30 : 0,
+              marginPercent:
+                nextPvp > 0 ? Math.round(((nextPvp - unitCost) / nextPvp) * 100) : 0,
               inStock: false,
               origin: "TALLER",
               supplierName: r.supplierName || supplierName || "Proveedor Externo",

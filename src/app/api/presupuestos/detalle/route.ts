@@ -334,19 +334,29 @@ export async function GET(request: Request) {
 
       const PRECIOS_RAPIDOS_MAP: Record<string, number> = {
         "cambio de aceite": 10,
+        "aceite motor": 10,
         "cambio de amortiguadores delanteros": 25,
+        "amort. delanteros": 25,
         "cambio de amortiguadores posteriores": 20,
+        "amort. posteriores": 20,
         "cambio de ruliman delantero": 20,
+        "rulimán delantero": 20,
         "cambio de ruliman posterior": 20,
+        "rulimán posterior": 20,
         "cambio de aceite de caja": 10,
+        "aceite de caja": 10,
         "cambio de aceite corona": 10,
+        "aceite corona": 10,
         "lavado completo": 12,
         "lavado completo mas grafito": 15,
         "lavado completo más grafito": 15,
+        "lavado + grafito": 15,
         "lavado exterior": 6,
         "aspirador interior": 5,
+        "aspirado": 5,
         "limpieza tapicería más lavado": 45,
         "limpieza tapiceria mas lavado": 45,
+        "tapicería + lavado": 45,
         "lavado chasis": 10,
         "alineación": 15,
         "alineacion": 15,
@@ -355,11 +365,20 @@ export async function GET(request: Request) {
         "rotacion": 8,
         "corrección caída": 20,
         "correccion caida": 20,
+        "caída": 20,
         "corrección camber": 20,
         "correccion camber": 20,
+        "camber": 20,
         "corrección caster": 20,
         "correccion caster": 20,
+        "caster": 20,
       };
+      const normalizarServicioNombre = (txt: string) =>
+        String(txt || "")
+          .trim()
+          .toLowerCase()
+          .replace(/^\d+x\s+/i, "")
+          .replace(/\bamort\./g, "amortiguadores");
 
       // Separar ítems de itemsJson que fueron guardados como SERVICE desde RegistroFinalUnificado en Taller
       const rawParts: any[] = [];
@@ -382,7 +401,7 @@ export async function GET(request: Request) {
           String(it.id || "").startsWith("man-") ||
           String(it.code || "").startsWith("MAN-")
         );
-        const costPrice = Number(it.supplierPrice || it.costPrice || it.cost || 0);
+        const costPrice = Number(it.supplierPrice ?? it.costPrice ?? it.cost ?? 0);
         const rawPrice = Number(it.price || 0);
         let catalogPrice = 0;
         if (!isManual && rawPrice <= 0) {
@@ -404,7 +423,7 @@ export async function GET(request: Request) {
             : catalogPrice > 0
             ? catalogPrice
             : costPrice > 0 && it.supplierAvailability === "SI_HAY"
-            ? Number((costPrice * 1.3).toFixed(2))
+            ? costPrice
             : 0;
         const qty = Number(it.qty || 1);
         const margin = price - costPrice;
@@ -519,30 +538,42 @@ export async function GET(request: Request) {
           String(sv.id || "").startsWith("man-") ||
           String(sv.code || "").startsWith("MAN-")
         );
-        const costPrice = isString ? 0 : Number(sv.supplierPrice || sv.costPrice || 0);
+        const costPrice = isString ? 0 : Number(sv.supplierPrice ?? sv.costPrice ?? 0);
         const rawPrice = isString ? 0 : Number(sv.price || 0);
+        const normName = String(name || "").trim().toLowerCase().replace(/^\d+x\s+/i, "");
+        const normExpanded = normalizarServicioNombre(name);
+        const matchSrv = !isManual
+          ? catalogServices.find(
+              (s: any) =>
+                (!isString && sv.id && s.id === sv.id) ||
+                (!isString && sv.code && s.code && String(s.code).toLowerCase() === String(sv.code).toLowerCase()) ||
+                (normName && String(s.name || "").trim().toLowerCase() === normName) ||
+                (normExpanded && normalizarServicioNombre(s.name || "") === normExpanded)
+            )
+          : null;
         let catalogPrice = 0;
-        if (!isManual && rawPrice <= 0) {
-          const normName = String(name || "").trim().toLowerCase().replace(/^\d+x\s+/i, "");
-          const matchSrv = catalogServices.find(
-            (s: any) =>
-              (!isString && sv.id && s.id === sv.id) ||
-              (!isString && sv.code && s.code && String(s.code).toLowerCase() === String(sv.code).toLowerCase()) ||
-              (normName && String(s.name || "").trim().toLowerCase() === normName)
-          );
+        if (!isManual) {
           if (matchSrv && Number(matchSrv.price) > 0) {
             catalogPrice = Number(matchSrv.price);
-          } else if (PRECIOS_RAPIDOS_MAP[normName]) {
+          } else if (rawPrice <= 0 && PRECIOS_RAPIDOS_MAP[normName]) {
             catalogPrice = PRECIOS_RAPIDOS_MAP[normName];
           }
         }
+        const esPrecioHardcodeadoAntiguo =
+          !isString &&
+          !sv.priceManuallyEdited &&
+          rawPrice > 0 &&
+          PRECIOS_RAPIDOS_MAP[normName] === rawPrice &&
+          catalogPrice > 0;
         const price =
-          rawPrice > 0
+          esPrecioHardcodeadoAntiguo
+            ? catalogPrice
+            : rawPrice > 0
             ? rawPrice
             : catalogPrice > 0
             ? catalogPrice
             : costPrice > 0 && !isString && sv.supplierAvailability === "SI_HAY"
-            ? Number((costPrice * 1.3).toFixed(2))
+            ? costPrice
             : 0;
         const code = isString ? `SRV-${index + 1}` : (sv.code || `SRV-${index + 1}`);
         const category = isString ? "Mano de Obra" : (sv.category || "Mano de Obra");

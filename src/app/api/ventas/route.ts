@@ -342,7 +342,12 @@ export async function POST(request: Request) {
 
         if (dbProduct) {
           validProductId = dbProduct.id;
-          price = parseFloat(dbProduct.price.toString());
+          const submittedPrice = parseFloat(item.price?.toString() || "");
+          if (Number.isFinite(submittedPrice) && submittedPrice >= 0) {
+            price = submittedPrice;
+          } else {
+            price = parseFloat(dbProduct.price.toString());
+          }
           name = dbProduct.name;
           code = dbProduct.code;
 

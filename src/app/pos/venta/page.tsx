@@ -257,9 +257,9 @@ export default function NuevaVentaPage() {
   const [mostrarModalDescuento, setMostrarModalDescuento] = useState(false);
 
   // IVA configurable
-  const [ivaPorcentaje, setIvaPorcentaje] = useState<number>(16);
+  const [ivaPorcentaje, setIvaPorcentaje] = useState<number>(15);
   const [mostrarModalIva, setMostrarModalIva] = useState(false);
-  const [ivaTempInput, setIvaTempInput] = useState("16");
+  const [ivaTempInput, setIvaTempInput] = useState("15");
 
   // 2. Calculadora de Cambio en Efectivo
   const [montoRecibido, setMontoRecibido] = useState<string>("");
@@ -456,8 +456,10 @@ export default function NuevaVentaPage() {
   const cargarProductos = useCallback(async () => {
     try {
       setCargandoProductos(true);
+      const activeBranch = getClientActiveBranch();
+      const inventoryBranch = activeBranch === "AMBOS" ? "PRINCIPAL" : activeBranch;
       const [resProd, resServ] = await Promise.all([
-        fetch("/api/productos"),
+        fetch(`/api/productos?sede=${encodeURIComponent(inventoryBranch)}`),
         fetch("/api/servicios-taller?activos=true"),
       ]);
 
@@ -1084,6 +1086,23 @@ export default function NuevaVentaPage() {
     );
   };
 
+  const updateQtyExact = (id: string, quantity: number) => {
+    setCart((prev) =>
+      prev
+        .map((item) => {
+          if (item.product.id !== id) return item;
+          const stockDisponible = item.product.isService ? 999 : item.product.stock;
+          const parsed = Number.isFinite(quantity) ? quantity : 1;
+          const newQty = Math.max(1, Math.min(stockDisponible, Math.trunc(parsed)));
+          if (parsed > stockDisponible) {
+            alert(`Stock máximo disponible alcanzado: ${stockDisponible}`);
+          }
+          return { ...item, qty: newQty };
+        })
+        .filter((item) => item.qty > 0)
+    );
+  };
+
   // Permitir al cajero en Oficina ajustar el precio final de cada servicio o ítem antes de cobrar
   const updatePrice = (id: string, newPrice: string | number) => {
     setCart((prev) =>
@@ -1121,7 +1140,10 @@ export default function NuevaVentaPage() {
       return;
     }
     const precio = parseFloat(manualPrecio) || 0;
-    const cantidad = parseInt(manualCantidad) || 1;
+    const cantidadIngresada = parseFloat(manualCantidad);
+    const cantidad = Number.isFinite(cantidadIngresada)
+      ? Math.max(1, Math.trunc(cantidadIngresada))
+      : 1;
 
     const nuevoItem: Product = {
       id: `manual-${Date.now()}`,
@@ -1540,7 +1562,13 @@ export default function NuevaVentaPage() {
 
           {/* Lado Derecho: Selector de Sede arriba + 4 botones de acción debajo, alineados a la punta derecha */}
           <div className="flex flex-col items-end gap-1.5 shrink-0 ml-auto">
-            <BranchTabs onChange={() => verificarCajaApertura(false)} size="sm" />
+            <BranchTabs
+              onChange={() => {
+                verificarCajaApertura(false);
+                cargarProductos();
+              }}
+              size="sm"
+            />
 
             <div className="flex items-center gap-1.5 sm:gap-2">
               {/* Historial (Solo icono) */}
@@ -2237,7 +2265,16 @@ export default function NuevaVentaPage() {
                         >
                           −
                         </button>
-                        <span className="w-5 text-center text-xs font-normal text-zinc-900 dark:text-zinc-200">{item.qty}</span>
+                        <input
+                          type="number"
+                          min="1"
+                          max={item.product.isService ? 999 : item.product.stock}
+                          step="1"
+                          value={item.qty}
+                          onChange={(e) => updateQtyExact(item.product.id, parseFloat(e.target.value))}
+                          className="w-9 h-6 text-center text-xs font-normal bg-transparent text-zinc-900 dark:text-zinc-200 outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                          aria-label={`Cantidad de ${item.product.name}`}
+                        />
                         <button
                           type="button"
                           onClick={() => updateQty(item.product.id, 1)}
@@ -3015,7 +3052,7 @@ export default function NuevaVentaPage() {
                   min="0"
                   max="100"
                   step="any"
-                  placeholder="16"
+                  placeholder="15"
                   value={ivaTempInput}
                   onChange={(e) => {
                     setIvaTempInput(e.target.value);

@@ -1037,8 +1037,12 @@ export default function RegistroFinalUnificado({
     ];
     const presets = combinados.map(({ name, isCustom }, i) => {
       const norm = name.trim().toLowerCase();
+      const normExp = norm.replace(/\bamort\./g, "amortiguadores");
       const enCat = Array.isArray(serviciosCatalogo)
-        ? serviciosCatalogo.find((s: any) => String(s?.name || "").trim().toLowerCase() === norm)
+        ? serviciosCatalogo.find((s: any) => {
+            const sn = String(s?.name || "").trim().toLowerCase();
+            return sn === norm || sn.replace(/\bamort\./g, "amortiguadores") === normExp;
+          })
         : null;
       const precioFinal = Number(enCat?.price) > 0 ? Number(enCat.price) : (PRECIOS_RAPIDOS[norm] ?? 10);
       return {

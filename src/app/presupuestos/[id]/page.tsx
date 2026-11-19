@@ -456,14 +456,16 @@ export default function PaginaDetallePropuesta() {
     if (actual > 0 || esManual) return actual;
     const norm = String(nombre || "").trim().toLowerCase().replace(/^\d+x\s+/i, "");
     if (!norm) return 0;
+    const normExp = norm.replace(/\bamort\./g, "amortiguadores");
+    const matchCat = catalogoServiciosRef.current.find((s: any) => {
+      const sn = String(s?.name || "").trim().toLowerCase();
+      return sn === norm || sn.replace(/\bamort\./g, "amortiguadores") === normExp;
+    });
+    if (matchCat && Number(matchCat.price) > 0) return Number(matchCat.price);
     for (const esp of Object.values(SERVICIOS_RAPIDOS_POR_ESPECIALIDAD)) {
       const matchRapido = esp.find((s) => s.nombre.trim().toLowerCase() === norm);
       if (matchRapido && matchRapido.precio > 0) return matchRapido.precio;
     }
-    const matchCat = catalogoServiciosRef.current.find(
-      (s: any) => String(s?.name || "").trim().toLowerCase() === norm
-    );
-    if (matchCat && Number(matchCat.price) > 0) return Number(matchCat.price);
     return 0;
   }, []);
 
@@ -1310,16 +1312,20 @@ export default function PaginaDetallePropuesta() {
               Boolean(match.supplierRespondedAt) &&
               match.supplierRespondedAt !== it.supplierRespondedAt;
             if (respondioNuevo) {
-              const newCost = match.supplierPrice ? Number(match.supplierPrice) : Number(match.costPrice ?? it.costPrice);
-              const keepPrice = Number(it.price || 0);
+              const newCost =
+                match.supplierPrice !== undefined && match.supplierPrice !== null
+                  ? Number(match.supplierPrice)
+                  : Number(match.costPrice ?? it.costPrice);
+              const newPrice =
+                match.supplierAvailability === "SI_HAY" ? newCost : Number(it.price || 0);
               const qty = Number(it.qty || 1);
               return {
                 ...it,
                 costPrice: newCost,
-                price: keepPrice,
+                price: newPrice,
                 subtotalCosto: Number((newCost * qty).toFixed(2)),
-                subtotalVenta: Number((keepPrice * qty).toFixed(2)),
-                margin: Number(((keepPrice - newCost) * qty).toFixed(2)),
+                subtotalVenta: Number((newPrice * qty).toFixed(2)),
+                margin: Number(((newPrice - newCost) * qty).toFixed(2)),
                 supplierAvailability: match.supplierAvailability ?? it.supplierAvailability,
                 supplierPrice: match.supplierPrice ?? it.supplierPrice,
                 deliveryTime: match.deliveryTime ?? it.deliveryTime,
@@ -1343,10 +1349,17 @@ export default function PaginaDetallePropuesta() {
               Boolean(match.supplierRespondedAt) &&
               match.supplierRespondedAt !== sv.supplierRespondedAt;
             if (respondioNuevo) {
+              const newCost =
+                match.supplierPrice !== undefined && match.supplierPrice !== null
+                  ? Number(match.supplierPrice)
+                  : Number(match.costPrice ?? sv.costPrice ?? 0);
               return {
                 ...sv,
-                costPrice: match.supplierPrice ? Number(match.supplierPrice) : Number(match.costPrice ?? sv.costPrice ?? 0),
-                price: Number(sv.price || 0),
+                costPrice: newCost,
+                price:
+                  match.supplierAvailability === "SI_HAY"
+                    ? newCost
+                    : Number(sv.price || 0),
                 supplierAvailability: match.supplierAvailability ?? sv.supplierAvailability,
                 supplierPrice: match.supplierPrice ?? sv.supplierPrice,
                 deliveryTime: match.deliveryTime ?? sv.deliveryTime,
