@@ -246,7 +246,31 @@ export async function DELETE(req: Request) {
     await withRetry(async () => {
       await ensureTables();
       if (docType === "orden") {
+        const existingOrd = await prisma.workshopOrder
+          .findUnique({ where: { id }, select: { vehicleId: true, plate: true } })
+          .catch(() => null);
         await prisma.workshopOrder.delete({ where: { id } });
+        const deletedVehicleId = existingOrd?.vehicleId || null;
+        const deletedPlate = String(existingOrd?.plate || "").trim().toUpperCase();
+        if (deletedVehicleId || deletedPlate) {
+          const refs = (await prisma
+            .$queryRawUnsafe(
+              `SELECT
+                (SELECT COUNT(*)::int FROM "WorkshopOrder" WHERE ($1::text IS NOT NULL AND "vehicleId" = $1) OR ($2::text != '' AND UPPER("plate") = $2)) AS orders_cnt,
+                (SELECT COUNT(*)::int FROM "WorkshopHistory" WHERE $2::text != '' AND UPPER("plate") = $2) AS hist_cnt`,
+              deletedVehicleId,
+              deletedPlate
+            )
+            .catch(() => [])) as any[];
+          const r = refs[0];
+          if (r && Number(r.orders_cnt || 0) === 0 && Number(r.hist_cnt || 0) === 0) {
+            if (deletedVehicleId) {
+              await prisma.vehicle.deleteMany({ where: { id: deletedVehicleId } }).catch(() => {});
+            } else if (deletedPlate) {
+              await prisma.vehicle.deleteMany({ where: { plate: { equals: deletedPlate, mode: "insensitive" } } }).catch(() => {});
+            }
+          }
+        }
       } else {
         await prisma.$executeRawUnsafe(`DELETE FROM "ClientQuote" WHERE "id" = $1`, id);
       }

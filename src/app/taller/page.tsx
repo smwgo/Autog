@@ -851,7 +851,12 @@ export default function TallerPanel() {
       } catch { }
     }
     fetch("/api/auth/me")
-      .then((response) => response.json())
+      .then(async (response) => {
+        if (!response.ok) return null;
+        const ct = response.headers.get("content-type") || "";
+        if (!ct.includes("application/json")) return null;
+        return response.json();
+      })
       .then((data) => {
         if (data?.success && data?.user) {
           const user = data.user;
@@ -1743,6 +1748,11 @@ export default function TallerPanel() {
       });
       if (!res.ok) {
         console.warn(`Respuesta no exitosa al cargar taller (${res.status})`);
+        return false;
+      }
+      const ct = res.headers.get("content-type") || "";
+      if (!ct.includes("application/json")) {
+        console.warn("Respuesta no JSON al cargar taller");
         return false;
       }
       const data = await res.json();

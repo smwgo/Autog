@@ -2376,7 +2376,7 @@ export default function ModalNuevaOrdenTrabajo({
                 String(c.identification).trim().toUpperCase() ===
                   String(prev.identification).trim().toUpperCase())
           );
-          if (!actualizado) return prev;
+          if (!actualizado) return null;
           return {
             ...actualizado,
             vehicles: Array.isArray(actualizado.vehicles) ? actualizado.vehicles : [],
@@ -2393,7 +2393,7 @@ export default function ModalNuevaOrdenTrabajo({
 
   // Al entrar al Paso 2 (Vehículo), refrescar siempre desde BD para no mostrar vehículos eliminados o cacheados en otro navegador
   useEffect(() => {
-    if (!isOpen || pasoActivo !== 2 || !clienteSeleccionado?.id) return;
+    if (!isOpen || pasoActivo !== 2) return;
     sincronizarClientesFrescos();
   }, [isOpen, pasoActivo, clienteSeleccionado?.id, sincronizarClientesFrescos]);
 
@@ -2520,10 +2520,8 @@ export default function ModalNuevaOrdenTrabajo({
         .replace(/[\s.-]/g, "")
         .trim()
         .toLowerCase();
-      const telNorm = normalizarTelefonoDuplicado(datos.telefono || "");
-      const nombreNorm = normalizarTextoDuplicado(datos.nombre || "");
 
-      // 1. Prioridad máxima: misma cédula / RUC
+      // Identificar duplicados únicamente por cédula / RUC real (nunca mezclar clientes o vehículos por WhatsApp o nombre)
       if (
         identNorm.length >= 5 &&
         !identGenericas.has(identNorm) &&
@@ -2538,22 +2536,6 @@ export default function ModalNuevaOrdenTrabajo({
           return cIdent === identNorm;
         });
         if (matchIdent) return { cliente: matchIdent, motivo: "cédula/RUC" };
-      }
-
-      // 2. Segunda prioridad: mismo número de WhatsApp / teléfono
-      if (telNorm) {
-        const matchTel = (fuente || []).find(
-          (c) => normalizarTelefonoDuplicado(c?.phone || "") === telNorm
-        );
-        if (matchTel) return { cliente: matchTel, motivo: "WhatsApp" };
-      }
-
-      // 3. Tercera prioridad: mismo nombre exacto
-      if (nombreNorm.length >= 4) {
-        const matchNombre = (fuente || []).find(
-          (c) => normalizarTextoDuplicado(c?.name || "") === nombreNorm
-        );
-        if (matchNombre) return { cliente: matchNombre, motivo: "nombre" };
       }
 
       return null;
@@ -2674,6 +2656,17 @@ export default function ModalNuevaOrdenTrabajo({
         setPasoActivo(2);
         return;
       }
+
+      // Es un cliente nuevo: garantizar que no arrastre vehículos previos y abrir directo el registro de vehículo nuevo
+      setClienteSeleccionado(null);
+      setVehiculoSeleccionadoId("NUEVO");
+      setVehiculoPlaca("");
+      setVehiculoMarca("");
+      setVehiculoModelo("");
+      setVehiculoKm("");
+      setVehiculoFoto(null);
+      setMostrarFormNuevoVehiculo(true);
+      setSubPasoVehiculo("placa");
     }
 
     setPasoActivo(2);
@@ -3755,15 +3748,6 @@ export default function ModalNuevaOrdenTrabajo({
                     }
                     const waFinal = `593${whatsappParteLocal(nuevoClienteTelefono)}`;
                     setNuevoClienteTelefono(waFinal);
-                    const dupWa = buscarClienteDuplicado({ telefono: waFinal });
-                    if (dupWa?.cliente) {
-                      mostrarToast(
-                        `Ya existe un cliente con ese WhatsApp: ${dupWa.cliente.name}. Cargando sus datos.`,
-                        "ok"
-                      );
-                      handleSeleccionarCliente(dupWa.cliente);
-                      return;
-                    }
                     setSubPasoCliente("email");
                   } else if (subPasoCliente === "email") {
                     setSubPasoCliente("direccion");
@@ -4526,8 +4510,8 @@ export default function ModalNuevaOrdenTrabajo({
 
           {pasoActivo === 2 && !editOrderId && (
             <div className="space-y-5 animate-fade-in">
-              {/* Si el cliente ya tiene vehículos registrados en Neon */}
-              {clienteSeleccionado?.vehicles?.length > 0 && !mostrarFormNuevoVehiculo && (
+              {/* Si el cliente ya tiene vehículos registrados en Neon (solo cuando es un cliente existente seleccionado, nunca al crear uno nuevo) */}
+              {Boolean(clienteSeleccionado?.id) && !mostrarFormNuevoCliente && clienteSeleccionado?.vehicles?.length > 0 && !mostrarFormNuevoVehiculo && (
                 <div className="space-y-3">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {clienteSeleccionado.vehicles.map((v: any) => {
@@ -4604,7 +4588,7 @@ export default function ModalNuevaOrdenTrabajo({
               )}
 
               {/* Formulario de Vehículo — Flujo Deslizable Paso a Paso */}
-              {(mostrarFormNuevoVehiculo || !clienteSeleccionado?.vehicles?.length) && (() => {
+              {(mostrarFormNuevoVehiculo || mostrarFormNuevoCliente || !clienteSeleccionado?.id || !clienteSeleccionado?.vehicles?.length) && (() => {
                 const PASOS: Array<{ id: typeof subPasoVehiculo; label: string; icon: string }> = [
                   { id: "placa", label: "Placa", icon: "🔢" },
                   { id: "marca", label: "Marca", icon: "🏷️" },
@@ -4753,7 +4737,7 @@ export default function ModalNuevaOrdenTrabajo({
                           {clienteSeleccionado?.name || nuevoClienteNombre || "Sin cliente"}
                         </strong>
                       </div>
-                      {clienteSeleccionado?.vehicles && clienteSeleccionado.vehicles.length > 0 && (
+                      {Boolean(clienteSeleccionado?.id) && !mostrarFormNuevoCliente && clienteSeleccionado?.vehicles && clienteSeleccionado.vehicles.length > 0 && (
                         <button
                           type="button"
                           onClick={() => setMostrarFormNuevoVehiculo(false)}

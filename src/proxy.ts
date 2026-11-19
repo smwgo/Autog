@@ -21,6 +21,7 @@ function isPublicApiRequest(pathname: string, method: string): boolean {
     return true;
   }
   if (pathname === "/api/storage/download" && method === "GET") return true;
+  if (pathname === "/api/taller/seguimiento-publico" && method === "GET") return true;
   if (pathname === "/api/servicios-taller" && method === "GET") return true;
   if (pathname === "/api/productos" && method === "GET") return true;
   if (pathname === "/api/empresa" && method === "GET") return true;

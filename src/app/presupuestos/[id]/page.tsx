@@ -4571,153 +4571,152 @@ export default function PaginaDetallePropuesta() {
                             handleAbrirDatosIngreso(auto);
                           }}
                           aria-pressed={esActivo}
-                          className={`snap-start shrink-0 w-full min-h-[76px] sm:min-h-[68px] px-3.5 py-2.5 sm:px-3 sm:py-2 rounded-2xl sm:rounded-xl border text-left flex items-center justify-between gap-3 transition-colors cursor-pointer ${esActivo
+                          className={`snap-start shrink-0 w-full min-h-[76px] sm:min-h-[68px] px-3 py-2.5 sm:px-3 sm:py-2 rounded-2xl sm:rounded-xl border text-left flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 sm:gap-3 transition-colors cursor-pointer ${esActivo
                             ? "bg-gradient-to-r from-blue-50/90 via-blue-50/75 to-indigo-50/80 dark:from-blue-500/[0.14] dark:via-blue-500/[0.11] dark:to-indigo-500/[0.12] border-blue-300/75 dark:border-blue-400/30 shadow-sm"
                             : "bg-white dark:bg-[#111113] border-zinc-200 dark:border-white/10"
                             }`}
                         >
-                          <span
-                            role={fotoVehiculoCard ? "button" : undefined}
-                            tabIndex={fotoVehiculoCard ? 0 : undefined}
-                            title={fotoVehiculoCard ? "🔍 Clic para ampliar foto del vehículo en grande" : undefined}
-                            onClick={(e) => {
-                              if (fotoVehiculoCard) {
-                                e.stopPropagation();
-                                setFotoZoom(fotoVehiculoCard);
-                              }
-                            }}
-                            className={`relative w-16 h-14 sm:w-14 sm:h-12 rounded-xl sm:rounded-lg shrink-0 bg-blue-100/70 dark:bg-blue-500/15 text-blue-600 dark:text-blue-300 flex items-center justify-center overflow-hidden border border-blue-200/70 dark:border-blue-400/25 group/thumb ${fotoVehiculoCard
-                              ? "cursor-zoom-in hover:ring-2 hover:ring-blue-400/70 hover:scale-[1.04] transition-all"
-                              : ""
-                              }`}
-                          >
-                            <svg
-                              className="w-8 h-8 sm:w-7 sm:h-7"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
-                              strokeWidth={1.5}
-                              aria-hidden="true"
+                          <div className="flex items-center gap-3 w-full sm:w-auto sm:flex-1 min-w-0">
+                            <span
+                              role={fotoVehiculoCard ? "button" : undefined}
+                              tabIndex={fotoVehiculoCard ? 0 : undefined}
+                              title={fotoVehiculoCard ? "🔍 Clic para ampliar foto del vehículo en grande" : undefined}
+                              onClick={(e) => {
+                                if (fotoVehiculoCard) {
+                                  e.stopPropagation();
+                                  setFotoZoom(fotoVehiculoCard);
+                                }
+                              }}
+                              className={`relative w-14 h-12 sm:w-14 sm:h-12 rounded-xl sm:rounded-lg shrink-0 bg-blue-100/70 dark:bg-blue-500/15 text-blue-600 dark:text-blue-300 flex items-center justify-center overflow-hidden border border-blue-200/70 dark:border-blue-400/25 group/thumb ${fotoVehiculoCard
+                                ? "cursor-zoom-in hover:ring-2 hover:ring-blue-400/70 hover:scale-[1.04] transition-all"
+                                : ""
+                                }`}
                             >
-                              <path strokeLinecap="round" strokeLinejoin="round" d="m5 11 1.5-4.5A2 2 0 0 1 8.4 5h7.2a2 2 0 0 1 1.9 1.5L19 11M3.5 11h17v7h-17zM6.5 18v1.5M17.5 18v1.5" />
-                            </svg>
-                            {fotoVehiculoCard && (
-                              <>
-                                <img
-                                  src={fotoVehiculoCard}
-                                  alt={`Vehículo ${vehiculoStr}`}
-                                  onError={(event) => {
-                                    event.currentTarget.style.display = "none";
-                                  }}
-                                  className="absolute inset-0 w-full h-full rounded-xl sm:rounded-lg object-cover transition-transform duration-200 group-hover/thumb:scale-110"
-                                />
-                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/thumb:opacity-100 transition-opacity flex items-center justify-center text-white">
-                                  <svg className="w-5 h-5 drop-shadow-md" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2}>
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v6m3-3H7" />
-                                  </svg>
-                                </div>
-                              </>
-                            )}
-                          </span>
-
-                          <span className="min-w-0 flex-1">
-                            <span className="block text-base sm:text-sm font-bold sm:font-semibold text-zinc-900 dark:text-white truncate">
-                              {nombreVehiculo}
-                            </span>
-                            <span className="mt-1 flex items-center gap-2.5 text-sm sm:text-xs text-zinc-600 dark:text-zinc-300">
-                              <span className="font-mono tracking-wider text-blue-600 dark:text-blue-400 truncate text-base sm:text-sm font-black">
-                                {auto.plate}
-                              </span>
-                              {anioVehiculo && (
-                                <span className="shrink-0 border-l-2 border-zinc-300 dark:border-white/25 pl-2.5 font-bold text-sm sm:text-xs text-zinc-700 dark:text-zinc-300">
-                                  {anioVehiculo}
-                                </span>
-                              )}
-                              {numeroVehiculoCliente > 0 && (
-                                <span
-                                  className="shrink-0 px-1.5 py-0.5 rounded-md bg-emerald-500/15 border border-emerald-500/30 text-[10px] font-mono font-bold text-emerald-600 dark:text-emerald-300"
-                                  title={`Vehículo ${numeroVehiculoCliente} de ${totalVehiculosCliente || 1} de ${nombreClienteDisplay || "este cliente"}`}
-                                >
-                                  {numeroVehiculoCliente}
-                                </span>
-                              )}
-                            </span>
-                          </span>
-
-                          <div className="shrink-0 text-right max-w-[140px] sm:max-w-[220px] pl-1">
-                            {nombreClienteDisplay && (
-                              <span
-                                className="block text-xs sm:text-sm font-bold text-zinc-900 dark:text-white truncate"
-                                title={nombreClienteDisplay}
+                              <svg
+                                className="w-7 h-7 sm:w-7 sm:h-7"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                                strokeWidth={1.5}
+                                aria-hidden="true"
                               >
-                                {nombreClienteDisplay}
+                                <path strokeLinecap="round" strokeLinejoin="round" d="m5 11 1.5-4.5A2 2 0 0 1 8.4 5h7.2a2 2 0 0 1 1.9 1.5L19 11M3.5 11h17v7h-17zM6.5 18v1.5M17.5 18v1.5" />
+                              </svg>
+                              {fotoVehiculoCard && (
+                                <>
+                                  <img
+                                    src={fotoVehiculoCard}
+                                    alt={`Vehículo ${vehiculoStr}`}
+                                    onError={(event) => {
+                                      event.currentTarget.style.display = "none";
+                                    }}
+                                    className="absolute inset-0 w-full h-full rounded-xl sm:rounded-lg object-cover transition-transform duration-200 group-hover/thumb:scale-110"
+                                  />
+                                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/thumb:opacity-100 transition-opacity flex items-center justify-center text-white">
+                                    <svg className="w-5 h-5 drop-shadow-md" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2}>
+                                      <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v6m3-3H7" />
+                                    </svg>
+                                  </div>
+                                </>
+                              )}
+                            </span>
+
+                            <span className="min-w-0 flex-1">
+                              <span className="block text-[15px] sm:text-sm font-bold sm:font-semibold text-zinc-900 dark:text-white leading-snug break-words sm:truncate">
+                                {nombreVehiculo}
                               </span>
-                            )}
+                              <span className="mt-1 flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-sm sm:text-xs text-zinc-600 dark:text-zinc-300">
+                                <span className="font-mono tracking-wider text-blue-600 dark:text-blue-400 text-[15px] sm:text-sm font-black whitespace-nowrap">
+                                  {auto.plate}
+                                </span>
+                                {anioVehiculo && (
+                                  <span className="shrink-0 border-l-2 border-zinc-300 dark:border-white/25 pl-2.5 font-bold text-xs text-zinc-700 dark:text-zinc-300">
+                                    {anioVehiculo}
+                                  </span>
+                                )}
+                                {numeroVehiculoCliente > 0 && (
+                                  <span
+                                    className="shrink-0 px-1.5 py-0.5 rounded-md bg-emerald-500/15 border border-emerald-500/30 text-[10px] font-mono font-bold text-emerald-600 dark:text-emerald-300"
+                                    title={`Vehículo ${numeroVehiculoCliente} de ${totalVehiculosCliente || 1} de ${nombreClienteDisplay || "este cliente"}`}
+                                  >
+                                    {numeroVehiculoCliente}
+                                  </span>
+                                )}
+                              </span>
+                            </span>
                           </div>
 
-                          <div className="flex items-center gap-1 shrink-0">
-                            <span
-                              role="button"
-                              tabIndex={0}
-                              title={
-                                listaPropuestasCarrusel.length > 1
-                                  ? `Propuesta anterior (${index + 1} de ${listaPropuestasCarrusel.length})`
-                                  : "Propuesta anterior"
-                              }
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                if (listaPropuestasCarrusel.length > 1) {
-                                  retrocederAnteriorPropuesta(auto);
-                                }
-                              }}
-                              className="p-2 sm:p-2 rounded-xl text-zinc-400 hover:text-purple-600 dark:text-zinc-400 dark:hover:text-purple-400 hover:bg-purple-50/70 dark:hover:bg-purple-500/15 active:scale-90 transition-all duration-200 cursor-pointer shrink-0 group/flecha-izq flex items-center justify-center select-none"
-                            >
-                              <svg
-                                className="w-5 h-5 sm:w-5.5 sm:h-5.5 transition-transform duration-200 group-hover/flecha-izq:-translate-x-0.5 group-hover/flecha-izq:scale-110"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                                strokeWidth={2.2}
-                                aria-hidden="true"
-                              >
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
-                              </svg>
-                            </span>
+                          <div className="flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto pt-2 sm:pt-0 border-t border-zinc-200/70 dark:border-white/10 sm:border-t-0 shrink-0">
+                            <div className="min-w-0 flex-1 sm:flex-initial text-left sm:text-right sm:max-w-[220px]">
+                              {nombreClienteDisplay && (
+                                <span
+                                  className="block text-xs sm:text-sm font-bold text-zinc-900 dark:text-white break-words sm:truncate"
+                                  title={nombreClienteDisplay}
+                                >
+                                  {nombreClienteDisplay}
+                                </span>
+                              )}
+                            </div>
 
-                            {listaPropuestasCarrusel.length > 1 && (
-                              <span className="text-[11px] sm:text-xs font-mono font-bold px-1 select-none whitespace-nowrap">
-                                <span className="text-blue-600 dark:text-blue-400">{index + 1}</span>
-                                <span className="text-zinc-400 dark:text-zinc-500">/{listaPropuestasCarrusel.length}</span>
+                            {listaPropuestasCarrusel.length > 1 ? (
+                              <div className="flex items-center gap-1 shrink-0 ml-auto bg-zinc-100 dark:bg-white/5 rounded-xl p-1 border border-zinc-200 dark:border-white/10">
+                                <span
+                                  role="button"
+                                  tabIndex={0}
+                                  title={`Propuesta anterior (${index + 1} de ${listaPropuestasCarrusel.length})`}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    retrocederAnteriorPropuesta(auto);
+                                  }}
+                                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg hover:bg-blue-500/10 hover:text-blue-500 text-zinc-400 dark:text-zinc-400 flex items-center justify-center transition-all cursor-pointer select-none active:scale-90"
+                                >
+                                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5} aria-hidden="true">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+                                  </svg>
+                                </span>
+
+                                <span className="text-[11px] sm:text-xs font-mono font-bold px-1 select-none whitespace-nowrap">
+                                  <span className="text-blue-600 dark:text-blue-400">{index + 1}</span>
+                                  <span className="text-zinc-400 dark:text-zinc-500">/{listaPropuestasCarrusel.length}</span>
+                                </span>
+
+                                <span
+                                  role="button"
+                                  tabIndex={0}
+                                  title={`Siguiente propuesta (${index + 1} de ${listaPropuestasCarrusel.length})`}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    avanzarSiguientePropuesta(auto);
+                                  }}
+                                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg hover:bg-blue-500/10 hover:text-blue-500 text-zinc-400 dark:text-zinc-400 flex items-center justify-center transition-all cursor-pointer select-none active:scale-90"
+                                >
+                                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5} aria-hidden="true">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                                  </svg>
+                                </span>
+                              </div>
+                            ) : (
+                              <span
+                                role="button"
+                                tabIndex={0}
+                                title="Propuesta actual"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                }}
+                                className="p-2 sm:p-2.5 rounded-xl text-zinc-400 dark:text-zinc-500 shrink-0 ml-auto flex items-center justify-center select-none"
+                              >
+                                <svg
+                                  className="w-5 h-5 sm:w-6 sm:h-6 text-zinc-400 dark:text-zinc-600"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                  stroke="currentColor"
+                                  strokeWidth={2}
+                                  aria-hidden="true"
+                                >
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                                </svg>
                               </span>
                             )}
-
-                            <span
-                              role="button"
-                              tabIndex={0}
-                              title={
-                                listaPropuestasCarrusel.length > 1
-                                  ? `Siguiente propuesta (${index + 1} de ${listaPropuestasCarrusel.length})`
-                                  : "Siguiente propuesta"
-                              }
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                if (listaPropuestasCarrusel.length > 1) {
-                                  avanzarSiguientePropuesta(auto);
-                                }
-                              }}
-                              className="p-2 sm:p-2 rounded-xl text-zinc-400 hover:text-purple-600 dark:text-zinc-400 dark:hover:text-purple-400 hover:bg-purple-50/70 dark:hover:bg-purple-500/15 active:scale-90 transition-all duration-200 cursor-pointer shrink-0 group/flecha-der flex items-center justify-center select-none"
-                            >
-                              <svg
-                                className="w-5 h-5 sm:w-5.5 sm:h-5.5 transition-transform duration-200 group-hover/flecha-der:translate-x-0.5 group-hover/flecha-der:scale-110"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                                strokeWidth={2.2}
-                                aria-hidden="true"
-                              >
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
-                              </svg>
-                            </span>
                           </div>
                         </button>
                       );
